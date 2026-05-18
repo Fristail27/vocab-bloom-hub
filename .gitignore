@@ -1,0 +1,70 @@
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+
+# dependencies
+/apps/frontend/node_modules
+/apps/frontend/.pnp
+/apps/frontend/.pnp.*
+/apps/frontend/.yarn/*
+!/apps/frontend/.yarn/patches
+!/apps/frontend/.yarn/plugins
+!/apps/frontend/.yarn/releases
+!/apps/frontend/.yarn/versions
+/apps/server/node_modules
+/node_modules
+
+# next.js
+/apps/frontend/.next/
+/apps/frontend/out/
+
+# production
+/apps/frontend/build
+/apps/server/dist
+/apps/server/build
+
+# misc
+.DS_Store
+*.pem
+/apps/frontend/.DS_Store
+/apps/frontend/*.pem
+/apps/server/.DS_Store
+/apps/server/*.pem
+
+# debug
+/apps/frontend/npm-debug.log*
+/apps/frontend/yarn-debug.log*
+/apps/frontend/yarn-error.log*
+/apps/frontend/.pnpm-debug.log*
+/apps/server/npm-debug.log*
+/apps/server/yarn-debug.log*
+/apps/server/yarn-error.log*
+/apps/server/.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+/apps/frontend/.env*
+/apps/server/.env*
+.env*
+
+# vercel
+/apps/frontend/.vercel
+
+# typescript
+/apps/frontend/*.tsbuildinfo
+/apps/frontend/next-env.d.ts
+
+# Diagnostic reports (https://nodejs.org/api/report.html)
+/apps/server/report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json

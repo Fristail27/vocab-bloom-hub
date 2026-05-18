@@ -1,0 +1,54 @@
+{
+  "name": "vocab-bloom-hub",
+  "version": "0.0.1",
+  "private": true,
+  "workspaces": [
+    "apps/frontend",
+    "apps/server"
+  ],
+  "description": "A modular open-source platform for working with vocabulary data: APIs, datasets, and tooling.",
+  "homepage": "https://github.com/Fristail27/vocab-bloom-hub",
+  "author": {
+    "name": "Alexey Ryzhov (Fristail27)",
+    "url": "https://github.com/Fristail27"
+  },
+  "bugs": {
+    "url": "https://github.com/Fristail27/vocab-bloom-hub/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Fristail27/vocab-bloom-hub.git"
+  },
+  "keywords": [
+    "dictionary",
+    "language",
+    "linguistics",
+    "nlp",
+    "lexicon",
+    "vocabulary",
+    "thesaurus",
+    "semantic-network",
+    "multilingual",
+    "translation",
+    "etymology",
+    "synonyms",
+    "definitions",
+    "language-learning",
+    "natural-language-processing",
+    "open-source",
+    "typescript",
+    "vocab-bloom-hub",
+    "vocab-bloom"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "front:dev": "yarn workspace frontend dev",
+    "server:dev": "yarn workspace server start:dev",
+    "dev": "concurrently \"yarn front:dev\" \"yarn server:dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "typescript": "^6.0.3"
+  }
+}
