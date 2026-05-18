@@ -1,0 +1,59 @@
+{
+  "name": "frontend",
+  "version": "0.0.1",
+  "private": true,
+  "license": "MIT",
+  "description": "Web interface for Vocab Bloom Hub — a modern vocabulary and linguistics platform built with Next.js. Provides dictionary search, word exploration, semantic relations, and language learning tools.",
+  "keywords": [
+    "frontend",
+    "nextjs",
+    "react",
+    "dictionary-ui",
+    "vocabulary-ui",
+    "nlp-ui",
+    "language-learning",
+    "linguistics",
+    "semantic-search",
+    "word-explorer",
+    "multilingual-dictionary",
+    "education",
+    "open-source",
+    "vocab-bloom",
+    "vocab-bloom-hub"
+  ],
+  "author": {
+    "name": "Alexey Ryzhov (Fristail27)",
+    "url": "https://github.com/Fristail27"
+  },
+  "bugs": {
+    "url": "https://github.com/Fristail27/vocab-bloom-hub/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Fristail27/vocab-bloom-hub.git"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "js-cookie": "^3.0.7",
+    "next": "16.2.6",
+    "primeicons": "^7.0.0",
+    "primereact": "^10.9.8",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "sass": "^1.99.0"
+  },
+  "devDependencies": {
+    "@types/js-cookie": "^3.0.6",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "typescript": "^5"
+  }
+}

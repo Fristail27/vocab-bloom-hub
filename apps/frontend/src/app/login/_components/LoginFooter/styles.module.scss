@@ -1,0 +1,15 @@
+.loginFooter {
+  display: flex;
+  justify-content: space-between;
+  gap: 48px;
+  width: 100%;
+  padding: 16px;
+
+  .link {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+    color: var(--blue-500);
+  }
+}

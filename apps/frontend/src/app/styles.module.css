@@ -1,0 +1,8 @@
+.mainPage {
+    display: flex;
+}
+
+.mainContainer {
+    display: flex;
+    flex-grow: 1;
+}
