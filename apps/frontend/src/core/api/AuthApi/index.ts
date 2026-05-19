@@ -1,15 +1,25 @@
-import {BaseApi} from "../baseApi";
+import {AbstractBaseApi} from "../AbstractBaseApi";
+import {LoginReqBody, LoginResBody} from "../../../../../server/types";
 
-export class AuthApi extends BaseApi {
-    static async login (params: URLSearchParams) {
-        const url = `${this.baseURL}/auth/login?${params.toString()}`;
-        const res = await fetch(url)
+export class AuthApi extends AbstractBaseApi {
+    static async login (hash: LoginReqBody): Promise<LoginResBody> {
+        const url = `${this.baseURL}/auth/login`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/json",
+            },
+            credentials: 'include',
+            body: JSON.stringify(hash),
+        });
         return await res.json()
     }
 
-    static async checkToken (token: string) {
-        const url = `${this.baseURL}/auth/check-token?token=${token}`;
-        const res = await fetch(url)
-        return await res.text()
+    static async checkToken () {
+        const url = `${this.baseURL}/auth/check-token`;
+        const res = await fetch(url, {
+            headers: {'Content-Type': 'application/json', Authorization: `Bearer ${await this.getToken()}`},
+        })
+        return await res.json()
     }
 }

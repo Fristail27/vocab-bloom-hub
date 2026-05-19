@@ -1,12 +1,12 @@
 import cookies from 'js-cookie';
 
-export class BaseApi {
+export class AbstractBaseApi {
     static isInitialized: boolean = false;
     static get baseURL(): string {
-        return process.env.BASE_API_URL || 'http://localhost:3010/api'
+        return process.env.NEXT_PUBLIC_BASE_API_URL || '/api'
     }
 
-    static async getBearer (): Promise<string | undefined> {
+    static async getToken(): Promise<string | undefined> {
         return cookies.get('bearer') as string;
     }
 }

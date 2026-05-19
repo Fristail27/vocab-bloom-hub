@@ -1,5 +1,5 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
-import {RoleE} from "@vb/shared-types";
+import {RoleE} from "../../../../types";
 
 @Injectable()
 export class AdminGuard implements CanActivate {

@@ -8,6 +8,7 @@ import {getThemeLink} from "@/helpers/getThemeLink";
 import styles from "./styles.module.css";
 import "./globals.css";
 import 'primeicons/primeicons.css';
+import {ServerAuthApi} from "@/core/api/AuthApi/ServerAuthApi";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -29,7 +30,8 @@ type RootLayoutP = Readonly<{
 }>
 
 export default async function RootLayout({children}: RootLayoutP) {
-    const isAuth = false;
+    const isValidTokenRes = await ServerAuthApi.checkToken();
+    const isAuth = isValidTokenRes.isValid;
     const cookieStore = await cookies()
     const theme = (cookieStore.get('theme')?.value || ThemeE.light) as ThemeE;
     const themeLink = getThemeLink(theme);
