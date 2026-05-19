@@ -4,7 +4,8 @@
   "private": true,
   "workspaces": [
     "apps/frontend",
-    "apps/server"
+    "apps/server",
+    "packages/shared-types"
   ],
   "description": "A modular open-source platform for working with vocabulary data: APIs, datasets, and tooling.",
   "homepage": "https://github.com/Fristail27/vocab-bloom-hub",

@@ -4,9 +4,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import configuration from '../../../configuration';
+import { AuthModule } from '../AuthModule/auth.module';
 
 @Module({
   imports: [
+      AuthModule,
     // TypeOrmModule.forRootAsync({
     //   imports: [ConfigModule],
     //   useFactory: (config: ConfigService) => ({
