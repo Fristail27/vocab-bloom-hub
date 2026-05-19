@@ -7,5 +7,4 @@ export default () => ({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
   },
-  VK_CLIENT_ID: process.env.VK_CLIENT_ID,
 });
