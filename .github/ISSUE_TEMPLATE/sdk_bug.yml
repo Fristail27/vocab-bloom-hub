@@ -1,0 +1,40 @@
+name: SDK Bug
+description: Report SDK related issues
+title: "[SDK]: "
+labels:
+  - sdk
+  - bug
+body:
+  - type: dropdown
+    id: sdk
+    attributes:
+      label: SDK
+      options:
+        - npm-sdk
+        - python-sdk
+    validations:
+      required: true
+
+  - type: input
+    id: sdk_version
+    attributes:
+      label: SDK version
+      placeholder: e.g. 1.2.0
+
+  - type: input
+    id: runtime
+    attributes:
+      label: Runtime version
+      placeholder: node 22 / python 3.12
+
+  - type: textarea
+    id: code
+    attributes:
+      label: Minimal reproduction
+      render: ts
+
+  - type: textarea
+    id: error
+    attributes:
+      label: Error output
+      render: shell
