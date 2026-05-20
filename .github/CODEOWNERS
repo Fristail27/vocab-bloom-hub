@@ -1,0 +1,14 @@
+# Default owner
+* @Fristail27
+
+# Backend
+/apps/server/ @Fristail27
+
+# Frontend
+/apps/frontend/ @Fristail27
+
+# Common
+/packages/shared-types/ @Fristail27
+
+# GitHub workflows
+/.github/ @Fristail27
