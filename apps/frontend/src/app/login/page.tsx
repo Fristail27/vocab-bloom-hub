@@ -1,8 +1,7 @@
 import type {Metadata} from "next";
-import { Button } from 'primereact/button';
-import {InputText} from "primereact/inputtext";
 import {LoginHeader} from "./_components/LoginHeader";
 import {LoginFooter} from "./_components/LoginFooter";
+import {LoginForm} from "@/app/login/_components/LoginForm";
 import styles from './styles.module.scss'
 
 export const metadata: Metadata = {
@@ -14,13 +13,7 @@ export default function LoginPage () {
     return <div className={styles.loginPage}>
         <div className={styles.loginContent}>
             <LoginHeader/>
-            <div className={styles.card}>
-                <h1>Vocab Bloom</h1>
-                <h2>Admin panel</h2>
-                <InputText id="username" placeholder="Username" />
-                <InputText id="password" placeholder="Password" />
-                <Button label="Submit" />
-            </div>
+            <LoginForm/>
             <LoginFooter/>
         </div>
     </div>

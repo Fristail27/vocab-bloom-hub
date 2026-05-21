@@ -15,9 +15,7 @@
     "baseUrl": ".",
 
     "paths": {
-      "@vocab/shared-types": [
-        "packages/shared-types/src"
-      ]
+      "@/*": ["./apps/frontend/src/*"]
     }
   }
 }
