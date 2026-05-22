@@ -2,13 +2,18 @@ import type {Metadata} from "next";
 import {cookies} from "next/headers";
 import {Geist, Geist_Mono} from "next/font/google";
 import React from "react";
+import {notFound} from "next/navigation";
+import {getMessages} from "next-intl/server";
+import {NextIntlClientProvider} from 'next-intl';
+import {routing} from '@/i18n/routing';
 import {Provider} from "@/components/Provider";
-import {ThemeE} from "@/types/common";
+import {InterfaceLanguageEnum, ThemeE} from "@/types/common";
 import {getThemeLink} from "@/helpers/getThemeLink";
+import {ServerAuthApi} from "@/core/api/AuthApi/ServerAuthApi";
 import styles from "./styles.module.css";
 import "./globals.css";
 import 'primeicons/primeicons.css';
-import {ServerAuthApi} from "@/core/api/AuthApi/ServerAuthApi";
+
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -27,26 +32,36 @@ export const metadata: Metadata = {
 
 type RootLayoutP = Readonly<{
     children: React.ReactNode;
+    params: Promise<{
+        locale: InterfaceLanguageEnum;
+    }>
 }>
 
-export default async function RootLayout({children}: RootLayoutP) {
+export default async function RootLayout({children, params}: RootLayoutP) {
+    const {locale} = await params;
+
+    if (!routing.locales.includes(locale as any)) notFound();
+    const messages = await getMessages();
+
     const isValidTokenRes = await ServerAuthApi.checkToken();
     const isAuth = isValidTokenRes.isValid;
     const cookieStore = await cookies()
     const theme = (cookieStore.get('theme')?.value || ThemeE.light) as ThemeE;
     const themeLink = getThemeLink(theme);
-
     return (
-        <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+        <html lang={locale} className={`${geistSans.variable} ${geistMono.variable}`}>
         <head>
             <link id="theme-link" rel="stylesheet" href={themeLink}/>
         </head>
         <body>
+        <NextIntlClientProvider messages={messages}>
+
         <Provider isAuth={isAuth}>
             <main className={styles.mainContainer}>
                 {children}
             </main>
         </Provider>
+        </NextIntlClientProvider>
         </body>
         </html>
     );

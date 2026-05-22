@@ -3,6 +3,9 @@
   flex-direction: column;
   gap: 12px;
   max-width: 600px;
+  h1 {
+    text-align: center;
+  }
 
   .input {
     height: 40px;

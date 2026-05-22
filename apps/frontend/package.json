@@ -41,6 +41,7 @@
   "dependencies": {
     "js-cookie": "^3.0.7",
     "next": "16.2.6",
+    "next-intl": "^4.12.0",
     "primeicons": "^7.0.0",
     "primereact": "^10.9.8",
     "react": "19.2.4",

@@ -3,7 +3,6 @@ import React, {ReactNode, useEffect} from "react";
 import { PrimeReactProvider } from 'primereact/api';
 import {usePathname, useRouter} from "next/navigation";
 
-
 type ProviderP =  {
     children: ReactNode;
     isAuth: boolean;

@@ -44,7 +44,7 @@
   "scripts": {
     "front:dev": "yarn workspace frontend dev",
     "server:dev": "yarn workspace server start:dev",
-    "dev": "concurrently \"yarn front:dev\" \"yarn server:dev\"",
+    "dev": "concurrently \"yarn server:dev\" \"yarn front:dev\"",
     "test": "jest"
   },
   "devDependencies": {
