@@ -44,10 +44,16 @@
   "scripts": {
     "front:dev": "yarn workspace frontend dev",
     "server:dev": "yarn workspace server start:dev",
-    "dev": "concurrently \"yarn front:dev\" \"yarn server:dev\""
+    "dev": "concurrently \"yarn front:dev\" \"yarn server:dev\"",
+    "test": "jest"
   },
   "devDependencies": {
+    "@types/jest": "^29.0.0",
     "concurrently": "^9.2.1",
+    "identity-obj-proxy": "^3.0.0",
+    "jest": "^29.0.0",
+    "jest-environment-jsdom": "^30.4.1",
+    "ts-jest": "^29.0.0",
     "typescript": "^6.0.3"
   }
 }
