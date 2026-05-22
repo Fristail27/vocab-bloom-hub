@@ -1,0 +1,14 @@
+{
+  "common": {
+    "theme": {
+      "light": "light",
+      "dark": "dark"
+    }
+  },
+  "login": {
+    "username": "Username",
+    "password": "Password",
+    "sign_in": "Sign In",
+    "admin_panel_sign_in": "Admin Panel Sign In"
+  }
+}

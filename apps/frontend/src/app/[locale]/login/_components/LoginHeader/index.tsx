@@ -1,6 +1,7 @@
 import {cookies} from "next/headers";
 import {ThemeSwitch} from "@/components/ThemeSwitch";
 import {ThemeE} from "@/types/common";
+import {LanguageSwitch} from "@/components/LanguageSwitch";
 import styles from './styles.module.scss'
 
 export const LoginHeader = async () => {
@@ -9,6 +10,7 @@ export const LoginHeader = async () => {
 
     return <header className={styles.loginHeader}>
         <h3>Vocab Bloom Logo</h3>
+        <LanguageSwitch />
         <ThemeSwitch theme={theme}/>
     </header>
 }
