@@ -13,7 +13,7 @@
     "isolatedModules": true,
 
     "baseUrl": ".",
-
+    "types": ["jest", "node"],
     "paths": {
       "@/*": ["./apps/frontend/src/*"]
     }
