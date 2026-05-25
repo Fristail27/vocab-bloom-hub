@@ -6,8 +6,8 @@ import {InputText} from "primereact/inputtext";
 import {Button} from "primereact/button";
 import {AuthApi} from "@/core/api/AuthApi";
 import {hashLoginString} from '../../../../../../../server/core/utils/crypto'
-import styles from "./styles.module.scss";
 import {useTranslations} from "next-intl";
+import styles from "./styles.module.scss";
 
 export const LoginForm = () => {
     const [username, setUsername] = useState("");

@@ -1,3 +1,5 @@
+![Logo](.github/assets/main-readme-logo.svg)
+
 # Vocab Bloom Hub
 
 A modular open-source platform for working with vocabulary data: dictionaries, linguistic datasets, semantic networks, and language processing tools.
