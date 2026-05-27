@@ -1,7 +1,7 @@
-import {ErrorResT} from "./errors";
+import { ErrorResT } from './errors';
 
 export enum RoleE {
-    admin = 'admin'
+  admin = 'admin',
 }
 
 export type LoginReqBody = { hash: string };

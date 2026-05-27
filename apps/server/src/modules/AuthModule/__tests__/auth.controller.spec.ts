@@ -1,6 +1,14 @@
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+} from '@jest/globals';
 import { Test, TestingModule } from '@nestjs/testing';
 import type { Request, Response } from 'express';
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+
 import { AuthController } from '../auth.controller';
 import { AuthService } from '../auth.service';
 
@@ -10,10 +18,12 @@ describe('AuthController', () => {
   const FAKE_TOKEN = 'fake.jwt.token';
 
   // Мок всего сервиса
-  const mockAuthService: jest.Mocked<Pick<
-    AuthService,
-    'login' | 'checkToken' | 'createJwtToken' | 'setTokenToCookie'
-  >> = {
+  const mockAuthService: jest.Mocked<
+    Pick<
+      AuthService,
+      'login' | 'checkToken' | 'createJwtToken' | 'setTokenToCookie'
+    >
+  > = {
     login: jest.fn(),
     checkToken: jest.fn(),
     createJwtToken: jest.fn(),
@@ -21,8 +31,7 @@ describe('AuthController', () => {
   };
 
   // Хелперы для моков req/res
-  const makeRes = (): jest.Mocked<Response> =>
-    ({ cookie: jest.fn() } as any);
+  const makeRes = (): jest.Mocked<Response> => ({ cookie: jest.fn() }) as any;
 
   const makeReq = (authHeader?: string): Partial<Request> => ({
     headers: {
@@ -39,7 +48,9 @@ describe('AuthController', () => {
     controller = module.get<AuthController>(AuthController);
   });
 
-  afterEach(() => {jest.clearAllMocks();});
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 
   // ─── POST /login ──────────────────────────────────────────────────────────
 

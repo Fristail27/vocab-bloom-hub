@@ -28,3 +28,4 @@ This project is structured as a monorepo:
 apps/
   frontend/   → Next.js web interface
   server/     → NestJS API backend
+```

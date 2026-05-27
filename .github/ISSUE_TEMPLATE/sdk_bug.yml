@@ -1,6 +1,6 @@
 name: SDK Bug
 description: Report SDK related issues
-title: "[SDK]: "
+title: '[SDK]: '
 labels:
   - sdk
   - bug

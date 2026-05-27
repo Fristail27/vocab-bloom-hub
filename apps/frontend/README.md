@@ -39,3 +39,4 @@ apps/frontend/
   features/           # feature-based modules
   lib/                # API clients, helpers
   styles/             # global styles
+```

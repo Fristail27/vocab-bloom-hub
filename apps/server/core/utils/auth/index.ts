@@ -1,2 +1,2 @@
-export * from './createJwt'
-export * from './validateJwt'
+export * from './createJwt';
+export * from './validateJwt';

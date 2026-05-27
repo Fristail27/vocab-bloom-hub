@@ -1,9 +1,9 @@
 export enum ThemeE {
-    light = 'light',
-    dark = 'dark',
+  light = 'light',
+  dark = 'dark',
 }
 
 export enum InterfaceLanguageEnum {
-    en = 'en',
-    ru = 'ru',
+  en = 'en',
+  ru = 'ru',
 }

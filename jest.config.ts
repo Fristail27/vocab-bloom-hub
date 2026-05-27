@@ -1,6 +1,3 @@
 export default {
-    projects: [
-        '<rootDir>/apps/server',
-        '<rootDir>/apps/frontend',
-    ],
+  projects: ['<rootDir>/apps/server', '<rootDir>/apps/frontend'],
 };

@@ -1,2 +1,2 @@
-export {sha256} from './sha256'
-export {hashLoginString} from './hashLoginString'
+export { hashLoginString } from './hashLoginString';
+export { sha256 } from './sha256';

@@ -3,6 +3,7 @@
 First of all, thank you for considering contributing to Vocab Bloom Hub ❤️
 
 We welcome all kinds of contributions, including:
+
 - Bug fixes
 - New features
 - Documentation improvements
@@ -39,6 +40,7 @@ yarn dev
 ## Project Philosophy
 
 Vocab Bloom Hub aims to be:
+
 - Simple and maintainable
 - Beginner-friendly
 - Open for collaboration
@@ -51,6 +53,7 @@ Please try to keep contributions aligned with these goals.
 Use descriptive branch names whenever possible.
 
 Examples:
+
 - `feature/add-authentication`
 - `fix/mobile-layout`
 - `docs/update-readme`
@@ -60,6 +63,7 @@ Examples:
 Please write clear and meaningful commit messages.
 
 Examples:
+
 - `feat: add spaced repetition algorithm`
 - `fix: resolve vocabulary sorting issue`
 - `docs: improve installation guide`
@@ -85,6 +89,7 @@ Before submitting a pull request:
 Please follow the existing project structure and coding style.
 
 General recommendations:
+
 - Write readable and maintainable code
 - Use meaningful variable and function names
 - Prefer reusable components
@@ -94,6 +99,7 @@ General recommendations:
 ## Reporting Bugs
 
 When creating a bug report, please include:
+
 - Steps to reproduce
 - Expected behavior
 - Actual behavior
@@ -105,6 +111,7 @@ When creating a bug report, please include:
 Feature requests are welcome.
 
 Please describe:
+
 - The problem you are trying to solve
 - Your proposed solution
 - Possible alternatives
@@ -117,5 +124,20 @@ By participating in this project, you agree to follow the
 ## Questions
 
 If you have questions, feel free to open an Issue or start a Discussion.
+
+## Project Structure
+
+```text
+.
+├── apps
+│   ├── frontend    # Next.js frontend application
+│   └── server      # NestJS backend application
+├── package.json    # Root workspace configuration
+├── tsconfig.base.json
+├── tsconfig.json
+├── jest.config.ts
+├── README.md
+└── yarn.lock
+```
 
 Thank you for contributing to Vocab Bloom Hub 🚀
