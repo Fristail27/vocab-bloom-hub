@@ -13,7 +13,9 @@ import {ServerAuthApi} from "@/core/api/AuthApi/ServerAuthApi";
 import styles from "./styles.module.css";
 import "./globals.css";
 import 'primeicons/primeicons.css';
-
+import {Footer} from "@/components/Footer";
+import {Header} from "@/components/Header";
+import {SideMenu} from "@/components/SideMenu";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -55,12 +57,13 @@ export default async function RootLayout({children, params}: RootLayoutP) {
         </head>
         <body>
         <NextIntlClientProvider messages={messages}>
-
-        <Provider isAuth={isAuth}>
+            <Header/>
             <main className={styles.mainContainer}>
-                {children}
+                <Provider isAuth={isAuth}>
+                    {children}
+                </Provider>
             </main>
-        </Provider>
+            <Footer/>
         </NextIntlClientProvider>
         </body>
         </html>

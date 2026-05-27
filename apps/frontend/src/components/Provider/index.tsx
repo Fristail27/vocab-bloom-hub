@@ -1,7 +1,9 @@
 'use client'
 import React, {ReactNode, useEffect} from "react";
 import { PrimeReactProvider } from 'primereact/api';
-import {usePathname, useRouter} from "next/navigation";
+import {useParams, usePathname, useRouter} from "next/navigation";
+import {SideMenu} from "@/components/SideMenu";
+import styles from "./styles.module.scss";
 
 type ProviderP =  {
     children: ReactNode;
@@ -11,6 +13,7 @@ type ProviderP =  {
 export const Provider: React.FC<ProviderP> = ({ children, isAuth }) => {
     const pathname = usePathname();
     const router = useRouter();
+    const {locale} = useParams();
 
     useEffect(() => {
         if (!isAuth && pathname !== '/login') {
@@ -19,6 +22,12 @@ export const Provider: React.FC<ProviderP> = ({ children, isAuth }) => {
     }, [pathname])
 
     return <PrimeReactProvider>
-        {(isAuth || pathname === '/login') && children}
+        {pathname === `/${locale}/login` && children}
+        {pathname !== `/${locale}/login` && <>
+            <SideMenu/>
+            <div className={styles.mainContent}>
+                {children}
+            </div>
+        </>}
     </PrimeReactProvider>
 }

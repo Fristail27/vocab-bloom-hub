@@ -5,7 +5,7 @@ import {MainLogoWithTitle} from "@/core/ui/logo";
 import {LanguageSwitch} from "@/components/LanguageSwitch";
 import styles from './styles.module.scss'
 
-export const LoginHeader = async () => {
+export const Header = async () => {
     const cookieStore = await cookies()
     const theme = (cookieStore.get('theme')?.value || ThemeE.light) as ThemeE;
 
