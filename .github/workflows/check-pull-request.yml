@@ -1,0 +1,46 @@
+name: check-pull-request
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Prepare Yarn 4
+        run: corepack prepare yarn@4.15.0 --activate
+
+      - name: Check Yarn version
+        run: yarn -v
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Prettier check
+        run: yarn format:check
+
+      - name: Typecheck frontend
+        run: yarn workspace frontend tsc --noEmit
+
+      - name: Typecheck server
+        run: yarn workspace server tsc --noEmit

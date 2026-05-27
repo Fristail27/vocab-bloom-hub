@@ -1,6 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+
 import { AppModule } from './modules/AppModule/app.module';
 
 async function bootstrap() {
@@ -19,14 +20,14 @@ async function bootstrap() {
 
   app.enableCors({
     origin: [`http://localhost:3000`],
-    credentials: true
+    credentials: true,
   });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true, // удаляет лишние поля
       forbidNonWhitelisted: true, // ошибка если пришли лишние поля
-      transform: true // автопреобразование типов
-    })
+      transform: true, // автопреобразование типов
+    }),
   );
   await app.listen(process.env.PORT || 3000);
 }

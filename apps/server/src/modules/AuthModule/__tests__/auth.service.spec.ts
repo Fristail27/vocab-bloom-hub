@@ -1,7 +1,16 @@
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+} from '@jest/globals';
 import { BadRequestException } from '@nestjs/common';
-import { describe, it, expect, beforeEach, afterEach, beforeAll, jest } from '@jest/globals';
-import { AuthService } from '../auth.service';
+
 import { hashLoginString } from '../../../../core/utils/crypto';
+import { AuthService } from '../auth.service';
 
 // Мокаем crypto и auth утилиты
 jest.mock('../../../../core/utils/crypto');
@@ -9,7 +18,9 @@ jest.mock('../../../../core/utils/auth');
 
 import { createJwt, validateJwt } from '../../../../core/utils/auth';
 
-const mockHashLoginString = hashLoginString as jest.MockedFunction<typeof hashLoginString>;
+const mockHashLoginString = hashLoginString as jest.MockedFunction<
+  typeof hashLoginString
+>;
 const mockCreateJwt = createJwt as jest.MockedFunction<typeof createJwt>;
 const mockValidateJwt = validateJwt as jest.MockedFunction<typeof validateJwt>;
 
@@ -152,7 +163,7 @@ describe('AuthService', () => {
   // ─── setTokenToCookie ─────────────────────────────────────────────────────
 
   describe('setTokenToCookie', () => {
-    const mockRes = () => ({ cookie: jest.fn() } as any);
+    const mockRes = () => ({ cookie: jest.fn() }) as any;
 
     it('устанавливает куку с правильными параметрами', () => {
       const res = mockRes();

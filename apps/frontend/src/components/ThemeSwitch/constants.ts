@@ -1,4 +1,4 @@
 export const ThemeOptions = [
-    {value: 'light', label: 'Light'},
-    {value: 'dark', label: 'Dark'},
-]
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+];
