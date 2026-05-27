@@ -10,5 +10,9 @@
     "password": "Пароль",
     "sign_in": "Войти",
     "admin_panel_sign_in": "Вход в панель администратора"
+  },
+  "menu": {
+    "menu_title": "Меню",
+    "main": "Главная"
   }
 }

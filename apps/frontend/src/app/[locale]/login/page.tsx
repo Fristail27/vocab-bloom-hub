@@ -1,6 +1,4 @@
 import type {Metadata} from "next";
-import {LoginHeader} from "./_components/LoginHeader";
-import {LoginFooter} from "./_components/LoginFooter";
 import {LoginForm} from "@/app/[locale]/login/_components/LoginForm";
 import styles from './styles.module.scss'
 
@@ -11,10 +9,6 @@ export const metadata: Metadata = {
 
 export default function LoginPage () {
     return <div className={styles.loginPage}>
-        <div className={styles.loginContent}>
-            <LoginHeader/>
-            <LoginForm/>
-            <LoginFooter/>
-        </div>
+        <LoginForm/>
     </div>
 }

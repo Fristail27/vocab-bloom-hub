@@ -5,4 +5,7 @@
 .mainContainer {
     display: flex;
     flex-grow: 1;
+    width: 100dvw;
+    max-width: 100dvw;
+    padding: 0 24px;
 }
