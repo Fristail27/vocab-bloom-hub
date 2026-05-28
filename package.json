@@ -79,5 +79,8 @@
     "node": ">=24",
     "yarn": ">=4.15.0"
   },
-  "packageManager": "yarn@4.15.0"
+  "packageManager": "yarn@4.15.0",
+  "dependencies": {
+    "sqlite3": "^6.0.1"
+  }
 }
