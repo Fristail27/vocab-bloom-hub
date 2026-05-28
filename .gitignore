@@ -69,3 +69,5 @@
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 /apps/server/report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+dev.sqlite
