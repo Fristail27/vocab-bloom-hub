@@ -1,14 +1,10 @@
-import './globals.css';
-import 'primeicons/primeicons.css';
-
+import React from 'react';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
-import React from 'react';
-
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { Provider } from '@/components/Provider';
@@ -16,8 +12,9 @@ import { ServerAuthApi } from '@/core/api/AuthApi/ServerAuthApi';
 import { getThemeLink } from '@/helpers/getThemeLink';
 import { routing } from '@/i18n/routing';
 import { InterfaceLanguageEnum, ThemeE } from '@/types/common';
-
 import styles from './styles.module.css';
+import './globals.css';
+import 'primeicons/primeicons.css';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -36,9 +33,7 @@ export const metadata: Metadata = {
 
 type RootLayoutP = Readonly<{
   children: React.ReactNode;
-  params: Promise<{
-    locale: InterfaceLanguageEnum;
-  }>;
+  params: Promise<{ locale: InterfaceLanguageEnum }>;
 }>;
 
 export default async function RootLayout({ children, params }: RootLayoutP) {

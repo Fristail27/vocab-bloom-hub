@@ -3,7 +3,8 @@
     "theme": {
       "light": "Светлая",
       "dark": "Темная"
-    }
+    },
+    "dictionary": "Словарь"
   },
   "login": {
     "username": "Имя пользователя",

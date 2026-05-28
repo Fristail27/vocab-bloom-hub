@@ -1,18 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { AuthApi } from '@/core/api/AuthApi';
 import { hashLoginString } from '../../../../../../../server/core/utils/crypto';
+import { StateContext } from '@/components/StateContext';
 import styles from './styles.module.scss';
 
 export const LoginForm = () => {
   const [username, setUsername] = useState('');
   const [pass, setPass] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const { setIsAuth } = useContext(StateContext);
   const router = useRouter();
   const t = useTranslations('login');
 
@@ -23,6 +25,7 @@ export const LoginForm = () => {
     if ('error' in res) {
       setError(res.message);
     } else {
+      setIsAuth(true);
       router.push('/');
     }
   };

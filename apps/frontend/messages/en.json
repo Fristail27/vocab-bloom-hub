@@ -3,7 +3,8 @@
     "theme": {
       "light": "light",
       "dark": "dark"
-    }
+    },
+    "dictionary": "Dictionary"
   },
   "login": {
     "username": "Username",
