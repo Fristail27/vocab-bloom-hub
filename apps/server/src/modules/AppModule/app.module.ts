@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import * as path from 'path';
 import configuration from '../../../configuration';
 import { AuthModule } from '../AuthModule/auth.module';
@@ -11,22 +11,26 @@ import { AppService } from './app.service';
   imports: [
     AuthModule,
     TypeOrmModule.forRootAsync({
-      useFactory: () => {
+      useFactory: (): TypeOrmModuleOptions => {
         const databaseUrl = process.env.DATABASE_URL;
+
+        const base = {
+          autoLoadEntities: true,
+          synchronize: process.env.NODE_ENV === 'development',
+        };
+
         if (databaseUrl) {
           return {
+            ...base,
             type: 'postgres',
             url: databaseUrl,
-            autoLoadEntities: true,
-            synchronize: process.env.NODE_ENV === 'development',
           };
         }
 
         return {
-          type: 'sqlite',
+          ...base,
+          type: 'better-sqlite3',
           database: path.join(process.cwd(), '..', '..', 'dev.sqlite'),
-          autoLoadEntities: true,
-          synchronize: process.env.NODE_ENV === 'development',
         };
       },
     }),
