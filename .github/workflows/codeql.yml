@@ -1,0 +1,65 @@
+name: 'CodeQL'
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+  schedule:
+    - cron: '0 3 * * 1'
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['javascript']
+
+    steps:
+      # 1. Checkout repo
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Force Yarn 4.15.0
+        run: |
+          corepack prepare yarn@4.15.0 --activate
+          yarn -v
+          which yarn
+
+      - name: Remove possible Yarn 1 cache conflict
+        run: corepack yarn cache clean || true
+
+      - name: Install dependencies
+        run: corepack yarn install --immutable
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Build frontend
+        run: yarn workspace frontend build
+        continue-on-error: true
+
+      - name: Build backend
+        run: yarn workspace server build
+        continue-on-error: true
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
