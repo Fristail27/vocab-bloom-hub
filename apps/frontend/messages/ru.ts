@@ -1,0 +1,27 @@
+import { ErrorCodes } from '../../server/core/constants/error_codes';
+
+export default {
+  errors: {
+    [ErrorCodes.login_or_pass_wrong]: 'Неправильные имя пользователя или пароль',
+    [ErrorCodes.internal_server_error]: 'Что-то пошло не так',
+    [ErrorCodes.unparsed_data]: 'Ответ нельзя распарсить',
+    [ErrorCodes.failed_fetch]: 'Не удалось выполнить запрос',
+  },
+  common: {
+    theme: {
+      light: 'Светлая',
+      dark: 'Темная',
+    },
+    dictionary: 'Словарь',
+  },
+  login: {
+    username: 'Имя пользователя',
+    password: 'Пароль',
+    sign_in: 'Войти',
+    admin_panel_sign_in: 'Вход в панель администратора',
+  },
+  menu: {
+    menu_title: 'Меню',
+    main: 'Главная',
+  },
+};

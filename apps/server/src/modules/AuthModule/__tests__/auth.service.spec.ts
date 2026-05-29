@@ -1,12 +1,4 @@
-import {
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  jest,
-} from '@jest/globals';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { BadRequestException } from '@nestjs/common';
 
 import { hashLoginString } from '../../../../core/utils/crypto';
@@ -18,9 +10,7 @@ jest.mock('../../../../core/utils/auth');
 
 import { createJwt, validateJwt } from '../../../../core/utils/auth';
 
-const mockHashLoginString = hashLoginString as jest.MockedFunction<
-  typeof hashLoginString
->;
+const mockHashLoginString = hashLoginString as jest.MockedFunction<typeof hashLoginString>;
 const mockCreateJwt = createJwt as jest.MockedFunction<typeof createJwt>;
 const mockValidateJwt = validateJwt as jest.MockedFunction<typeof validateJwt>;
 
@@ -44,9 +34,7 @@ describe('AuthService', () => {
     // hashLoginString вызывается дважды в getLoginHash:
     // 1й вызов: hash(username, pass)      → loginHash
     // 2й вызов: hash(username, loginHash) → secretHash
-    mockHashLoginString
-      .mockResolvedValueOnce(FAKE_LOGIN_HASH)
-      .mockResolvedValueOnce(FAKE_SECRET_HASH);
+    mockHashLoginString.mockResolvedValueOnce(FAKE_LOGIN_HASH).mockResolvedValueOnce(FAKE_SECRET_HASH);
 
     mockCreateJwt.mockReturnValue(FAKE_TOKEN);
     mockValidateJwt.mockReturnValue(true);
@@ -70,16 +58,12 @@ describe('AuthService', () => {
     });
 
     it('бросает BadRequestException при неверном хэше', async () => {
-      await expect(service.login('wrong-hash')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(service.login('wrong-hash')).rejects.toThrow(BadRequestException);
       expect(mockCreateJwt).not.toHaveBeenCalled();
     });
 
     it('бросает ошибку с нужным сообщением', async () => {
-      await expect(service.login('wrong-hash')).rejects.toThrow(
-        'login or password is wrong',
-      );
+      await expect(service.login('wrong-hash')).rejects.toThrow('login or password is wrong');
     });
   });
 
@@ -114,9 +98,7 @@ describe('AuthService', () => {
   describe('checkToken', () => {
     it('возвращает true для валидного токена', async () => {
       // hashLoginString снова нужно настроить — предыдущие вызовы уже израсходованы
-      mockHashLoginString
-        .mockResolvedValueOnce(FAKE_LOGIN_HASH)
-        .mockResolvedValueOnce(FAKE_SECRET_HASH);
+      mockHashLoginString.mockResolvedValueOnce(FAKE_LOGIN_HASH).mockResolvedValueOnce(FAKE_SECRET_HASH);
 
       mockValidateJwt.mockReturnValue(true);
 
@@ -125,9 +107,7 @@ describe('AuthService', () => {
     });
 
     it('возвращает false для невалидного токена', async () => {
-      mockHashLoginString
-        .mockResolvedValueOnce(FAKE_LOGIN_HASH)
-        .mockResolvedValueOnce(FAKE_SECRET_HASH);
+      mockHashLoginString.mockResolvedValueOnce(FAKE_LOGIN_HASH).mockResolvedValueOnce(FAKE_SECRET_HASH);
 
       mockValidateJwt.mockReturnValue(false);
 
@@ -136,9 +116,7 @@ describe('AuthService', () => {
     });
 
     it('возвращает false если validateJwt бросает ошибку', async () => {
-      mockHashLoginString
-        .mockResolvedValueOnce(FAKE_LOGIN_HASH)
-        .mockResolvedValueOnce(FAKE_SECRET_HASH);
+      mockHashLoginString.mockResolvedValueOnce(FAKE_LOGIN_HASH).mockResolvedValueOnce(FAKE_SECRET_HASH);
 
       mockValidateJwt.mockImplementation(() => {
         throw new Error('jwt expired');
@@ -149,9 +127,7 @@ describe('AuthService', () => {
     });
 
     it('возвращает false для пустой строки', async () => {
-      mockHashLoginString
-        .mockResolvedValueOnce(FAKE_LOGIN_HASH)
-        .mockResolvedValueOnce(FAKE_SECRET_HASH);
+      mockHashLoginString.mockResolvedValueOnce(FAKE_LOGIN_HASH).mockResolvedValueOnce(FAKE_SECRET_HASH);
 
       mockValidateJwt.mockReturnValue(false);
 

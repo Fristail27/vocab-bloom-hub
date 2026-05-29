@@ -5,11 +5,7 @@ export const Footer = () => {
   return (
     <footer className={styles.footer}>
       <span>Docs</span>
-      <Link
-        className={styles.link}
-        href="https://github.com/Fristail27/vocab-bloom-hub"
-        target="_blank"
-      >
+      <Link className={styles.link} href="https://github.com/Fristail27/vocab-bloom-hub" target="_blank">
         <i className="pi pi-github" style={{ color: 'var(--blue-500)' }}></i>
         Github
       </Link>

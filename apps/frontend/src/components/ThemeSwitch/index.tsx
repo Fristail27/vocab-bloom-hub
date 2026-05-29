@@ -14,9 +14,7 @@ type ThemeSwitchP = {
 };
 
 export const ThemeSwitch: React.FC<ThemeSwitchP> = ({ theme }) => {
-  const [selectedTheme, setSelectedTheme] = useState<ThemeE>(
-    theme || (cookies.get('theme') as ThemeE),
-  );
+  const [selectedTheme, setSelectedTheme] = useState<ThemeE>(theme || (cookies.get('theme') as ThemeE));
   const t = useTranslations('common.theme');
 
   const changeTheme = useCallback(
@@ -24,9 +22,7 @@ export const ThemeSwitch: React.FC<ThemeSwitchP> = ({ theme }) => {
       if (v.value) {
         setSelectedTheme(v.value);
         cookies.set('theme', v.value);
-        const themeLinkEl = document.getElementById(
-          'theme-link',
-        ) as HTMLLinkElement;
+        const themeLinkEl = document.getElementById('theme-link') as HTMLLinkElement;
         if (themeLinkEl) themeLinkEl.href = getThemeLink(v.value);
       }
     },

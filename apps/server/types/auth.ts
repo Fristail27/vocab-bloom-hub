@@ -8,4 +8,4 @@ export type LoginReqBody = { hash: string };
 
 export type LoginResBody = { token: string } | ErrorResT;
 
-export type CheckTokenResBody = { isValid: boolean } | ErrorResT;
+export type CheckTokenResBody = { isValid: boolean };

@@ -1,9 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { Response } from 'express';
-
 import { createJwt, validateJwt } from '../../../core/utils/auth';
 import { hashLoginString } from '../../../core/utils/crypto';
 import { RoleE } from '../../../types';
+import { ErrorCodes } from '../../../core/constants/error_codes';
 
 @Injectable()
 export class AuthService {
@@ -36,23 +36,17 @@ export class AuthService {
     const username = process.env.USERNAME as string;
     const { loginHash, secretHash } = await this.getLoginHash();
 
-    return createJwt(
-      { username, roles: [RoleE.admin] },
-      secretHash + loginHash,
-    );
+    return createJwt({ username, roles: [RoleE.admin] }, secretHash + loginHash);
   }
 
   async login(hash: string): Promise<string> {
     const username = process.env.USERNAME as string;
     const { loginHash, secretHash } = await this.getLoginHash();
     if (loginHash !== hash) {
-      throw new BadRequestException('login or password is wrong');
+      throw new BadRequestException(ErrorCodes.login_or_pass_wrong);
     }
 
-    return createJwt(
-      { username, roles: [RoleE.admin] },
-      secretHash + loginHash,
-    );
+    return createJwt({ username, roles: [RoleE.admin] }, secretHash + loginHash);
   }
 
   async checkToken(jwt: string): Promise<boolean> {

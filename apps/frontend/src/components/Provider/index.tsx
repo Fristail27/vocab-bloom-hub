@@ -12,10 +12,7 @@ type ProviderP = {
   isAuth: boolean;
 };
 
-export const Provider: React.FC<ProviderP> = ({
-  children,
-  isAuth: defaultIsAuth,
-}) => {
+export const Provider: React.FC<ProviderP> = ({ children, isAuth: defaultIsAuth }) => {
   const [isAuth, setIsAuth] = useState(defaultIsAuth);
   const pathname = usePathname();
   const router = useRouter();
