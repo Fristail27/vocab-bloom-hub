@@ -48,10 +48,7 @@ export default async function RootLayout({ children, params }: RootLayoutP) {
   const theme = (cookieStore.get('theme')?.value || ThemeE.light) as ThemeE;
   const themeLink = getThemeLink(theme);
   return (
-    <html
-      lang={locale}
-      className={`${geistSans.variable} ${geistMono.variable}`}
-    >
+    <html lang={locale} className={`${geistSans.variable} ${geistMono.variable}`}>
       <head>
         <link id="theme-link" rel="stylesheet" href={themeLink} />
       </head>

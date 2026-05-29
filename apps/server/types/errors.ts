@@ -1,5 +1,5 @@
 export type ErrorResT = {
   message: string;
-  error: string;
-  statusCode: number;
+  error: boolean;
+  statusCode?: number;
 };

@@ -1,11 +1,7 @@
 import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
 
-import type {
-  CheckTokenResBody,
-  LoginReqBody,
-  LoginResBody,
-} from '../../../types';
+import type { CheckTokenResBody, LoginReqBody, LoginResBody } from '../../../types';
 import { AuthService } from './auth.service';
 
 @Controller('/api/auth')
@@ -24,10 +20,7 @@ export class AuthController {
   }
 
   @Get('check-token')
-  async checkToken(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<CheckTokenResBody> {
+  async checkToken(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<CheckTokenResBody> {
     if (!req.headers.authorization) {
       return { isValid: false };
     }

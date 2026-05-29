@@ -1,11 +1,4 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  jest,
-} from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { Test, TestingModule } from '@nestjs/testing';
 import type { Request, Response } from 'express';
 
@@ -19,10 +12,7 @@ describe('AuthController', () => {
 
   // Мок всего сервиса
   const mockAuthService: jest.Mocked<
-    Pick<
-      AuthService,
-      'login' | 'checkToken' | 'createJwtToken' | 'setTokenToCookie'
-    >
+    Pick<AuthService, 'login' | 'checkToken' | 'createJwtToken' | 'setTokenToCookie'>
   > = {
     login: jest.fn(),
     checkToken: jest.fn(),
@@ -70,21 +60,14 @@ describe('AuthController', () => {
 
       await controller.login({ hash: 'correct-hash' }, res);
 
-      expect(mockAuthService.setTokenToCookie).toHaveBeenCalledWith(
-        FAKE_TOKEN,
-        res,
-      );
+      expect(mockAuthService.setTokenToCookie).toHaveBeenCalledWith(FAKE_TOKEN, res);
     });
 
     it('пробрасывает ошибку от authService.login', async () => {
-      mockAuthService.login.mockRejectedValue(
-        new Error('login or password is wrong'),
-      );
+      mockAuthService.login.mockRejectedValue(new Error('login or password is wrong'));
       const res = makeRes();
 
-      await expect(
-        controller.login({ hash: 'wrong-hash' }, res),
-      ).rejects.toThrow('login or password is wrong');
+      await expect(controller.login({ hash: 'wrong-hash' }, res)).rejects.toThrow('login or password is wrong');
     });
 
     it('не вызывает setTokenToCookie при ошибке логина', async () => {
@@ -121,10 +104,7 @@ describe('AuthController', () => {
 
       expect(result).toEqual({ isValid: true });
       expect(mockAuthService.createJwtToken).toHaveBeenCalled();
-      expect(mockAuthService.setTokenToCookie).toHaveBeenCalledWith(
-        FAKE_TOKEN,
-        res,
-      );
+      expect(mockAuthService.setTokenToCookie).toHaveBeenCalledWith(FAKE_TOKEN, res);
     });
 
     it('возвращает { isValid: false } и не обновляет куку при невалидном токене', async () => {

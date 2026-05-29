@@ -17,13 +17,13 @@ export const LoginForm = () => {
   const { setIsAuth } = useContext(StateContext);
   const router = useRouter();
   const t = useTranslations('login');
+  const tErr = useTranslations('errors');
 
   const submitLogin = async () => {
     const hash = await hashLoginString(username, pass);
     const res = await AuthApi.login({ hash });
-
     if ('error' in res) {
-      setError(res.message);
+      setError(tErr(res.message));
     } else {
       setIsAuth(true);
       router.push('/');
