@@ -1,9 +1,10 @@
 version: 2
+
 updates:
   - package-ecosystem: 'npm'
     directory: '/'
     schedule:
-      interval: 'daily'
+      interval: 'weekly'
 
   - package-ecosystem: 'npm'
     directory: '/apps/frontend'
@@ -15,10 +16,20 @@ updates:
     schedule:
       interval: 'weekly'
 
+    groups:
+      npm-all:
+        patterns:
+          - '*'
+
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
       interval: 'weekly'
+
+    groups:
+      actions:
+        patterns:
+          - '*'
 
   - package-ecosystem: 'pip'
     directory: '/'
