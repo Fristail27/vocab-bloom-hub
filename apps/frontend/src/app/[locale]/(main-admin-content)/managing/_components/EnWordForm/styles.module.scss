@@ -1,0 +1,40 @@
+.addWordForm {
+  display: flex;
+  gap: 12px;
+  padding-top: 16px;
+
+  .steps {
+    align-items: flex-start;
+  }
+
+  .content {
+    flex-grow: 1;
+  }
+
+  .firstLine {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+
+    .wordInput {
+      border-bottom-right-radius: 0;
+      border-top-right-radius: 0;
+    }
+
+    .posSelect {
+      width: 132px;
+      border-radius: 0;
+    }
+
+    .checkButton {
+      border-left: none;
+      border-bottom-left-radius: 0;
+      border-top-left-radius: 0;
+    }
+  }
+
+  .submitButton {
+    margin-top: 12px;
+    width: max-content;
+  }
+}

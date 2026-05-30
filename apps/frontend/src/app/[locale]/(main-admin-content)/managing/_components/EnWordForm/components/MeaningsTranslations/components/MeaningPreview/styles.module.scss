@@ -1,0 +1,21 @@
+.meaningPreview {
+  display: flex;
+  flex-direction: column;
+
+  .meaningInfo {
+    display: flex;
+    gap: 24px;
+  }
+
+  .examplesContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    .examples {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+  }
+}

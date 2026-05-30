@@ -1,0 +1,49 @@
+.meaningItemContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background-color: var(--fourth-background);
+  padding: 16px;
+  border-radius: 20px;
+
+  .line {
+    display: flex;
+    gap: 16px;
+
+    .leftPart {
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+
+      .subline {
+        display: flex;
+        gap: 16px;
+      }
+    }
+  }
+}
+
+.examples {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background-color: var(--third-background);
+  padding: 16px;
+  border-radius: 20px;
+
+  .examplesTitle {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .example {
+    display: flex;
+    width: 100%;
+    gap: 4px;
+
+    & > div {
+      flex-grow: 1;
+    }
+  }
+}

@@ -1,0 +1,19 @@
+.meaningTranslation {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .firstLine {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .variantsOfWords {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    background: var(--third-background);
+  }
+}
