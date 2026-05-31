@@ -5,16 +5,16 @@ import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
+import { AntdRegistry } from '@ant-design/nextjs-registry';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { Provider } from '@/components/Provider';
 import { ServerAuthApi } from '@/core/api/AuthApi/ServerAuthApi';
-import { getThemeLink } from '@/helpers/getThemeLink';
+import { getThemeVariablesLink } from '@/helpers/getThemeLink';
 import { routing } from '@/i18n/routing';
 import { InterfaceLanguageEnum, ThemeE } from '@/types/common';
 import styles from './styles.module.css';
 import './globals.css';
-import 'primeicons/primeicons.css';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -46,20 +46,22 @@ export default async function RootLayout({ children, params }: RootLayoutP) {
   const isAuth = isValidTokenRes.isValid;
   const cookieStore = await cookies();
   const theme = (cookieStore.get('theme')?.value || ThemeE.light) as ThemeE;
-  const themeLink = getThemeLink(theme);
+  const themeLink = getThemeVariablesLink(theme);
   return (
     <html lang={locale} className={`${geistSans.variable} ${geistMono.variable}`}>
       <head>
-        <link id="theme-link" rel="stylesheet" href={themeLink} />
+        <link id="variables-link" rel="stylesheet" href={themeLink} />
       </head>
       <body>
-        <NextIntlClientProvider messages={messages}>
-          <Header />
-          <main className={styles.mainContainer}>
-            <Provider isAuth={isAuth}>{children}</Provider>
-          </main>
-          <Footer />
-        </NextIntlClientProvider>
+        <AntdRegistry>
+          <Provider theme={theme} isAuth={isAuth}>
+            <NextIntlClientProvider messages={messages}>
+              <Header />
+              <main className={styles.mainContainer}>{children}</main>
+              <Footer />
+            </NextIntlClientProvider>
+          </Provider>
+        </AntdRegistry>
       </body>
     </html>
   );

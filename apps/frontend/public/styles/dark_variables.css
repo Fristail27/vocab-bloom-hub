@@ -1,0 +1,21 @@
+:root {
+  --color-bg-base: #000000;
+  --color-bg-layout: #141414;
+  --color-bg-container: #1f1f1f;
+  --color-bg-elevated: #2a2a2a;
+
+  --color-text: rgba(255, 255, 255, 0.85);
+  --color-text-secondary: rgba(255, 255, 255, 0.45);
+  --color-text-disabled: rgba(255, 255, 255, 0.25);
+
+  --color-border: #424242;
+  --color-border-secondary: #303030;
+
+  --color-primary: #1668dc;
+  --color-primary-hover: #3c89e8;
+  --color-primary-active: #1554ad;
+
+  --color-success: #49aa19;
+  --color-warning: #d89614;
+  --color-error: #dc4446;
+}

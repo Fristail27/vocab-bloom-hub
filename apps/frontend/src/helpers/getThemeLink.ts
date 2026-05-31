@@ -1,3 +1,5 @@
 import { ThemeE } from '@/types/common';
 
-export const getThemeLink = (theme: ThemeE) => `/themes/lara-${theme}-cyan/theme.css`;
+export const getThemeVariablesLink = (theme: ThemeE) => {
+  return `/styles/${theme}_variables.css`;
+};

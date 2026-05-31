@@ -3,6 +3,13 @@
   justify-content: space-between;
   gap: 48px;
   width: 100%;
-  padding: 16px;
+  padding: 4px 16px;
   align-items: center;
+  background-color: var(--color-bg-container);
+
+  .rightPart {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
 }

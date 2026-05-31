@@ -1,6 +1,6 @@
 import { InterfaceLanguageEnum } from '@/types/common';
 
 export const InterfaceLanguageOptions = [
-  { code: InterfaceLanguageEnum.en, name: 'English' },
-  { code: InterfaceLanguageEnum.ru, name: 'Русский' },
+  { value: InterfaceLanguageEnum.en, label: 'English', icons: ['usaFlag' as const] },
+  { value: InterfaceLanguageEnum.ru, label: 'Русский', icons: ['rusFlag' as const] },
 ];
