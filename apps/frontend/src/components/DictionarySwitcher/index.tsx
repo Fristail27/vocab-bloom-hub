@@ -2,36 +2,40 @@
 
 import React, { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Dropdown } from 'primereact/dropdown';
 import cookies from 'js-cookie';
 import { DictionaryOptions } from '@/components/DictionarySwitcher/constants';
 import { DictionaryE } from '../../../../server/types';
-import styles from './styles.module.scss';
+import { Select } from '@/core/ui/Select';
+import { labelRender, optionRender } from '@/core/ui/Select/utils';
+import { LabelInValueType } from '@rc-component/select/es/Select';
+import icons from '@/core/ui/icons';
 
 export const DictionarySwitcher: React.FC = () => {
-  const defaultValue = DictionaryOptions.find((o) => o.code === DictionaryE.en);
-  const [value, setValue] = useState(defaultValue);
+  const [value, setValue] = useState<DictionaryE>(DictionaryE.en);
   const t = useTranslations('common');
 
+  const renderLabel = (o: LabelInValueType) =>
+    labelRender(o, DictionaryOptions.find((op) => op.value === o.value)?.icons as Array<keyof typeof icons>);
+
   useEffect(() => {
-    const v = cookies.get('dictionary');
+    const v = cookies.get('dictionary') as DictionaryE;
     if (!v) {
       cookies.set('dictionary', DictionaryE.en);
     } else {
-      setValue(DictionaryOptions.find((o) => o.code === v));
+      setValue(v);
     }
   }, []);
 
   return (
-    <div className={styles.dictionarySelect}>
-      <span>{t('dictionary')}</span>
-      <Dropdown
-        value={value}
-        onChange={(e) => setValue(e.value)}
-        options={DictionaryOptions}
-        placeholder={t('dictionary')}
-        optionLabel="name"
-      />
-    </div>
+    <Select<DictionaryE>
+      disabled
+      label={t('dictionary')}
+      value={value}
+      onChange={setValue}
+      options={DictionaryOptions}
+      placeholder={t('dictionary')}
+      optionRender={optionRender}
+      labelRender={renderLabel}
+    />
   );
 };

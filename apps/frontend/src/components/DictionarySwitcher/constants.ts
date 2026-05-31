@@ -1,3 +1,9 @@
 import { DictionaryE } from '../../../../server/types';
 
-export const DictionaryOptions = [{ code: DictionaryE.en, name: 'English' }];
+export const DictionaryOptions = [
+  {
+    value: DictionaryE.en,
+    label: 'English',
+    icons: ['usaFlag' as const],
+  },
+];

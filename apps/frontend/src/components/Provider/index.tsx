@@ -2,22 +2,23 @@
 
 import React, { ReactNode, useEffect, useState, useMemo } from 'react';
 import { useParams, usePathname, useRouter } from 'next/navigation';
-import { PrimeReactProvider } from 'primereact/api';
-import { SideMenu } from '@/components/SideMenu';
+import { ConfigProvider, theme as antdTheme } from 'antd';
 import { StateContext } from '@/components/StateContext';
-import styles from './styles.module.scss';
+import { ThemeE } from '@/types/common';
 
 type ProviderP = {
   children: ReactNode;
   isAuth: boolean;
+  theme: ThemeE;
 };
 
-export const Provider: React.FC<ProviderP> = ({ children, isAuth: defaultIsAuth }) => {
+export const Provider: React.FC<ProviderP> = ({ children, isAuth: defaultIsAuth, theme: defaultTheme }) => {
   const [isAuth, setIsAuth] = useState(defaultIsAuth);
+  const [theme, setTheme] = useState(defaultTheme);
   const pathname = usePathname();
   const router = useRouter();
   const { locale } = useParams();
-  const state = useMemo(() => ({ isAuth, setIsAuth }), [isAuth]);
+  const state = useMemo(() => ({ isAuth, setIsAuth, theme, setTheme }), [isAuth, theme]);
 
   useEffect(() => {
     if (!isAuth && pathname !== `/${locale}/login`) {
@@ -27,15 +28,14 @@ export const Provider: React.FC<ProviderP> = ({ children, isAuth: defaultIsAuth 
 
   return (
     <StateContext value={state}>
-      <PrimeReactProvider>
+      <ConfigProvider
+        theme={{
+          algorithm: theme === ThemeE.dark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+        }}
+      >
         {pathname === `/${locale}/login` && children}
-        {pathname !== `/${locale}/login` && isAuth && (
-          <>
-            <SideMenu />
-            <div className={styles.mainContent}>{children}</div>
-          </>
-        )}
-      </PrimeReactProvider>
+        {pathname !== `/${locale}/login` && isAuth && children}
+      </ConfigProvider>
     </StateContext>
   );
 };

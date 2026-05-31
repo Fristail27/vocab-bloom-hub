@@ -3,12 +3,14 @@
 import { useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Button } from 'primereact/button';
-import { InputText } from 'primereact/inputtext';
+import { Button, Typography } from 'antd';
 import { AuthApi } from '@/core/api/AuthApi';
 import { hashLoginString } from '../../../../../../../server/core/utils/crypto';
 import { StateContext } from '@/components/StateContext';
+import { Input } from '@/core/ui/Input';
 import styles from './styles.module.scss';
+
+const { Text, Title } = Typography;
 
 export const LoginForm = () => {
   const [username, setUsername] = useState('');
@@ -36,26 +38,33 @@ export const LoginForm = () => {
 
   return (
     <div className={styles.card}>
-      <h1>Vocab Bloom Hub</h1>
-      <h2>{t('admin_panel_sign_in')}</h2>
-      <InputText
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        id="username"
-        name="username"
-        invalid={!!error}
-        placeholder={t('username')}
-      />
-      <InputText
-        value={pass}
-        onChange={(e) => setPass(e.target.value)}
-        id="password"
-        name="password"
-        invalid={!!error}
-        placeholder={t('password')}
-      />
-      {error && <span className={styles.error}>{error}</span>}
-      <Button disabled={!!error} onClick={submitLogin} label={t('sign_in')} />
+      <Title level={1}>Vocab Bloom Hub</Title>
+      <Title level={3}>{t('admin_panel_sign_in')}</Title>
+      <div className={styles.form}>
+        <Input
+          label={t('username')}
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          id="username"
+          name="username"
+          status={error ? 'error' : undefined}
+          placeholder={t('username')}
+        />
+        <Input
+          label={t('password')}
+          value={pass}
+          type="password"
+          onChange={(e) => setPass(e.target.value)}
+          id="password"
+          name="password"
+          status={error ? 'error' : undefined}
+          placeholder={t('password')}
+        />
+        {error && <Text type="danger">{error}</Text>}
+        <Button type="primary" disabled={!!error} onClick={submitLogin}>
+          {t('sign_in')}
+        </Button>
+      </div>
     </div>
   );
 };

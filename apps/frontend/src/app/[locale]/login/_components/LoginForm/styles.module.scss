@@ -1,17 +1,21 @@
 .card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 28px;
   max-width: 600px;
-  h1 {
+  align-items: center;
+
+  h1,
+  h3 {
     text-align: center;
+    margin: 0 !important;
   }
 
-  .input {
-    height: 40px;
-  }
-
-  .error {
-    color: var(--red-400);
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 280px;
+    width: 100%;
   }
 }
