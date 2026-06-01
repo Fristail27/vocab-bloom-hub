@@ -1,0 +1,6 @@
+.mainSection {
+  :global(.ant-card-body) {
+    display: flex;
+    gap: 12px;
+  }
+}

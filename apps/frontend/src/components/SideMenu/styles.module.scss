@@ -29,6 +29,12 @@
       display: flex;
       flex-direction: column;
       gap: 4px;
+
+      .linkItem {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
     }
   }
 }

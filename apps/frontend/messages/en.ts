@@ -23,5 +23,16 @@ export default {
   menu: {
     menu_title: 'Menu',
     main: 'Main',
+    managing: 'Managing',
+    statistics: 'Statistics',
+  },
+  managing: {
+    add_word: 'Add word',
+    add_phrase: 'Add phrase',
+    add_grammar_patten: 'Add grammar patten',
+    edit: 'Edit data',
+  },
+  statistics: {
+    common_statistics: 'Common statistics',
   },
 };

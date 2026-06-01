@@ -13,7 +13,7 @@ import { ServerAuthApi } from '@/core/api/AuthApi/ServerAuthApi';
 import { getThemeVariablesLink } from '@/helpers/getThemeLink';
 import { routing } from '@/i18n/routing';
 import { InterfaceLanguageEnum, ThemeE } from '@/types/common';
-import styles from './styles.module.css';
+import styles from './styles.module.scss';
 import './globals.css';
 
 const geistSans = Geist({

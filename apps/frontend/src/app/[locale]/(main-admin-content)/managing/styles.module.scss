@@ -1,0 +1,16 @@
+.mainPage {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  .headerBtns {
+    display: flex;
+    gap: 8px;
+  }
+
+  .breadcrumbItem {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
