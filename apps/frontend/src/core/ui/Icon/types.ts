@@ -14,4 +14,5 @@ export type IconP = {
   name: keyof typeof icons;
   width?: number;
   height?: number;
+  color?: string | undefined;
 };

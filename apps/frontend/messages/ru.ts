@@ -23,5 +23,16 @@ export default {
   menu: {
     menu_title: 'Меню',
     main: 'Главная',
+    managing: 'Управление',
+    statistics: 'Статистика',
+  },
+  managing: {
+    add_word: 'Добавить слово',
+    add_phrase: 'Добавить фразу',
+    add_grammar_patten: 'Добавить грамматический шаблон',
+    edit: 'Редактировать',
+  },
+  statistics: {
+    common_statistics: 'Общая статистика',
   },
 };
