@@ -1,0 +1,21 @@
+.checkWordBlock {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+
+  .wordInput {
+    border-bottom-right-radius: 0;
+    border-top-right-radius: 0;
+  }
+
+  .posSelect {
+    width: 132px;
+    border-radius: 0;
+  }
+
+  .checkButton {
+    border-left: none;
+    border-bottom-left-radius: 0;
+    border-top-left-radius: 0;
+  }
+}

@@ -32,6 +32,10 @@ export default {
     add_grammar_patten: 'Добавить грамматический шаблон',
     edit: 'Редактировать',
   },
+  en_managing_words: {
+    word: 'Слово',
+    part_of_speech: 'Часть речи',
+  },
   statistics: {
     common_statistics: 'Общая статистика',
   },

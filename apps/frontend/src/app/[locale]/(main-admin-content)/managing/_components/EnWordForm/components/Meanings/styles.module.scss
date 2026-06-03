@@ -1,0 +1,19 @@
+.meanings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  .title {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .addBtn {
+    width: max-content;
+  }
+
+  .nextButton {
+    width: max-content;
+  }
+}

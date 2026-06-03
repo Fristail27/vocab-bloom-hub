@@ -1,0 +1,21 @@
+.subFormsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  .subForms {
+    display: flex;
+    gap: 20px;
+    background-color: var(--main-background);
+    padding: 20px;
+    border-radius: 20px;
+
+    & > * {
+      flex-grow: 1;
+    }
+  }
+
+  .nextButton {
+    width: max-content;
+  }
+}

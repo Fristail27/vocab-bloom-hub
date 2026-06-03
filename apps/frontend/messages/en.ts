@@ -32,6 +32,10 @@ export default {
     add_grammar_patten: 'Add grammar patten',
     edit: 'Edit data',
   },
+  en_managing_words: {
+    word: 'Word',
+    part_of_speech: 'Part of speech',
+  },
   statistics: {
     common_statistics: 'Common statistics',
   },
