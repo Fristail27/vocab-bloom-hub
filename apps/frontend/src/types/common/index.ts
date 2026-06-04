@@ -1,3 +1,5 @@
+import { useTranslations } from 'next-intl';
+
 export enum ThemeE {
   light = 'light',
   dark = 'dark',
@@ -13,3 +15,5 @@ export type CommonPageP = {
     locale: InterfaceLanguageEnum;
   }>;
 };
+
+export type TranslatorT = ReturnType<typeof useTranslations>;

@@ -1,0 +1,10 @@
+.categoriesTags {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .tags {
+    display: flex;
+    gap: 8px;
+  }
+}

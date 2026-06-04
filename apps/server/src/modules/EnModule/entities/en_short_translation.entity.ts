@@ -30,15 +30,13 @@ export class EnShortTranslation {
   @Column({ type: 'text' })
   description!: string;
 
-  @ManyToOne(() => EnWord, (entry) => entry.shortTranslations, {
-    onDelete: 'CASCADE',
-  })
-  @JoinColumn({ name: 'word_entry' })
-  word_entry!: EnWord;
+  @ManyToOne(() => EnWord, (entry) => entry.short_translations, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'word' })
+  word!: EnWord;
 
   @Column({ type: 'simple-enum', enum: AvailableTranslationLanguagesE })
   language!: AvailableTranslationLanguagesE.ru;
 
-  @Column({ type: 'text', array: true })
+  @Column({ type: 'simple-array', array: true, default: [] })
   variantsOfWords!: string[];
 }

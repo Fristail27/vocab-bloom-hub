@@ -1,25 +1,23 @@
 import {
-  EnWordFormsE,
-  WordLevelE,
   EnAreaVariantsE,
-  EnVerbTransitivityE,
-  EnPhrasalObjectPatternE,
-  AvailableTranslationLanguagesE,
-  CategoryE,
-  EnWordT,
-  EnShortTranslationT,
   EnMeaningT,
-} from '../../../../../../../../server/types';
+  EnPhrasalObjectPatternE,
+  EnVerbTransitivityE,
+  EnWordFormsE,
+  EnWordFormT,
+  EnWordT,
+} from 'server/types';
 import { CommonInfoDataT } from './types';
-import { EnWordFormModeE, DefaultCommonData, FormWordT, GetStepItemsArg } from './constants';
+import { DefaultCommonData } from './constants';
+import { TranslatorT } from '@/types/common';
 
-export const getDefaultSubForm = (key: EnWordFormsE): FormWordT => {
+export const getDefaultSubForm = (key: EnWordFormsE): EnWordFormT => {
   return {
     word: '',
     area_variant: EnAreaVariantsE.common,
     transcription: '',
     id: Math.ceil(Math.random() * 100000000),
-    form: key,
+    form_of_word: key,
   };
 };
 
@@ -28,9 +26,11 @@ export const getInitCommonInfo = (w?: EnWordT | undefined): CommonInfoDataT => {
     return DefaultCommonData;
   }
   return {
+    id: w.id,
+    form_of_word: w.form_of_word,
     generated: true,
-    generatedByModel: 'unknown',
-    category: CategoryE.unknown,
+    generated_by_model: 'unknown',
+    categories: [],
     verb___is_phrasal: !!w.verb___is_phrasal,
     transcription: w.transcription || '',
     area_variant: w.area_variant,
@@ -41,55 +41,41 @@ export const getInitCommonInfo = (w?: EnWordT | undefined): CommonInfoDataT => {
     description: w.description || '',
     is_obsolete: !!w.is_obsolete,
     is_abbreviation: w.is_abbreviation,
-    word_level: w.word_level || WordLevelE.unknown,
+    word_level: w.word_level || null,
     noun___irregular_plural: !!w.noun___irregular_plural,
     noun___is_proper: !!w.noun___is_proper,
-    noun___countable: !!w.noun___countable,
-    base_phrasal: w.base_phrasal?.word_text || undefined,
+    noun___uncountable: !!w.noun___uncountable,
+    base_phrasal: w.base_phrasal || undefined,
   };
 };
 
-export const mapInitForms = (forms: EnWordT[]): FormWordT[] => {
+export const mapInitForms = (forms: EnWordFormT[]): EnWordFormT[] => {
   return forms.map((w) => ({
-    word: w.word_text,
+    word: w.word,
     id: w.id,
     area_variant: w.area_variant,
     transcription: w.transcription || '',
-    form: w.form_of_word,
+    form_of_word: w.form_of_word,
   }));
-};
-
-export const getInitShortTranslations = (
-  shortTranslations: EnShortTranslationT[] = [],
-): EnShortTranslationT | undefined => {
-  if (!shortTranslations || shortTranslations.length === 0) {
-    return undefined;
-  }
-  const t = shortTranslations.find((t) => t.language === AvailableTranslationLanguagesE.ru);
-  return t;
 };
 
 export const getInitMeanings = (meanings: EnMeaningT[] = []): EnMeaningT[] => {
   return [...meanings]
     .map((m) => ({
       ...m,
-      translation: m.translation.map((t) => t),
+      translation: m.translations.map((t) => t),
     }))
     .sort((a, b) => a.sort_order - b.sort_order);
 };
 
-export const getStepItems = (data: GetStepItemsArg, mode: EnWordFormModeE) => {
+export const getStepItems = (t: TranslatorT, disabled: boolean) => {
   return [
-    {
-      title: 'Проверка слова',
-      content: data?.word && `${data.word} - ${data.pos}`,
-      disabled: !!data || mode === EnWordFormModeE.edit,
-    },
-    { title: 'Основное', disabled: !data && mode !== EnWordFormModeE.edit },
-    { title: 'Формы слова', disabled: !data && mode !== EnWordFormModeE.edit },
-    { title: 'Значения слова', disabled: !data && mode !== EnWordFormModeE.edit },
-    { title: 'Короткий перевод', disabled: !data && mode !== EnWordFormModeE.edit },
-    { title: 'Перевод значений', disabled: !data && mode !== EnWordFormModeE.edit },
-    { title: 'Сохранение', disabled: !data && mode !== EnWordFormModeE.edit },
+    { title: t('checking_word'), disabled: true },
+    { title: t('basic_information'), disabled },
+    { title: t('word_forms'), disabled },
+    { title: t('word_meanings'), disabled },
+    { title: t('short_translations'), disabled },
+    { title: t('meaning_translations'), disabled },
+    { title: t('save_word'), disabled },
   ];
 };

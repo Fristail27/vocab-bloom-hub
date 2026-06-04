@@ -1,30 +1,9 @@
-import {
-  CategoryE,
-  EnAreaVariantsE,
-  LanguageRegisterE,
-  WordLevelE,
-} from '../../../../../../../../server/types';
-import { FormWordT } from './constants';
-import { NounSettingsT } from './components/NounSettings/types';
-import { VerbSettingsT } from './components/VerbSettings/types';
+import { EnWordT } from 'server/types';
 
-export type SubFormsT = {
-  [key: string]: FormWordT[];
-};
-
-export type CommonInfoDataT = {
-  generatedByModel: string;
-  generated: boolean;
-  is_abbreviation: boolean | undefined | null;
-  category: CategoryE | null;
-  description: string;
-  transcription: string;
-  language_register: LanguageRegisterE;
-  is_obsolete: boolean;
-  word_level: WordLevelE;
-  area_variant: EnAreaVariantsE;
-} & Partial<NounSettingsT> &
-  Partial<VerbSettingsT>;
+export type CommonInfoDataT = Omit<
+  EnWordT,
+  'meanings' | 'forms' | 'short_translations' | 'part_of_speech' | 'word' | 'word_text'
+>;
 
 export enum StatusOfWordPresenceE {
   present = 'present',

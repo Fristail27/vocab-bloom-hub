@@ -1,34 +1,18 @@
 .commonWordInfo {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 
   .line {
     display: flex;
-    gap: 24px;
-    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .inputContainer {
     display: flex;
     flex-direction: column;
     width: 200px;
-
-    .input {
-    }
-  }
-
-  .radioContainer {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .selectContainer {
-    width: 160px;
-
-    .select {
-      width: 100%;
-    }
   }
 
   .btn {

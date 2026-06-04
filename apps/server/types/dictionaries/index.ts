@@ -1,10 +1,10 @@
 export * from './en';
+export * from './EnApiTypes';
 
 export enum LanguageRegisterE {
   formal = 'formal',
   informal = 'informal',
   slang = 'slang',
-  unknown = 'unknown',
 }
 
 export enum WordLevelE {
@@ -14,7 +14,6 @@ export enum WordLevelE {
   B2 = 'B2',
   C1 = 'C1',
   C2 = 'C2',
-  unknown = 'unknown',
 }
 
 export enum CategoryE {
@@ -28,7 +27,6 @@ export enum CategoryE {
   political = 'political',
   sport = 'sport',
   culinary = 'culinary',
-  unknown = 'unknown',
 }
 
 export enum AvailableTranslationLanguagesE {
