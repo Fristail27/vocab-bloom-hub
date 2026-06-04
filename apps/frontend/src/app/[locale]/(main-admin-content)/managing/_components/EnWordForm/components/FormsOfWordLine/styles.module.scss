@@ -1,17 +1,46 @@
-.inputsAndButton {
+.column {
   display: flex;
   flex-direction: column;
   gap: 6px;
   flex-grow: 1;
 
+  .title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    h4 {
+      margin: 0;
+    }
+  }
+
+  .formsLine {
+    display: flex;
+    gap: 8px;
+  }
+  .formOfWordCard {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    border-radius: 12px;
+    background-color: var(--color-bg-elevated);
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    width: 204px;
+
+    .deleteBtn {
+      position: absolute;
+      right: 4px;
+      top: 4px;
+      padding: 2px;
+      height: 18px;
+    }
+  }
+
   .firstLine {
     display: flex;
     gap: 6px;
     align-items: flex-end;
-
-    .select {
-      width: 80px;
-    }
 
     & > div:first-child {
       flex-grow: 1;

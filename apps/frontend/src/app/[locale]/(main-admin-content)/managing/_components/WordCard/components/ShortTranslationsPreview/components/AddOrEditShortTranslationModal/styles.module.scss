@@ -1,0 +1,27 @@
+.shortTranslation {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .nextButton {
+    width: max-content;
+  }
+
+  .variants_of_words {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: var(--third-background);
+
+    .subtitle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .variantWordLine {
+      display: flex;
+      gap: 4px;
+    }
+  }
+}

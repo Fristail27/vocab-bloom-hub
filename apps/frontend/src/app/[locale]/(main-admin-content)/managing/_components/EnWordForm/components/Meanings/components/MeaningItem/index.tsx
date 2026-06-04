@@ -1,15 +1,13 @@
 import React from 'react';
-import { Button, Input as AntdInput, Radio, Typography } from 'antd';
-import { PlusCircleFilled } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
+import { Badge, Button, Input as AntdInput, Typography } from 'antd';
+import { CloseOutlined, PlusOutlined } from '@ant-design/icons';
 import { Input } from '@/core/ui/Input';
-import { Select } from '@/core/ui/Select';
-import { EnMeaningT, LanguageRegisterE, WordLevelE } from 'server/types';
-import {
-  AreaVariants,
-  Levels,
-} from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/constants';
-import { EnAreaVariantsE } from 'server/types';
-import { optionRender } from '@/core/ui/Select/utils';
+import { EnMeaningT, WordLevelE, EnAreaVariantsE, LanguageRegisterE, CategoryE } from 'server/types';
+import { RegionalLabelSelect } from '../../../RegionalLabelSelect';
+import { WordLevelSelect } from '../../../WordLevelSelect';
+import { LanguageRegisterSelect } from '../../../LanguageRegisterSelect';
+import { CategorySelect } from '../../../CategoriesSelect';
 import styles from './styles.module.scss';
 
 const { Text } = Typography;
@@ -22,6 +20,7 @@ type MeaningItemP = {
 };
 
 export const MeaningItem: React.FC<MeaningItemP> = ({ meaning, onChange, onDelete }) => {
+  const t = useTranslations('en_managing_words');
   const onChangeExample = (v: string, i: number) => {
     onChange({
       ...meaning,
@@ -42,68 +41,59 @@ export const MeaningItem: React.FC<MeaningItemP> = ({ meaning, onChange, onDelet
 
   return (
     <div className={styles.meaningItemContainer}>
-      <div className={styles.line}>
-        <div className={styles.leftPart}>
-          <div className={styles.subline}>
-            <Text strong>{meaning.sort_order}.</Text>
-            <Input
-              label="Значение коротко"
-              value={meaning.title}
-              onChange={(e) => onChange({ ...meaning, title: e.target.value })}
-            />
-            <Select
-              className={styles.select}
-              label="Региональная маркированность"
-              options={AreaVariants}
-              optionRender={optionRender}
-              value={meaning.area_variant}
-              onChange={(v) => onChange({ ...meaning, area_variant: v as EnAreaVariantsE })}
-            />
-            <Select
-              label="Уровень слова"
-              options={Levels}
-              className={styles.select}
-              value={meaning.meaning_level}
-              onChange={(v) => onChange({ ...meaning, meaning_level: v as WordLevelE })}
-            />
-          </div>
-          <div className={styles.inputContainer}>
-            <Text strong>Описание подробней</Text>
-            <TextArea
-              value={meaning.definition}
-              onChange={(e) => onChange({ ...meaning, definition: e.target.value })}
-            />
-          </div>
-        </div>
-        <div className={styles.selectContainer}>
-          <Text strong>language register</Text>
-          <Radio.Group
-            vertical
-            className={styles.radio}
-            onChange={(e) => onChange({ ...meaning, language_register: e.target.value })}
-            value={meaning.language_register}
-          >
-            <Radio value={LanguageRegisterE.formal}>formal</Radio>
-            <Radio value={LanguageRegisterE.informal}>informal</Radio>
-            <Radio value={LanguageRegisterE.slang}>slang</Radio>
-          </Radio.Group>
-        </div>
-        <Button type="primary" danger onClick={() => onDelete(meaning.sort_order)}>
-          Удалить
-        </Button>
+      <Button
+        className={styles.deleteMeaning}
+        type="primary"
+        danger
+        onClick={() => onDelete(meaning.sort_order)}
+      >
+        <CloseOutlined />
+      </Button>
+      <Badge className={styles.sortOrder} color="blue" count={meaning.sort_order} />
+      <Input
+        className={styles.shortMeaning}
+        label={t('short_meaning')}
+        value={meaning.title}
+        onChange={(e) => onChange({ ...meaning, title: e.target.value })}
+      />
+      <div className={styles.subline}>
+        <RegionalLabelSelect
+          value={meaning.area_variant as EnAreaVariantsE}
+          onChange={(v) => onChange({ ...meaning, area_variant: v as EnAreaVariantsE })}
+        />
+        <WordLevelSelect
+          value={meaning.meaning_level as WordLevelE}
+          onChange={(v) => onChange({ ...meaning, meaning_level: v as WordLevelE })}
+        />
+        <LanguageRegisterSelect
+          onChange={(v) => onChange({ ...meaning, language_register: v })}
+          value={meaning.language_register as LanguageRegisterE}
+        />
+      </div>
+      <CategorySelect
+        containerClassName={styles.categories}
+        value={meaning.categories as CategoryE[]}
+        onChange={(v) => onChange({ ...meaning, categories: v })}
+      />
+      <div className={styles.inputContainer}>
+        <Text strong>{t('full_meaning_description')}</Text>
+        <TextArea
+          value={meaning.definition}
+          onChange={(e) => onChange({ ...meaning, definition: e.target.value })}
+        />
       </div>
       <div className={styles.examples}>
         <div className={styles.examplesTitle}>
-          <Text strong>Примеры</Text>
-          <Button className={styles.addBtn} onClick={addExample} type="primary">
-            <PlusCircleFilled />
+          <Text strong>{t('examples')}</Text>
+          <Button size="small" className={styles.addBtn} onClick={addExample} type="primary">
+            <PlusOutlined />
           </Button>
         </div>
         {meaning.examples.map((example, i) => (
           <div className={styles.example} key={i.toString()}>
             <Input onChange={(e) => onChangeExample(e.target.value, i)} value={example} />
             <Button type="primary" danger onClick={() => deleteExample(i)}>
-              Удалить пример
+              <CloseOutlined />
             </Button>
           </div>
         ))}

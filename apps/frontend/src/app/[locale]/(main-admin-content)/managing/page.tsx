@@ -5,6 +5,7 @@ import { CommonPageP } from '@/types/common';
 import { Icon } from '@/core/ui/Icon';
 import styles from './styles.module.scss';
 import { BreadcrumbSection } from '@/core/ui/Breadcrumb/components/ManagingBreadcrumbSection';
+import { SearchModule } from '@/app/[locale]/(main-admin-content)/managing/_components/SearchModule';
 
 export default async function ManagingPage({ params }: CommonPageP) {
   const { locale } = await params;
@@ -30,6 +31,7 @@ export default async function ManagingPage({ params }: CommonPageP) {
           {manageT('add_grammar_patten')}
         </Button>
       </div>
+      <SearchModule />
     </div>
   );
 }

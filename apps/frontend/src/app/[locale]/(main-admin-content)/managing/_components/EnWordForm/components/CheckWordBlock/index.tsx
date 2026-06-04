@@ -1,12 +1,13 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import { Input } from '@/core/ui/Input';
 import { Select } from '@/core/ui/Select';
 import { EnPartsOfSpeech } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/constants';
-import { EnPartOfSpeechE } from '../../../../../../../../../../server/types';
+import { EnPartOfSpeechE } from 'server/types';
 import styles from './styles.module.scss';
 
 type CheckWordBlockP = {
@@ -24,17 +25,19 @@ export const CheckWordBlock: React.FC<CheckWordBlockP> = ({
   setPartOfSpeech,
   checkWord,
 }) => {
+  const t = useTranslations('en_managing_words');
+
   return (
     <div className={styles.checkWordBlock}>
       <Input
         className={styles.wordInput}
-        label="Слово"
+        label={t('word')}
         onChange={(e) => setWord(e.target.value)}
         value={word}
       />
       <Select
         options={EnPartsOfSpeech}
-        label="Часть речи"
+        label={t('part_of_speech')}
         className={styles.posSelect}
         value={partOfSpeech}
         onChange={setPartOfSpeech}

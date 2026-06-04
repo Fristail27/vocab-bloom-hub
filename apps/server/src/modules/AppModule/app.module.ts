@@ -39,6 +39,9 @@ import { EnShortTranslation } from '../EnModule/entities/en_short_translation.en
           ...base,
           type: 'better-sqlite3',
           database: path.join(process.cwd(), '..', '..', 'dev.sqlite'),
+          prepareDatabase: (db) => {
+            db.pragma('foreign_keys = ON');
+          },
         };
       },
     }),

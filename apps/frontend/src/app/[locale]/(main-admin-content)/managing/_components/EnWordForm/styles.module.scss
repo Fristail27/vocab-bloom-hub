@@ -2,13 +2,27 @@
   display: flex;
   gap: 12px;
   padding-top: 16px;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 
-  .steps {
-    align-items: flex-start;
+  .selectedWordTitle {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .leftContainer {
+    width: 200px;
+    .steps {
+      align-items: flex-start;
+      width: 200px;
+    }
   }
 
   .content {
-    flex-grow: 1;
+    width: calc(100% - 200px - 12px);
   }
 
   .firstLine {

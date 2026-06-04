@@ -1,25 +1,36 @@
 .meaningItemContainer {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  background-color: var(--fourth-background);
-  padding: 16px;
+  gap: 12px;
+  background-color: var(--color-bg-elevated);
   border-radius: 20px;
+  position: relative;
+  padding: 24px 16px 16px;
 
-  .line {
+  .deleteMeaning {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+  }
+
+  .sortOrder {
+    position: absolute;
+    left: 4px;
+    top: 4px;
+  }
+
+  .shortMeaning {
+    width: calc(100% - 48px);
+  }
+
+  .subline {
     display: flex;
     gap: 16px;
+    flex-wrap: wrap;
+  }
 
-    .leftPart {
-      display: flex;
-      flex-direction: column;
-      flex-grow: 1;
-
-      .subline {
-        display: flex;
-        gap: 16px;
-      }
-    }
+  .categories {
+    width: 100%;
   }
 }
 
@@ -28,12 +39,10 @@
   flex-direction: column;
   gap: 4px;
   background-color: var(--third-background);
-  padding: 16px;
-  border-radius: 20px;
 
   .examplesTitle {
     display: flex;
-    gap: 16px;
+    gap: 8px;
     align-items: center;
   }
 

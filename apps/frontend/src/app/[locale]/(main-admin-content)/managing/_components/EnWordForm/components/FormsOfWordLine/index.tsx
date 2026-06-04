@@ -1,20 +1,18 @@
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Button, Typography } from 'antd';
-import { CloseOutlined, PlusCircleOutlined } from '@ant-design/icons';
+import { CloseOutlined, PlusOutlined } from '@ant-design/icons';
 import { Input } from '@/core/ui/Input';
-import { Select } from '@/core/ui/Select';
-import { optionRender } from '@/core/ui/Select/utils';
-import { AreaVariantsOptions } from './constants';
-import { EnAreaVariantsE } from 'server/types';
-import { FormWordT } from '../../constants';
+import { EnAreaVariantsE, EnWordFormT } from 'server/types';
+import { RegionalLabelSelect } from '../RegionalLabelSelect';
+import { getTitle } from './utils';
 import styles from './styles.module.scss';
 
-const { Text } = Typography;
+const { Title } = Typography;
 
 type FormsOfWordLineP = {
-  values: FormWordT[];
-  disabled?: boolean | undefined;
-  onChange: (v: FormWordT, i: number) => void;
+  values: EnWordFormT[];
+  onChange: (v: EnWordFormT, i: number) => void;
   addField: () => void;
   deleteField: (id: number) => void;
   title: string;
@@ -22,47 +20,54 @@ type FormsOfWordLineP = {
 
 export const FormsOfWordLine: React.FC<FormsOfWordLineP> = ({
   values,
-  disabled,
   onChange,
   addField,
   title,
   deleteField,
 }) => {
+  const t = useTranslations('en_managing_words');
   return (
-    <div className={styles.inputsAndButton}>
-      <Text strong>{title}</Text>
-      {values.map((w, i) => (
-        <div key={i}>
-          <div className={styles.firstLine}>
-            <Input
-              onChange={(e) => onChange({ ...w, word: e.target.value }, i)}
-              value={w.word}
-              disabled={disabled}
-            />
-            <Button onClick={() => deleteField(w.id)} type="text">
+    <div className={styles.column}>
+      <span className={styles.title}>
+        <Title level={4}>{getTitle(title)}</Title>
+        <Button size="small" onClick={addField} type="primary">
+          <PlusOutlined />
+        </Button>
+      </span>
+      <div className={styles.formsLine}>
+        {values.map((w, i) => (
+          <div className={styles.formOfWordCard} key={i}>
+            <Button
+              size="small"
+              className={styles.deleteBtn}
+              onClick={() => deleteField(w.id)}
+              danger
+              type="primary"
+            >
               <CloseOutlined />
             </Button>
-          </div>
-          <div className={styles.firstLine}>
+            <div className={styles.firstLine}>
+              <RegionalLabelSelect
+                width={188}
+                value={w.area_variant}
+                onChange={(v) => onChange({ ...w, area_variant: v as EnAreaVariantsE }, i)}
+              />
+            </div>
+            <Input
+              label={t('form')}
+              placeholder={t('form')}
+              onChange={(e) => onChange({ ...w, word: e.target.value }, i)}
+              value={w.word}
+            />
             <Input
               onChange={(e) => onChange({ ...w, transcription: e.target.value }, i)}
-              value={w.transcription}
-              disabled={disabled}
-              placeholder="Транскрипция"
-            />
-            <Select
-              className={styles.select}
-              value={w.area_variant}
-              onChange={(v) => onChange({ ...w, area_variant: v as EnAreaVariantsE }, i)}
-              options={AreaVariantsOptions}
-              optionRender={optionRender}
+              value={w.transcription || ''}
+              label={t('pronunciation')}
+              placeholder={t('pronunciation')}
             />
           </div>
-        </div>
-      ))}
-      <Button onClick={addField} type="primary">
-        <PlusCircleOutlined />
-      </Button>
+        ))}
+      </div>
     </div>
   );
 };

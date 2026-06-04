@@ -1,11 +1,10 @@
 import React from 'react';
-import { Button, Typography } from 'antd';
-import { PlusCircleFilled } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
+import { Button } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 import { MeaningItem } from './components/MeaningItem';
-import { EnAreaVariantsE, EnMeaningT, LanguageRegisterE, WordLevelE } from 'server/types';
+import { EnAreaVariantsE, EnMeaningT, LanguageRegisterE } from 'server/types';
 import styles from './styles.module.scss';
-
-const { Text } = Typography;
 
 type MeaningsP = {
   onClickNext: () => void;
@@ -14,6 +13,7 @@ type MeaningsP = {
 };
 
 export const Meanings: React.FC<MeaningsP> = ({ meanings, setMeanings, onClickNext }) => {
+  const t = useTranslations('en_managing_words');
   const addMeaning = () => {
     setMeanings([
       ...meanings,
@@ -21,25 +21,19 @@ export const Meanings: React.FC<MeaningsP> = ({ meanings, setMeanings, onClickNe
         id: Math.random(),
         title: '',
         definition: '',
+        is_obsolete: false,
         sort_order: meanings.length + 1,
         area_variant: EnAreaVariantsE.common,
         language_register: LanguageRegisterE.formal,
         examples: [],
-        meaning_level: WordLevelE.unknown,
-        translation: [],
+        meaning_level: null,
+        translations: [],
       },
     ]);
   };
 
   const onChange = (meaning: EnMeaningT) => {
-    setMeanings(
-      meanings.map((m) => {
-        if (m.sort_order === meaning.sort_order) {
-          return meaning;
-        }
-        return m;
-      }),
-    );
+    setMeanings(meanings.map((m) => (m.sort_order === meaning.sort_order ? meaning : m)));
   };
 
   const onDelete = (sortOrder: number) => {
@@ -48,15 +42,15 @@ export const Meanings: React.FC<MeaningsP> = ({ meanings, setMeanings, onClickNe
   };
   return (
     <div className={styles.meanings}>
-      <div className={styles.title}>
-        <Text strong>Значения слова</Text>
-        <Button className={styles.addBtn} onClick={addMeaning} type="primary">
-          <PlusCircleFilled />
-        </Button>
-      </div>
       {meanings.map((m) => (
         <MeaningItem key={m.sort_order} onDelete={onDelete} onChange={onChange} meaning={m} />
       ))}
+      <div className={styles.title}>
+        <Button className={styles.addBtn} onClick={addMeaning} type="primary">
+          <PlusOutlined />
+          {t('add_meaning')}
+        </Button>
+      </div>
       <Button type="primary" onClick={onClickNext} className={styles.nextButton}>
         Далее
       </Button>
