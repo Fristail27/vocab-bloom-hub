@@ -29,20 +29,18 @@ export class EnMeaning {
   @IsDate()
   updateAt!: Date;
 
-  @ManyToOne(() => EnWord, (entry) => entry.meanings, {
-    onDelete: 'CASCADE',
-  })
-  @JoinColumn({ name: 'word_entry_id' })
-  word_entry!: EnWord;
+  @ManyToOne(() => EnWord, (entry) => entry.meanings, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'word' })
+  word!: EnWord;
 
-  @Column({ type: 'simple-enum', enum: CategoryE, nullable: true })
-  category?: CategoryE | null;
+  @Column({ type: 'simple-enum', enum: CategoryE, array: true, default: [] })
+  categories?: CategoryE[] | null;
 
   @Column({ type: 'simple-enum', enum: WordLevelE, nullable: true })
   meaning_level?: WordLevelE | null;
 
-  @Column({ type: 'simple-enum', enum: EnAreaVariantsE, nullable: true })
-  area_variant?: EnAreaVariantsE | null;
+  @Column({ type: 'simple-enum', enum: EnAreaVariantsE, default: EnAreaVariantsE.common })
+  area_variant!: EnAreaVariantsE;
 
   @Column({ type: 'simple-enum', enum: LanguageRegisterE, nullable: true })
   language_register?: LanguageRegisterE | null;
@@ -56,9 +54,12 @@ export class EnMeaning {
   @Column({ type: 'text' })
   definition!: string;
 
-  @Column('text', { array: true, nullable: true })
+  @Column({ type: 'boolean', default: false })
+  is_obsolete!: boolean;
+
+  @Column({ type: 'simple-array', array: true, nullable: true })
   examples!: string[];
 
-  @OneToMany(() => EnMeaningTranslation, (entry) => entry.meaning)
-  translation!: EnMeaningTranslation[];
+  @OneToMany(() => EnMeaningTranslation, (entry) => entry.meaning, { onDelete: 'CASCADE' })
+  translations!: EnMeaningTranslation[];
 }

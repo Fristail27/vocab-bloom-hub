@@ -4,7 +4,6 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
-  RelationId,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
   CreateDateColumn,
@@ -44,14 +43,11 @@ export class EnWord {
   @JoinColumn({ name: 'word', referencedColumnName: 'word' })
   word!: EnEntry;
 
-  @RelationId((entry: EnWord) => entry.word)
-  word_text!: string;
-
   @Column({ type: 'boolean', default: true })
   generated?: boolean;
 
   @Column({ type: 'text', nullable: true })
-  generatedByModel?: string | null;
+  generated_by_model?: string | null;
 
   @Column({ type: 'boolean', default: false })
   is_obsolete?: boolean | null;
@@ -65,8 +61,8 @@ export class EnWord {
   @Column({ type: 'simple-enum', enum: EnAreaVariantsE, nullable: true })
   area_variant!: EnAreaVariantsE;
 
-  @Column({ type: 'simple-enum', enum: CategoryE, nullable: true })
-  category?: CategoryE;
+  @Column({ type: 'simple-enum', enum: CategoryE, array: true, default: [] })
+  categories?: CategoryE[];
 
   @Column({ type: 'simple-enum', enum: LanguageRegisterE, nullable: true })
   language_register!: LanguageRegisterE;
@@ -87,16 +83,16 @@ export class EnWord {
   base_form?: EnWord | null;
 
   @OneToMany(() => EnWord, (e) => e.base_form, { onDelete: 'CASCADE' })
-  forms?: EnWord[] | null;
+  forms!: EnWord[];
 
   @Column({ type: 'text', array: true, nullable: true })
-  pattern!: string[];
+  pattern?: string[] | null;
 
-  @OneToMany(() => EnMeaning, (meaning) => meaning.word_entry)
+  @OneToMany(() => EnMeaning, (meaning) => meaning.word, { onDelete: 'CASCADE', cascade: ['remove'] })
   meanings!: EnMeaning[];
 
-  @OneToMany(() => EnShortTranslation, (tr) => tr.word_entry)
-  shortTranslations!: EnShortTranslation[];
+  @OneToMany(() => EnShortTranslation, (tr) => tr.word, { onDelete: 'CASCADE', cascade: ['remove'] })
+  short_translations!: EnShortTranslation[];
 
   /* ─────────────── NOUN ─────────────── */
 
@@ -104,7 +100,7 @@ export class EnWord {
   noun___irregular_plural?: boolean | null;
 
   @Column({ type: 'boolean', nullable: true })
-  noun___countable?: boolean | null;
+  noun___uncountable?: boolean | null;
 
   @Column({ type: 'boolean', nullable: true })
   noun___is_proper?: boolean | null;

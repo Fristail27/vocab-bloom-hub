@@ -1,0 +1,28 @@
+.foundWord {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+
+  .wordInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .topLine {
+      display: flex;
+      gap: 4px;
+      height: max-content;
+    }
+
+    .forms {
+      display: flex;
+      gap: 4px;
+      height: max-content;
+    }
+  }
+
+  .buttons {
+    display: flex;
+    gap: 4px;
+  }
+}

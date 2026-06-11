@@ -42,6 +42,7 @@ export const LoginForm = () => {
       <Title level={3}>{t('admin_panel_sign_in')}</Title>
       <div className={styles.form}>
         <Input
+          style={{ width: '100%' }}
           label={t('username')}
           value={username}
           onChange={(e) => setUsername(e.target.value)}
@@ -51,6 +52,7 @@ export const LoginForm = () => {
           placeholder={t('username')}
         />
         <Input
+          style={{ width: '100%' }}
           label={t('password')}
           value={pass}
           type="password"

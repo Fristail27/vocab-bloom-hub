@@ -30,7 +30,7 @@ export class EnMeaningTranslation {
   @Column({ type: 'simple-enum', enum: AvailableTranslationLanguagesE })
   language!: AvailableTranslationLanguagesE.ru;
 
-  @ManyToOne(() => EnMeaning, (entry) => entry.translation, {
+  @ManyToOne(() => EnMeaning, (entry) => entry.translations, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'meaning' })
@@ -42,6 +42,6 @@ export class EnMeaningTranslation {
   @Column({ type: 'text' })
   definition!: string;
 
-  @Column({ type: 'text', array: true })
+  @Column({ type: 'simple-array', array: true, default: [] })
   variantsOfWords!: string[];
 }

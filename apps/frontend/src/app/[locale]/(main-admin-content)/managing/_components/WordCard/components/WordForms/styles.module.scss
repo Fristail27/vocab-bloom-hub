@@ -1,0 +1,45 @@
+.wordForms {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .formLine {
+    display: flex;
+    gap: 8px;
+
+    .formTitle {
+      min-width: 144px;
+    }
+
+    .wordsOfForm {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      .word {
+        display: flex;
+        gap: 8px;
+
+        .wordTag {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          justify-content: center;
+        }
+
+        .tag {
+          display: flex;
+          gap: 4px;
+          align-items: center;
+          justify-content: center;
+          font-weight: 600;
+
+          :global(.ant-typography) {
+            font-size: var(--ant-font-size-sm);
+            font-weight: 400;
+          }
+        }
+      }
+    }
+  }
+}
