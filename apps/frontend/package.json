@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "js-cookie": "^3.0.7",
-    "next": "16.2.7",
+    "next": "16.2.9",
     "next-intl": "^4.12.0",
     "react": "19.2.7",
     "react-dom": "19.2.7",
