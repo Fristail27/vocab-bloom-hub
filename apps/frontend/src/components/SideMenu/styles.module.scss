@@ -3,7 +3,7 @@
   align-items: center;
   justify-content: center;
   padding: 12px;
-  min-width: 200px;
+  width: var(--side-menu-width);
 
   .menuContent {
     display: flex;

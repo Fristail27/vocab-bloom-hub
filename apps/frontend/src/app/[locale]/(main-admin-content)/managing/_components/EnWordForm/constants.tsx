@@ -1,29 +1,19 @@
-import React from 'react';
-import { Icon } from '@/core/ui/Icon';
 import { CommonInfoDataT } from './types';
 import {
-  EnWordFormsE,
-  WordLevelE,
-  EnAreaVariantsE,
-  LanguageRegisterE,
-  EnPartOfSpeechE,
-  EnVerbTransitivityE,
-  EnPhrasalObjectPatternE,
   AvailableTranslationLanguagesE,
+  EnAreaVariantsE,
+  EnPartOfSpeechE,
+  EnPhrasalObjectPatternE,
   EnShortTranslationT,
-} from '../../../../../../../../server/types';
+  EnVerbTransitivityE,
+  EnWordFormsE,
+  LanguageRegisterE,
+} from 'server/types';
 
 export enum EnWordFormModeE {
   edit = 'edit',
   add = 'add',
 }
-
-export type GetStepItemsArg =
-  | {
-      word: string;
-      pos: EnPartOfSpeechE;
-    }
-  | undefined;
 
 export const EnPartsOfSpeech = [
   { value: 'noun', label: 'noun' },
@@ -42,33 +32,7 @@ export const EnPartsOfSpeech = [
   { value: 'letter', label: 'letter' },
 ];
 
-export type FormWordT = {
-  id: number;
-  word: string;
-  area_variant: EnAreaVariantsE;
-  languageRegister?: LanguageRegisterE | undefined;
-  transcription: string;
-  form: EnWordFormsE;
-};
-
-export const AreaVariants = [
-  { value: EnAreaVariantsE.common, label: 'Общее' },
-  { value: EnAreaVariantsE.british, label: 'Британское' },
-  { value: EnAreaVariantsE.american, label: 'Американское', icon: <Icon name="usaFlag" size="medium" /> },
-  { value: EnAreaVariantsE.australian, label: 'Австралийское' },
-];
-
-export const Levels = [
-  { value: WordLevelE.unknown, label: 'Не указано' },
-  { value: WordLevelE.A1, label: 'A1' },
-  { value: WordLevelE.A2, label: 'A2' },
-  { value: WordLevelE.B1, label: 'B1' },
-  { value: WordLevelE.B2, label: 'B2' },
-  { value: WordLevelE.C1, label: 'C1' },
-  { value: WordLevelE.C2, label: 'C2' },
-];
-
-export const FormsByPartOfSpeech = {
+export const FormsByPartOfSpeech: Record<EnPartOfSpeechE, EnWordFormsE[]> = {
   [EnPartOfSpeechE.noun]: [
     EnWordFormsE.plural_form,
     EnWordFormsE.possessive_singular_form,
@@ -89,27 +53,41 @@ export const FormsByPartOfSpeech = {
     EnWordFormsE.possessive_pronoun,
     EnWordFormsE.reflexive,
   ],
+  [EnPartOfSpeechE.modal_verb]: [],
+  [EnPartOfSpeechE.numeral_fractional]: [],
+  [EnPartOfSpeechE.determiner]: [],
+  [EnPartOfSpeechE.interjection]: [],
+  [EnPartOfSpeechE.article]: [],
+  [EnPartOfSpeechE.preposition]: [],
+  [EnPartOfSpeechE.conjunction]: [],
+  [EnPartOfSpeechE.letter]: [],
+  [EnPartOfSpeechE.phrase]: [],
+  [EnPartOfSpeechE.grammar_pattern]: [],
 };
 
-export const DefaultShortTranslation: EnShortTranslationT = {
-  id: 0,
-  language: AvailableTranslationLanguagesE.ru,
-  variantsOfWords: [],
-  description: '',
-};
+export const DefaultShortTranslation: EnShortTranslationT[] = [
+  {
+    id: 0,
+    language: AvailableTranslationLanguagesE.ru,
+    variants_of_words: [],
+    description: '',
+  },
+];
 
 export const DefaultCommonData: CommonInfoDataT = {
+  id: 0,
   generated: true,
-  generatedByModel: 'GPT-5.3-mini',
-  category: null,
-  word_level: WordLevelE.unknown,
+  form_of_word: EnWordFormsE.base_form,
+  generated_by_model: 'GPT-5.3-mini',
+  categories: [],
+  word_level: null,
   is_obsolete: false,
   is_abbreviation: null,
   language_register: LanguageRegisterE.formal,
   area_variant: EnAreaVariantsE.common,
   transcription: '',
   description: '',
-  noun___countable: true,
+  noun___uncountable: false,
   noun___is_proper: false,
   noun___irregular_plural: false,
   verb___is_irregular: false,

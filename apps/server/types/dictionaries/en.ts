@@ -60,20 +60,34 @@ export enum EnPhrasalObjectPatternE {
   inseparable = 'inseparable', // look after sb
   separable = 'separable', // turn off the light / turn the light off
   separable_pronoun_only = 'separable_pronoun_only', // turn it off ONLY
-  unknown = 'unknown',
 }
 
 export enum EnVerbTransitivityE {
   transitive = 'transitive',
   intransitive = 'intransitive',
   both = 'both',
-  unknown = 'unknown',
 }
 
 export type EnMeaningTranslationT = Omit<EnMeaningTranslation, 'updateAt' | 'createdAt' | 'meaning'>;
-export type EnMeaningT = Omit<EnMeaning, 'updateAt' | 'createdAt' | 'word_entry' | 'translation'> & {
-  translation: EnMeaningTranslationT[];
+export type EnMeaningT = Omit<EnMeaning, 'updateAt' | 'createdAt' | 'translations' | 'word'> & {
+  translations: EnMeaningTranslationT[];
+};
+export type EnShortTranslationT = Omit<EnShortTranslation, 'updateAt' | 'createdAt' | 'word_entry' | 'word'>;
+
+export type EnWordFormT = Pick<
+  Omit<EnWordT, 'forms'>,
+  'id' | 'area_variant' | 'transcription' | 'form_of_word' | 'word'
+>;
+
+export type EnWordT = Omit<
+  EnWord,
+  'createdAt' | 'updateAt' | 'meanings' | 'short_translations' | 'forms' | 'base_phrasal' | 'word' | 'base_form'
+> & {
+  word: string;
+  meanings: EnMeaningT[];
+  short_translations: EnShortTranslationT[];
+  forms: EnWordFormT[];
+  base_phrasal: string | undefined;
+  base_form?: Omit<EnWordT, 'base_form'> | undefined;
 };
 export type EnEntryT = EnEntry;
-export type EnWordT = EnWord;
-export type EnShortTranslationT = Omit<EnShortTranslation, 'updateAt' | 'createdAt' | 'word_entry'>;

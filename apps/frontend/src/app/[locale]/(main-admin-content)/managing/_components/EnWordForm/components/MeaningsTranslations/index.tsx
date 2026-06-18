@@ -4,6 +4,8 @@ import { AvailableTranslationLanguagesE, EnMeaningT, EnMeaningTranslationT } fro
 import { MeaningPreview } from '../MeaningsTranslations/components/MeaningPreview';
 import { MeaningTranslation } from '../MeaningsTranslations/components/MeaningTranslation';
 import styles from './styles.module.scss';
+import { PlusOutlined } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 
 type MeaningTranslationsP = {
   meanings: EnMeaningT[];
@@ -16,23 +18,24 @@ export const MeaningsTranslations: React.FC<MeaningTranslationsP> = ({
   onClickNext,
   meanings,
 }) => {
+  const t = useTranslations('en_managing_words');
   const addTranslation = (id: number) => {
     const newTranslation: EnMeaningTranslationT = {
       id: Math.random(),
       title: '',
       definition: '',
-      variantsOfWords: [],
+      variants_of_words: [],
       language: AvailableTranslationLanguagesE.ru,
     };
     setMeanings(
-      meanings.map((m) => (m.id === id ? { ...m, translation: [...m.translation, newTranslation] } : m)),
+      meanings.map((m) => (m.id === id ? { ...m, translations: [...m.translations, newTranslation] } : m)),
     );
   };
   const onChangeTranslation = (meaningId: number, translation: EnMeaningTranslationT) => {
     setMeanings(
       meanings.map((m) =>
         m.id === meaningId
-          ? { ...m, translation: m.translation.map((t) => (t.id === translation.id ? translation : t)) }
+          ? { ...m, translations: m.translations.map((t) => (t.id === translation.id ? translation : t)) }
           : m,
       ),
     );
@@ -41,7 +44,7 @@ export const MeaningsTranslations: React.FC<MeaningTranslationsP> = ({
   const onDeleteTranslation = (meaningId: number, translationId: number) => {
     setMeanings(
       meanings.map((m) =>
-        m.id === meaningId ? { ...m, translation: m.translation.filter((t) => t.id !== translationId) } : m,
+        m.id === meaningId ? { ...m, translations: m.translations.filter((t) => t.id !== translationId) } : m,
       ),
     );
   };
@@ -51,7 +54,7 @@ export const MeaningsTranslations: React.FC<MeaningTranslationsP> = ({
         <div key={m.id}>
           <MeaningPreview m={m} />
           <div className={styles.translations}>
-            {m.translation.map((t, i) => (
+            {m.translations.map((t, i) => (
               <MeaningTranslation
                 key={`${i}-${m.id}`}
                 t={t}
@@ -59,8 +62,14 @@ export const MeaningsTranslations: React.FC<MeaningTranslationsP> = ({
                 onChange={(t) => onChangeTranslation(m.id, t)}
               />
             ))}
-            <Button type="primary" onClick={() => addTranslation(m.id)}>
-              Добавить перевод
+            <Button
+              disabled={m.translations.length > 0}
+              style={{ width: 'max-content' }}
+              type="primary"
+              onClick={() => addTranslation(m.id)}
+            >
+              <PlusOutlined />
+              {t('add_translation')}
             </Button>
           </div>
         </div>

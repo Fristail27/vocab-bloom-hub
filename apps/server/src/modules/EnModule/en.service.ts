@@ -1,17 +1,52 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Like, Repository } from 'typeorm';
 import { EnEntry } from './entities/en_entry.entity';
 import { EnWord } from './entities/en_word.entity';
 import { EnMeaning } from './entities/en_meaning.entity';
 import { EnMeaningTranslation } from './entities/en_meaning_translation.entity';
 import { EnShortTranslation } from './entities/en_short_translation.entity';
+import {
+  AddMeaningResT,
+  AddMeaningTranslationReqT,
+  AddMeaningTranslationResT,
+  AddResT,
+  AddShortTranslationResT,
+  AddWordFormResT,
+  DeleteMeaningResT,
+  DeleteMeaningTranslationResT,
+  DeleteResT,
+  DeleteShortTranslationResT,
+  EditMeaningResT,
+  EditMeaningTranslationReqT,
+  EditMeaningTranslationResT,
+  EditShortTranslationResT,
+  EditWordFormResT,
+  EnEntryTypesE,
+  EnMeaningT,
+  EnMeaningTranslationT,
+  EnPartOfSpeechE,
+  EnShortTranslationT,
+  EnWordFormsE,
+  EnWordFormT,
+  EnWordT,
+} from '../../../types';
+import { ErrorCodes } from '../../../core/constants/error_codes';
+import { SearchReqDTO } from './dto/SearchReq.dto';
+import { mapSearchResults } from './utils/mapSearchResults';
+import { prepareWordFromDB } from './utils/prepareWordFromDB';
+import { AddWordFormReqDTO } from './dto/AddWordFormReq.dto';
+import { EditWordFormReqDTO } from './dto/EditWordFormReq.dto';
+import { AddShortTranslationReqDTO } from './dto/AddShortTranslationReq.dto';
+import { EditShortTranslationReqDTO } from './dto/EditShortTranslationReq.dto';
+import { AddMeaningReqDTO } from './dto/AddMeaningReq.dto';
+import { EditMeaningReqDTO } from './dto/EditMeaningReq.dto';
 
 @Injectable()
 export class EnService {
   constructor(
     @InjectRepository(EnEntry)
-    private readonly EnEntriesRep: Repository<EnEntry>,
+    private readonly enEntriesRep: Repository<EnEntry>,
 
     @InjectRepository(EnWord)
     private readonly enWordsRep: Repository<EnWord>,
@@ -25,4 +60,391 @@ export class EnService {
     @InjectRepository(EnShortTranslation)
     private readonly enShortTranslationRep: Repository<EnShortTranslation>,
   ) {}
+
+  async checkWord(word: string, partOfSpeech: EnPartOfSpeechE): Promise<boolean> {
+    return await this.enWordsRep
+      .createQueryBuilder('e')
+      .innerJoin('e.word', 'w')
+      .where('w.word = :word', { word })
+      .andWhere('e.part_of_speech = :partOfSpeech', { partOfSpeech })
+      .getExists();
+  }
+
+  private async addEntry(word: string, type: EnEntryTypesE): Promise<EnEntry> {
+    return this.enEntriesRep.save({ word, type });
+  }
+  private async addWordRow(entry: EnEntry, data: EnWordT): Promise<EnWord> {
+    const row = await this.getWordRow(data.word, data.part_of_speech, data.form_of_word);
+    if (row) {
+      throw new ConflictException(ErrorCodes.word_already_exists);
+    }
+    const {
+      word: _word,
+      base_form: _baseForm,
+      short_translations: _shortTranslations,
+      meanings: _meanings,
+      forms: _forms,
+      phrasal_variants: _phrasalVariants,
+      id: _id,
+      base_phrasal,
+      ...other
+    } = data;
+    let basePhrasalWord: EnWord | null | undefined;
+    if (other.part_of_speech === EnPartOfSpeechE.verb && base_phrasal) {
+      basePhrasalWord = await this.getWordRow(base_phrasal, EnPartOfSpeechE.verb, EnWordFormsE.base_form);
+      if (!basePhrasalWord) {
+        if (!entry.entries || entry.entries.length === 0) {
+          await this.enEntriesRep.delete({ word: entry.word });
+        }
+        throw new BadRequestException(ErrorCodes.phrasal_base_doesnt_exist);
+      }
+    }
+    return this.enWordsRep.save({
+      word: entry,
+      ...other,
+      ...(basePhrasalWord && { base_phrasal: basePhrasalWord }),
+    });
+  }
+
+  private async getWordRow(
+    word: string,
+    pos: EnPartOfSpeechE,
+    formOfWord: EnWordFormsE,
+  ): Promise<EnWord | null> {
+    return this.enWordsRep
+      .createQueryBuilder('w')
+      .innerJoin('w.word', 'entry')
+      .where('entry.word = :word', { word })
+      .andWhere('w.part_of_speech = :pos', { pos })
+      .andWhere('w.form_of_word = :formOfWord', { formOfWord })
+      .getOne();
+  }
+  private async getOrAddEntry(word: string, type: EnEntryTypesE): Promise<EnEntry> {
+    const entry = await this.enEntriesRep.findOne({ where: { word }, relations: { entries: true } });
+    if (entry) {
+      return entry;
+    }
+    return this.addEntry(word, type);
+  }
+
+  private async addMeaningTranslation(
+    m: EnMeaning,
+    translation: EnMeaningTranslationT,
+  ): Promise<EnMeaningTranslation> {
+    const { id: _id, ...t } = translation;
+    return this.enMeaningTranslationRep.save({ ...t, meaning: m });
+  }
+
+  private async addMeaning(word: EnWord, meaning: EnMeaningT): Promise<EnMeaning> {
+    const { translations: _translations, id: _id, ...m } = meaning;
+    const newMeaning = await this.enMeaningsRep.save({ ...m, word });
+
+    if (_translations) {
+      for (const translation of _translations) {
+        await this.addMeaningTranslation(newMeaning, translation);
+      }
+    }
+
+    return newMeaning;
+  }
+
+  private async addShortTranslation(
+    word: EnWord,
+    shortTranslation: EnShortTranslationT,
+  ): Promise<EnShortTranslation> {
+    const { id: _id, ...s } = shortTranslation;
+    return this.enShortTranslationRep.save({ ...s, word });
+  }
+
+  private async addFormOfWord(wordForm: EnWordFormT, baseWord: EnWord) {
+    const { id: _id, word, ...f } = wordForm;
+    const formEntry = await this.getOrAddEntry(word, EnEntryTypesE.word);
+    const wordRow = await this.getWordRow(word, baseWord.part_of_speech, f.form_of_word);
+    if (wordRow) {
+      return wordRow;
+    } else {
+      return this.enWordsRep.save({
+        word: formEntry,
+        ...f,
+        part_of_speech: baseWord.part_of_speech,
+        base_form: baseWord,
+      });
+    }
+  }
+
+  async addWord(body: EnWordT): Promise<AddResT> {
+    const baseEntry = await this.getOrAddEntry(body.word, EnEntryTypesE.word);
+    const baseWord = await this.addWordRow(baseEntry, body);
+
+    if (body.forms) {
+      for (const form of body.forms) await this.addFormOfWord(form, baseWord);
+    }
+
+    if (body.meanings) {
+      for (const m of body.meanings) await this.addMeaning(baseWord, m);
+    }
+
+    if (body.short_translations) {
+      for (const s of body.short_translations) await this.addShortTranslation(baseWord, s);
+    }
+
+    // TODO add phrasal_base
+    return body;
+  }
+
+  async search({ search }: SearchReqDTO): Promise<EnWordT[]> {
+    const res = await this.enEntriesRep.find({
+      where: { word: Like(`%${search}%`) },
+      relations: {
+        entries: {
+          forms: {
+            base_form: {
+              base_phrasal: { word: true },
+              phrasal_variants: true,
+              forms: true,
+              word: true,
+            },
+            word: true,
+          },
+          phrasal_variants: true,
+          base_phrasal: { word: true },
+          word: true,
+        },
+      },
+    });
+
+    return mapSearchResults(res);
+  }
+
+  async deleteWord(id: number): Promise<DeleteResT> {
+    const word = await this.enWordsRep.findOne({
+      where: { id },
+      relations: { word: true, forms: { word: true } },
+    });
+    if (!word) {
+      return { success: false };
+    }
+    const formEntries: string[] = word.forms.map((f) => f.word.word);
+    formEntries.push(word.word.word);
+    await this.enWordsRep.delete({ id });
+
+    for (const entryStr of formEntries) {
+      const entry = await this.enEntriesRep.findOne({ where: { word: entryStr } });
+      if (entry) {
+        await this.enEntriesRep.delete({ word: entryStr });
+      }
+    }
+    return { success: true };
+  }
+
+  async getWordById(id: number): Promise<EnWordT> {
+    const res = await this.enWordsRep.findOne({
+      where: { id },
+      relations: {
+        forms: { word: true },
+        meanings: { translations: true },
+        phrasal_variants: true,
+        base_phrasal: { word: true },
+        short_translations: true,
+        word: true,
+      },
+    });
+
+    if (!res) {
+      throw new NotFoundException(ErrorCodes.word_doesnt_found);
+    }
+
+    return prepareWordFromDB(res);
+  }
+
+  async addWordForm(body: AddWordFormReqDTO): Promise<AddWordFormResT> {
+    const word = await this.enWordsRep
+      .createQueryBuilder('w')
+      .innerJoin('w.word', 'entry')
+      .where('entry.word = :word', { word: body.word })
+      .andWhere('w.form_of_word = :formOfWord', { formOfWord: body.form_of_word })
+      .leftJoin('w.base_form', 'baseForm')
+      .andWhere('baseForm.id = :baseFormId', { baseFormId: body.base_word_id })
+      .getOne();
+    if (word) {
+      throw new ConflictException(ErrorCodes.word_already_exists);
+    }
+
+    // TODO объединить с getById
+    const baseWord = await this.enWordsRep.findOne({ where: { id: body.base_word_id } });
+    if (!baseWord) {
+      throw new NotFoundException(ErrorCodes.word_doesnt_found);
+    }
+    const entry = await this.getOrAddEntry(body.word, EnEntryTypesE.word);
+    await this.enWordsRep.save({
+      word: entry,
+      form_of_word: body.form_of_word,
+      area_variant: body.area_variant,
+      base_form: baseWord,
+      part_of_speech: baseWord.part_of_speech,
+      transcription: body.transcription,
+    });
+
+    return { success: true };
+  }
+
+  async editWordForm(body: EditWordFormReqDTO): Promise<EditWordFormResT> {
+    const word = await this.enWordsRep.findOne({
+      where: { id: body.id },
+      relations: { word: true },
+    });
+    if (!word) {
+      throw new NotFoundException(ErrorCodes.word_doesnt_found);
+    }
+
+    if (body.word && body.word !== word.word.word) {
+      const newEntry = await this.getOrAddEntry(body.word, EnEntryTypesE.word);
+      const oldWord = word.word.word;
+      word.word = newEntry;
+      await this.enWordsRep.save(word);
+
+      const oldEntryWordsCount = await this.enWordsRep
+        .createQueryBuilder('w')
+        .where('w.word = :word', { word: oldWord })
+        .getCount();
+
+      if (oldEntryWordsCount === 0) {
+        await this.enEntriesRep.delete({ word: oldWord });
+      }
+    }
+
+    if (body.transcription && body.transcription !== word.transcription) {
+      word.transcription = body.transcription;
+    }
+    if (body.area_variant && body.area_variant !== word.area_variant) {
+      word.area_variant = body.area_variant;
+    }
+
+    await this.enWordsRep.save(word);
+
+    return { success: true };
+  }
+
+  async addSingleShortTranslation(body: AddShortTranslationReqDTO): Promise<AddShortTranslationResT> {
+    const word = await this.enWordsRep.findOne({ where: { id: body.word_id } });
+
+    if (!word) {
+      throw new NotFoundException(ErrorCodes.word_doesnt_found);
+    }
+
+    await this.enShortTranslationRep.save({
+      word: word,
+      language: body.language,
+      description: body.description,
+      variants_of_words: body.variant_of_words,
+    });
+
+    return { success: true };
+  }
+
+  async deleteShortTranslation(id: number): Promise<DeleteShortTranslationResT> {
+    await this.enShortTranslationRep.delete({ id });
+
+    return { success: true };
+  }
+
+  async editShortTranslation(body: EditShortTranslationReqDTO): Promise<EditShortTranslationResT> {
+    const tr = await this.enShortTranslationRep.findOne({ where: { id: body.id } });
+
+    if (!tr) {
+      throw new NotFoundException(ErrorCodes.word_doesnt_found);
+    }
+    if (body.description && body.description !== tr.description) {
+      tr.description = body.description;
+    }
+    if (body.language && body.language !== tr.language) {
+      tr.language = body.language;
+    }
+
+    if (body.variant_of_words && body.variant_of_words.join() !== tr.variants_of_words.join()) {
+      tr.variants_of_words = body.variant_of_words;
+    }
+
+    await this.enShortTranslationRep.save(tr);
+    return { success: true };
+  }
+
+  async addSingleMeaning(body: AddMeaningReqDTO): Promise<AddMeaningResT> {
+    const { word_id, ...newMeaning } = body;
+    const word = await this.enWordsRep.findOne({ where: { id: word_id } });
+
+    if (!word) {
+      throw new NotFoundException(ErrorCodes.word_doesnt_found);
+    }
+
+    await this.enMeaningsRep.save({ word: word, ...newMeaning });
+
+    return { success: true };
+  }
+
+  async editMeaning(body: EditMeaningReqDTO): Promise<EditMeaningResT> {
+    const meaning = await this.enMeaningsRep.findOne({ where: { id: body.id } });
+
+    if (!meaning) {
+      throw new NotFoundException(ErrorCodes.word_doesnt_found);
+    }
+
+    if (body.title && body.title !== meaning.title) meaning.title = body.title;
+    if (body.definition && body.definition !== meaning.definition) meaning.definition = body.definition;
+    if (body.sort_order && body.sort_order !== meaning.sort_order) meaning.sort_order = body.sort_order;
+    if (body.meaning_level && body.meaning_level !== meaning.meaning_level)
+      meaning.meaning_level = body.meaning_level;
+    if (body.language_register !== meaning.language_register)
+      meaning.language_register = body.language_register;
+    if (body.area_variant && body.area_variant !== meaning.area_variant)
+      meaning.area_variant = body.area_variant;
+    if (body.examples && body.examples.join() !== meaning.examples.join()) meaning.examples = body.examples;
+    if (body.categories && body.categories.join() !== meaning.categories?.join())
+      meaning.categories = body.categories;
+
+    await this.enMeaningsRep.save(meaning);
+    return { success: true };
+  }
+
+  async deleteMeaning(id: number): Promise<DeleteMeaningResT> {
+    await this.enMeaningsRep.delete({ id });
+
+    return { success: true };
+  }
+
+  async addSingleMeaningTranslation(body: AddMeaningTranslationReqT): Promise<AddMeaningTranslationResT> {
+    const { meaning_id, ...newMeaning } = body;
+    const meaning = await this.enMeaningsRep.findOne({ where: { id: meaning_id } });
+
+    if (!meaning) {
+      throw new NotFoundException(ErrorCodes.word_doesnt_found);
+    }
+
+    await this.enMeaningTranslationRep.save({ meaning, ...newMeaning });
+
+    return { success: true };
+  }
+
+  async editMeaningTranslation(body: EditMeaningTranslationReqT): Promise<EditMeaningTranslationResT> {
+    const meaningTr = await this.enMeaningTranslationRep.findOne({ where: { id: body.id } });
+
+    if (!meaningTr) {
+      throw new NotFoundException(ErrorCodes.word_doesnt_found);
+    }
+
+    if (body.title && body.title !== meaningTr.title) meaningTr.title = body.title;
+    if (body.definition && body.definition !== meaningTr.definition) meaningTr.definition = body.definition;
+    if (body.language && body.language !== meaningTr.language) meaningTr.language = body.language;
+    if (body.variant_of_words && body.variant_of_words.join() !== meaningTr.variants_of_words?.join())
+      meaningTr.variants_of_words = body.variant_of_words;
+
+    await this.enMeaningTranslationRep.save(meaningTr);
+    return { success: true };
+  }
+
+  async deleteMeaningTranslation(id: number): Promise<DeleteMeaningTranslationResT> {
+    await this.enMeaningTranslationRep.delete({ id });
+
+    return { success: true };
+  }
 }

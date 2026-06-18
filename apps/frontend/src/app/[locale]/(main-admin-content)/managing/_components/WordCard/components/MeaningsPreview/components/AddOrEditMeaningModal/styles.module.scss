@@ -1,0 +1,42 @@
+.meaning {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .line {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+
+    .sortOrder {
+      width: 60px;
+    }
+
+    & > div {
+      flex-grow: 1;
+    }
+  }
+
+  .examples {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background-color: var(--third-background);
+
+    .examplesTitle {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .example {
+      display: flex;
+      width: 100%;
+      gap: 4px;
+
+      & > div {
+        flex-grow: 1;
+      }
+    }
+  }
+}

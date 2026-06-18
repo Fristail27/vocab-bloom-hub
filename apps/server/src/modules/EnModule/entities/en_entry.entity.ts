@@ -19,6 +19,6 @@ export class EnEntry {
   @Column({ type: 'simple-enum', enum: EnEntryTypesE, default: EnEntryTypesE.word })
   type?: EnEntryTypesE;
 
-  @OneToMany(() => EnWord, (entry) => entry.word)
+  @OneToMany(() => EnWord, (entry) => entry.word, { onDelete: 'CASCADE' })
   entries!: EnWord[];
 }

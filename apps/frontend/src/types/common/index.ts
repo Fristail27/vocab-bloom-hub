@@ -1,3 +1,5 @@
+import { useTranslations } from 'next-intl';
+
 export enum ThemeE {
   light = 'light',
   dark = 'dark',
@@ -8,8 +10,12 @@ export enum InterfaceLanguageEnum {
   ru = 'ru',
 }
 
-export type CommonPageP = {
-  params: Promise<{
-    locale: InterfaceLanguageEnum;
-  }>;
+export type CommonPageP<T extends object = object> = {
+  params: Promise<
+    {
+      locale: InterfaceLanguageEnum;
+    } & T
+  >;
 };
+
+export type TranslatorT = ReturnType<typeof useTranslations>;

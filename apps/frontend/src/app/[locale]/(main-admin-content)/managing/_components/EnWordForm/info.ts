@@ -1,0 +1,214 @@
+import {
+  AvailableTranslationLanguagesE,
+  EnAreaVariantsE,
+  EnPartOfSpeechE,
+  EnVerbTransitivityE,
+  EnWordFormsE,
+  EnWordT,
+  LanguageRegisterE,
+  WordLevelE,
+} from 'server/types';
+
+// TODO удалить
+export const re: EnWordT = {
+  form_of_word: EnWordFormsE.base_form,
+  id: 0,
+  word: 'misconstrue',
+  part_of_speech: EnPartOfSpeechE.verb,
+  generated_by_model: 'DeepSeek',
+  is_obsolete: false,
+  generated: true,
+  area_variant: EnAreaVariantsE.common,
+  language_register: LanguageRegisterE.formal,
+  description:
+    'To fail to understand or interpret the meaning of words, actions, or intentions accurately, leading to an incorrect conclusion.',
+  verb___is_irregular: false,
+  verb___is_phrasal: false,
+  verb___transitivity: EnVerbTransitivityE.transitive,
+  verb___phrasal_object_pattern: null,
+  base_phrasal: undefined,
+  categories: [],
+  word_level: WordLevelE.C1,
+  transcription: '/ˌmɪskənˈstruː/',
+  forms: [
+    {
+      id: 54388,
+      form_of_word: EnWordFormsE.past_simple,
+      word: 'misconstrued',
+      area_variant: EnAreaVariantsE.common,
+      transcription: '/ˌmɪskənˈstruːd/',
+    },
+    {
+      id: 432,
+      form_of_word: EnWordFormsE.past_participle,
+      word: 'misconstrued',
+      area_variant: EnAreaVariantsE.common,
+      transcription: '/ˌmɪskənˈstruːd/',
+    },
+    {
+      id: 4343,
+      form_of_word: EnWordFormsE.present_participle,
+      word: 'misconstruing',
+      area_variant: EnAreaVariantsE.common,
+      transcription: '/ˌmɪskənˈstruːɪŋ/',
+    },
+    {
+      id: 5434543,
+      form_of_word: EnWordFormsE.third_person_singular,
+      word: 'misconstrues',
+      area_variant: EnAreaVariantsE.common,
+      transcription: '/ˌmɪskənˈstruːz/',
+    },
+  ],
+  short_translations: [
+    {
+      id: 1,
+      language: AvailableTranslationLanguagesE.ru,
+      description: 'Неверно истолковывать, превратно понимать значение слов или поступков',
+      variants_of_words: [
+        'искажать смысл',
+        'неверно толковать',
+        'превратно понимать',
+        'неправильно интерпретировать',
+        'перевирать значение',
+        'вкладывать неверный смысл',
+      ],
+    },
+  ],
+  meanings: [
+    {
+      id: 99,
+      sort_order: 1,
+      title: 'To interpret wrongly',
+      definition:
+        'To form a mistaken understanding of a statement, action, or intention, often by assigning a meaning that was not intended.',
+      is_obsolete: false,
+      language_register: LanguageRegisterE.formal,
+      area_variant: EnAreaVariantsE.common,
+      meaning_level: WordLevelE.C1,
+      examples: [
+        'Her silence was misconstrued as a sign of agreement.',
+        'He feared his remarks might be misconstrued by the press.',
+        'The judge warned the jury not to misconstrue the evidence.',
+        'My friendly gesture was sadly misconstrued as romantic interest.',
+        "Critics often misconstrue the artist's true intentions.",
+      ],
+      categories: [],
+      translations: [
+        {
+          id: 84,
+          language: AvailableTranslationLanguagesE.ru,
+          title: 'Неверно истолковывать, превратно понимать',
+          definition:
+            'Создавать ошибочное понимание высказывания, действия или намерения, приписывая значение, которое не подразумевалось.',
+          variants_of_words: [
+            'неверно истолковывать',
+            'превратно понимать',
+            'неправильно интерпретировать',
+            'искажать смысл',
+            'вкладывать ложный смысл',
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+// TODO удалить
+export const tres: EnWordT = {
+  form_of_word: EnWordFormsE.base_form,
+  id: 1,
+  word: 'run',
+  part_of_speech: EnPartOfSpeechE.verb,
+  generated_by_model: 'DeepSeek',
+  is_obsolete: false,
+  generated: true,
+  area_variant: EnAreaVariantsE.common,
+  language_register: LanguageRegisterE.formal,
+  description: 'To move swiftly on foot so that both feet leave the ground for an instant during each stride.',
+  verb___is_irregular: true,
+  verb___is_phrasal: false,
+  verb___transitivity: EnVerbTransitivityE.both,
+  verb___phrasal_object_pattern: null,
+  base_phrasal: undefined,
+  categories: [],
+  word_level: WordLevelE.A1,
+  transcription: '/rʌn/',
+  forms: [
+    {
+      id: 101,
+      form_of_word: EnWordFormsE.past_simple,
+      word: 'ran',
+      area_variant: EnAreaVariantsE.common,
+      transcription: '/ræn/',
+    },
+    {
+      id: 102,
+      form_of_word: EnWordFormsE.past_participle,
+      word: 'run',
+      area_variant: EnAreaVariantsE.common,
+      transcription: '/rʌn/',
+    },
+    {
+      id: 103,
+      form_of_word: EnWordFormsE.present_participle,
+      word: 'running',
+      area_variant: EnAreaVariantsE.common,
+      transcription: '/ˈrʌn.ɪŋ/',
+    },
+    {
+      id: 104,
+      form_of_word: EnWordFormsE.third_person_singular,
+      word: 'runs',
+      area_variant: EnAreaVariantsE.common,
+      transcription: '/rʌnz/',
+    },
+  ],
+  short_translations: [
+    {
+      id: 2,
+      language: AvailableTranslationLanguagesE.ru,
+      description: 'Двигаться быстро на ногах, работать, управлять, течь',
+      variants_of_words: [
+        'бежать',
+        'бегать',
+        'работать (о механизме)',
+        'управлять',
+        'руководить',
+        'течь',
+        'проходить',
+      ],
+    },
+  ],
+  meanings: [
+    {
+      id: 100,
+      sort_order: 1,
+      title: 'To move swiftly on foot',
+      definition:
+        'To go quickly by moving the legs more rapidly than at a walk and in such a manner that for an instant both feet are off the ground.',
+      is_obsolete: false,
+      language_register: LanguageRegisterE.formal,
+      area_variant: EnAreaVariantsE.common,
+      meaning_level: WordLevelE.A1,
+      examples: [
+        'She had to run to catch the bus.',
+        'He runs five miles every morning before work.',
+        'The children ran across the playground laughing.',
+        "I can't run as fast as my brother.",
+        'A deer ran across the road in front of the car.',
+      ],
+      categories: [],
+      translations: [
+        {
+          id: 85,
+          language: AvailableTranslationLanguagesE.ru,
+          title: 'Бежать, передвигаться бегом',
+          definition:
+            'Передвигаться быстро, перебирая ногами так, что в каждый момент обе ноги отрываются от земли.',
+          variants_of_words: ['бежать', 'бегать', 'нестись', 'мчаться'],
+        },
+      ],
+    },
+  ],
+};

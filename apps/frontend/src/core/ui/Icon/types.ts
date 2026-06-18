@@ -1,4 +1,4 @@
-import type icons from '../icons';
+import { IconNamesT } from '@/core/ui/icons/types';
 
 export enum IconSizeE {
   tiny = 'tiny',
@@ -11,7 +11,7 @@ export enum IconSizeE {
 export type IconP = {
   size?: keyof typeof IconSizeE;
   className?: string | undefined;
-  name: keyof typeof icons;
+  name: IconNamesT;
   width?: number;
   height?: number;
   color?: string | undefined;

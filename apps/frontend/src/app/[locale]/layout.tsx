@@ -51,6 +51,7 @@ export default async function RootLayout({ children, params }: RootLayoutP) {
     <html lang={locale} className={`${geistSans.variable} ${geistMono.variable}`}>
       <head>
         <link id="variables-link" rel="stylesheet" href={themeLink} />
+        <link rel="stylesheet" href="/styles/variables.css" />
       </head>
       <body>
         <AntdRegistry>

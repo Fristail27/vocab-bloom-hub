@@ -1,0 +1,22 @@
+.meaningsPreview {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .title {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    .addBtn {
+      height: 20px;
+      width: 24px;
+    }
+  }
+
+  .meanings {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+}

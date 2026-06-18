@@ -1,0 +1,75 @@
+.shortTranslationsPreview {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .title {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    .addBtn {
+      height: 22px;
+      width: 24px;
+    }
+  }
+
+  .shortTranslationsList {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .translation {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-left: 4px solid red;
+    margin-left: 8px;
+    width: calc(100% - 8px);
+    padding-left: 4px;
+
+    &.edit {
+      padding-left: 32px;
+      position: relative;
+
+      .deleteBtn {
+        position: absolute;
+        top: 28px;
+        left: 4px;
+        width: 24px;
+        height: 20px;
+      }
+
+      .editBtn {
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        width: 24px;
+        height: 20px;
+      }
+    }
+  }
+
+  .title {
+    font-weight: 500;
+  }
+
+  .desc {
+    display: flex;
+    gap: 4px;
+  }
+
+  .tag {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: max-content;
+  }
+
+  .variantsOfWord {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
