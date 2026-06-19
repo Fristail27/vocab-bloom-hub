@@ -8,6 +8,7 @@ import { AddMeaningReqDTO } from '../../src/modules/EnModule/dto/AddMeaningReq.d
 import { EditMeaningReqDTO } from '../../src/modules/EnModule/dto/EditMeaningReq.dto';
 import { AddMeaningTranslationReqDTO } from '../../src/modules/EnModule/dto/AddMeaningTranslationReq.dto';
 import { EditMeaningTranslationReqDTO } from '../../src/modules/EnModule/dto/EditMeaningTranslationReq.dto';
+import { EditCommonInfoOfWordReqDTO } from '../../src/modules/EnModule/dto/EditCommonInfoOfWordReq.dto';
 
 export type CheckWordResT = { hasWord: boolean } | ErrorResT;
 export type AddResT = EnWordT | ErrorResT;
@@ -36,3 +37,6 @@ export type AddMeaningTranslationResT = { success: boolean } | ErrorResT;
 export type EditMeaningTranslationReqT = EditMeaningTranslationReqDTO;
 export type EditMeaningTranslationResT = { success: boolean } | ErrorResT;
 export type DeleteMeaningTranslationResT = { success: boolean } | ErrorResT;
+
+export type EditCommonInfoOfWordReqT = EditCommonInfoOfWordReqDTO;
+export type EditCommonInfoOfWordResT = { success: boolean } | ErrorResT;

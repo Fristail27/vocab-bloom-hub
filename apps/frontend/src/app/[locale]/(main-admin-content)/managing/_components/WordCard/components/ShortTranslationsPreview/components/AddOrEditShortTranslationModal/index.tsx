@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Button, Input as AntdInput, message, Modal, Typography } from 'antd';
+import { App, Button, Input as AntdInput, Modal, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
 import { EnShortTranslationT } from 'server/types';
 import { TranslationLanguageSelect } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/TranslationLanguageSelect';
@@ -30,6 +30,7 @@ export const AddOrEditShortTranslationModal: React.FC<AddOrEditShortTranslationM
   const [values, setValues] = useState<AddOrEditStateT>(DefaultState);
   const t = useTranslations('en_managing_words');
   const tError = useTranslations('errors');
+  const { message } = App.useApp();
 
   const { wordId } = useParams();
 

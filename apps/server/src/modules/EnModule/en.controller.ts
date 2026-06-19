@@ -25,6 +25,7 @@ import {
   DeleteMeaningTranslationResT,
   DeleteResT,
   DeleteShortTranslationResT,
+  EditCommonInfoOfWordResT,
   EditMeaningResT,
   type EditMeaningTranslationReqT,
   EditMeaningTranslationResT,
@@ -44,6 +45,7 @@ import { AddShortTranslationReqDTO } from './dto/AddShortTranslationReq.dto';
 import { EditShortTranslationReqDTO } from './dto/EditShortTranslationReq.dto';
 import { AddMeaningReqDTO } from './dto/AddMeaningReq.dto';
 import { EditMeaningReqDTO } from './dto/EditMeaningReq.dto';
+import { EditCommonInfoOfWordReqDTO } from './dto/EditCommonInfoOfWordReq.dto';
 
 @ApiTags('En_Words')
 @Controller('/api/en/')
@@ -87,6 +89,15 @@ export class EnController {
     } catch {
       throw new InternalServerErrorException(ErrorCodes.internal_server_error);
     }
+  }
+
+  @UseGuards(AdminGuard)
+  @Patch('common-info/:id')
+  async editWord(
+    @Param('id') id: string,
+    @Body() body: EditCommonInfoOfWordReqDTO,
+  ): Promise<EditCommonInfoOfWordResT> {
+    return this.enService.editWord(+id, body);
   }
 
   @UseGuards(AdminGuard)

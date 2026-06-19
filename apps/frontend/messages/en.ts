@@ -135,6 +135,9 @@ export default {
     delete_meaning_tr_desc:
       'Are you sure you want to delete this meaning translation? This action cannot be undone.',
     delete_meaning_tr_success: 'Meaning Translation deleted successfully',
+    edit_common_data_btn: 'Edit Common Data',
+    edit_common_data: 'Editing Common Data',
+    edit_common_data_success: 'Common data updated',
   },
   statistics: {
     common_statistics: 'Common statistics',

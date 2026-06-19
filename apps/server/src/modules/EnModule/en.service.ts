@@ -17,6 +17,7 @@ import {
   DeleteMeaningTranslationResT,
   DeleteResT,
   DeleteShortTranslationResT,
+  EditCommonInfoOfWordResT,
   EditMeaningResT,
   EditMeaningTranslationReqT,
   EditMeaningTranslationResT,
@@ -41,6 +42,7 @@ import { AddShortTranslationReqDTO } from './dto/AddShortTranslationReq.dto';
 import { EditShortTranslationReqDTO } from './dto/EditShortTranslationReq.dto';
 import { AddMeaningReqDTO } from './dto/AddMeaningReq.dto';
 import { EditMeaningReqDTO } from './dto/EditMeaningReq.dto';
+import { EditCommonInfoOfWordReqDTO } from './dto/EditCommonInfoOfWordReq.dto';
 
 @Injectable()
 export class EnService {
@@ -234,6 +236,71 @@ export class EnService {
         await this.enEntriesRep.delete({ word: entryStr });
       }
     }
+    return { success: true };
+  }
+
+  async editWord(id: number, body: EditCommonInfoOfWordReqDTO): Promise<EditCommonInfoOfWordResT> {
+    const word = await this.enWordsRep.findOne({ where: { id } });
+
+    if (!word) {
+      throw new NotFoundException(ErrorCodes.word_doesnt_found);
+    }
+
+    const {
+      verb___transitivity,
+      verb___is_irregular,
+      noun___irregular_plural,
+      noun___always_plural,
+      noun___uncountable,
+      verb___is_phrasal,
+      verb___phrasal_object_pattern,
+      noun___is_proper,
+      language_register,
+      categories,
+      is_obsolete,
+      description,
+      generated_by_model,
+      generated,
+      word_level,
+      transcription,
+      is_abbreviation,
+      area_variant,
+    } = body;
+
+    if (typeof generated === 'boolean' && generated !== word.generated) word.generated = generated;
+    if (typeof is_obsolete === 'boolean' && is_obsolete !== word.is_obsolete) word.is_obsolete = is_obsolete;
+    if (typeof verb___is_irregular === 'boolean' && verb___is_irregular !== word.verb___is_irregular)
+      word.verb___is_irregular = verb___is_irregular;
+    if (
+      typeof noun___irregular_plural === 'boolean' &&
+      noun___irregular_plural !== word.noun___irregular_plural
+    )
+      word.noun___irregular_plural = noun___irregular_plural;
+    if (typeof noun___always_plural === 'boolean' && noun___always_plural !== word.noun___always_plural)
+      word.noun___always_plural = noun___always_plural;
+    if (typeof noun___uncountable === 'boolean' && noun___uncountable !== word.noun___uncountable)
+      word.noun___uncountable = noun___uncountable;
+    if (typeof noun___is_proper === 'boolean' && noun___is_proper !== word.noun___is_proper)
+      word.noun___is_proper = noun___is_proper;
+    if (typeof verb___is_phrasal === 'boolean' && verb___is_phrasal !== word.verb___is_phrasal)
+      word.verb___is_phrasal = verb___is_phrasal;
+    if (typeof is_abbreviation === 'boolean' && is_abbreviation !== word.is_abbreviation)
+      word.is_abbreviation = is_abbreviation;
+    if (generated_by_model && generated_by_model !== word.generated_by_model)
+      word.generated_by_model = generated_by_model;
+    if (description && description !== word.description) word.description = description;
+    if (verb___phrasal_object_pattern && verb___phrasal_object_pattern !== word.verb___phrasal_object_pattern)
+      word.verb___phrasal_object_pattern = verb___phrasal_object_pattern;
+    if (verb___transitivity && verb___transitivity !== word.verb___transitivity)
+      word.verb___transitivity = verb___transitivity;
+    if (transcription && transcription !== word.transcription) word.transcription = transcription;
+    if (word_level && word_level !== word.word_level) word.word_level = word_level;
+    if (language_register && language_register !== word.language_register)
+      word.language_register = language_register;
+    if (area_variant && area_variant !== word.area_variant) word.area_variant = area_variant;
+    if (categories && categories.join() !== word.categories?.join()) word.categories = categories;
+
+    await this.enWordsRep.save(word);
     return { success: true };
   }
 
