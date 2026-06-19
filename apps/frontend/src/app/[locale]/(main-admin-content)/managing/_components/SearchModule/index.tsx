@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { App } from 'antd';
 import { useTranslations } from 'next-intl';
-import { message } from 'antd';
 import { EnWordT } from 'server/types';
 import { Input } from '@/core/ui/Input';
 import { EnApi } from '@/core/api/EnApi';
@@ -13,6 +13,7 @@ import styles from './styles.module.scss';
 export const SearchModule: React.FC = () => {
   const t = useTranslations('en_managing_words');
   const tErr = useTranslations('errors');
+  const { message } = App.useApp();
   const [searchValue, setSearchValue] = useState<string>('');
   const [words, setWords] = useState<EnWordT[]>([]);
   const debouncedValue = useDebounced(searchValue, 400);

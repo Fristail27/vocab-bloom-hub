@@ -13,6 +13,8 @@ import {
   DeleteMeaningTranslationResT,
   DeleteResT,
   DeleteShortTranslationResT,
+  EditCommonInfoOfWordReqT,
+  EditCommonInfoOfWordResT,
   EditMeaningReqT,
   EditMeaningResT,
   EditMeaningTranslationReqT,
@@ -43,6 +45,13 @@ export class EnApi extends AbstractBaseApi {
 
   static async deleteWord(id: number): Promise<DeleteResT> {
     return this.delete<DeleteResT>(`${this.baseURL}/en/${id}`);
+  }
+
+  static async editCommonInfoOfWord(
+    id: string | number,
+    data: EditCommonInfoOfWordReqT,
+  ): Promise<EditCommonInfoOfWordResT> {
+    return this.patch<EditCommonInfoOfWordResT>(`${this.baseURL}/en/common-info/${id}`, data);
   }
 
   static async getWordById(id: number): Promise<GetWordByIdResT> {

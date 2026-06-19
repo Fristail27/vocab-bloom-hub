@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { Button, message, Popover, Tag, Typography } from 'antd';
+import { App, Button, Popover, Tag, Typography } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { EnWordT } from 'server/types';
 import { DeletePopoverContent } from '../DeletePopoverContent';
@@ -17,6 +17,7 @@ export const FoundWord: React.FC<FoundWordP> = ({ w }) => {
   const locale = useLocale();
   const tErr = useTranslations('errors');
   const t = useTranslations('en_managing_words');
+  const { message } = App.useApp();
 
   const onDelete = async () => {
     const res = await EnApi.deleteWord(w.id);

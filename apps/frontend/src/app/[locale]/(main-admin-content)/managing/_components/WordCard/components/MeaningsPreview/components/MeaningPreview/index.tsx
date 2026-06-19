@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Typography, Badge, Tag, Button, message } from 'antd';
+import { Typography, Badge, Tag, Button, App } from 'antd';
 import { CloseOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { EnAreaVariantsE, EnMeaningT, EnMeaningTranslationT } from 'server/types';
 import { Icon } from '@/core/ui/Icon';
@@ -29,6 +29,7 @@ export const MeaningPreview: React.FC<MeaningPreviewP> = ({ meaning, mode, setEd
   const [deleteTranslationData, setDeleteTranslationData] = useState<EnMeaningTranslationT | null>(null);
   const t = useTranslations('en_managing_words');
   const tError = useTranslations('errors');
+  const { message } = App.useApp();
 
   const deleteMeaning = async () => {
     const res = await EnApi.deleteMeaning(meaning.id);

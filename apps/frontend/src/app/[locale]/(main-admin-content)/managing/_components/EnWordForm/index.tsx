@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button, message, Steps } from 'antd';
+import { App, Button, Steps } from 'antd';
 import { EnMeaningT, EnPartOfSpeechE, EnShortTranslationT, EnWordFormT, EnWordT } from 'server/types';
 import { DefaultCommonData, DefaultShortTranslation, EnWordFormModeE } from './constants';
 import { WordAlreadyExistBlock } from './components/WordAlreadyExistBlock';
@@ -28,6 +28,7 @@ type AddWordFormP = {
 export const EnWordForm: React.FC<AddWordFormP> = ({ initData, mode = EnWordFormModeE.add }) => {
   const t = useTranslations('en_managing_words');
   const tError = useTranslations('errors');
+  const { message } = App.useApp();
   const [step, setStep] = useState<number>(0);
   const [stepItems, setStepItems] = useState(getStepItems(t, mode, mode === EnWordFormModeE.add));
   const [word, setWord] = useState<string>(initData?.word || '');

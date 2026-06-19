@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { CloseOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, message, Tag, Typography } from 'antd';
+import { App, Button, Tag, Typography } from 'antd';
 import clsx from 'clsx';
 import { EnShortTranslationT } from 'server/types';
 import { Icon } from '@/core/ui/Icon';
@@ -26,6 +26,7 @@ export const ShortTranslationsPreview: React.FC<ShortTranslationsPreviewP> = ({ 
   const [deleteModalData, setDeleteModalData] = useState<EnShortTranslationT | null>(null);
   const t = useTranslations('en_managing_words');
   const tError = useTranslations('errors');
+  const { message } = App.useApp();
 
   const onDeleteShortTranslation = async (tr: EnShortTranslationT) => {
     const res = await EnApi.deleteShortTranslation(tr.id);

@@ -1,4 +1,4 @@
-import { CheckTokenResBody, LoginReqBody, LoginResBody } from '../../../../../server/types';
+import { CheckTokenResBody, LoginReqBody, LoginResBody } from 'server/types';
 import { AbstractBaseApi } from '../AbstractBaseApi';
 
 export class AuthApi extends AbstractBaseApi {

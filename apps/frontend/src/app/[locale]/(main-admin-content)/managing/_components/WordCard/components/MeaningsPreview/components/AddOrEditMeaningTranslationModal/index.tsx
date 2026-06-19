@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Button, Input as AntdInput, message, Modal, Typography } from 'antd';
+import { App, Button, Input as AntdInput, Modal, Typography } from 'antd';
 import { CloseOutlined, PlusOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import { EnMeaningTranslationT } from 'server/types';
@@ -31,6 +31,7 @@ export const AddOrEditMeaningTranslationModal: React.FC<AddOrEditMeaningTranslat
   const [values, setValues] = useState<AddOrEditStateT>(DefaultState);
   const t = useTranslations('en_managing_words');
   const tError = useTranslations('errors');
+  const { message } = App.useApp();
 
   const submitAdd = async () => {
     if (meaningId) {

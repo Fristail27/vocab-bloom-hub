@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { App } from 'antd';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
@@ -55,13 +56,15 @@ export default async function RootLayout({ children, params }: RootLayoutP) {
       </head>
       <body>
         <AntdRegistry>
-          <Provider theme={theme} isAuth={isAuth}>
-            <NextIntlClientProvider messages={messages}>
-              <Header />
-              <main className={styles.mainContainer}>{children}</main>
-              <Footer />
-            </NextIntlClientProvider>
-          </Provider>
+          <App>
+            <Provider theme={theme} isAuth={isAuth}>
+              <NextIntlClientProvider messages={messages}>
+                <Header />
+                <main className={styles.mainContainer}>{children}</main>
+                <Footer />
+              </NextIntlClientProvider>
+            </Provider>
+          </App>
         </AntdRegistry>
       </body>
     </html>

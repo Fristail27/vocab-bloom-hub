@@ -3,8 +3,9 @@ import { EnWordT } from '../../../../types';
 import { prepareWordForm } from './prepareWordForm';
 
 export const prepareWordFromDB = (row: EnWord): EnWordT => {
+  const { createdAt: _createdAt, updateAt: _updateAt, ...other } = row;
   return {
-    ...row,
+    ...other,
     word: row.word.word,
     forms: (row.forms || [])?.map(prepareWordForm),
     meanings: row.meanings,

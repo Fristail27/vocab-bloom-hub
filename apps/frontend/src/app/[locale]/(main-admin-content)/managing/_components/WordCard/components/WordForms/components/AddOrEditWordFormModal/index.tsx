@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { message, Modal } from 'antd';
+import { App, Modal } from 'antd';
 import { EnAreaVariantsE, EnWordFormT } from 'server/types';
 import { RegionalLabelSelect } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/RegionalLabelSelect';
 import { Input } from '@/core/ui/Input';
@@ -18,6 +18,7 @@ type AddOrEditWordFormModalP = {
 export const AddOrEditWordFormModal: React.FC<AddOrEditWordFormModalP> = ({ data, onClose }) => {
   const [values, setValues] = useState<ValuesStateT>(DefaultValues);
   const { wordId } = useParams();
+  const { message } = App.useApp();
   const tError = useTranslations('errors');
   const t = useTranslations('en_managing_words');
 

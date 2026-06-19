@@ -1,7 +1,7 @@
 'use client';
 
 import React, { ChangeEventHandler, useState } from 'react';
-import { Button, message } from 'antd';
+import { App, Button } from 'antd';
 import { Input } from '@/core/ui/Input';
 import { WordDoesntExistBlock } from '../WordDoesntExistBlock';
 import { CheckCircleOutlined } from '@ant-design/icons';
@@ -21,6 +21,8 @@ type VerbSettingsP = {
 export const CheckingBasePhrasalVerb: React.FC<VerbSettingsP> = ({ onChange, value }) => {
   const t = useTranslations('en_managing_words');
   const tError = useTranslations('errors');
+  const { message } = App.useApp();
+
   const [statusOfPresence, setStatusOfPresence] = useState<StatusOfWordPresenceE>(
     StatusOfWordPresenceE.notChecked,
   );

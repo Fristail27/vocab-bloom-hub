@@ -135,6 +135,9 @@ export default {
     delete_meaning_tr_desc:
       'Вы уверены, что хотите удалить этот перевод значения? Это действие нельзя отменить.',
     delete_meaning_tr_success: 'Перевод значения удалён',
+    edit_common_data_btn: 'Редактировать общие данные',
+    edit_common_data: 'Редактирование общих данных',
+    edit_common_data_success: 'Общие данные обновлены',
   },
   statistics: {
     common_statistics: 'Общая статистика',

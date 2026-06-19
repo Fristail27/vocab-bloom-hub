@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Tag, Typography, Button, message } from 'antd';
+import { Tag, Typography, Button, App } from 'antd';
 import { CloseOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { getTitle } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/FormsOfWordLine/utils';
 import { Icon } from '@/core/ui/Icon';
@@ -25,6 +25,7 @@ type WordFormItemP = {
 export const WordFormItem: React.FC<WordFormItemP> = ({ name, forms, mode, setModalData }) => {
   const [deleteModalData, setDeleteModalData] = useState<EnWordFormT | null>(null);
   const t = useTranslations('en_managing_words');
+  const { message } = App.useApp();
 
   const onDeleteForm = async (f: EnWordFormT) => {
     const res = await EnApi.deleteWord(f.id);

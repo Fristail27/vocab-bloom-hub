@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Button, Input as AntdInput, message, Modal, Typography } from 'antd';
+import { App, Button, Input as AntdInput, Modal, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
 import { CategoryE, EnAreaVariantsE, EnMeaningT, LanguageRegisterE, WordLevelE } from 'server/types';
 import { CloseOutlined, PlusOutlined } from '@ant-design/icons';
@@ -29,6 +29,7 @@ export const AddOrEditMeaningModal: React.FC<AddOrEditMeaningModalP> = ({ isOpen
   const [values, setValues] = useState<AddOrEditStateT>(DefaultState);
   const t = useTranslations('en_managing_words');
   const tError = useTranslations('errors');
+  const { message } = App.useApp();
 
   const { wordId } = useParams();
 
