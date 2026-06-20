@@ -3,31 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Repository } from 'typeorm';
 import { EnEntry } from './entities/en_entry.entity';
 import { EnWord } from './entities/en_word.entity';
-import { EnMeaning } from './entities/en_meaning.entity';
-import { EnMeaningTranslation } from './entities/en_meaning_translation.entity';
-import { EnShortTranslation } from './entities/en_short_translation.entity';
 import {
-  AddMeaningResT,
-  AddMeaningTranslationReqT,
-  AddMeaningTranslationResT,
   AddResT,
-  AddShortTranslationResT,
   AddWordFormResT,
-  DeleteMeaningResT,
-  DeleteMeaningTranslationResT,
   DeleteResT,
-  DeleteShortTranslationResT,
   EditCommonInfoOfWordResT,
-  EditMeaningResT,
-  EditMeaningTranslationReqT,
-  EditMeaningTranslationResT,
-  EditShortTranslationResT,
   EditWordFormResT,
   EnEntryTypesE,
-  EnMeaningT,
-  EnMeaningTranslationT,
   EnPartOfSpeechE,
-  EnShortTranslationT,
   EnWordFormsE,
   EnWordFormT,
   EnWordT,
@@ -38,11 +21,10 @@ import { mapSearchResults } from './utils/mapSearchResults';
 import { prepareWordFromDB } from './utils/prepareWordFromDB';
 import { AddWordFormReqDTO } from './dto/AddWordFormReq.dto';
 import { EditWordFormReqDTO } from './dto/EditWordFormReq.dto';
-import { AddShortTranslationReqDTO } from './dto/AddShortTranslationReq.dto';
-import { EditShortTranslationReqDTO } from './dto/EditShortTranslationReq.dto';
-import { AddMeaningReqDTO } from './dto/AddMeaningReq.dto';
-import { EditMeaningReqDTO } from './dto/EditMeaningReq.dto';
 import { EditCommonInfoOfWordReqDTO } from './dto/EditCommonInfoOfWordReq.dto';
+import { EnShortTranslationService } from './modules/EnShortTranslation/enShortTranslation.service';
+import { EnMeaningTranslationService } from './modules/EnMeaningTranslation/enMeaningTranslation.service';
+import { EnMeaningService } from './modules/EnMeaning/enMeaning.service';
 
 @Injectable()
 export class EnService {
@@ -53,14 +35,9 @@ export class EnService {
     @InjectRepository(EnWord)
     private readonly enWordsRep: Repository<EnWord>,
 
-    @InjectRepository(EnMeaning)
-    private readonly enMeaningsRep: Repository<EnMeaning>,
-
-    @InjectRepository(EnMeaningTranslation)
-    private readonly enMeaningTranslationRep: Repository<EnMeaningTranslation>,
-
-    @InjectRepository(EnShortTranslation)
-    private readonly enShortTranslationRep: Repository<EnShortTranslation>,
+    private readonly enShortTranslationService: EnShortTranslationService,
+    private readonly enMeaningTranslationService: EnMeaningTranslationService,
+    private readonly enMeaningService: EnMeaningService,
   ) {}
 
   async checkWord(word: string, partOfSpeech: EnPartOfSpeechE): Promise<boolean> {
@@ -129,35 +106,6 @@ export class EnService {
     return this.addEntry(word, type);
   }
 
-  private async addMeaningTranslation(
-    m: EnMeaning,
-    translation: EnMeaningTranslationT,
-  ): Promise<EnMeaningTranslation> {
-    const { id: _id, ...t } = translation;
-    return this.enMeaningTranslationRep.save({ ...t, meaning: m });
-  }
-
-  private async addMeaning(word: EnWord, meaning: EnMeaningT): Promise<EnMeaning> {
-    const { translations: _translations, id: _id, ...m } = meaning;
-    const newMeaning = await this.enMeaningsRep.save({ ...m, word });
-
-    if (_translations) {
-      for (const translation of _translations) {
-        await this.addMeaningTranslation(newMeaning, translation);
-      }
-    }
-
-    return newMeaning;
-  }
-
-  private async addShortTranslation(
-    word: EnWord,
-    shortTranslation: EnShortTranslationT,
-  ): Promise<EnShortTranslation> {
-    const { id: _id, ...s } = shortTranslation;
-    return this.enShortTranslationRep.save({ ...s, word });
-  }
-
   private async addFormOfWord(wordForm: EnWordFormT, baseWord: EnWord) {
     const { id: _id, word, ...f } = wordForm;
     const formEntry = await this.getOrAddEntry(word, EnEntryTypesE.word);
@@ -183,14 +131,26 @@ export class EnService {
     }
 
     if (body.meanings) {
-      for (const m of body.meanings) await this.addMeaning(baseWord, m);
+      for (const m of body.meanings)
+        await this.enMeaningService.addMeaning({
+          word_id: baseWord.id,
+          meaning_level: m.meaning_level,
+          language_register: m.language_register,
+          categories: m.categories,
+          ...m,
+        });
     }
 
     if (body.short_translations) {
-      for (const s of body.short_translations) await this.addShortTranslation(baseWord, s);
+      for (const s of body.short_translations)
+        await this.enShortTranslationService.addShortTranslation({
+          language: s.language,
+          description: s.description,
+          variant_of_words: s.variants_of_words,
+          word_id: baseWord.id,
+        });
     }
 
-    // TODO add phrasal_base
     return body;
   }
 
@@ -388,128 +348,6 @@ export class EnService {
     }
 
     await this.enWordsRep.save(word);
-
-    return { success: true };
-  }
-
-  async addSingleShortTranslation(body: AddShortTranslationReqDTO): Promise<AddShortTranslationResT> {
-    const word = await this.enWordsRep.findOne({ where: { id: body.word_id } });
-
-    if (!word) {
-      throw new NotFoundException(ErrorCodes.word_doesnt_found);
-    }
-
-    const res = await this.enShortTranslationRep.save({
-      word: word,
-      language: body.language,
-      description: body.description,
-      variants_of_words: body.variant_of_words,
-    });
-
-    return { success: true, id: res.id };
-  }
-
-  async deleteShortTranslation(id: number): Promise<DeleteShortTranslationResT> {
-    await this.enShortTranslationRep.delete({ id });
-
-    return { success: true };
-  }
-
-  async editShortTranslation(body: EditShortTranslationReqDTO): Promise<EditShortTranslationResT> {
-    const tr = await this.enShortTranslationRep.findOne({ where: { id: body.id } });
-
-    if (!tr) {
-      throw new NotFoundException(ErrorCodes.word_doesnt_found);
-    }
-    if (body.description && body.description !== tr.description) {
-      tr.description = body.description;
-    }
-    if (body.language && body.language !== tr.language) {
-      tr.language = body.language;
-    }
-
-    if (body.variant_of_words && body.variant_of_words.join() !== tr.variants_of_words.join()) {
-      tr.variants_of_words = body.variant_of_words;
-    }
-
-    await this.enShortTranslationRep.save(tr);
-    return { success: true };
-  }
-
-  async addSingleMeaning(body: AddMeaningReqDTO): Promise<AddMeaningResT> {
-    const { word_id, ...newMeaning } = body;
-    const word = await this.enWordsRep.findOne({ where: { id: word_id } });
-
-    if (!word) {
-      throw new NotFoundException(ErrorCodes.word_doesnt_found);
-    }
-
-    const res = await this.enMeaningsRep.save({ word: word, ...newMeaning });
-
-    return { success: true, id: res.id };
-  }
-
-  async editMeaning(body: EditMeaningReqDTO): Promise<EditMeaningResT> {
-    const meaning = await this.enMeaningsRep.findOne({ where: { id: body.id } });
-
-    if (!meaning) {
-      throw new NotFoundException(ErrorCodes.word_doesnt_found);
-    }
-
-    if (body.title && body.title !== meaning.title) meaning.title = body.title;
-    if (body.definition && body.definition !== meaning.definition) meaning.definition = body.definition;
-    if (body.sort_order && body.sort_order !== meaning.sort_order) meaning.sort_order = body.sort_order;
-    if (body.meaning_level && body.meaning_level !== meaning.meaning_level)
-      meaning.meaning_level = body.meaning_level;
-    if (body.language_register !== meaning.language_register)
-      meaning.language_register = body.language_register;
-    if (body.area_variant && body.area_variant !== meaning.area_variant)
-      meaning.area_variant = body.area_variant;
-    if (body.examples && body.examples.join() !== meaning.examples.join()) meaning.examples = body.examples;
-    if (body.categories && body.categories.join() !== meaning.categories?.join())
-      meaning.categories = body.categories;
-
-    await this.enMeaningsRep.save(meaning);
-    return { success: true };
-  }
-
-  async deleteMeaning(id: number): Promise<DeleteMeaningResT> {
-    await this.enMeaningsRep.delete({ id });
-
-    return { success: true };
-  }
-
-  async addSingleMeaningTranslation(body: AddMeaningTranslationReqT): Promise<AddMeaningTranslationResT> {
-    const { meaning_id, ...newMeaning } = body;
-    const meaning = await this.enMeaningsRep.findOne({ where: { id: meaning_id } });
-
-    if (!meaning) {
-      throw new NotFoundException(ErrorCodes.word_doesnt_found);
-    }
-
-    const res = await this.enMeaningTranslationRep.save({ meaning, ...newMeaning });
-    return { success: true, id: res.id };
-  }
-
-  async editMeaningTranslation(body: EditMeaningTranslationReqT): Promise<EditMeaningTranslationResT> {
-    const meaningTr = await this.enMeaningTranslationRep.findOne({ where: { id: body.id } });
-
-    if (!meaningTr) {
-      throw new NotFoundException(ErrorCodes.word_doesnt_found);
-    }
-
-    if (body.title && body.title !== meaningTr.title) meaningTr.title = body.title;
-    if (body.definition && body.definition !== meaningTr.definition) meaningTr.definition = body.definition;
-    if (body.language && body.language !== meaningTr.language) meaningTr.language = body.language;
-    if (body.variant_of_words && body.variant_of_words.join() !== meaningTr.variants_of_words?.join())
-      meaningTr.variants_of_words = body.variant_of_words;
-
-    await this.enMeaningTranslationRep.save(meaningTr);
-    return { success: true };
-  }
-
-  async deleteMeaningTranslation(id: number): Promise<DeleteMeaningTranslationResT> {
-    await this.enMeaningTranslationRep.delete({ id });
 
     return { success: true };
   }
