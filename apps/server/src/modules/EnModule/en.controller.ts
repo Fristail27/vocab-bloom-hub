@@ -14,22 +14,11 @@ import { ApiTags } from '@nestjs/swagger';
 import { EnService } from './en.service';
 import { AdminGuard } from '../AuthModule/guards/admin.guard';
 import {
-  AddMeaningResT,
-  type AddMeaningTranslationReqT,
-  AddMeaningTranslationResT,
   AddResT,
-  AddShortTranslationResT,
   AddWordFormResT,
   CheckWordResT,
-  DeleteMeaningResT,
-  DeleteMeaningTranslationResT,
   DeleteResT,
-  DeleteShortTranslationResT,
   EditCommonInfoOfWordResT,
-  EditMeaningResT,
-  type EditMeaningTranslationReqT,
-  EditMeaningTranslationResT,
-  EditShortTranslationResT,
   EditWordFormResT,
   EnEntryTypesE,
   EnPartOfSpeechE,
@@ -41,10 +30,6 @@ import { ErrorCodes } from '../../../core/constants/error_codes';
 import { SearchReqDTO } from './dto/SearchReq.dto';
 import { AddWordFormReqDTO } from './dto/AddWordFormReq.dto';
 import { EditWordFormReqDTO } from './dto/EditWordFormReq.dto';
-import { AddShortTranslationReqDTO } from './dto/AddShortTranslationReq.dto';
-import { EditShortTranslationReqDTO } from './dto/EditShortTranslationReq.dto';
-import { AddMeaningReqDTO } from './dto/AddMeaningReq.dto';
-import { EditMeaningReqDTO } from './dto/EditMeaningReq.dto';
 import { EditCommonInfoOfWordReqDTO } from './dto/EditCommonInfoOfWordReq.dto';
 
 @ApiTags('En_Words')
@@ -116,59 +101,5 @@ export class EnController {
   @Patch('word-form')
   async editWordForm(@Body() body: EditWordFormReqDTO): Promise<EditWordFormResT> {
     return this.enService.editWordForm(body);
-  }
-
-  @UseGuards(AdminGuard)
-  @Post('short-translation')
-  async addShortTranslation(@Body() body: AddShortTranslationReqDTO): Promise<AddShortTranslationResT> {
-    return this.enService.addSingleShortTranslation(body);
-  }
-
-  @UseGuards(AdminGuard)
-  @Delete('short-translation/:id')
-  async deleteShortTranslation(@Param('id') id: string): Promise<DeleteShortTranslationResT> {
-    return this.enService.deleteShortTranslation(+id);
-  }
-
-  @UseGuards(AdminGuard)
-  @Patch('short-translation')
-  async editShortTranslation(@Body() body: EditShortTranslationReqDTO): Promise<EditShortTranslationResT> {
-    return this.enService.editShortTranslation(body);
-  }
-
-  @UseGuards(AdminGuard)
-  @Post('meaning')
-  async addMeaning(@Body() body: AddMeaningReqDTO): Promise<AddMeaningResT> {
-    return this.enService.addSingleMeaning(body);
-  }
-
-  @UseGuards(AdminGuard)
-  @Patch('meaning')
-  async editMeaning(@Body() body: EditMeaningReqDTO): Promise<EditMeaningResT> {
-    return this.enService.editMeaning(body);
-  }
-
-  @UseGuards(AdminGuard)
-  @Delete('meaning/:id')
-  async deleteMeaning(@Param('id') id: string): Promise<DeleteMeaningResT> {
-    return this.enService.deleteMeaning(+id);
-  }
-
-  @UseGuards(AdminGuard)
-  @Post('meaning-translation')
-  async addMeaningTranslation(@Body() body: AddMeaningTranslationReqT): Promise<AddMeaningTranslationResT> {
-    return this.enService.addSingleMeaningTranslation(body);
-  }
-
-  @UseGuards(AdminGuard)
-  @Patch('meaning-translation')
-  async editMeaningTranslation(@Body() body: EditMeaningTranslationReqT): Promise<EditMeaningTranslationResT> {
-    return this.enService.editMeaningTranslation(body);
-  }
-
-  @UseGuards(AdminGuard)
-  @Delete('meaning-translation/:id')
-  async deleteMeaningTranslation(@Param('id') id: string): Promise<DeleteMeaningTranslationResT> {
-    return this.enService.deleteMeaningTranslation(+id);
   }
 }

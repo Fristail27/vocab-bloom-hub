@@ -2,12 +2,12 @@ import { ErrorResT } from '../errors';
 import { EnWordT } from './en';
 import { AddWordFormReqDTO } from '../../src/modules/EnModule/dto/AddWordFormReq.dto';
 import { EditWordFormReqDTO } from '../../src/modules/EnModule/dto/EditWordFormReq.dto';
-import { AddShortTranslationReqDTO } from '../../src/modules/EnModule/dto/AddShortTranslationReq.dto';
-import { EditShortTranslationReqDTO } from '../../src/modules/EnModule/dto/EditShortTranslationReq.dto';
-import { AddMeaningReqDTO } from '../../src/modules/EnModule/dto/AddMeaningReq.dto';
-import { EditMeaningReqDTO } from '../../src/modules/EnModule/dto/EditMeaningReq.dto';
-import { AddMeaningTranslationReqDTO } from '../../src/modules/EnModule/dto/AddMeaningTranslationReq.dto';
-import { EditMeaningTranslationReqDTO } from '../../src/modules/EnModule/dto/EditMeaningTranslationReq.dto';
+import { AddShortTranslationReqDTO } from '../../src/modules/EnModule/modules/EnShortTranslation/dto/AddShortTranslationReq.dto';
+import { EditShortTranslationReqDTO } from '../../src/modules/EnModule/modules/EnShortTranslation/dto/EditShortTranslationReq.dto';
+import { AddMeaningReqDTO } from '../../src/modules/EnModule/modules/EnMeaning/dto/AddMeaningReq.dto';
+import { EditMeaningReqDTO } from '../../src/modules/EnModule/modules/EnMeaning/dto/EditMeaningReq.dto';
+import { AddMeaningTranslationReqDTO } from '../../src/modules/EnModule/modules/EnMeaningTranslation/dto/AddMeaningTranslationReq.dto';
+import { EditMeaningTranslationReqDTO } from '../../src/modules/EnModule/modules/EnMeaningTranslation/dto/EditMeaningTranslationReq.dto';
 import { EditCommonInfoOfWordReqDTO } from '../../src/modules/EnModule/dto/EditCommonInfoOfWordReq.dto';
 
 export type CheckWordResT = { hasWord: boolean } | ErrorResT;

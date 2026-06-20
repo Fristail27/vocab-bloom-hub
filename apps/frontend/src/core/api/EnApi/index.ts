@@ -66,15 +66,15 @@ export class EnApi extends AbstractBaseApi {
   }
 
   static async addShortTranslation(body: AddShortTranslationReqT): Promise<AddShortTranslationResT> {
-    return this.post<AddShortTranslationResT>(`${this.baseURL}/en/short-translation`, body);
+    return this.post<AddShortTranslationResT>(`${this.baseURL}/en/word/short-translation`, body);
   }
 
   static async editShortTranslation(body: EditShortTranslationReqT): Promise<EditShortTranslationResT> {
-    return this.patch<EditShortTranslationResT>(`${this.baseURL}/en/short-translation`, body);
+    return this.patch<EditShortTranslationResT>(`${this.baseURL}/en/word/short-translation`, body);
   }
 
   static async deleteShortTranslation(id: string | number): Promise<DeleteShortTranslationResT> {
-    return this.delete<AddShortTranslationResT>(`${this.baseURL}/en/short-translation/${id}`);
+    return this.delete<AddShortTranslationResT>(`${this.baseURL}/en/word/short-translation/${id}`);
   }
 
   static async addMeaning(body: AddMeaningReqT): Promise<AddMeaningResT> {

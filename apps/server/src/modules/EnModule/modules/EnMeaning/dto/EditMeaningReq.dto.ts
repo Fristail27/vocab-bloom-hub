@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNumber, IsArray, IsBoolean, IsEnum, IsOptional } from 'class-validator';
-import { CategoryE, EnAreaVariantsE, EnMeaningT, LanguageRegisterE, WordLevelE } from '../../../../types';
+import { CategoryE, EnAreaVariantsE, EnMeaningT, LanguageRegisterE, WordLevelE } from '../../../../../../types';
 
 export class EditMeaningReqDTO {
   @ApiProperty()

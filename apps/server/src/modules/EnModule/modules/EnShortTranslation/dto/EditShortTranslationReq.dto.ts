@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsEnum, IsNumber, IsArray, IsOptional } from 'class-validator';
-import { AvailableTranslationLanguagesE, EnShortTranslationT } from '../../../../types';
+import { AvailableTranslationLanguagesE, EnShortTranslationT } from '../../../../../../types';
 
 export class EditShortTranslationReqDTO {
   @ApiProperty()
