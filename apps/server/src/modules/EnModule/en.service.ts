@@ -343,7 +343,7 @@ export class EnService {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);
     }
     const entry = await this.getOrAddEntry(body.word, EnEntryTypesE.word);
-    await this.enWordsRep.save({
+    const res = await this.enWordsRep.save({
       word: entry,
       form_of_word: body.form_of_word,
       area_variant: body.area_variant,
@@ -352,7 +352,7 @@ export class EnService {
       transcription: body.transcription,
     });
 
-    return { success: true };
+    return { success: true, id: res.id };
   }
 
   async editWordForm(body: EditWordFormReqDTO): Promise<EditWordFormResT> {
@@ -399,14 +399,14 @@ export class EnService {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);
     }
 
-    await this.enShortTranslationRep.save({
+    const res = await this.enShortTranslationRep.save({
       word: word,
       language: body.language,
       description: body.description,
       variants_of_words: body.variant_of_words,
     });
 
-    return { success: true };
+    return { success: true, id: res.id };
   }
 
   async deleteShortTranslation(id: number): Promise<DeleteShortTranslationResT> {
@@ -444,9 +444,9 @@ export class EnService {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);
     }
 
-    await this.enMeaningsRep.save({ word: word, ...newMeaning });
+    const res = await this.enMeaningsRep.save({ word: word, ...newMeaning });
 
-    return { success: true };
+    return { success: true, id: res.id };
   }
 
   async editMeaning(body: EditMeaningReqDTO): Promise<EditMeaningResT> {
@@ -487,9 +487,8 @@ export class EnService {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);
     }
 
-    await this.enMeaningTranslationRep.save({ meaning, ...newMeaning });
-
-    return { success: true };
+    const res = await this.enMeaningTranslationRep.save({ meaning, ...newMeaning });
+    return { success: true, id: res.id };
   }
 
   async editMeaningTranslation(body: EditMeaningTranslationReqT): Promise<EditMeaningTranslationResT> {

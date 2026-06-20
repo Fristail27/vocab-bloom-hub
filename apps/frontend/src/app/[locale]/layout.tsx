@@ -56,7 +56,7 @@ export default async function RootLayout({ children, params }: RootLayoutP) {
       </head>
       <body>
         <AntdRegistry>
-          <App>
+          <App className={styles.antdAppContainer}>
             <Provider theme={theme} isAuth={isAuth}>
               <NextIntlClientProvider messages={messages}>
                 <Header />

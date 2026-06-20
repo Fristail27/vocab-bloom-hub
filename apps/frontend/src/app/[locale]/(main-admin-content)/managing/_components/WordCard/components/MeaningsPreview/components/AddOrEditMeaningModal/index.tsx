@@ -15,6 +15,7 @@ import { WordLevelSelect } from '@/app/[locale]/(main-admin-content)/managing/_c
 import { LanguageRegisterSelect } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/LanguageRegisterSelect';
 import { CategorySelect } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/CategoriesSelect';
 import styles from './styles.module.scss';
+import { UpdateTypeE } from '@/app/[locale]/(main-admin-content)/managing/_components/WordCard/constants';
 
 const { TextArea } = AntdInput;
 const { Text } = Typography;
@@ -23,9 +24,15 @@ type AddOrEditMeaningModalP = {
   isOpen: boolean;
   onClose: () => void;
   data: EnMeaningT | null;
+  updateMeaning: (v: EnMeaningT, type: UpdateTypeE) => void;
 };
 
-export const AddOrEditMeaningModal: React.FC<AddOrEditMeaningModalP> = ({ isOpen, onClose, data }) => {
+export const AddOrEditMeaningModal: React.FC<AddOrEditMeaningModalP> = ({
+  isOpen,
+  onClose,
+  data,
+  updateMeaning,
+}) => {
   const [values, setValues] = useState<AddOrEditStateT>(DefaultState);
   const t = useTranslations('en_managing_words');
   const tError = useTranslations('errors');
@@ -41,6 +48,7 @@ export const AddOrEditMeaningModal: React.FC<AddOrEditMeaningModalP> = ({ isOpen
         message.error(tError(res.message));
       } else {
         message.success(t('add_meaning_success'));
+        updateMeaning({ translations: [], ...data, ...values, id: res.id }, UpdateTypeE.add);
         onClose();
       }
     }
@@ -54,6 +62,7 @@ export const AddOrEditMeaningModal: React.FC<AddOrEditMeaningModalP> = ({ isOpen
         message.error(tError(res.message));
       } else {
         message.success(t('edit_meaning_success'));
+        updateMeaning({ ...data, ...values }, UpdateTypeE.edit);
         onClose();
       }
     }

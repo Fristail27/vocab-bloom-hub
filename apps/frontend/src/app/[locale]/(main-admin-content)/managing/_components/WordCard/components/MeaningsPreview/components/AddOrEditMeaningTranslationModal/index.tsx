@@ -11,6 +11,7 @@ import { DefaultState } from './constants';
 import { AddOrEditStateT } from './types';
 import { EnApi } from '@/core/api/EnApi';
 import styles from './styles.module.scss';
+import { UpdateTypeE } from '@/app/[locale]/(main-admin-content)/managing/_components/WordCard/constants';
 
 const { TextArea } = AntdInput;
 const { Text } = Typography;
@@ -20,6 +21,7 @@ type AddOrEditMeaningTranslationModalP = {
   onClose: () => void;
   data: EnMeaningTranslationT | null;
   meaningId: number;
+  updateMeaningTranslation: (tr: EnMeaningTranslationT, type: UpdateTypeE) => void;
 };
 
 export const AddOrEditMeaningTranslationModal: React.FC<AddOrEditMeaningTranslationModalP> = ({
@@ -27,6 +29,7 @@ export const AddOrEditMeaningTranslationModal: React.FC<AddOrEditMeaningTranslat
   onClose,
   data,
   meaningId,
+  updateMeaningTranslation,
 }) => {
   const [values, setValues] = useState<AddOrEditStateT>(DefaultState);
   const t = useTranslations('en_managing_words');
@@ -47,6 +50,7 @@ export const AddOrEditMeaningTranslationModal: React.FC<AddOrEditMeaningTranslat
         message.error(tError(res.message));
       } else {
         message.success(t('add_meaning_tr_success'));
+        updateMeaningTranslation({ ...data, ...values, id: res.id }, UpdateTypeE.add);
         onClose();
       }
     }
@@ -66,6 +70,7 @@ export const AddOrEditMeaningTranslationModal: React.FC<AddOrEditMeaningTranslat
         message.error(tError(res.message));
       } else {
         message.success(t('edit_meaning_tr_success'));
+        updateMeaningTranslation({ ...data, ...values }, UpdateTypeE.edit);
         onClose();
       }
     }

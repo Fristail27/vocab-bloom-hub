@@ -8,7 +8,7 @@ import styles from './styles.module.scss';
 const { Text } = Typography;
 type DeleteMeaningTranslationModalP = {
   onClose: () => void;
-  onOk: (id: number) => void;
+  onOk: (tr: EnMeaningTranslationT) => void;
   isOpen: boolean;
   translation: EnMeaningTranslationT | null;
 };
@@ -25,7 +25,7 @@ export const DeleteMeaningTranslationModal: React.FC<DeleteMeaningTranslationMod
       okButtonProps={{ danger: true }}
       title={t('delete_word_form')}
       open={isOpen}
-      onOk={() => onOk(translation?.id as number)}
+      onOk={() => onOk(translation as EnMeaningTranslationT)}
       onCancel={onClose}
       className={styles.deleteModal}
     >

@@ -9,13 +9,19 @@ import { DefaultValues } from './constants';
 import { ValuesStateT } from './types';
 import { getTitle } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/FormsOfWordLine/utils';
 import { EnApi } from '@/core/api/EnApi';
+import { UpdateTypeE } from '@/app/[locale]/(main-admin-content)/managing/_components/WordCard/constants';
 
 type AddOrEditWordFormModalP = {
   data: EnWordFormT | null;
+  updateFormOfWord: (f: EnWordFormT, type: UpdateTypeE) => void;
   onClose: () => void;
 };
 
-export const AddOrEditWordFormModal: React.FC<AddOrEditWordFormModalP> = ({ data, onClose }) => {
+export const AddOrEditWordFormModal: React.FC<AddOrEditWordFormModalP> = ({
+  data,
+  onClose,
+  updateFormOfWord,
+}) => {
   const [values, setValues] = useState<ValuesStateT>(DefaultValues);
   const { wordId } = useParams();
   const { message } = App.useApp();
@@ -33,6 +39,7 @@ export const AddOrEditWordFormModal: React.FC<AddOrEditWordFormModalP> = ({ data
         message.error(tError(res.message));
       } else {
         onClose();
+        updateFormOfWord({ ...data, ...values, id: res.id }, UpdateTypeE.add);
       }
     }
   }, [wordId, values, data]);
@@ -43,6 +50,7 @@ export const AddOrEditWordFormModal: React.FC<AddOrEditWordFormModalP> = ({ data
       if ('error' in res) {
         message.error(tError(res.message));
       } else {
+        updateFormOfWord({ ...data, ...values }, UpdateTypeE.edit);
         onClose();
       }
     }

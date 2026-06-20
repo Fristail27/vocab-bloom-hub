@@ -12,6 +12,7 @@ import { DefaultState } from './constants';
 import { AddOrEditStateT } from './types';
 import { EnApi } from '@/core/api/EnApi';
 import styles from './styles.module.scss';
+import { UpdateTypeE } from '@/app/[locale]/(main-admin-content)/managing/_components/WordCard/constants';
 
 const { TextArea } = AntdInput;
 const { Text } = Typography;
@@ -20,12 +21,14 @@ type AddOrEditShortTranslationModalP = {
   isOpen: boolean;
   onClose: () => void;
   data: EnShortTranslationT | null;
+  updateShortTranslation: (v: EnShortTranslationT, type: UpdateTypeE) => void;
 };
 
 export const AddOrEditShortTranslationModal: React.FC<AddOrEditShortTranslationModalP> = ({
   isOpen,
   onClose,
   data,
+  updateShortTranslation,
 }) => {
   const [values, setValues] = useState<AddOrEditStateT>(DefaultState);
   const t = useTranslations('en_managing_words');
@@ -47,6 +50,7 @@ export const AddOrEditShortTranslationModal: React.FC<AddOrEditShortTranslationM
         message.error(tError(res.message));
       } else {
         message.success(t(data?.id === 0 ? 'add_short_translation_success' : 'edit_short_translation_success'));
+        updateShortTranslation({ ...values, id: res.id }, UpdateTypeE.add);
         onClose();
       }
     }
@@ -67,6 +71,7 @@ export const AddOrEditShortTranslationModal: React.FC<AddOrEditShortTranslationM
         message.success(
           t(data?.id === 0 ? 'edit_short_translation_success' : 'edit_short_translation_success'),
         );
+        updateShortTranslation({ ...data, ...values }, UpdateTypeE.edit);
         onClose();
       }
     }
