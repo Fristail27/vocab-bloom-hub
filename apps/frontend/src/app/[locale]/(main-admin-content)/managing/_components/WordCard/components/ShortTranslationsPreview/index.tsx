@@ -7,7 +7,7 @@ import { EnShortTranslationT } from 'server/types';
 import { Icon } from '@/core/ui/Icon';
 import { FlagByAreaEnum } from '../../../WordCard/components/WordForms/constants';
 import { IconNamesT } from '@/core/ui/icons/types';
-import { WordCardModeE } from '../../../WordCard/constants';
+import { UpdateTypeE, WordCardModeE } from '../../../WordCard/constants';
 import { DefaultShortTranslationData } from './constants';
 import { AddOrEditShortTranslationModal } from './components/AddOrEditShortTranslationModal';
 import { DeleteShortTranslationModal } from './components/DeleteShortTranslationModal';
@@ -19,9 +19,14 @@ const { Text } = Typography;
 type ShortTranslationsPreviewP = {
   translations: EnShortTranslationT[];
   mode: WordCardModeE;
+  updateShortTranslation: (v: EnShortTranslationT, type: UpdateTypeE) => void;
 };
 
-export const ShortTranslationsPreview: React.FC<ShortTranslationsPreviewP> = ({ translations, mode }) => {
+export const ShortTranslationsPreview: React.FC<ShortTranslationsPreviewP> = ({
+  translations,
+  mode,
+  updateShortTranslation,
+}) => {
   const [modalData, setModalData] = useState<EnShortTranslationT | null>(null);
   const [deleteModalData, setDeleteModalData] = useState<EnShortTranslationT | null>(null);
   const t = useTranslations('en_managing_words');
@@ -35,12 +40,14 @@ export const ShortTranslationsPreview: React.FC<ShortTranslationsPreviewP> = ({ 
       message.error(tError(res.message));
     } else {
       setDeleteModalData(null);
+      updateShortTranslation(tr, UpdateTypeE.delete);
     }
   };
   return (
     <>
       <AddOrEditShortTranslationModal
         isOpen={!!modalData}
+        updateShortTranslation={updateShortTranslation}
         onClose={() => setModalData(null)}
         data={modalData}
       />

@@ -7,7 +7,7 @@ import { Icon } from '@/core/ui/Icon';
 import { FlagByAreaEnum } from '@/app/[locale]/(main-admin-content)/managing/_components/WordCard/components/WordForms/constants';
 import { IconNamesT } from '@/core/ui/icons/types';
 import { EnWordFormsE, EnWordFormT } from 'server/types';
-import { WordCardModeE } from '../../../../constants';
+import { UpdateTypeE, WordCardModeE } from '../../../../constants';
 import { getDefaultNewFormData } from './utils';
 import styles from './styles.module.scss';
 import { DeleteWordFormModal } from '@/app/[locale]/(main-admin-content)/managing/_components/WordCard/components/WordForms/components/DeleteWordFormModal';
@@ -20,9 +20,16 @@ type WordFormItemP = {
   forms: EnWordFormT[];
   mode: WordCardModeE;
   setModalData: (data: EnWordFormT) => void;
+  updateFormOfWord: (f: EnWordFormT, type: UpdateTypeE) => void;
 };
 
-export const WordFormItem: React.FC<WordFormItemP> = ({ name, forms, mode, setModalData }) => {
+export const WordFormItem: React.FC<WordFormItemP> = ({
+  name,
+  forms,
+  mode,
+  setModalData,
+  updateFormOfWord,
+}) => {
   const [deleteModalData, setDeleteModalData] = useState<EnWordFormT | null>(null);
   const t = useTranslations('en_managing_words');
   const { message } = App.useApp();
@@ -33,6 +40,7 @@ export const WordFormItem: React.FC<WordFormItemP> = ({ name, forms, mode, setMo
       message.error(t(res.message));
     } else {
       message.success(t('delete_word_form_success'));
+      updateFormOfWord(f, UpdateTypeE.delete);
     }
   };
 

@@ -8,7 +8,7 @@ import { FlagByAreaEnum } from '@/app/[locale]/(main-admin-content)/managing/_co
 import { IconNamesT } from '@/core/ui/icons/types';
 import { MeaningTranslation } from '../MeaningTranslation';
 import { DirectTranslations } from '../DirectTranslations';
-import { WordCardModeE } from '../../../../constants';
+import { UpdateTypeE, WordCardModeE } from '../../../../constants';
 import { DeleteMeaningModal } from '../DeleteMeaningModal';
 import { EnApi } from '@/core/api/EnApi';
 import { DefaultTranslation } from './constants';
@@ -21,9 +21,10 @@ type MeaningPreviewP = {
   meaning: EnMeaningT;
   mode: WordCardModeE;
   setEditData: (d: EnMeaningT) => void;
+  updateMeaning: (v: EnMeaningT, type: UpdateTypeE) => void;
 };
 
-export const MeaningPreview: React.FC<MeaningPreviewP> = ({ meaning, mode, setEditData }) => {
+export const MeaningPreview: React.FC<MeaningPreviewP> = ({ meaning, mode, setEditData, updateMeaning }) => {
   const [isOpenDelete, setIsOpenDelete] = useState(false);
   const [addTranslationData, setAddTranslationData] = useState<EnMeaningTranslationT | null>(null);
   const [deleteTranslationData, setDeleteTranslationData] = useState<EnMeaningTranslationT | null>(null);
@@ -37,15 +38,39 @@ export const MeaningPreview: React.FC<MeaningPreviewP> = ({ meaning, mode, setEd
       message.error(tError(res.message));
     } else {
       message.success(t('delete_meaning_success'));
+      updateMeaning(meaning, UpdateTypeE.delete);
+      setIsOpenDelete(false);
     }
   };
 
-  const deleteMeaningTranslation = async (id: number) => {
-    const res = await EnApi.deleteMeaningTranslation(id);
+  const updateMeaningTranslation = (tr: EnMeaningTranslationT, type: UpdateTypeE) => {
+    switch (type) {
+      case UpdateTypeE.add:
+        updateMeaning({ ...meaning, translations: [...meaning.translations, tr] }, UpdateTypeE.edit);
+        break;
+      case UpdateTypeE.edit:
+        updateMeaning(
+          { ...meaning, translations: meaning.translations.map((tra) => (tra.id === tr.id ? tr : tra)) },
+          UpdateTypeE.edit,
+        );
+        break;
+      case UpdateTypeE.delete:
+        updateMeaning(
+          { ...meaning, translations: meaning.translations.filter((tra) => tra.id !== tr.id) },
+          UpdateTypeE.edit,
+        );
+        break;
+    }
+  };
+
+  const deleteMeaningTranslation = async (tr: EnMeaningTranslationT) => {
+    const res = await EnApi.deleteMeaningTranslation(tr.id);
     if ('error' in res) {
       message.error(tError(res.message));
     } else {
+      updateMeaningTranslation(tr, UpdateTypeE.delete);
       message.success(t('delete_meaning_tr_success'));
+      setDeleteTranslationData(null);
     }
   };
 
@@ -68,6 +93,7 @@ export const MeaningPreview: React.FC<MeaningPreviewP> = ({ meaning, mode, setEd
         isOpen={!!addTranslationData}
         onClose={() => setAddTranslationData(null)}
         data={addTranslationData}
+        updateMeaningTranslation={updateMeaningTranslation}
       />
       <div className={styles.meaningPreview}>
         <div className={styles.titleLine}>

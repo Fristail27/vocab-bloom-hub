@@ -12,3 +12,9 @@
   padding: 0;
   background-color: var(--color-bg-layout);
 }
+
+.antdAppContainer {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
