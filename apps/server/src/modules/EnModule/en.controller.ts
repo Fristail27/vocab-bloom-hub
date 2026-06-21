@@ -19,6 +19,7 @@ import {
   CheckWordResT,
   DeleteResT,
   EditCommonInfoOfWordResT,
+  EditPhrasalBaseResT,
   EditWordFormResT,
   EnEntryTypesE,
   EnPartOfSpeechE,
@@ -31,6 +32,7 @@ import { SearchReqDTO } from './dto/SearchReq.dto';
 import { AddWordFormReqDTO } from './dto/AddWordFormReq.dto';
 import { EditWordFormReqDTO } from './dto/EditWordFormReq.dto';
 import { EditCommonInfoOfWordReqDTO } from './dto/EditCommonInfoOfWordReq.dto';
+import { EditPhrasalBaseReqDTO } from './dto/EditPhrasalBase.dto';
 
 @ApiTags('En_Words')
 @Controller('/api/en/')
@@ -41,11 +43,12 @@ export class EnController {
   @Get('check-word/:word')
   async checkWord(
     @Param('word') word: string,
-    @Query() query: { partOfSpeech: EnPartOfSpeechE },
+    @Query() query: { partOfSpeech: EnPartOfSpeechE; forPhrasal: string },
   ): Promise<CheckWordResT> {
     try {
-      const { partOfSpeech } = query;
-      return { hasWord: await this.enService.checkWord(word, partOfSpeech) };
+      const { partOfSpeech, forPhrasal } = query;
+      const id = await this.enService.checkWord(word, partOfSpeech, forPhrasal === 'true');
+      return { hasWord: !!id, ...(id && { id }) };
     } catch {
       throw new InternalServerErrorException(ErrorCodes.internal_server_error);
     }
@@ -83,6 +86,12 @@ export class EnController {
     @Body() body: EditCommonInfoOfWordReqDTO,
   ): Promise<EditCommonInfoOfWordResT> {
     return this.enService.editWord(+id, body);
+  }
+
+  @UseGuards(AdminGuard)
+  @Patch('phrasal-base')
+  async editPhrasalBase(@Body() body: EditPhrasalBaseReqDTO): Promise<EditPhrasalBaseResT> {
+    return this.enService.editPhrasalBase(body);
   }
 
   @UseGuards(AdminGuard)

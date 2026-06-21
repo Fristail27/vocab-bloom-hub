@@ -8,6 +8,7 @@ import {
   AddWordFormResT,
   DeleteResT,
   EditCommonInfoOfWordResT,
+  EditPhrasalBaseResT,
   EditWordFormResT,
   EnEntryTypesE,
   EnPartOfSpeechE,
@@ -23,8 +24,8 @@ import { AddWordFormReqDTO } from './dto/AddWordFormReq.dto';
 import { EditWordFormReqDTO } from './dto/EditWordFormReq.dto';
 import { EditCommonInfoOfWordReqDTO } from './dto/EditCommonInfoOfWordReq.dto';
 import { EnShortTranslationService } from './modules/EnShortTranslation/enShortTranslation.service';
-import { EnMeaningTranslationService } from './modules/EnMeaningTranslation/enMeaningTranslation.service';
 import { EnMeaningService } from './modules/EnMeaning/enMeaning.service';
+import { EditPhrasalBaseReqDTO } from './dto/EditPhrasalBase.dto';
 
 @Injectable()
 export class EnService {
@@ -36,17 +37,25 @@ export class EnService {
     private readonly enWordsRep: Repository<EnWord>,
 
     private readonly enShortTranslationService: EnShortTranslationService,
-    private readonly enMeaningTranslationService: EnMeaningTranslationService,
     private readonly enMeaningService: EnMeaningService,
   ) {}
 
-  async checkWord(word: string, partOfSpeech: EnPartOfSpeechE): Promise<boolean> {
-    return await this.enWordsRep
+  async checkWord(word: string, partOfSpeech: EnPartOfSpeechE, forPhrasal: boolean): Promise<number | false> {
+    const qb = this.enWordsRep
       .createQueryBuilder('e')
       .innerJoin('e.word', 'w')
       .where('w.word = :word', { word })
-      .andWhere('e.part_of_speech = :partOfSpeech', { partOfSpeech })
-      .getExists();
+      .andWhere('e.part_of_speech = :partOfSpeech', { partOfSpeech });
+
+    if (forPhrasal) {
+      qb.leftJoin('e.base_phrasal', 'bp')
+        .andWhere('(e.verb___is_phrasal IS NULL OR e.verb___is_phrasal = false)')
+        .andWhere('bp.id IS NULL');
+    }
+
+    const result = await qb.select('e.id', 'id').getRawOne<{ id: number }>();
+
+    return result?.id ?? false;
   }
 
   private async addEntry(word: string, type: EnEntryTypesE): Promise<EnEntry> {
@@ -260,6 +269,23 @@ export class EnService {
     if (area_variant && area_variant !== word.area_variant) word.area_variant = area_variant;
     if (categories && categories.join() !== word.categories?.join()) word.categories = categories;
 
+    await this.enWordsRep.save(word);
+    return { success: true };
+  }
+
+  async editPhrasalBase(body: EditPhrasalBaseReqDTO): Promise<EditPhrasalBaseResT> {
+    const word = await this.enWordsRep.findOne({ where: { id: body.id } });
+
+    if (!word) {
+      throw new NotFoundException(ErrorCodes.word_doesnt_found);
+    }
+
+    const phrasalBase = await this.enWordsRep.findOne({ where: { id: body.phrasal_base_id } });
+
+    if (!phrasalBase) {
+      throw new NotFoundException(ErrorCodes.word_doesnt_found);
+    }
+    word.base_phrasal = phrasalBase;
     await this.enWordsRep.save(word);
     return { success: true };
   }

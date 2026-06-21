@@ -9,8 +9,9 @@ import { EditMeaningReqDTO } from '../../src/modules/EnModule/modules/EnMeaning/
 import { AddMeaningTranslationReqDTO } from '../../src/modules/EnModule/modules/EnMeaningTranslation/dto/AddMeaningTranslationReq.dto';
 import { EditMeaningTranslationReqDTO } from '../../src/modules/EnModule/modules/EnMeaningTranslation/dto/EditMeaningTranslationReq.dto';
 import { EditCommonInfoOfWordReqDTO } from '../../src/modules/EnModule/dto/EditCommonInfoOfWordReq.dto';
+import { EditPhrasalBaseReqDTO } from '../../src/modules/EnModule/dto/EditPhrasalBase.dto';
 
-export type CheckWordResT = { hasWord: boolean } | ErrorResT;
+export type CheckWordResT = { hasWord: boolean; id?: number } | ErrorResT;
 export type AddResT = EnWordT | ErrorResT;
 export type SearchResT = EnWordT[] | ErrorResT;
 export type DeleteResT = { success: boolean } | ErrorResT;
@@ -40,3 +41,6 @@ export type DeleteMeaningTranslationResT = { success: boolean } | ErrorResT;
 
 export type EditCommonInfoOfWordReqT = EditCommonInfoOfWordReqDTO;
 export type EditCommonInfoOfWordResT = { success: boolean } | ErrorResT;
+
+export type EditPhrasalBaseReqT = EditPhrasalBaseReqDTO;
+export type EditPhrasalBaseResT = { success: boolean } | ErrorResT;

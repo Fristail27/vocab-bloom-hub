@@ -1,19 +1,31 @@
 .verbTags {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 4px;
 
-  .tag {
+  .line {
     display: flex;
-    gap: 4px;
     align-items: center;
-    justify-content: center;
-    font-weight: 600;
+    gap: 8px;
+    flex-wrap: wrap;
 
-    :global(.ant-typography) {
-      font-size: var(--ant-font-size-sm);
-      font-weight: 400;
+    .tag {
+      width: auto;
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+
+      :global(.ant-typography) {
+        font-size: var(--ant-font-size-sm);
+        font-weight: 400;
+      }
     }
+  }
+
+  .editBtn {
+    height: 18px;
+    width: 22px;
   }
 }

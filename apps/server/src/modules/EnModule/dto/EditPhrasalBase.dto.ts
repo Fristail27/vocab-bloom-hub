@@ -1,0 +1,12 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { IsNumber } from 'class-validator';
+
+export class EditPhrasalBaseReqDTO {
+  @ApiProperty()
+  @IsNumber()
+  phrasal_base_id!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  id!: number;
+}
