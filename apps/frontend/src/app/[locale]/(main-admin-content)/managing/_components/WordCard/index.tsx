@@ -98,6 +98,8 @@ export const WordCard: React.FC<WordCardP> = ({ word, mode = WordCardModeE.view 
     }
   };
 
+  const updatePhrasal = (v: string | null) => setState((p) => ({ ...p, base_phrasal: v || undefined }));
+
   return (
     <>
       <EditCommonDataModal
@@ -157,7 +159,9 @@ export const WordCard: React.FC<WordCardP> = ({ word, mode = WordCardModeE.view 
           )}
         </div>
         {word.part_of_speech === EnPartOfSpeechE.noun && <NounInfoTags word={state} />}
-        {word.part_of_speech === EnPartOfSpeechE.verb && <VerbInfoTags word={state} />}
+        {word.part_of_speech === EnPartOfSpeechE.verb && (
+          <VerbInfoTags word={state} mode={mode} updatePhrasal={updatePhrasal} />
+        )}
         {state.categories && state.categories.length > 0 && (
           <CategoriesTags categories={state.categories || []} word={word.word} />
         )}

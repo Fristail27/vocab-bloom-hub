@@ -16,9 +16,10 @@ import styles from './styles.module.scss';
 type VerbSettingsP = {
   onChange: (v: string) => void;
   value: string | null | undefined;
+  setCheckedId?: (v: number) => void;
 };
 
-export const CheckingBasePhrasalVerb: React.FC<VerbSettingsP> = ({ onChange, value }) => {
+export const CheckingBasePhrasalVerb: React.FC<VerbSettingsP> = ({ onChange, value, setCheckedId }) => {
   const t = useTranslations('en_managing_words');
   const tError = useTranslations('errors');
   const { message } = App.useApp();
@@ -33,11 +34,14 @@ export const CheckingBasePhrasalVerb: React.FC<VerbSettingsP> = ({ onChange, val
   };
 
   const checkPhrasalBase = async () => {
-    const res = await EnApi.checkWord(value as string, EnPartOfSpeechE.verb);
+    const res = await EnApi.checkWord(value as string, EnPartOfSpeechE.verb, true);
     if ('error' in res) {
       message.error(tError(res.message));
     } else {
       setStatusOfPresence(res.hasWord ? StatusOfWordPresenceE.present : StatusOfWordPresenceE.absent);
+      if (setCheckedId && res.hasWord && res.id) {
+        setCheckedId(res.id);
+      }
     }
   };
 

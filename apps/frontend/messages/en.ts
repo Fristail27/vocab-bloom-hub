@@ -138,6 +138,9 @@ export default {
     edit_common_data_btn: 'Edit Common Data',
     edit_common_data: 'Editing Common Data',
     edit_common_data_success: 'Common data updated',
+    add_phrasal_base: 'Add Base of Phrasal Verb',
+    add_phrasal_base_title: 'Adding Base of Phrasal Verb',
+    edit_phrasal_base_title: 'Editing Base of Phrasal Verb',
   },
   statistics: {
     common_statistics: 'Common statistics',

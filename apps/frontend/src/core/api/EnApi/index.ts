@@ -19,6 +19,8 @@ import {
   EditMeaningResT,
   EditMeaningTranslationReqT,
   EditMeaningTranslationResT,
+  EditPhrasalBaseReqT,
+  EditPhrasalBaseResT,
   EditShortTranslationReqT,
   EditShortTranslationResT,
   EditWordFormReqT,
@@ -31,8 +33,10 @@ import {
 import { CheckWordResT } from 'server/types';
 
 export class EnApi extends AbstractBaseApi {
-  static async checkWord(word: string, pos: EnPartOfSpeechE): Promise<CheckWordResT> {
-    return this.get<CheckWordResT>(`${this.baseURL}/en/check-word/${word}`, { query: { partOfSpeech: pos } });
+  static async checkWord(word: string, pos: EnPartOfSpeechE, forPhrasal?: boolean): Promise<CheckWordResT> {
+    return this.get<CheckWordResT>(`${this.baseURL}/en/check-word/${word}`, {
+      query: { partOfSpeech: pos, forPhrasal },
+    });
   }
 
   static async addWord(data: EnWordT): Promise<AddResT> {
@@ -52,6 +56,10 @@ export class EnApi extends AbstractBaseApi {
     data: EditCommonInfoOfWordReqT,
   ): Promise<EditCommonInfoOfWordResT> {
     return this.patch<EditCommonInfoOfWordResT>(`${this.baseURL}/en/common-info/${id}`, data);
+  }
+
+  static async editPhrasalBase(body: EditPhrasalBaseReqT): Promise<EditPhrasalBaseResT> {
+    return this.patch<EditPhrasalBaseResT>(`${this.baseURL}/en/phrasal-base`, body);
   }
 
   static async getWordById(id: number): Promise<GetWordByIdResT> {

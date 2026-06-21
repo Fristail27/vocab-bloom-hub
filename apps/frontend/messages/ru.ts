@@ -138,6 +138,9 @@ export default {
     edit_common_data_btn: 'Редактировать общие данные',
     edit_common_data: 'Редактирование общих данных',
     edit_common_data_success: 'Общие данные обновлены',
+    add_phrasal_base: 'Добавить базовый глагол',
+    add_phrasal_base_title: 'Добавление базового глагола',
+    edit_phrasal_base_title: 'Изменение базового глагола',
   },
   statistics: {
     common_statistics: 'Общая статистика',
