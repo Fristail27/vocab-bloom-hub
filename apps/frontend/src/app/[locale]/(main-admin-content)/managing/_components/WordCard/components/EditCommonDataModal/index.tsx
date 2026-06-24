@@ -13,6 +13,7 @@ import { VerbTransitivitySelect } from '@/app/[locale]/(main-admin-content)/mana
 import { PhrasalObjectPatternSelect } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/PhrasalObjectPatternSelect';
 import { CommonInfoDataT } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/types';
 import { getDefaultValue } from '@/app/[locale]/(main-admin-content)/managing/_components/WordCard/components/EditCommonDataModal/utils';
+import { PatternEditor } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/PatternEditor';
 import styles from './styles.module.scss';
 
 const { TextArea } = AntdInput;
@@ -144,6 +145,9 @@ export const EditCommonDataModal: React.FC<EditCommonDataModalP> = ({ isOpen, on
           onChange={(v) => setD({ ...d, verb___phrasal_object_pattern: v })}
           value={d.verb___phrasal_object_pattern}
         />
+      )}
+      {pos === EnPartOfSpeechE.grammar_pattern && (
+        <PatternEditor value={d.pattern || []} onChange={(v) => setD({ ...d, pattern: v })} />
       )}
     </Modal>
   );

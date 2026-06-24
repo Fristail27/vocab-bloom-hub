@@ -12,6 +12,7 @@ import { CategorySelect } from '../CategoriesSelect';
 import { VerbTransitivitySelect } from '../VerbTransitivitySelect';
 import { PhrasalObjectPatternSelect } from '../PhrasalObjectPatternSelect';
 import styles from './styles.module.scss';
+import { PatternEditor } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/PatternEditor';
 
 const { TextArea } = AntdInput;
 const { Text } = Typography;
@@ -26,7 +27,7 @@ type CommonWordInfoP = {
 export const CommonWordInfo: React.FC<CommonWordInfoP> = ({ pos, clickNext, commonInfo, onChange }) => {
   const t = useTranslations('en_managing_words');
 
-  const changeField = (v: boolean | string | CategoryE[], field: keyof CommonInfoDataT) => {
+  const changeField = (v: boolean | string | CategoryE[] | string[], field: keyof CommonInfoDataT) => {
     onChange({ ...commonInfo, [field]: v });
   };
 
@@ -165,6 +166,9 @@ export const CommonWordInfo: React.FC<CommonWordInfoP> = ({ pos, clickNext, comm
           value={commonInfo.base_phrasal}
           onChange={(v) => changeField(v, 'base_phrasal')}
         />
+      )}
+      {pos === EnPartOfSpeechE.grammar_pattern && (
+        <PatternEditor value={commonInfo.pattern || []} onChange={(v) => changeField(v, 'pattern')} />
       )}
       <Button onClick={clickNext} className={styles.btn} type="primary">
         Далее

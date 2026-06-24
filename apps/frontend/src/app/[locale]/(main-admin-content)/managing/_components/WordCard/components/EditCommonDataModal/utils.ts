@@ -15,7 +15,6 @@ export const getDefaultValue = (
     meanings: _meanings,
     short_translations: _short_translations,
     phrasal_variants: _phrasal_variants,
-    pattern: _pattern,
     ...common
   } = word;
 

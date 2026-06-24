@@ -166,9 +166,15 @@ export const WordCard: React.FC<WordCardP> = ({ word, mode = WordCardModeE.view 
           <CategoriesTags categories={state.categories || []} word={word.word} />
         )}
         <div className={styles.desc}>
-          <Text strong>Описание:</Text>
+          <Text strong>{t('description')}</Text>
           <Text code>{state.description}</Text>
         </div>
+        {word.part_of_speech === EnPartOfSpeechE.grammar_pattern && state.pattern && (
+          <div className={styles.desc}>
+            <Text strong>{t('pattern')}</Text>
+            <Text italic>{state.pattern?.join(' ')}</Text>
+          </div>
+        )}
         {formNames && (
           <WordForms
             updateFormOfWord={updateFormOfWord}

@@ -24,12 +24,6 @@ export default async function ManagingPage({ params }: CommonPageP) {
         <Button type="primary" href={`/${locale}/managing/add-word`}>
           {manageT('add_word')}
         </Button>
-        <Button type="primary" href={`/${locale}/managing/add-phrase`}>
-          {manageT('add_phrase')}
-        </Button>
-        <Button type="primary" href={`/${locale}/managing/add-grammar-patten`}>
-          {manageT('add_grammar_patten')}
-        </Button>
       </div>
       <SearchModule />
     </div>

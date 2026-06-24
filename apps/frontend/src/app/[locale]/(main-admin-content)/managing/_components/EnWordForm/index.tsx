@@ -1,9 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { App, Button, Steps } from 'antd';
-import { EnMeaningT, EnPartOfSpeechE, EnShortTranslationT, EnWordFormT, EnWordT } from 'server/types';
+import {
+  EnEntryTypesE,
+  EnMeaningT,
+  EnPartOfSpeechE,
+  EnShortTranslationT,
+  EnWordFormT,
+  EnWordT,
+} from 'server/types';
 import { DefaultCommonData, DefaultShortTranslation, EnWordFormModeE } from './constants';
 import { WordAlreadyExistBlock } from './components/WordAlreadyExistBlock';
 import { CommonInfoDataT, StatusOfWordPresenceE } from './types';
@@ -33,6 +40,7 @@ export const EnWordForm: React.FC<AddWordFormP> = ({ initData, mode = EnWordForm
   const [stepItems, setStepItems] = useState(getStepItems(t, mode, mode === EnWordFormModeE.add));
   const [word, setWord] = useState<string>(initData?.word || '');
   const [partOfSpeech, setPartOfSpeech] = useState<EnPartOfSpeechE | null>(initData?.part_of_speech || null);
+  const [type, setType] = useState<EnEntryTypesE>(EnEntryTypesE.word);
   const [commonInfo, setCommonInfo] = useState<CommonInfoDataT>(getInitCommonInfo(initData));
   const [shortTranslations, setShortTranslations] = useState<EnShortTranslationT[]>(
     initData?.short_translations || DefaultShortTranslation,
@@ -51,7 +59,7 @@ export const EnWordForm: React.FC<AddWordFormP> = ({ initData, mode = EnWordForm
           part_of_speech: partOfSpeech,
           meanings,
           short_translations: shortTranslations,
-          forms: forms.filter((c) => c.word.trim().length > 0),
+          forms: type === EnEntryTypesE.word ? forms.filter((c) => c.word.trim().length > 0) : [],
         };
         if (body) {
           const res = await EnApi.addWord(body);
@@ -76,33 +84,6 @@ export const EnWordForm: React.FC<AddWordFormP> = ({ initData, mode = EnWordForm
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'unknown_error';
       message.error(tError(errorMessage));
-    }
-  };
-
-  const editWord = async () => {
-    try {
-      // if (partOfSpeech) {
-      //   let body: any = {
-      //     word,
-      //     part_of_speech: partOfSpeech,
-      //     meanings,
-      //     shortTranslations: [shortTranslation],
-      //     forms: forms.map(({ languageRegister, ...f }) => f),
-      //     ...commonInfo,
-      //   };
-      //   if (body) {
-      //     body.forms = body.forms.filter((c: any) => c.word.length > 0);
-      //     const res = await EnWordsApi.editWord(initData?.id as number, body);
-      //
-      //     if (res.success) {
-      //       // router.push(`/${lang}/admin-panel/dictionary/en/edit-word`)
-      //     } else {
-      //       message.error('Не удалось добавить слово');
-      //     }
-      //   }
-      // }
-    } catch (err) {
-      console.log(err);
     }
   };
 
@@ -149,6 +130,17 @@ export const EnWordForm: React.FC<AddWordFormP> = ({ initData, mode = EnWordForm
   const onClickShortNext = () => setStep(5);
   const onClickMeaningTranslationNext = () => setStep(6);
 
+  useEffect(() => {
+    if (type === EnEntryTypesE.word) {
+      setPartOfSpeech(null);
+    }
+    if (type === EnEntryTypesE.phrase) {
+      setPartOfSpeech(EnPartOfSpeechE.phrase);
+    }
+    if (type === EnEntryTypesE.grammar_pattern) {
+      setPartOfSpeech(EnPartOfSpeechE.grammar_pattern);
+    }
+  }, [type]);
   return (
     <div className={styles.addWordForm}>
       <div className={styles.leftContainer}>
@@ -179,6 +171,8 @@ export const EnWordForm: React.FC<AddWordFormP> = ({ initData, mode = EnWordForm
             <CheckWordBlock
               checkWord={checkWord}
               word={word}
+              type={type}
+              setType={setType}
               setWord={setWord}
               setPartOfSpeech={setPartOfSpeech}
               partOfSpeech={partOfSpeech}
@@ -224,14 +218,13 @@ export const EnWordForm: React.FC<AddWordFormP> = ({ initData, mode = EnWordForm
             word={{
               ...commonInfo,
               meanings,
-              forms,
+              forms: type === EnEntryTypesE.word ? forms : [],
               short_translations: shortTranslations,
               part_of_speech: partOfSpeech as EnPartOfSpeechE,
               word,
             }}
             mode={mode}
             addWord={addWord}
-            editWord={editWord}
           />
         )}
       </div>

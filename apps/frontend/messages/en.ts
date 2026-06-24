@@ -34,8 +34,6 @@ export default {
   },
   managing: {
     add_word: 'Add word',
-    add_phrase: 'Add phrase',
-    add_grammar_patten: 'Add grammar patten',
     edit: 'Edit data',
     edit_word: 'Edit word',
   },
@@ -141,6 +139,13 @@ export default {
     add_phrasal_base: 'Add Base of Phrasal Verb',
     add_phrasal_base_title: 'Adding Base of Phrasal Verb',
     edit_phrasal_base_title: 'Editing Base of Phrasal Verb',
+    entry_type: 'Entry type',
+    entry_type_word: 'Word',
+    entry_type_phrase: 'Phrase',
+    entry_type_grammar_pattern: 'Grammar Pattern',
+    pattern: 'Pattern',
+    add_part: 'Add Part',
+    add_slot: 'Add SLOT',
   },
   statistics: {
     common_statistics: 'Common statistics',

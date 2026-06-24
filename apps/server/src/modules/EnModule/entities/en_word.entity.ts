@@ -85,7 +85,7 @@ export class EnWord {
   @OneToMany(() => EnWord, (e) => e.base_form, { onDelete: 'CASCADE' })
   forms!: EnWord[];
 
-  @Column({ type: 'text', array: true, nullable: true })
+  @Column({ type: 'simple-json', nullable: true })
   pattern?: string[] | null;
 
   @OneToMany(() => EnMeaning, (meaning) => meaning.word, { onDelete: 'CASCADE', cascade: ['remove'] })
