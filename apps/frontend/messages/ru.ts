@@ -34,8 +34,6 @@ export default {
   },
   managing: {
     add_word: 'Добавить слово',
-    add_phrase: 'Добавить фразу',
-    add_grammar_patten: 'Добавить грамматический шаблон',
     edit: 'Редактировать',
     edit_word: 'Редактирование слова',
   },
@@ -141,6 +139,13 @@ export default {
     add_phrasal_base: 'Добавить базовый глагол',
     add_phrasal_base_title: 'Добавление базового глагола',
     edit_phrasal_base_title: 'Изменение базового глагола',
+    entry_type: 'Тип записи',
+    entry_type_word: 'Слово',
+    entry_type_phrase: 'Фраза',
+    entry_type_grammar_pattern: 'Грамматический паттерн',
+    pattern: 'Шаблон',
+    add_part: 'Добавить часть',
+    add_slot: 'Добавить SLOT',
   },
   statistics: {
     common_statistics: 'Общая статистика',

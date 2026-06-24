@@ -132,7 +132,14 @@ export class EnService {
   }
 
   async addWord(body: EnWordT): Promise<AddResT> {
-    const baseEntry = await this.getOrAddEntry(body.word, EnEntryTypesE.word);
+    let type = EnEntryTypesE.word;
+    if (body.part_of_speech === EnPartOfSpeechE.phrase) {
+      type = EnEntryTypesE.phrase;
+    }
+    if (body.part_of_speech === EnPartOfSpeechE.grammar_pattern) {
+      type = EnEntryTypesE.grammar_pattern;
+    }
+    const baseEntry = await this.getOrAddEntry(body.word, type);
     const baseWord = await this.addWordRow(baseEntry, body);
 
     if (body.forms) {
@@ -234,6 +241,7 @@ export class EnService {
       transcription,
       is_abbreviation,
       area_variant,
+      pattern,
     } = body;
 
     if (typeof generated === 'boolean' && generated !== word.generated) word.generated = generated;
@@ -268,6 +276,7 @@ export class EnService {
       word.language_register = language_register;
     if (area_variant && area_variant !== word.area_variant) word.area_variant = area_variant;
     if (categories && categories.join() !== word.categories?.join()) word.categories = categories;
+    if (pattern && pattern.join() !== word.pattern?.join()) word.pattern = pattern;
 
     await this.enWordsRep.save(word);
     return { success: true };

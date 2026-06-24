@@ -7,8 +7,6 @@ export const getManagingButtons = (
 ) => {
   return [
     { text: t('add_word'), href: `/${locale}/managing/add-word`, type: 'primary' as const },
-    { text: t('add_phrase'), href: `/${locale}/managing/add-phrase`, type: 'primary' as const },
-    { text: t('add_grammar_patten'), href: `/${locale}/managing/add-grammar-patten`, type: 'primary' as const },
     { text: t('edit'), href: `/${locale}/managing`, type: 'dashed' as const },
   ];
 };

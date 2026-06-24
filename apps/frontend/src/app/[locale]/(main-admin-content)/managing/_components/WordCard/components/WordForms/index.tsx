@@ -22,6 +22,11 @@ export const WordForms: React.FC<WordFormsP> = ({ forms, formNames, mode, update
   const t = useTranslations('en_managing_words');
 
   const closeFormModal = () => setModalData(null);
+
+  if (mode === WordCardModeE.view && (!forms || forms.length === 0)) {
+    return null;
+  }
+
   return (
     <>
       <AddOrEditWordFormModal data={modalData} onClose={closeFormModal} updateFormOfWord={updateFormOfWord} />

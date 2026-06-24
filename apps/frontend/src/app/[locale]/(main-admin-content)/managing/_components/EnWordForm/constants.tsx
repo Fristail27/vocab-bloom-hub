@@ -96,3 +96,5 @@ export const DefaultCommonData: CommonInfoDataT = {
   base_phrasal: '',
   verb___phrasal_object_pattern: EnPhrasalObjectPatternE.separable,
 };
+
+export const SlotName = '__SLOT__';

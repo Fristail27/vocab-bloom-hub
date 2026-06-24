@@ -62,6 +62,12 @@ export class EditCommonInfoOfWordReqDTO {
   @IsEnum(CategoryE, { each: true })
   categories?: EnWordT['categories'] | undefined;
 
+  @ApiProperty({ isArray: true })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  pattern?: string[] | null | undefined;
+
   @ApiProperty()
   @IsOptional()
   @IsBoolean()
