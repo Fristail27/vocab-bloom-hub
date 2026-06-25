@@ -6,6 +6,7 @@ export const getManagingButtons = (
   locale: InterfaceLanguageEnum,
 ) => {
   return [
+    { text: t('import_dictionary'), href: `/${locale}/managing/import-dictionary`, type: 'primary' as const },
     { text: t('add_word'), href: `/${locale}/managing/add-word`, type: 'primary' as const },
     { text: t('edit'), href: `/${locale}/managing`, type: 'dashed' as const },
   ];
