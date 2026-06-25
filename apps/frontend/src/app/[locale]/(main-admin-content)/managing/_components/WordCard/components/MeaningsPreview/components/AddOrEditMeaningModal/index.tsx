@@ -42,7 +42,7 @@ export const AddOrEditMeaningModal: React.FC<AddOrEditMeaningModalP> = ({
 
   const submitAdd = async () => {
     if (wordId) {
-      const res = await EnApi.addMeaning({ word_id: +wordId, ...values });
+      const res = await EnApi.addMeaning({ word_id: +wordId, ...values, translations: [] });
 
       if ('error' in res) {
         message.error(tError(res.message));

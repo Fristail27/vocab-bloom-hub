@@ -11,6 +11,7 @@ export const mapSearchResults = (entries: EnEntry[]): EnWordT[] => {
       if (w.form_of_word == EnWordFormsE.base_form) {
         r.push({
           ...w,
+          phrasal_variants: undefined,
           word: entry.word,
           forms: (w.forms || [])?.map(prepareWordForm),
           meanings: [],
@@ -23,6 +24,7 @@ export const mapSearchResults = (entries: EnEntry[]): EnWordT[] => {
         if (!config[w.id] && w.base_form) {
           r.push({
             ...w.base_form,
+            phrasal_variants: undefined,
             word: entry.word,
             forms: (w.base_form?.forms || [])?.map(prepareWordForm),
             meanings: [],

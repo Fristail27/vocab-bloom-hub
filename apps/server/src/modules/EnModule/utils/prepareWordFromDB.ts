@@ -9,7 +9,7 @@ export const prepareWordFromDB = (row: EnWord): EnWordT => {
     word: row.word.word,
     forms: (row.forms || [])?.map(prepareWordForm),
     meanings: row.meanings,
-    phrasal_variants: undefined,
+    phrasal_variants: row.phrasal_variants?.map((w) => w.word.word),
     base_form: undefined,
     base_phrasal: row.base_phrasal?.word?.word,
   };

@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { EnShortTranslation } from '../../entities/en_short_translation.entity';
 import {
   AddMeaningTranslationReqT,
   AddMeaningTranslationResT,
@@ -19,7 +18,7 @@ export class EnMeaningTranslationService {
     @InjectRepository(EnMeaning)
     private readonly enMeaningsRep: Repository<EnMeaning>,
 
-    @InjectRepository(EnShortTranslation)
+    @InjectRepository(EnMeaningTranslation)
     private readonly enMeaningTranslationRep: Repository<EnMeaningTranslation>,
   ) {}
 

@@ -1,6 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsArray, IsBoolean, IsEnum } from 'class-validator';
+import { IsString, IsNumber, IsArray, IsBoolean, IsEnum, ValidateNested } from 'class-validator';
 import { CategoryE, EnAreaVariantsE, EnMeaningT, LanguageRegisterE, WordLevelE } from '../../../../../../types';
+import { MeaningTranslationDto } from '../../EnMeaningTranslation/dto/MeaningTranslation.dto';
+import { Type } from 'class-transformer';
 
 export class AddMeaningReqDTO {
   @ApiProperty()
@@ -44,4 +46,10 @@ export class AddMeaningReqDTO {
   @IsArray()
   @IsEnum(CategoryE, { each: true })
   categories!: EnMeaningT['categories'];
+
+  @ApiProperty({ type: [MeaningTranslationDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MeaningTranslationDto)
+  translations!: MeaningTranslationDto[];
 }

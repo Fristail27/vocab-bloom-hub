@@ -6,6 +6,10 @@ import { AppModule } from './modules/AppModule/app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const httpServer = app.getHttpServer();
+  httpServer.requestTimeout = 20 * 60 * 1000;
+  httpServer.headersTimeout = 20 * 60 * 1000 + 1000; // должен быть чуть больше keepAliveTimeout
+  httpServer.keepAliveTimeout = 20 * 60 * 1000;
 
   const config = new DocumentBuilder()
     .setTitle('VocabBloom API')

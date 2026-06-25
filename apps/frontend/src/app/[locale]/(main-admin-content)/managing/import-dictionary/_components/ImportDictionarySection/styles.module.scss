@@ -1,0 +1,16 @@
+.importDictionarySection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .startBtn {
+    width: max-content;
+  }
+
+  .progress {
+    :global(.ant-progress-indicator) {
+      width: 58px;
+      overflow: hidden;
+    }
+  }
+}
