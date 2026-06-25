@@ -28,6 +28,8 @@ import {
   EnPartOfSpeechE,
   EnWordT,
   GetWordByIdResT,
+  ImportDictionaryReqT,
+  ImportDictionaryResT,
   SearchResT,
 } from 'server/types';
 import { CheckWordResT } from 'server/types';
@@ -107,5 +109,10 @@ export class EnApi extends AbstractBaseApi {
 
   static async deleteMeaningTranslation(id: string | number): Promise<DeleteMeaningTranslationResT> {
     return this.delete<DeleteMeaningTranslationResT>(`${this.baseURL}/en/meaning-translation/${id}`);
+  }
+
+  static async importDictionary(version: string): Promise<ImportDictionaryResT> {
+    const body: ImportDictionaryReqT = { user_version: version };
+    return this.post<ImportDictionaryResT>(`${this.baseURL}/en/import-dictionary/`, body);
   }
 }

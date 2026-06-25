@@ -10,6 +10,7 @@ import { AddMeaningTranslationReqDTO } from '../../src/modules/EnModule/modules/
 import { EditMeaningTranslationReqDTO } from '../../src/modules/EnModule/modules/EnMeaningTranslation/dto/EditMeaningTranslationReq.dto';
 import { EditCommonInfoOfWordReqDTO } from '../../src/modules/EnModule/dto/EditCommonInfoOfWordReq.dto';
 import { EditPhrasalBaseReqDTO } from '../../src/modules/EnModule/dto/EditPhrasalBase.dto';
+import { ImportDictionaryReq } from '../../src/modules/EnModule/dto/ImportDictionaryReq.dto';
 
 export type CheckWordResT = { hasWord: boolean; id?: number } | ErrorResT;
 export type AddResT = EnWordT | ErrorResT;
@@ -44,3 +45,6 @@ export type EditCommonInfoOfWordResT = { success: boolean } | ErrorResT;
 
 export type EditPhrasalBaseReqT = EditPhrasalBaseReqDTO;
 export type EditPhrasalBaseResT = { success: boolean } | ErrorResT;
+
+export type ImportDictionaryReqT = ImportDictionaryReq;
+export type ImportDictionaryResT = { success: boolean } | ErrorResT;

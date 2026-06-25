@@ -36,6 +36,12 @@ export default {
     add_word: 'Добавить слово',
     edit: 'Редактировать',
     edit_word: 'Редактирование слова',
+    import_dictionary: 'Загрузить словарь',
+  },
+  import_dictionary: {
+    your_version: 'Ваша Версия',
+    latest_version: 'Последняя версия',
+    start_importing: 'Начать загрузку',
   },
   en_managing_words: {
     word: 'Слово',
