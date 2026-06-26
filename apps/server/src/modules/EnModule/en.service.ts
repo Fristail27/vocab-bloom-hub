@@ -15,6 +15,7 @@ import {
   EnWordFormsE,
   EnWordFormT,
   EnWordT,
+  ImportDictionaryResT,
 } from '../../../types';
 import { ErrorCodes } from '../../../core/constants/error_codes';
 import { SearchReqDTO } from './dto/SearchReq.dto';
@@ -26,6 +27,7 @@ import { EditCommonInfoOfWordReqDTO } from './dto/EditCommonInfoOfWordReq.dto';
 import { EnShortTranslationService } from './modules/EnShortTranslation/enShortTranslation.service';
 import { EnMeaningService } from './modules/EnMeaning/enMeaning.service';
 import { EditPhrasalBaseReqDTO } from './dto/EditPhrasalBase.dto';
+import { ImportDictionaryReq } from './dto/ImportDictionaryReq.dto';
 
 @Injectable()
 export class EnService {
@@ -384,6 +386,11 @@ export class EnService {
 
     await this.enWordsRep.save(word);
 
+    return { success: true };
+  }
+
+  async importDictionary(body: ImportDictionaryReq): Promise<ImportDictionaryResT> {
+    console.log(432, body);
     return { success: true };
   }
 }
