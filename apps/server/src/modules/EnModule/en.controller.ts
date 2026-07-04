@@ -25,7 +25,6 @@ import {
   EnPartOfSpeechE,
   type EnWordT,
   GetWordByIdResT,
-  ImportDictionaryResT,
   SearchResT,
 } from '../../../types';
 import { ErrorCodes } from '../../../core/constants/error_codes';
@@ -34,7 +33,6 @@ import { AddWordFormReqDTO } from './dto/AddWordFormReq.dto';
 import { EditWordFormReqDTO } from './dto/EditWordFormReq.dto';
 import { EditCommonInfoOfWordReqDTO } from './dto/EditCommonInfoOfWordReq.dto';
 import { EditPhrasalBaseReqDTO } from './dto/EditPhrasalBase.dto';
-import { ImportDictionaryReq } from './dto/ImportDictionaryReq.dto';
 
 @ApiTags('En_Words')
 @Controller('/api/en/')
@@ -112,11 +110,5 @@ export class EnController {
   @Patch('word-form')
   async editWordForm(@Body() body: EditWordFormReqDTO): Promise<EditWordFormResT> {
     return this.enService.editWordForm(body);
-  }
-
-  @UseGuards(AdminGuard)
-  @Post('import-dictionary')
-  async importDictionary(@Body() body: ImportDictionaryReq): Promise<ImportDictionaryResT> {
-    return this.enService.importDictionary(body);
   }
 }

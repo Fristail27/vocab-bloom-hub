@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
   CreateDateColumn,
+  Index,
 } from 'typeorm';
 import { IsNumber, IsDate, IsNotEmpty, IsPositive } from 'class-validator';
 import { EnEntry } from './en_entry.entity';
@@ -24,6 +25,10 @@ import {
 } from '../../../../types';
 
 @Entity('en_words')
+@Index('IDX_EN_WORD_LOOKUP', ['word', 'part_of_speech', 'form_of_word'])
+@Index('IDX_EN_BASE_FORM', ['base_form'])
+@Index('IDX_EN_BASE_PHRASAL', ['base_phrasal'])
+@Index('IDX_EN_PART_OF_SPEECH', ['part_of_speech'])
 export class EnWord {
   @PrimaryGeneratedColumn()
   @IsNumber()
@@ -31,11 +36,13 @@ export class EnWord {
   @IsNotEmpty()
   id!: number;
 
-  @CreateDateColumn({ type: 'datetime' })
+  //TODO сделать условным для sqlite/postgress
+  @CreateDateColumn()
   @IsDate()
   createdAt!: Date;
 
-  @UpdateDateColumn({ type: 'datetime' })
+  //TODO сделать условным для sqlite/postgress
+  @UpdateDateColumn()
   @IsDate()
   updateAt!: Date;
 

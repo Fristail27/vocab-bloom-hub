@@ -5,6 +5,7 @@ import { Icon } from '@/core/ui/Icon';
 import { BreadcrumbSection } from '@/core/ui/Breadcrumb/components/ManagingBreadcrumbSection';
 import { CommonPageP } from '@/types/common';
 import { ImportDictionarySection } from './_components/ImportDictionarySection';
+import { ExportDictionarySection } from './_components/ExportDictionarySection';
 import styles from './styles.module.scss';
 
 export default async function ImportDictionaryPage({ params }: CommonPageP) {
@@ -21,6 +22,7 @@ export default async function ImportDictionaryPage({ params }: CommonPageP) {
       <Title level={2}>{manageT('import_dictionary')}</Title>
       <Breadcrumb items={breadCrumbs} />
       <ImportDictionarySection />
+      <ExportDictionarySection />
     </div>
   );
 }

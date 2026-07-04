@@ -1,8 +1,8 @@
-import { EnEntry } from '../../src/modules/EnModule/entities/en_entry.entity';
-import { EnWord } from '../../src/modules/EnModule/entities/en_word.entity';
-import { EnMeaning } from '../../src/modules/EnModule/entities/en_meaning.entity';
-import { EnShortTranslation } from '../../src/modules/EnModule/entities/en_short_translation.entity';
-import { EnMeaningTranslation } from '../../src/modules/EnModule/entities/en_meaning_translation.entity';
+import { EnWord } from '../../../src/modules/EnModule/entities/en_word.entity';
+import { EnMeaning } from '../../../src/modules/EnModule/entities/en_meaning.entity';
+import { EnShortTranslation } from '../../../src/modules/EnModule/entities/en_short_translation.entity';
+import { EnMeaningTranslation } from '../../../src/modules/EnModule/entities/en_meaning_translation.entity';
+import { AvailableTranslationLanguagesE, CategoryE, LanguageRegisterE, WordLevelE } from '../index';
 
 export enum EnEntryTypesE {
   word = 'word',
@@ -76,7 +76,7 @@ export type EnShortTranslationT = Omit<EnShortTranslation, 'updateAt' | 'created
 
 export type EnWordFormT = Pick<
   Omit<EnWordT, 'forms'>,
-  'id' | 'area_variant' | 'transcription' | 'form_of_word' | 'word'
+  'id' | 'area_variant' | 'transcription' | 'form_of_word' | 'word' | 'is_obsolete'
 >;
 
 export type EnWordT = Omit<
@@ -90,4 +90,58 @@ export type EnWordT = Omit<
   base_phrasal: string | undefined;
   base_form?: Omit<EnWordT, 'base_form'> | undefined;
 };
-export type EnEntryT = EnEntry;
+
+export type DictionaryWordJSONT = {
+  is_obsolete: boolean;
+  word_level?: WordLevelE | 'unknown' | undefined | null;
+  area_variant: EnAreaVariantsE;
+  category?: CategoryE | 'unknown' | undefined | null;
+  language_register: LanguageRegisterE | 'unknown' | null;
+  part_of_speech: EnPartOfSpeechE;
+  form_of_word: EnWordFormsE;
+  description: string;
+  transcription: string;
+  noun___irregular_plural: boolean | null;
+  noun___countable: boolean | null;
+  noun___is_proper: boolean | null;
+  verb___is_irregular: boolean | null;
+  verb___transitivity: EnVerbTransitivityE | 'unknown' | null;
+  verb___is_phrasal: boolean | null;
+  verb___phrasal_object_pattern: EnPhrasalObjectPatternE | 'unknown' | null;
+  word: string;
+  pattern: null;
+  generated: boolean | null;
+  generatedByModel: string | null;
+  is_abbreviation: boolean | null;
+  is_hyphenated: boolean | null;
+  word_info: { createdAt: string; updateAt: string; word: string; type: EnEntryTypesE };
+  forms: Array<{
+    word: string;
+    form_of_word: EnWordFormsE;
+    transcription: string;
+    area_variant: EnAreaVariantsE;
+    is_obsolete: boolean | null;
+  }>;
+  meanings: Array<{
+    sort_order: number;
+    title: string;
+    definition: string;
+    examples: string[];
+    category?: CategoryE | 'unknown' | undefined | null;
+    meaning_level?: WordLevelE | 'unknown' | undefined | null;
+    area_variant: EnAreaVariantsE;
+    language_register: LanguageRegisterE | 'unknown' | null;
+    translations: Array<{
+      id: number;
+      language: AvailableTranslationLanguagesE;
+      title: string;
+      definition: string;
+      variantsOfWords: string[];
+    }>;
+  }>;
+  short_translations: Array<{
+    language: AvailableTranslationLanguagesE;
+    description: string;
+    variantsOfWords: string[];
+  }>;
+};

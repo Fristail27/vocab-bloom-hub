@@ -42,6 +42,9 @@ export default {
     your_version: 'Ваша Версия',
     latest_version: 'Последняя версия',
     start_importing: 'Начать загрузку',
+    start_exporting: 'Начать сохранение',
+    en_saving_0: 'Идет добавление записей...',
+    en_saving_1: 'Сохранение фразовых глаголов...',
   },
   en_managing_words: {
     word: 'Слово',

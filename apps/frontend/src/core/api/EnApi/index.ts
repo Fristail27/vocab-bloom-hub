@@ -27,12 +27,14 @@ import {
   EditWordFormResT,
   EnPartOfSpeechE,
   EnWordT,
+  ErrorResT,
   GetWordByIdResT,
+  ImportDictionaryChunkT,
   ImportDictionaryReqT,
-  ImportDictionaryResT,
   SearchResT,
 } from 'server/types';
 import { CheckWordResT } from 'server/types';
+import { ErrorCodes } from 'server/core/constants/error_codes';
 
 export class EnApi extends AbstractBaseApi {
   static async checkWord(word: string, pos: EnPartOfSpeechE, forPhrasal?: boolean): Promise<CheckWordResT> {
@@ -111,8 +113,64 @@ export class EnApi extends AbstractBaseApi {
     return this.delete<DeleteMeaningTranslationResT>(`${this.baseURL}/en/meaning-translation/${id}`);
   }
 
-  static async importDictionary(version: string): Promise<ImportDictionaryResT> {
+  static async importDictionary(
+    version: string,
+    handleChunk: (ch: ImportDictionaryChunkT) => void,
+    onError: (err: string) => void,
+  ): Promise<ReadableStreamDefaultReader<Uint8Array> | ErrorResT> {
     const body: ImportDictionaryReqT = { user_version: version };
-    return this.post<ImportDictionaryResT>(`${this.baseURL}/en/import-dictionary/`, body);
+    const reader = await AbstractBaseApi.stream(`${this.baseURL}/en/dictionary/import`, {
+      method: 'POST',
+      body: body as BodyInit,
+    });
+
+    const decoder = new TextDecoder();
+
+    if ('error' in reader) {
+      return { error: true, message: ErrorCodes.internal_server_error };
+    }
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+
+      try {
+        const d: ImportDictionaryChunkT = JSON.parse(chunk);
+        handleChunk(d);
+      } catch (err: any) {
+        onError(err.message);
+      }
+    }
+    return reader;
+  }
+
+  static async exportDictionary(
+    handleChunk: (ch: ImportDictionaryChunkT) => void,
+    onError: (err: string) => void,
+  ): Promise<ReadableStreamDefaultReader<Uint8Array> | ErrorResT> {
+    const reader = await AbstractBaseApi.stream(`${this.baseURL}/en/dictionary/export`);
+
+    const decoder = new TextDecoder();
+
+    if ('error' in reader) {
+      return { error: true, message: ErrorCodes.internal_server_error };
+    }
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+
+      try {
+        const d: ImportDictionaryChunkT = JSON.parse(chunk);
+        handleChunk(d);
+      } catch (err: any) {
+        onError(err.message);
+      }
+    }
+    return reader;
   }
 }

@@ -15,7 +15,6 @@ import {
   EnWordFormsE,
   EnWordFormT,
   EnWordT,
-  ImportDictionaryResT,
 } from '../../../types';
 import { ErrorCodes } from '../../../core/constants/error_codes';
 import { SearchReqDTO } from './dto/SearchReq.dto';
@@ -27,7 +26,6 @@ import { EditCommonInfoOfWordReqDTO } from './dto/EditCommonInfoOfWordReq.dto';
 import { EnShortTranslationService } from './modules/EnShortTranslation/enShortTranslation.service';
 import { EnMeaningService } from './modules/EnMeaning/enMeaning.service';
 import { EditPhrasalBaseReqDTO } from './dto/EditPhrasalBase.dto';
-import { ImportDictionaryReq } from './dto/ImportDictionaryReq.dto';
 
 @Injectable()
 export class EnService {
@@ -96,11 +94,7 @@ export class EnService {
     });
   }
 
-  private async getWordRow(
-    word: string,
-    pos: EnPartOfSpeechE,
-    formOfWord: EnWordFormsE,
-  ): Promise<EnWord | null> {
+  async getWordRow(word: string, pos: EnPartOfSpeechE, formOfWord: EnWordFormsE): Promise<EnWord | null> {
     return this.enWordsRep
       .createQueryBuilder('w')
       .innerJoin('w.word', 'entry')
@@ -144,30 +138,38 @@ export class EnService {
     const baseEntry = await this.getOrAddEntry(body.word, type);
     const baseWord = await this.addWordRow(baseEntry, body);
 
+    const saveMeaningsPromises = [];
+    const saveShortTranslationsPromises = [];
     if (body.forms) {
       for (const form of body.forms) await this.addFormOfWord(form, baseWord);
     }
 
     if (body.meanings) {
       for (const m of body.meanings)
-        await this.enMeaningService.addMeaning({
-          word_id: baseWord.id,
-          meaning_level: m.meaning_level,
-          language_register: m.language_register,
-          categories: m.categories,
-          ...m,
-        });
+        saveMeaningsPromises.push(
+          this.enMeaningService.addMeaning({
+            word_id: baseWord.id,
+            meaning_level: m.meaning_level,
+            language_register: m.language_register,
+            categories: m.categories,
+            ...m,
+          }),
+        );
     }
 
     if (body.short_translations) {
       for (const s of body.short_translations)
-        await this.enShortTranslationService.addShortTranslation({
-          language: s.language,
-          description: s.description,
-          variant_of_words: s.variants_of_words,
-          word_id: baseWord.id,
-        });
+        saveShortTranslationsPromises.push(
+          this.enShortTranslationService.addShortTranslation({
+            language: s.language,
+            description: s.description,
+            variant_of_words: s.variants_of_words,
+            word_id: baseWord.id,
+          }),
+        );
     }
+
+    await Promise.all([...saveMeaningsPromises, ...saveShortTranslationsPromises]);
 
     return body;
   }
@@ -386,11 +388,6 @@ export class EnService {
 
     await this.enWordsRep.save(word);
 
-    return { success: true };
-  }
-
-  async importDictionary(body: ImportDictionaryReq): Promise<ImportDictionaryResT> {
-    console.log(432, body);
     return { success: true };
   }
 }
