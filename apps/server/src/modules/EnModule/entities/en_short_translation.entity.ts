@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -12,6 +13,8 @@ import { IsDate, IsNotEmpty, IsNumber, IsPositive } from 'class-validator';
 import { AvailableTranslationLanguagesE } from '../../../../types';
 
 @Entity('en_short_translations')
+@Index('IDX_EN_SHORT_TRANSLATION_WORD', ['word'])
+@Index('IDX_EN_SHORT_TRANSLATION_LANGUAGE', ['language'])
 export class EnShortTranslation {
   @PrimaryGeneratedColumn()
   @IsNumber()
@@ -37,6 +40,7 @@ export class EnShortTranslation {
   @Column({ type: 'simple-enum', enum: AvailableTranslationLanguagesE })
   language!: AvailableTranslationLanguagesE.ru;
 
-  @Column({ type: 'simple-array', array: true, default: [] })
+  //TODO сделать условным для sqlite/postgress
+  @Column({ type: 'text', array: true, default: [] })
   variants_of_words!: string[];
 }

@@ -80,4 +80,49 @@ export class AbstractBaseApi {
   static delete<T>(url: string, options?: Omit<RequestOptions, 'body' | 'method'>) {
     return this.request<T>(url, { ...options, method: 'DELETE' });
   }
+
+  static async stream(
+    endpoint: string,
+    options: RequestOptions = {},
+  ): Promise<ReadableStreamDefaultReader<Uint8Array> | ErrorResT> {
+    const { query, headers = {}, body, ...fetchOptions } = options;
+
+    try {
+      const url = this.buildUrl(endpoint, query);
+
+      const res = await fetch(url, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${await this.getToken()}`,
+          ...headers,
+        },
+        ...(body && { body: JSON.stringify(body) }),
+        ...fetchOptions,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+
+        return {
+          ...(err || {}),
+          error: true,
+        };
+      }
+
+      if (!res.body) {
+        return {
+          error: true,
+          message: ErrorCodes.unparsed_data,
+        };
+      }
+
+      return res.body.getReader();
+    } catch {
+      return {
+        error: true,
+        message: ErrorCodes.failed_fetch,
+      };
+    }
+  }
 }

@@ -94,11 +94,7 @@ export class EnService {
     });
   }
 
-  private async getWordRow(
-    word: string,
-    pos: EnPartOfSpeechE,
-    formOfWord: EnWordFormsE,
-  ): Promise<EnWord | null> {
+  async getWordRow(word: string, pos: EnPartOfSpeechE, formOfWord: EnWordFormsE): Promise<EnWord | null> {
     return this.enWordsRep
       .createQueryBuilder('w')
       .innerJoin('w.word', 'entry')
@@ -142,30 +138,38 @@ export class EnService {
     const baseEntry = await this.getOrAddEntry(body.word, type);
     const baseWord = await this.addWordRow(baseEntry, body);
 
+    const saveMeaningsPromises = [];
+    const saveShortTranslationsPromises = [];
     if (body.forms) {
       for (const form of body.forms) await this.addFormOfWord(form, baseWord);
     }
 
     if (body.meanings) {
       for (const m of body.meanings)
-        await this.enMeaningService.addMeaning({
-          word_id: baseWord.id,
-          meaning_level: m.meaning_level,
-          language_register: m.language_register,
-          categories: m.categories,
-          ...m,
-        });
+        saveMeaningsPromises.push(
+          this.enMeaningService.addMeaning({
+            word_id: baseWord.id,
+            meaning_level: m.meaning_level,
+            language_register: m.language_register,
+            categories: m.categories,
+            ...m,
+          }),
+        );
     }
 
     if (body.short_translations) {
       for (const s of body.short_translations)
-        await this.enShortTranslationService.addShortTranslation({
-          language: s.language,
-          description: s.description,
-          variant_of_words: s.variants_of_words,
-          word_id: baseWord.id,
-        });
+        saveShortTranslationsPromises.push(
+          this.enShortTranslationService.addShortTranslation({
+            language: s.language,
+            description: s.description,
+            variant_of_words: s.variants_of_words,
+            word_id: baseWord.id,
+          }),
+        );
     }
+
+    await Promise.all([...saveMeaningsPromises, ...saveShortTranslationsPromises]);
 
     return body;
   }

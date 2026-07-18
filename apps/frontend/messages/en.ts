@@ -36,6 +36,15 @@ export default {
     add_word: 'Add word',
     edit: 'Edit data',
     edit_word: 'Edit word',
+    import_dictionary: 'Import Dictionary',
+  },
+  import_dictionary: {
+    your_version: 'Your Version',
+    latest_version: 'Latest Version',
+    start_importing: 'Start importing',
+    start_exporting: 'Start exporting',
+    en_saving_0: 'Saving records...',
+    en_saving_1: 'Saving phrasal verbs...',
   },
   en_managing_words: {
     word: 'Word',

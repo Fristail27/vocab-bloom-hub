@@ -7,6 +7,7 @@ import { EnMeaning } from '../../entities/en_meaning.entity';
 import { AddMeaningReqDTO } from './dto/AddMeaningReq.dto';
 import { EditMeaningReqDTO } from './dto/EditMeaningReq.dto';
 import { EnWord } from '../../entities/en_word.entity';
+import { EnMeaningTranslationService } from '../EnMeaningTranslation/enMeaningTranslation.service';
 
 @Injectable()
 export class EnMeaningService {
@@ -16,6 +17,8 @@ export class EnMeaningService {
 
     @InjectRepository(EnMeaning)
     private readonly enMeaningsRep: Repository<EnMeaning>,
+
+    private readonly enMeaningTranslationService: EnMeaningTranslationService,
   ) {}
 
   async addMeaning(body: AddMeaningReqDTO): Promise<AddMeaningResT> {
@@ -27,6 +30,14 @@ export class EnMeaningService {
     }
 
     const res = await this.enMeaningsRep.save({ word: word, ...newMeaning });
+    if (body.translations.length > 0) {
+      for (const translation of body.translations) {
+        await this.enMeaningTranslationService.addMeaningTranslation({
+          meaning_id: res.id,
+          ...translation,
+        });
+      }
+    }
 
     return { success: true, id: res.id };
   }

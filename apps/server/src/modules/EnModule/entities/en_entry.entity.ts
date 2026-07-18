@@ -1,15 +1,18 @@
-import { Column, CreateDateColumn, Entity, OneToMany, PrimaryColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, OneToMany, PrimaryColumn, UpdateDateColumn } from 'typeorm';
 import { IsDate } from 'class-validator';
 import { EnWord } from './en_word.entity';
 import { EnEntryTypesE } from '../../../../types';
 
 @Entity('en_entries')
+@Index('IDX_EN_ENTRY_TYPE', ['type'])
 export class EnEntry {
-  @CreateDateColumn({ type: 'datetime' })
+  //TODO сделать условным для sqlite/postgress
+  @CreateDateColumn()
   @IsDate()
   createdAt!: Date;
 
-  @UpdateDateColumn({ type: 'datetime' })
+  //TODO сделать условным для sqlite/postgress
+  @UpdateDateColumn()
   @IsDate()
   updateAt!: Date;
 
