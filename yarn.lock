@@ -1932,19 +1932,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/platform-express@npm:^11.0.1":
-  version: 11.1.24
-  resolution: "@nestjs/platform-express@npm:11.1.24"
+"@nestjs/platform-express@npm:^11.1.28":
+  version: 11.1.28
+  resolution: "@nestjs/platform-express@npm:11.1.28"
   dependencies:
     cors: "npm:2.8.6"
     express: "npm:5.2.1"
-    multer: "npm:2.1.1"
+    multer: "npm:2.2.0"
     path-to-regexp: "npm:8.4.2"
     tslib: "npm:2.8.1"
   peerDependencies:
     "@nestjs/common": ^11.0.0
     "@nestjs/core": ^11.0.0
-  checksum: 10c0/528230bf31dd32efa357348e75aed3239afe641f77a3172c69a8aea35546050b606a3ee29effc7f28cd35e10628baf18213effab1448b4aec85f50c2c478906d
+  checksum: 10c0/7063a2f33695a35776a4c5a4a3663b65c450779cdefe3302899d97ca79dbd20c6f2f3b4a8f6de9f633c73855d152e2eb6487bac975593a65e0513ca23a0a73a1
   languageName: node
   linkType: hard
 
@@ -8503,15 +8503,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"multer@npm:2.1.1":
-  version: 2.1.1
-  resolution: "multer@npm:2.1.1"
+"multer@npm:2.2.0":
+  version: 2.2.0
+  resolution: "multer@npm:2.2.0"
   dependencies:
     append-field: "npm:^1.0.0"
     busboy: "npm:^1.6.0"
     concat-stream: "npm:^2.0.0"
     type-is: "npm:^1.6.18"
-  checksum: 10c0/2ec4e02833b20f403cfb879d4b64d2a9070d902b9deae7aef18a6faadb707d7665385456cf540aa8a6dadfe3d4c5fc8e0e7b0675b94e1077048b1125426deee6
+  checksum: 10c0/7aa366d89042427347b6ab8e4a203405d7fe942e4a3095648a14526fcf3691d98ffc2da62abf85d8aca0a341f828168eb197b33cfdcfcce29d6ef593a5625591
   languageName: node
   linkType: hard
 
@@ -9867,7 +9867,7 @@ __metadata:
     "@nestjs/core": "npm:^11.1.28"
     "@nestjs/microservices": "npm:^11.1.27"
     "@nestjs/passport": "npm:^11.0.5"
-    "@nestjs/platform-express": "npm:^11.0.1"
+    "@nestjs/platform-express": "npm:^11.1.28"
     "@nestjs/schematics": "npm:^11.0.0"
     "@nestjs/swagger": "npm:^11.4.6"
     "@nestjs/testing": "npm:^11.1.27"
