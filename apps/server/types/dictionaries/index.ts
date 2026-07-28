@@ -1,5 +1,5 @@
 export * from './en';
-export * from './EnApiTypes';
+export * from './en/EnApiTypes';
 
 export enum LanguageRegisterE {
   formal = 'formal',

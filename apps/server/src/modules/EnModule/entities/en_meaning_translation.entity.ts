@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -12,6 +13,8 @@ import { EnMeaning } from './en_meaning.entity';
 import { AvailableTranslationLanguagesE } from '../../../../types';
 
 @Entity('en_meanings_translations')
+@Index('IDX_EN_MEANING_TRANSLATION_MEANING', ['meaning'])
+@Index('IDX_EN_MEANING_TRANSLATION_LANGUAGE', ['language'])
 export class EnMeaningTranslation {
   @PrimaryGeneratedColumn()
   @IsNumber()
@@ -42,6 +45,7 @@ export class EnMeaningTranslation {
   @Column({ type: 'text' })
   definition!: string;
 
-  @Column({ type: 'simple-array', array: true, default: [] })
+  //TODO сделать условным для sqlite/postgress
+  @Column({ type: 'text', array: true, default: [] })
   variants_of_words!: string[];
 }
