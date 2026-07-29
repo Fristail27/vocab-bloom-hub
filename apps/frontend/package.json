@@ -33,11 +33,12 @@
     "url": "git+https://github.com/Fristail27/vocab-bloom-hub.git"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
+    "dev": "dotenv -e ../../.env -- next dev",
+    "build": "dotenv -e ../../.env -- next build",
+    "start": "dotenv -e ../../.env -- next start"
   },
   "dependencies": {
+    "dotenv": "^17.4.2",
     "js-cookie": "^3.0.7",
     "next": "16.2.11",
     "next-intl": "^4.12.0",
