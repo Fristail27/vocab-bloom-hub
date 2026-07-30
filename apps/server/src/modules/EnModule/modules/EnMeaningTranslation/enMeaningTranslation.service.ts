@@ -23,7 +23,7 @@ export class EnMeaningTranslationService {
   ) {}
 
   async addMeaningTranslation(body: AddMeaningTranslationReqT): Promise<AddMeaningTranslationResT> {
-    const { meaning_id, ...newMeaning } = body;
+    const { meaning_id, id: _id, ...newMeaning } = body;
     const meaning = await this.enMeaningsRep.findOne({ where: { id: meaning_id } });
 
     if (!meaning) {

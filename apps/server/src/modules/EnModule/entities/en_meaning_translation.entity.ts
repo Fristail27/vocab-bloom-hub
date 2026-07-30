@@ -11,6 +11,7 @@ import {
 import { IsDate, IsNotEmpty, IsNumber, IsPositive } from 'class-validator';
 import { EnMeaning } from './en_meaning.entity';
 import { AvailableTranslationLanguagesE } from '../../../../types';
+import { checkIsPostgres } from '../../../../configuration';
 
 @Entity('en_meanings_translations')
 @Index('IDX_EN_MEANING_TRANSLATION_MEANING', ['meaning'])
@@ -45,7 +46,6 @@ export class EnMeaningTranslation {
   @Column({ type: 'text' })
   definition!: string;
 
-  //TODO сделать условным для sqlite/postgress
-  @Column({ type: 'text', array: true, default: [] })
+  @Column({ type: checkIsPostgres() ? 'text' : 'simple-array', array: true, default: [] })
   variants_of_words!: string[];
 }

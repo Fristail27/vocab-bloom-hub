@@ -11,6 +11,7 @@ import {
 import { EnWord } from './en_word.entity';
 import { IsDate, IsNotEmpty, IsNumber, IsPositive } from 'class-validator';
 import { AvailableTranslationLanguagesE } from '../../../../types';
+import { checkIsPostgres } from '../../../../configuration';
 
 @Entity('en_short_translations')
 @Index('IDX_EN_SHORT_TRANSLATION_WORD', ['word'])
@@ -40,7 +41,6 @@ export class EnShortTranslation {
   @Column({ type: 'simple-enum', enum: AvailableTranslationLanguagesE })
   language!: AvailableTranslationLanguagesE.ru;
 
-  //TODO сделать условным для sqlite/postgress
-  @Column({ type: 'text', array: true, default: [] })
+  @Column({ type: checkIsPostgres() ? 'text' : 'simple-array', array: true, default: [] })
   variants_of_words!: string[];
 }

@@ -9,6 +9,9 @@ export class AddMeaningReqDTO {
   @IsNumber()
   word_id!: number;
 
+  @IsNumber()
+  id?: number | undefined;
+
   @ApiProperty()
   @IsString()
   title!: EnMeaningT['title'];

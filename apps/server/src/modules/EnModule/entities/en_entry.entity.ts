@@ -2,17 +2,16 @@ import { Column, CreateDateColumn, Entity, Index, OneToMany, PrimaryColumn, Upda
 import { IsDate } from 'class-validator';
 import { EnWord } from './en_word.entity';
 import { EnEntryTypesE } from '../../../../types';
+import { checkIsPostgres } from '../../../../configuration';
 
 @Entity('en_entries')
 @Index('IDX_EN_ENTRY_TYPE', ['type'])
 export class EnEntry {
-  //TODO сделать условным для sqlite/postgress
-  @CreateDateColumn()
+  @CreateDateColumn({ type: checkIsPostgres() ? 'timestamptz' : 'datetime' })
   @IsDate()
   createdAt!: Date;
 
-  //TODO сделать условным для sqlite/postgress
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: checkIsPostgres() ? 'timestamptz' : 'datetime' })
   @IsDate()
   updateAt!: Date;
 

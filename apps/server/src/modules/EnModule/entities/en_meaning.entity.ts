@@ -13,6 +13,7 @@ import { EnWord } from './en_word.entity';
 import { IsDate, IsNotEmpty, IsNumber, IsPositive } from 'class-validator';
 import { EnMeaningTranslation } from './en_meaning_translation.entity';
 import { CategoryE, EnAreaVariantsE, LanguageRegisterE, WordLevelE } from '../../../../types';
+import { checkIsPostgres } from '../../../../configuration';
 
 @Entity('en_meanings')
 @Index('IDX_EN_MEANING_WORD', ['word'])
@@ -60,8 +61,7 @@ export class EnMeaning {
   @Column({ type: 'boolean', default: false })
   is_obsolete!: boolean;
 
-  //TODO сделать условным для sqlite/postgress
-  @Column({ type: 'text', array: true, nullable: true })
+  @Column({ type: checkIsPostgres() ? 'text' : 'simple-array', array: true, nullable: true })
   examples!: string[];
 
   @OneToMany(() => EnMeaningTranslation, (entry) => entry.meaning, { onDelete: 'CASCADE' })

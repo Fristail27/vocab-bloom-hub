@@ -23,6 +23,7 @@ import {
   LanguageRegisterE,
   WordLevelE,
 } from '../../../../types';
+import { checkIsPostgres } from '../../../../configuration';
 
 @Entity('en_words')
 @Index('IDX_EN_WORD_LOOKUP', ['word', 'part_of_speech', 'form_of_word'])
@@ -36,13 +37,11 @@ export class EnWord {
   @IsNotEmpty()
   id!: number;
 
-  //TODO сделать условным для sqlite/postgress
-  @CreateDateColumn()
+  @CreateDateColumn({ type: checkIsPostgres() ? 'timestamptz' : 'datetime' })
   @IsDate()
   createdAt!: Date;
 
-  //TODO сделать условным для sqlite/postgress
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: checkIsPostgres() ? 'timestamptz' : 'datetime' })
   @IsDate()
   updateAt!: Date;
 

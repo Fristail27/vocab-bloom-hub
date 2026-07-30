@@ -7,6 +7,9 @@ export class AddMeaningTranslationReqDTO {
   @IsEnum(AvailableTranslationLanguagesE)
   language!: EnMeaningTranslationT['language'];
 
+  @IsNumber()
+  id?: number | undefined;
+
   @ApiProperty()
   @IsString()
   title!: EnMeaningTranslationT['title'];
