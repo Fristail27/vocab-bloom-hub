@@ -1,3 +1,6 @@
+import { config } from 'dotenv';
+import path from 'path';
+config({ path: path.resolve(__dirname, '../../../../.env') });
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';

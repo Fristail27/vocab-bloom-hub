@@ -4,8 +4,9 @@ import React from 'react';
 import { App, Button, Progress, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
 import { ImportDictionaryChunkT } from 'server/types';
+import { EnDictionaryImportPhasesE } from 'server/src/modules/EnModule/modules/EnImportDictionary/constants';
 import { EnApi } from '@/core/api/EnApi';
-import { formatTime } from './utils';
+import { formatTime, getDownloadProgressStr } from './utils';
 import styles from './styles.module.scss';
 
 const { Text } = Typography;
@@ -37,8 +38,13 @@ export const ImportDictionarySection: React.FC = () => {
   const importDictionary = async () => {
     setInProgress(true);
     const handleChunk = (c: ImportDictionaryChunkT) => {
-      setPercents(+c.percent?.toFixed(2));
-      setStatusMessage(t(`en_saving_${c.stage}`));
+      if (c.stage === EnDictionaryImportPhasesE.downloading_database) {
+        const progressPart = getDownloadProgressStr(c);
+        setStatusMessage(`${t(`en_saving_${c.stage}`)} ${progressPart} ${+c.percent?.toFixed(2)}%`);
+      } else {
+        setPercents(+c.percent?.toFixed(2));
+        setStatusMessage(t(`en_saving_${c.stage}`));
+      }
     };
     const res = await EnApi.importDictionary('0.0.1', handleChunk, onError);
     if ('error' in res) {

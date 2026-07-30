@@ -48,4 +48,9 @@ export type EditPhrasalBaseReqT = EditPhrasalBaseReqDTO;
 export type EditPhrasalBaseResT = { success: boolean } | ErrorResT;
 
 export type ImportDictionaryReqT = ImportDictionaryReq;
-export type ImportDictionaryChunkT = { percent: number; stage?: EnDictionaryImportPhasesE | undefined };
+export type ImportDictionaryChunkT = {
+  percent: number;
+  stage?: EnDictionaryImportPhasesE | undefined;
+  downloaded?: number | undefined;
+  total?: number | undefined;
+};
