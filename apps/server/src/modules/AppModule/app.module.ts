@@ -48,7 +48,6 @@ import { EnShortTranslation } from '../EnModule/entities/en_short_translation.en
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
-      envFilePath: path.resolve(__dirname, '../../../../../../.env'),
     }),
   ],
   controllers: [AppController],

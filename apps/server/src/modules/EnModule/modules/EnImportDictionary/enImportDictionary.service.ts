@@ -49,7 +49,7 @@ export class EnImportDictionaryService {
     plusCount: () => number,
     handleLine: (line: T) => Promise<void>,
   ): Promise<void> {
-    const filePath = await this.downloadFile(fileName);
+    const filePath = await this.downloadFile(fileName, res, EnDictionaryImportPhasesE.downloading_database);
 
     try {
       const rl = readline.createInterface({
@@ -77,7 +77,11 @@ export class EnImportDictionaryService {
     }
   }
 
-  private async downloadFile(fileName: string): Promise<string> {
+  private async downloadFile(
+    fileName: string,
+    res: Response,
+    stage: EnDictionaryImportPhasesE,
+  ): Promise<string> {
     const tmpDir = path.join(os.tmpdir(), 'vocab-bloom-import');
     if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true });
     const filePath = path.join(tmpDir, fileName);
@@ -87,7 +91,40 @@ export class EnImportDictionaryService {
       throw new InternalServerErrorException(ErrorCodes.internal_server_error);
     }
 
-    await pipeline(Readable.fromWeb(response.body as any), createWriteStream(filePath));
+    const bytesTotal = Number(response.headers.get('content-length')) || 0;
+    let bytesDownloaded = 0;
+    let lastReportedPercent = -1;
+
+    const nodeStream = Readable.fromWeb(response.body as any);
+
+    nodeStream.on('data', (chunk: Buffer) => {
+      bytesDownloaded += chunk.length;
+
+      if (bytesTotal > 0) {
+        const percent = Math.floor((bytesDownloaded / bytesTotal) * 100);
+        if (percent === lastReportedPercent) return;
+        lastReportedPercent = percent;
+      }
+
+      const progressChunk: ImportDictionaryChunkT = {
+        percent: bytesTotal > 0 ? Math.floor((bytesDownloaded / bytesTotal) * 100) : 0,
+        stage,
+        downloaded: bytesDownloaded,
+        total: bytesTotal,
+      };
+      res.write(JSON.stringify(progressChunk) + '\n');
+    });
+
+    await pipeline(nodeStream, createWriteStream(filePath));
+
+    const finalChunk: ImportDictionaryChunkT = {
+      percent: 100,
+      stage,
+      downloaded: bytesDownloaded,
+      total: bytesTotal || bytesDownloaded,
+    };
+    res.write(JSON.stringify(finalChunk) + '\n');
+
     return filePath;
   }
 
