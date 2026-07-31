@@ -11,6 +11,7 @@ import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { Provider } from '@/components/Provider';
 import { ServerAuthApi } from '@/core/api/AuthApi/ServerAuthApi';
+import { ServerSettingsApi } from '@/core/api/SettingsApi/ServerSettingsApi';
 import { getThemeVariablesLink } from '@/helpers/getThemeLink';
 import { routing } from '@/i18n/routing';
 import { InterfaceLanguageEnum, ThemeE } from '@/types/common';
@@ -48,6 +49,7 @@ export default async function RootLayout({ children, params }: RootLayoutP) {
   const cookieStore = await cookies();
   const theme = (cookieStore.get('theme')?.value || ThemeE.light) as ThemeE;
   const themeLink = getThemeVariablesLink(theme);
+  const settings = await ServerSettingsApi.getSettings();
   return (
     <html lang={locale} className={`${geistSans.variable} ${geistMono.variable}`}>
       <head>
@@ -61,7 +63,7 @@ export default async function RootLayout({ children, params }: RootLayoutP) {
               <NextIntlClientProvider messages={messages}>
                 <Header />
                 <main className={styles.mainContainer}>{children}</main>
-                <Footer />
+                <Footer settings={settings} />
               </NextIntlClientProvider>
             </Provider>
           </App>

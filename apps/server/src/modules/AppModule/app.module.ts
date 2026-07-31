@@ -12,17 +12,20 @@ import { EnMeaning } from '../EnModule/entities/en_meaning.entity';
 import { EnMeaningTranslation } from '../EnModule/entities/en_meaning_translation.entity';
 import { EnEntry } from '../EnModule/entities/en_entry.entity';
 import { EnShortTranslation } from '../EnModule/entities/en_short_translation.entity';
+import { SettingsModule } from '../SettingsModule/settings.module';
+import { Settings } from '../SettingsModule/entities/settings.entity';
 
 @Module({
   imports: [
     AuthModule,
     EnModule,
+    SettingsModule,
     TypeOrmModule.forRootAsync({
       useFactory: (): TypeOrmModuleOptions => {
         const databaseUrl = process.env.DATABASE_URL;
 
         const base = {
-          entities: [EnEntry, EnWord, EnMeaning, EnMeaningTranslation, EnShortTranslation],
+          entities: [EnEntry, EnWord, EnMeaning, EnMeaningTranslation, EnShortTranslation, Settings],
           autoLoadEntities: true,
           synchronize: process.env.NODE_ENV === 'development',
         };
