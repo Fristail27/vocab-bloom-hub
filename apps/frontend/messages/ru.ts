@@ -12,6 +12,8 @@ export default {
     [ErrorCodes.phrasal_base_doesnt_exist]: 'Базова форма фразового глагола не существует.',
     [ErrorCodes.word_doesnt_found]: 'Слово не найдено',
     [ErrorCodes.translation_doesnt_found]: 'Перевод не найден',
+    [ErrorCodes.setting_field_doesnt_found]: 'Поле не найдено',
+    [ErrorCodes.setting_field_already_exists]: 'Поле уже существует',
   },
   common: {
     theme: {

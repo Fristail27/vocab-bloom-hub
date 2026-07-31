@@ -8,4 +8,6 @@ export enum ErrorCodes {
   phrasal_base_doesnt_exist = 'phrasal_base_doesnt_exist',
   word_doesnt_found = 'word_doesnt_found',
   translation_doesnt_found = 'translation_doesnt_found',
+  setting_field_doesnt_found = 'setting_field_doesnt_found',
+  setting_field_already_exists = 'setting_field_already_exists',
 }

@@ -1,7 +1,12 @@
 import Link from 'next/link';
+import React from 'react';
 import styles from './styles.module.scss';
 
-export const Footer = () => {
+type FooterP = {
+  settings: Record<string, string>;
+};
+
+export const Footer: React.FC<FooterP> = ({ settings }) => {
   return (
     <footer className={styles.footer}>
       <span>Docs</span>
@@ -9,7 +14,7 @@ export const Footer = () => {
         <i className="pi pi-github" style={{ color: 'var(--blue-500)' }}></i>
         Github
       </Link>
-      <span>Version: 0.0.1</span>
+      <span>Version: {settings.version}</span>
     </footer>
   );
 };
