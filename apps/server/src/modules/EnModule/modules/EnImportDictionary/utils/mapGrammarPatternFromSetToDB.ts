@@ -6,6 +6,7 @@ import {
   EnWordT,
   LanguageRegisterE,
 } from '../../../../../../types';
+import { getVersion } from '../../../../../../configuration';
 
 export const mapGrammarPatternFromSetToDB = (ph: DataSetGrammarPatternT): EnWordT => {
   return {
@@ -22,6 +23,7 @@ export const mapGrammarPatternFromSetToDB = (ph: DataSetGrammarPatternT): EnWord
     categories: ph.categories,
     verb___is_phrasal: false,
     verb___is_irregular: false,
+    version: ph.version || getVersion(),
     noun___is_proper: false,
     word_level: ph.level || null,
     description: ph.description,

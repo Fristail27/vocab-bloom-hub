@@ -17,7 +17,6 @@ export const preparePhraseForDataSet = (word: EnWord): DataSetPhraseT => {
     phrase: w.word.word,
     meanings: w.meanings.map(mapMeaningForDS) || [],
     short_translations: w.short_translations.map(mapShortTranslationForDS) || [],
-    // TODO
-    version: '0.0.1',
+    version: w.version,
   };
 };

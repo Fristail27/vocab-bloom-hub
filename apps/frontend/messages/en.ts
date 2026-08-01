@@ -78,6 +78,7 @@ export default {
     description: 'Word Description',
     source_model: 'Source Model',
     pronunciation: 'Pronunciation',
+    version: 'version',
     regional_label: 'Regional Label',
     level: 'CEFR Level',
     domain: 'Domain Category',

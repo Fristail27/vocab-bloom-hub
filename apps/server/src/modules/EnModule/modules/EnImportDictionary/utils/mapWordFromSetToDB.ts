@@ -1,5 +1,6 @@
 import { DataSetWordT } from '../../../../../../types/dictionaries/en/EnDataSetTypes';
 import { EnAreaVariantsE, EnWordFormsE, LanguageRegisterE } from '../../../../../../types';
+import { getVersion } from '../../../../../../configuration';
 
 export const mapWordFromSetToDB = (line: DataSetWordT) => {
   return {
@@ -21,6 +22,7 @@ export const mapWordFromSetToDB = (line: DataSetWordT) => {
     description: line.description,
     transcription: line.transcription,
     is_obsolete: line.is_obsolete,
+    version: line.version || getVersion(),
     is_abbreviation: line.is_abbreviation,
     noun___uncountable: line.noun___uncountable,
     noun___irregular_plural: line.noun___irregular_plural,

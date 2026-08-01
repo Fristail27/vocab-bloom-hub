@@ -13,6 +13,7 @@ import {
 export const re: EnWordT = {
   form_of_word: EnWordFormsE.base_form,
   id: 0,
+  version: '111',
   word: 'misconstrue',
   part_of_speech: EnPartOfSpeechE.verb,
   generated_by_model: 'DeepSeek',
@@ -119,6 +120,7 @@ export const tres: EnWordT = {
   form_of_word: EnWordFormsE.base_form,
   id: 1,
   word: 'run',
+  version: '32131',
   part_of_speech: EnPartOfSpeechE.verb,
   generated_by_model: 'DeepSeek',
   is_obsolete: false,
