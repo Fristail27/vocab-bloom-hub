@@ -1,6 +1,7 @@
 import { CommonInfoDataT } from './types';
 import {
   AvailableTranslationLanguagesE,
+  CustomVersionDictionaryOfWord,
   EnAreaVariantsE,
   EnPartOfSpeechE,
   EnPhrasalObjectPatternE,
@@ -82,6 +83,7 @@ export const DefaultCommonData: CommonInfoDataT = {
   categories: [],
   word_level: null,
   is_obsolete: false,
+  version: CustomVersionDictionaryOfWord,
   is_abbreviation: null,
   language_register: LanguageRegisterE.formal,
   area_variant: EnAreaVariantsE.common,

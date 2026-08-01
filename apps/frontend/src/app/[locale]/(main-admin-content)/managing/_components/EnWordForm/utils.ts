@@ -1,4 +1,5 @@
 import {
+  CustomVersionDictionaryOfWord,
   EnAreaVariantsE,
   EnMeaningT,
   EnPhrasalObjectPatternE,
@@ -27,6 +28,7 @@ export const getInitCommonInfo = (w?: EnWordT | undefined): CommonInfoDataT => {
   }
   return {
     id: w.id,
+    version: CustomVersionDictionaryOfWord,
     form_of_word: w.form_of_word,
     generated: true,
     generated_by_model: 'unknown',

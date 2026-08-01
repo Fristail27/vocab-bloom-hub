@@ -6,6 +6,7 @@ import {
   EnWordT,
   LanguageRegisterE,
 } from '../../../../../../types';
+import { getVersion } from '../../../../../../configuration';
 
 export const mapPhraseFromSetToDB = (ph: DataSetPhraseT): EnWordT => {
   return {
@@ -27,6 +28,7 @@ export const mapPhraseFromSetToDB = (ph: DataSetPhraseT): EnWordT => {
     description: ph.description,
     transcription: ph.transcription,
     is_obsolete: ph.is_obsolete,
+    version: ph.version || getVersion(),
     is_abbreviation: false,
     noun___uncountable: false,
     noun___irregular_plural: false,

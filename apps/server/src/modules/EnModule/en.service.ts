@@ -6,6 +6,7 @@ import { EnWord } from './entities/en_word.entity';
 import {
   AddResT,
   AddWordFormResT,
+  CustomVersionDictionaryOfWord,
   DeleteResT,
   EditCommonInfoOfWordResT,
   EditPhrasalBaseResT,
@@ -281,7 +282,7 @@ export class EnService {
     if (area_variant && area_variant !== word.area_variant) word.area_variant = area_variant;
     if (categories && categories.join() !== word.categories?.join()) word.categories = categories;
     if (pattern && pattern.join() !== word.pattern?.join()) word.pattern = pattern;
-
+    word.version = CustomVersionDictionaryOfWord;
     await this.enWordsRep.save(word);
     return { success: true };
   }

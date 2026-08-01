@@ -78,6 +78,7 @@ export default {
     description: 'Описание слова',
     source_model: 'Модель-источник',
     pronunciation: 'Транскрипция',
+    version: 'Версия',
     regional_label: 'Региональный вариант',
     level: 'Уровень слова',
     domain: 'Тематическая категория',

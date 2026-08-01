@@ -132,6 +132,10 @@ export const WordCard: React.FC<WordCardP> = ({ word, mode = WordCardModeE.view 
         </div>
         <div className={styles.line}>
           <Tag className={styles.tag} color="geekblue" variant="outlined">
+            <Text>{t('version')}:</Text>
+            {state.version}
+          </Tag>
+          <Tag className={styles.tag} color="geekblue" variant="outlined">
             <Text>{t('pronunciation')}:</Text>
             {state.transcription}
           </Tag>

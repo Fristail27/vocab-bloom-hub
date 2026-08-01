@@ -81,7 +81,6 @@ export const prepareWordForDataSet = (word: EnWord): DataSetWordT => {
     meanings: w.meanings.map(mapMeaningForDS) || [],
     short_translations: w.short_translations.map(mapShortTranslationForDS) || [],
     forms: w.forms.map(mapFormsForDS) || [],
-    // TODO
-    version: '0.0.1',
+    version: w.version,
   };
 };

@@ -23,7 +23,7 @@ import {
   LanguageRegisterE,
   WordLevelE,
 } from '../../../../types';
-import { checkIsPostgres } from '../../../../configuration';
+import { checkIsPostgres, getVersion } from '../../../../configuration';
 
 @Entity('en_words')
 @Index('IDX_EN_WORD_LOOKUP', ['word', 'part_of_speech', 'form_of_word'])
@@ -134,6 +134,6 @@ export class EnWord {
   @OneToMany(() => EnWord, (e) => e.base_phrasal, { onDelete: 'SET NULL' })
   phrasal_variants?: EnWord[];
 
-  @Column({ type: 'text', nullable: true })
-  version?: string | null;
+  @Column({ type: 'text', default: getVersion() })
+  version!: string;
 }
