@@ -2,7 +2,6 @@ import { ErrorCodes } from 'server/core/constants/error_codes';
 
 export default {
   errors: {
-    unknown_error: 'Unknown error',
     [ErrorCodes.login_or_pass_wrong]: 'Login or password is wrong',
     [ErrorCodes.internal_server_error]: 'Internal server error',
     [ErrorCodes.invalid_token]: 'Invalid or expired authentication token. Please sign in again.',
@@ -14,6 +13,7 @@ export default {
     [ErrorCodes.translation_doesnt_found]: 'Translation not found',
     [ErrorCodes.setting_field_doesnt_found]: 'Field not found',
     [ErrorCodes.setting_field_already_exists]: 'Field already exists',
+    [ErrorCodes.unknown_error]: 'Unknown error',
   },
   common: {
     theme: {
@@ -51,7 +51,10 @@ export default {
     en_saving_2: 'Saving grammar patterns...',
     en_saving_3: 'Saving phrases...',
     en_saving_4: 'Downloading database...',
+    en_saving_5: 'Completed',
     elapsed_time: 'Elapsed time',
+    retry_exporting: 'Retry',
+    export_again: 'Export again',
   },
   en_managing_words: {
     word: 'Word',

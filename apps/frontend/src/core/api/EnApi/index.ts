@@ -1,4 +1,4 @@
-import { AbstractBaseApi } from '../AbstractBaseApi';
+import { AbstractBaseApi, type DownloadedFileT } from '../AbstractBaseApi';
 import {
   AddMeaningReqT,
   AddMeaningResT,
@@ -179,20 +179,46 @@ export class EnApi extends AbstractBaseApi {
     if ('error' in reader) {
       return { error: true, message: ErrorCodes.internal_server_error };
     }
+
+    let buffer = '';
+
     while (true) {
       const { done, value } = await reader.read();
 
       if (done) break;
 
-      const chunk = decoder.decode(value);
+      buffer += decoder.decode(value, { stream: true });
 
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        try {
+          const d: ImportDictionaryChunkT = JSON.parse(trimmed);
+          handleChunk(d);
+        } catch (err: any) {
+          onError(err.message);
+        }
+      }
+    }
+
+    const trimmed = buffer.trim();
+    if (trimmed) {
       try {
-        const d: ImportDictionaryChunkT = JSON.parse(chunk);
+        const d: ImportDictionaryChunkT = JSON.parse(trimmed);
         handleChunk(d);
       } catch (err: any) {
         onError(err.message);
       }
     }
+
     return reader;
+  }
+
+  static async downloadExportedFile(exportId: string): Promise<DownloadedFileT | ErrorResT> {
+    return this.downloadFile(`${this.baseURL}/en/dictionary/export/download/${exportId}`);
   }
 }

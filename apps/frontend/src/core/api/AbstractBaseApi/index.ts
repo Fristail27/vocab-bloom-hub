@@ -1,10 +1,12 @@
 import cookies from 'js-cookie';
-import { ErrorResT } from '../../../../../server/types';
-import { ErrorCodes } from '../../../../../server/core/constants/error_codes';
+import { ErrorResT } from 'server/types';
+import { ErrorCodes } from 'server/core/constants/error_codes';
 
 type RequestOptions = RequestInit & {
   query?: Record<string, string | number | boolean | undefined>;
 };
+
+export type DownloadedFileT = { blob: Blob; filename?: string };
 
 export class AbstractBaseApi {
   static get baseURL(): string {
@@ -104,10 +106,7 @@ export class AbstractBaseApi {
       if (!res.ok) {
         const err = await res.json().catch(() => null);
 
-        return {
-          ...(err || {}),
-          error: true,
-        };
+        return { ...(err || {}), error: true };
       }
 
       if (!res.body) {
@@ -124,5 +123,66 @@ export class AbstractBaseApi {
         message: ErrorCodes.failed_fetch,
       };
     }
+  }
+
+  private static extractFilename(res: Response): string | undefined {
+    const disposition = res.headers.get('Content-Disposition');
+    if (!disposition) return undefined;
+
+    const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match?.[1]) {
+      try {
+        return decodeURIComponent(utf8Match[1]);
+      } catch {
+        return utf8Match[1];
+      }
+    }
+
+    const plainMatch = disposition.match(/filename="?([^";]+)"?/i);
+    return plainMatch?.[1];
+  }
+
+  static async downloadFile(
+    endpoint: string,
+    options: RequestOptions = {},
+  ): Promise<DownloadedFileT | ErrorResT> {
+    const { query, headers = {}, body, ...fetchOptions } = options;
+
+    try {
+      const url = this.buildUrl(endpoint, query);
+
+      const res = await fetch(url, {
+        credentials: 'include',
+        headers: {
+          Authorization: `Bearer ${await this.getToken()}`,
+          ...headers,
+        },
+        ...(body && { body: JSON.stringify(body) }),
+        ...fetchOptions,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        return { ...(err || {}), error: true };
+      }
+
+      const blob = await res.blob();
+      const filename = this.extractFilename(res);
+
+      return { blob, filename };
+    } catch {
+      return { error: true, message: ErrorCodes.failed_fetch };
+    }
+  }
+
+  static saveBlobAsFile(blob: Blob, filename: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
   }
 }

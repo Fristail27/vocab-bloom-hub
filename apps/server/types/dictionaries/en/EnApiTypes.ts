@@ -53,4 +53,5 @@ export type ImportDictionaryChunkT = {
   stage?: EnDictionaryImportPhasesE | undefined;
   downloaded?: number | undefined;
   total?: number | undefined;
+  exportId?: string | undefined;
 };

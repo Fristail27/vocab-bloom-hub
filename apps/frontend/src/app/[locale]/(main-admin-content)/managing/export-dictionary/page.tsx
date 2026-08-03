@@ -14,11 +14,11 @@ export default async function ImportDictionaryPage({ params }: CommonPageP) {
   const breadCrumbs = [
     { href: `/${locale}`, title: <Icon name="home" size="medium" /> },
     { href: `/${locale}/managing`, title: <BreadcrumbSection icon="managing" name={t('managing')} /> },
-    { title: manageT('import_dictionary') },
+    { title: manageT('export_dictionary') },
   ];
   return (
     <div className={styles.page}>
-      <Title level={2}>{manageT('import_dictionary')}</Title>
+      <Title level={2}>{manageT('export_dictionary')}</Title>
       <Breadcrumb items={breadCrumbs} />
       <ExportDictionarySection />
     </div>
