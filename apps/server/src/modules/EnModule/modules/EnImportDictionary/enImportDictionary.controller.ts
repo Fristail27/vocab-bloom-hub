@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Res, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { EnImportDictionaryService } from './enImportDictionary.service';
 import { AdminGuard } from '../../../AuthModule/guards/admin.guard';
@@ -20,5 +20,11 @@ export class EnImportDictionaryController {
   @Get('export')
   async exportDictionary(@Res() res: Response): Promise<void> {
     return this.enImportDictionaryService.exportDictionary(res);
+  }
+
+  @UseGuards(AdminGuard)
+  @Get('export/download/:exportId')
+  async downloadExport(@Param('exportId') exportId: string, @Res() res: Response) {
+    await this.enImportDictionaryService.streamExportFile(exportId, res);
   }
 }

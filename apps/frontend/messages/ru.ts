@@ -2,7 +2,7 @@ import { ErrorCodes } from 'server/core/constants/error_codes';
 
 export default {
   errors: {
-    unknown_error: 'Что-то пошло не так',
+    [ErrorCodes.unknown_error]: 'Что-то пошло не так',
     [ErrorCodes.login_or_pass_wrong]: 'Неправильные имя пользователя или пароль',
     [ErrorCodes.internal_server_error]: 'Что-то пошло не так',
     [ErrorCodes.invalid_token]: 'Недействительный или просроченный токен авторизации. Выполните вход повторно.',
@@ -51,7 +51,10 @@ export default {
     en_saving_2: 'Сохранение граматических паттернов...',
     en_saving_3: 'Сохранение фраз...',
     en_saving_4: 'Скачивание базы данных...',
+    en_saving_5: 'Завершено',
     elapsed_time: 'Затраченное время',
+    retry_exporting: 'Повторить',
+    export_again: 'Сохранить снова',
   },
   en_managing_words: {
     word: 'Слово',

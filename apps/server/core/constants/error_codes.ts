@@ -10,4 +10,5 @@ export enum ErrorCodes {
   translation_doesnt_found = 'translation_doesnt_found',
   setting_field_doesnt_found = 'setting_field_doesnt_found',
   setting_field_already_exists = 'setting_field_already_exists',
+  unknown_error = 'unknown_error',
 }
