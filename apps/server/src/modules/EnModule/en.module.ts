@@ -14,6 +14,8 @@ import { EnMeaningTranslationService } from './modules/EnMeaningTranslation/enMe
 import { EnMeaningService } from './modules/EnMeaning/enMeaning.service';
 import { EnImportDictionaryService } from './modules/EnImportDictionary/enImportDictionary.service';
 import { EnImportDictionaryController } from './modules/EnImportDictionary/enImportDictionary.controller';
+import { EnSearchController } from './modules/EnSearch/enSearch.controller';
+import { EnSearchService } from './modules/EnSearch/enSearch.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([EnEntry, EnWord, EnMeaning, EnMeaningTranslation, EnShortTranslation])],
@@ -23,6 +25,7 @@ import { EnImportDictionaryController } from './modules/EnImportDictionary/enImp
     EnMeaningTranslationController,
     EnMeaningTranslationController,
     EnImportDictionaryController,
+    EnSearchController,
   ],
   providers: [
     EnService,
@@ -30,6 +33,7 @@ import { EnImportDictionaryController } from './modules/EnImportDictionary/enImp
     EnMeaningTranslationService,
     EnMeaningService,
     EnImportDictionaryService,
+    EnSearchService,
   ],
   exports: [EnService],
 })
