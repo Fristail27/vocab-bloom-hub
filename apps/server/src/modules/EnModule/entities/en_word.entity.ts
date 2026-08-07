@@ -26,9 +26,11 @@ import {
 import { checkIsPostgres, getVersion } from '../../../../configuration';
 
 @Entity('en_words')
+@Index('IDX_EN_WORD', ['word'])
 @Index('IDX_EN_WORD_LOOKUP', ['word', 'part_of_speech', 'form_of_word'])
 @Index('IDX_EN_BASE_FORM', ['base_form'])
 @Index('IDX_EN_BASE_PHRASAL', ['base_phrasal'])
+@Index('IDX_EN_PHRASAL_SEARCH', ['base_phrasal', 'part_of_speech', 'form_of_word'])
 @Index('IDX_EN_PART_OF_SPEECH', ['part_of_speech'])
 export class EnWord {
   @PrimaryGeneratedColumn()

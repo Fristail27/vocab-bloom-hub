@@ -25,10 +25,8 @@ import {
   EnPartOfSpeechE,
   type EnWordT,
   GetWordByIdResT,
-  SearchResT,
 } from '../../../types';
 import { ErrorCodes } from '../../../core/constants/error_codes';
-import { SearchReqDTO } from './dto/SearchReq.dto';
 import { AddWordFormReqDTO } from './dto/AddWordFormReq.dto';
 import { EditWordFormReqDTO } from './dto/EditWordFormReq.dto';
 import { EditCommonInfoOfWordReqDTO } from './dto/EditCommonInfoOfWordReq.dto';
@@ -58,15 +56,6 @@ export class EnController {
   @Post('add/:entryType')
   async add(@Param('entryType') entryType: EnEntryTypesE, @Body() body: EnWordT): Promise<AddResT> {
     return this.enService.addWord(body);
-  }
-
-  @Post('search')
-  async search(@Body() body: SearchReqDTO): Promise<SearchResT> {
-    try {
-      return this.enService.search(body);
-    } catch {
-      throw new InternalServerErrorException(ErrorCodes.internal_server_error);
-    }
   }
 
   @UseGuards(AdminGuard)
