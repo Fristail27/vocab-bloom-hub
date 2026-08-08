@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { EnEntry } from './entities/en_entry.entity';
 import { EnWord } from './entities/en_word.entity';
 import {
@@ -18,8 +18,6 @@ import {
   EnWordT,
 } from '../../../types';
 import { ErrorCodes } from '../../../core/constants/error_codes';
-import { SearchReqDTO } from './dto/SearchReq.dto';
-import { mapSearchResults } from './utils/mapSearchResults';
 import { prepareWordFromDB } from './utils/prepareWordFromDB';
 import { AddWordFormReqDTO } from './dto/AddWordFormReq.dto';
 import { EditWordFormReqDTO } from './dto/EditWordFormReq.dto';
@@ -173,30 +171,6 @@ export class EnService {
     await Promise.all([...saveMeaningsPromises, ...saveShortTranslationsPromises]);
 
     return body;
-  }
-
-  async search({ search }: SearchReqDTO): Promise<EnWordT[]> {
-    const res = await this.enEntriesRep.find({
-      where: { word: Like(`%${search}%`) },
-      relations: {
-        entries: {
-          forms: {
-            base_form: {
-              base_phrasal: { word: true },
-              phrasal_variants: true,
-              forms: true,
-              word: true,
-            },
-            word: true,
-          },
-          phrasal_variants: true,
-          base_phrasal: { word: true },
-          word: true,
-        },
-      },
-    });
-
-    return mapSearchResults(res);
   }
 
   async deleteWord(id: number): Promise<DeleteResT> {
