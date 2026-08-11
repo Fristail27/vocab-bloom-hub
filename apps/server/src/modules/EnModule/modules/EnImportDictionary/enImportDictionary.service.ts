@@ -1,11 +1,17 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  HttpException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsRelations, FindOptionsWhere, In, MoreThan, Not, Repository } from 'typeorm';
 import * as yazl from 'yazl';
 import { randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream, existsSync, mkdirSync } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
-import { unlink } from 'node:fs/promises';
+import { stat, unlink } from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { Readable } from 'node:stream';
@@ -38,6 +44,8 @@ const EXPORT_TTL_MS = 15 * 60 * 1000;
 
 @Injectable()
 export class EnImportDictionaryService {
+  private readonly logger = new Logger(EnImportDictionaryService.name);
+
   private readonly pendingExports = new Map<string, PendingExport>();
 
   constructor(
@@ -63,15 +71,25 @@ export class EnImportDictionaryService {
         crlfDelay: Infinity,
       });
 
+      let lineNo = 0;
       for await (const l of rl) {
+        lineNo++;
         if (!l.trim()) continue;
         const count = plusCount();
 
         try {
           const line: T = JSON.parse(l);
           await handleLine(line);
-        } catch (error: any) {
-          if (!('message' in error) || error?.message !== ErrorCodes.word_already_exists) {
+        } catch (error) {
+          const isDuplicate = error instanceof Error && error.message === ErrorCodes.word_already_exists;
+          if (!isDuplicate) {
+            this.logger.error(
+              `Import of "${fileName}" failed at line ${lineNo}`,
+              error instanceof Error ? error.stack : String(error),
+            );
+            if (error instanceof HttpException) {
+              throw error;
+            }
             throw new InternalServerErrorException(ErrorCodes.internal_server_error);
           }
         }
@@ -142,7 +160,7 @@ export class EnImportDictionaryService {
   ): Promise<void> {
     if (count % 50 !== 0) return;
     const chunk: ImportDictionaryChunkT = {
-      percent: (count / allLength) * 100,
+      percent: Math.min(100, (count / allLength) * 100),
       stage,
     };
     res.write(JSON.stringify(chunk) + '\n');
@@ -198,29 +216,23 @@ export class EnImportDictionaryService {
       async ({ word, phrasal_variants }) => {
         const wordEntity = await this.enService.getWordRow(word, EnPartOfSpeechE.verb, EnWordFormsE.base_form);
         if (!wordEntity) {
-          throw new InternalServerErrorException(ErrorCodes.word_doesnt_found);
+          this.logger.warn(`Phrasal base verb "${word}" is missing in the dataset, skipping its variants`);
+          return;
         }
 
         for (const w of phrasal_variants) {
-          const count = plusCount();
           const variantEntity = await this.enService.getWordRow(
             w,
             EnPartOfSpeechE.verb,
             EnWordFormsE.base_form,
           );
           if (!variantEntity) {
-            throw new InternalServerErrorException(ErrorCodes.word_doesnt_found);
+            this.logger.warn(`Phrasal variant "${w}" of "${word}" is missing in the dataset, skipping`);
+            continue;
           }
 
           variantEntity.base_phrasal = wordEntity;
           await this.enWordsRep.save(variantEntity);
-
-          await this.reportImportProgress(
-            res,
-            count,
-            allLength,
-            EnDictionaryImportPhasesE.saving_phrasal_verbs,
-          );
         }
       },
     );
@@ -237,13 +249,15 @@ export class EnImportDictionaryService {
     await this.reportImportProgress(res, count, allLength, EnDictionaryImportPhasesE.downloading_database);
 
     await this.saveWords(res, allLength, plusCount);
-    await this.reportImportProgress(res, count, allLength, EnDictionaryImportPhasesE.downloading_database);
-
     await this.savePhrasalVerbs(res, allLength, plusCount);
-    await this.reportImportProgress(res, count, allLength, EnDictionaryImportPhasesE.downloading_database);
     await this.saveGrammarPatterns(res, allLength, plusCount);
-    await this.reportImportProgress(res, count, allLength, EnDictionaryImportPhasesE.downloading_database);
     await this.savePhrases(res, allLength, plusCount);
+
+    const finalChunk: ImportDictionaryChunkT = {
+      percent: 100,
+      stage: EnDictionaryImportPhasesE.completed,
+    };
+    res.write(JSON.stringify(finalChunk) + '\n');
 
     res.end();
   }
@@ -293,7 +307,7 @@ export class EnImportDictionaryService {
         lastId = batch[batch.length - 1].id;
         addProcessed(batch.length);
 
-        onProgress((processedSoFar() / total) * 100, stage);
+        onProgress(total > 0 ? Math.min(100, (processedSoFar() / total) * 100) : 100, stage);
         await new Promise((r) => setTimeout(r, 1));
       }
     } catch {
@@ -361,7 +375,7 @@ export class EnImportDictionaryService {
         total,
         () => processed,
         addProcessed,
-        EnDictionaryImportPhasesE.saving_words,
+        EnDictionaryImportPhasesE.saving_phrases,
         { part_of_speech: EnPartOfSpeechE.phrase },
         { word: true, short_translations: true, meanings: { translations: true } },
         preparePhraseForDataSet,
@@ -380,6 +394,7 @@ export class EnImportDictionaryService {
         emit,
       );
 
+      emit(100, EnDictionaryImportPhasesE.packing_archive);
       await this.zipFiles(zipPath, [wordsPath, phrasesPath, grammarPath]);
 
       const timeout = setTimeout(() => this.cleanupExport(exportId), EXPORT_TTL_MS);
@@ -429,6 +444,8 @@ export class EnImportDictionaryService {
 
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename="vocab-bloom-hub-en-export.zip"`);
+    const { size } = await stat(entry.filePath);
+    res.setHeader('Content-Length', size);
 
     const fileStream = createReadStream(entry.filePath);
     try {

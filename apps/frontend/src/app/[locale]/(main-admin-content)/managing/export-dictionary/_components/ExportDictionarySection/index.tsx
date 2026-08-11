@@ -29,8 +29,18 @@ export const ExportDictionarySection: React.FC = () => {
     [message, tErr],
   );
 
+  // Подготовка данных на сервере занимает первые 90% полосы,
+  // последние 10% — скачивание готового архива.
+  const SERVER_PROGRESS_MAX = 90;
+
   const downloadAndSaveFile = async (exportId: string) => {
-    const result = await EnApi.downloadExportedFile(exportId);
+    setStatusMessage(t('en_downloading_file'));
+
+    const result = await EnApi.downloadExportedFile(exportId, (loaded, total) => {
+      if (total <= 0) return;
+      const downloadPart = Math.min(1, loaded / total) * (100 - SERVER_PROGRESS_MAX);
+      setPercents(Number((SERVER_PROGRESS_MAX + downloadPart).toFixed(2)));
+    });
 
     if ('error' in result) {
       onError(result.message);
@@ -38,6 +48,7 @@ export const ExportDictionarySection: React.FC = () => {
     }
 
     AbstractBaseApi.saveBlobAsFile(result.blob, result.filename ?? 'vocab-bloom-hub-en-export.zip');
+    setPercents(100);
     setStatus(ExportStatusE.success);
   };
 
@@ -46,16 +57,20 @@ export const ExportDictionarySection: React.FC = () => {
     setPercents(0);
     setStatusMessage('');
 
+    let completedSeen = false;
+
     const handleChunk = (c: ImportDictionaryChunkT) => {
       if (c.stage === EnDictionaryImportPhasesE.completed) {
-        setPercents(100);
+        completedSeen = true;
         if (!c.exportId) {
-          onError('unknown_error');
+          onError(ErrorCodes.unknown_error);
           return;
         }
+        setPercents(SERVER_PROGRESS_MAX);
         void downloadAndSaveFile(c.exportId);
       } else {
-        setPercents(Number((c.percent ?? 0).toFixed(2)));
+        const percent = Math.min(100, Math.max(0, c.percent ?? 0));
+        setPercents(Number(((percent * SERVER_PROGRESS_MAX) / 100).toFixed(2)));
         setStatusMessage(t(`en_saving_${c.stage}`));
       }
     };
@@ -63,6 +78,12 @@ export const ExportDictionarySection: React.FC = () => {
     const res = await EnApi.exportDictionary(handleChunk, onError);
     if ('error' in res) {
       onError(res.message);
+      return;
+    }
+
+    // Стрим закончился без чанка completed — сервер оборвал экспорт.
+    if (!completedSeen) {
+      onError(ErrorCodes.unknown_error);
     }
   };
 
@@ -83,7 +104,12 @@ export const ExportDictionarySection: React.FC = () => {
 
   return (
     <div className={styles.importDictionarySection}>
-      <Progress percent={percents} status={progressStatus} />
+      <Progress
+        className={styles.progress}
+        percent={percents}
+        status={progressStatus}
+        format={(p = 0) => `${p.toFixed(2)}%`}
+      />
 
       {(status === 'idle' || status === 'error') && (
         <Button type="primary" onClick={exportDictionary} className={styles.startBtn}>

@@ -145,6 +145,7 @@ export class AbstractBaseApi {
   static async downloadFile(
     endpoint: string,
     options: RequestOptions = {},
+    onProgress?: (loaded: number, total: number) => void,
   ): Promise<DownloadedFileT | ErrorResT> {
     const { query, headers = {}, body, ...fetchOptions } = options;
 
@@ -166,8 +167,27 @@ export class AbstractBaseApi {
         return { ...(err || {}), error: true };
       }
 
-      const blob = await res.blob();
       const filename = this.extractFilename(res);
+
+      if (onProgress && res.body) {
+        const total = Number(res.headers.get('Content-Length')) || 0;
+        const reader = res.body.getReader();
+        const chunks: BlobPart[] = [];
+        let loaded = 0;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          loaded += value.length;
+          onProgress(loaded, total);
+        }
+
+        const blob = new Blob(chunks, { type: res.headers.get('Content-Type') ?? undefined });
+        return { blob, filename };
+      }
+
+      const blob = await res.blob();
 
       return { blob, filename };
     } catch {

@@ -48,7 +48,7 @@ export class EnApi extends AbstractBaseApi {
   }
 
   static async search(search: string): Promise<SearchResT> {
-    return this.post<SearchResT>(`${this.baseURL}/en/search`, { search });
+    return this.post<SearchResT>(`${this.baseURL}/en/search`, { search, limit: 100 });
   }
 
   static async deleteWord(id: number): Promise<DeleteResT> {
@@ -113,112 +113,82 @@ export class EnApi extends AbstractBaseApi {
     return this.delete<DeleteMeaningTranslationResT>(`${this.baseURL}/en/meaning-translation/${id}`);
   }
 
+  private static async readNdjsonStream(
+    reader: ReadableStreamDefaultReader<Uint8Array>,
+    handleChunk: (ch: ImportDictionaryChunkT) => void,
+    onError: (err: string) => void,
+  ): Promise<{ success: boolean } | ErrorResT> {
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    const parseLine = (line: string) => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+
+      try {
+        const d: ImportDictionaryChunkT = JSON.parse(trimmed);
+        handleChunk(d);
+      } catch {
+        onError(ErrorCodes.unparsed_data);
+      }
+    };
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        lines.forEach(parseLine);
+      }
+
+      parseLine(buffer);
+    } catch {
+      return { error: true, message: ErrorCodes.failed_fetch };
+    }
+
+    return { success: true };
+  }
+
   static async importDictionary(
     version: string,
     handleChunk: (ch: ImportDictionaryChunkT) => void,
     onError: (err: string) => void,
-  ): Promise<ReadableStreamDefaultReader<Uint8Array> | ErrorResT> {
+  ): Promise<{ success: boolean } | ErrorResT> {
     const body: ImportDictionaryReqT = { user_version: version };
     const reader = await AbstractBaseApi.stream(`${this.baseURL}/en/dictionary/import`, {
       method: 'POST',
       body: body as BodyInit,
     });
 
-    const decoder = new TextDecoder();
-
     if ('error' in reader) {
-      return { error: true, message: ErrorCodes.internal_server_error };
+      return reader;
     }
 
-    let buffer = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-
-      const lines = buffer.split('\n');
-      buffer = lines.pop() ?? '';
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-
-        try {
-          const d: ImportDictionaryChunkT = JSON.parse(trimmed);
-          handleChunk(d);
-        } catch (err: any) {
-          onError(err.message);
-        }
-      }
-    }
-
-    const trimmed = buffer.trim();
-    if (trimmed) {
-      try {
-        const d: ImportDictionaryChunkT = JSON.parse(trimmed);
-        handleChunk(d);
-      } catch (err: any) {
-        onError(err.message);
-      }
-    }
-
-    return reader;
+    return this.readNdjsonStream(reader, handleChunk, onError);
   }
 
   static async exportDictionary(
     handleChunk: (ch: ImportDictionaryChunkT) => void,
     onError: (err: string) => void,
-  ): Promise<ReadableStreamDefaultReader<Uint8Array> | ErrorResT> {
+  ): Promise<{ success: boolean } | ErrorResT> {
     const reader = await AbstractBaseApi.stream(`${this.baseURL}/en/dictionary/export`);
 
-    const decoder = new TextDecoder();
-
     if ('error' in reader) {
-      return { error: true, message: ErrorCodes.internal_server_error };
+      return reader;
     }
 
-    let buffer = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-
-      const lines = buffer.split('\n');
-      buffer = lines.pop() ?? '';
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-
-        try {
-          const d: ImportDictionaryChunkT = JSON.parse(trimmed);
-          handleChunk(d);
-        } catch (err: any) {
-          onError(err.message);
-        }
-      }
-    }
-
-    const trimmed = buffer.trim();
-    if (trimmed) {
-      try {
-        const d: ImportDictionaryChunkT = JSON.parse(trimmed);
-        handleChunk(d);
-      } catch (err: any) {
-        onError(err.message);
-      }
-    }
-
-    return reader;
+    return this.readNdjsonStream(reader, handleChunk, onError);
   }
 
-  static async downloadExportedFile(exportId: string): Promise<DownloadedFileT | ErrorResT> {
-    return this.downloadFile(`${this.baseURL}/en/dictionary/export/download/${exportId}`);
+  static async downloadExportedFile(
+    exportId: string,
+    onProgress?: (loaded: number, total: number) => void,
+  ): Promise<DownloadedFileT | ErrorResT> {
+    return this.downloadFile(`${this.baseURL}/en/dictionary/export/download/${exportId}`, {}, onProgress);
   }
 }

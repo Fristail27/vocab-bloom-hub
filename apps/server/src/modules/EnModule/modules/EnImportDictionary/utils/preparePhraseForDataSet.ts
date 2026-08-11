@@ -1,6 +1,6 @@
 import { DataSetPhraseT } from '../../../../../../types/dictionaries/en/EnDataSetTypes';
 import { EnWord } from '../../../entities/en_word.entity';
-import { mapMeaningForDS, mapShortTranslationForDS } from './prepareWordForDataSet';
+import { mapMeaningsForDS, mapShortTranslationForDS } from './prepareWordForDataSet';
 
 export const preparePhraseForDataSet = (word: EnWord): DataSetPhraseT => {
   const { pattern: _p, form_of_word: _f, ...w } = word;
@@ -15,7 +15,7 @@ export const preparePhraseForDataSet = (word: EnWord): DataSetPhraseT => {
     level: w.word_level || '',
     is_obsolete: Boolean(w.is_obsolete),
     phrase: w.word.word,
-    meanings: w.meanings.map(mapMeaningForDS) || [],
+    meanings: mapMeaningsForDS(w.meanings),
     short_translations: w.short_translations.map(mapShortTranslationForDS) || [],
     version: w.version,
   };

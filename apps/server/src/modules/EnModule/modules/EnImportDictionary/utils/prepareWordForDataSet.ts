@@ -35,6 +35,13 @@ export const mapMeaningForDS = (m: EnMeaning): EnMeaningDST => {
   };
 };
 
+// TypeORM не гарантирует порядок элементов в relations, поэтому сортируем сами
+export const mapMeaningsForDS = (meanings: EnMeaning[]): EnMeaningDST[] => {
+  return [...meanings]
+    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || a.id - b.id)
+    .map(mapMeaningForDS);
+};
+
 export const mapShortTranslationForDS = (t: EnShortTranslation): EnShortTranslationDST => {
   return {
     language: t.language,
@@ -78,7 +85,7 @@ export const prepareWordForDataSet = (word: EnWord): DataSetWordT => {
     word: w.word.word,
     base_phrasal: w.base_phrasal?.word.word || '',
     phrasal_variants: w.phrasal_variants?.map((v) => v.word.word) || [],
-    meanings: w.meanings.map(mapMeaningForDS) || [],
+    meanings: mapMeaningsForDS(w.meanings),
     short_translations: w.short_translations.map(mapShortTranslationForDS) || [],
     forms: w.forms.map(mapFormsForDS) || [],
     version: w.version,

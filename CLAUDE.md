@@ -1,0 +1,66 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What this is
+
+Vocab Bloom Hub — a monorepo for a multilingual dictionary/vocabulary platform. Yarn 4 workspaces (`apps/*`), Node >= 24:
+
+- `apps/frontend` — Next.js 16 (App Router) admin UI with Ant Design, Sass modules, and next-intl (en/ru locales via the `[locale]` route segment; middleware in `src/proxy.ts`).
+- `apps/server` — NestJS 11 API with TypeORM. Swagger UI is served at `/api` on the running server.
+
+## Commands
+
+```bash
+yarn dev            # run server + frontend together (concurrently)
+yarn server:dev     # NestJS with watch (port SERVER_PORT, default 3010)
+yarn front:dev      # Next.js dev (port FRONT_PORT, default 3000)
+
+yarn test           # all tests (root jest config with projects: server + frontend)
+yarn jest path/to/file.spec.ts            # single test file
+yarn jest --selectProjects server         # only server tests (or: frontend)
+yarn workspace server test:e2e            # server e2e tests
+
+yarn lint / yarn lint:fix                 # ESLint 10 flat config (eslint.config.ts)
+yarn format / yarn format:check           # Prettier
+yarn check          # lint + format:check (run before finishing work)
+```
+
+Test files are `*.spec.ts(x)`, colocated with code (e.g. in `__tests__/` dirs). Server tests run in node env; frontend tests run in jsdom with styles mocked and the `@/` alias mapped.
+
+## Environment
+
+A single `.env` at the repo root is used by both apps (frontend scripts wrap with `dotenv -e ../../.env`; server loads it at the top of `src/main.ts`). Relevant vars: `SERVER_PORT`, `FRONT_PORT`, `DATABASE_URL`, `USERNAME`, `PASSWORD`, `NEXT_PUBLIC_BASE_API_URL`.
+
+Database: if `DATABASE_URL` is set, TypeORM connects to Postgres; otherwise it falls back to `dev.sqlite` at the repo root (better-sqlite3). There are no migrations — `synchronize: true` when `NODE_ENV === 'development'`, so entity changes reshape the schema automatically in dev.
+
+## Architecture
+
+### Shared types: frontend imports from the server workspace
+
+`apps/server/types/` (API request/response types, enums, `ErrorResT`) and `apps/server/core/` (constants like `ErrorCodes`, utils) are the single source of truth shared across apps. The frontend imports them through the workspace package name, e.g. `import { ErrorResT } from 'server/types'`. When changing an API contract, update these types — both apps consume them.
+
+### Server: domain modules with sub-controller/service pairs
+
+Modules live in `apps/server/src/modules/` (AppModule is the root; AuthModule, EnModule, SettingsModule). The pattern inside a domain module like `EnModule`:
+
+- `entities/` — TypeORM entities (EnEntry, EnWord, EnMeaning, EnMeaningTranslation, EnShortTranslation), registered both in the module's `forFeature` and in AppModule's `forRootAsync`.
+- `modules/<Feature>/` — feature folders (EnSearch, EnImportDictionary, EnMeaning, ...) each holding a controller + service (+ dto/, utils/). These are **not** separate Nest modules; their controllers/providers are registered in the parent `en.module.ts`.
+
+A global `ValidationPipe` runs with `whitelist: true, forbidNonWhitelisted: true, transform: true` — request DTOs must declare every field with class-validator decorators or requests fail.
+
+### Auth: single admin from env
+
+There is no user table. `AuthService` derives hashes from the `USERNAME`/`PASSWORD` env vars, issues a JWT with the admin role, and sets it as a `bearer` cookie. Guards/strategy (passport-jwt) live in `AuthModule`; the frontend reads the cookie and sends it as a Bearer header.
+
+### Frontend API layer: error unions, not exceptions
+
+API clients in `src/core/api/` are static classes extending `AbstractBaseApi` (one class per server domain: AuthApi, EnApi, SettingsApi). Requests never throw — every method returns `T | ErrorResT`, and callers must check the `error` flag. Follow this pattern when adding endpoints. Base URL comes from `NEXT_PUBLIC_BASE_API_URL`.
+
+Reusable presentational primitives live in `src/core/ui/`; app-level composite components in `src/components/`; route-specific components in `_components/` folders next to their route.
+
+## Conventions
+
+- Commit messages follow `feat:`/`fix:`/`docs:` style; branches like `feature/...`, `fix/...` (see CONTRIBUTING.md). PRs go to `main`.
+- ESLint config is split in `eslint/` (base/next/nest) and composed in root `eslint.config.ts`; husky + lint-staged run on commit.
+- Some existing comments are in Russian; that's normal for this codebase.
