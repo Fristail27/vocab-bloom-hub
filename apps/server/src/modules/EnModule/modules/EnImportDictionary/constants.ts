@@ -5,6 +5,7 @@ export enum EnDictionaryImportPhasesE {
   saving_phrases,
   downloading_database,
   completed,
+  packing_archive,
 }
 
 export const SYSTEM_FIELDS = ['id', 'createdAt', 'updateAt', 'updatedAt'];

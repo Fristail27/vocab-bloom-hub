@@ -8,9 +8,12 @@
   }
 
   .progress {
+    // Фиксированная ширина под "100.00%" + tabular-nums, чтобы полоса
+    // не дёргалась от смены ширины цифр.
     :global(.ant-progress-indicator) {
-      width: 58px;
-      overflow: hidden;
+      width: 64px;
+      text-align: end;
+      font-variant-numeric: tabular-nums;
     }
   }
 }

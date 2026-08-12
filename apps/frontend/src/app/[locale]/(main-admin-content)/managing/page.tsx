@@ -21,6 +21,12 @@ export default async function ManagingPage({ params }: CommonPageP) {
       <Title level={2}>{t('managing')}</Title>
       <Breadcrumb items={breadCrumbs} />
       <div className={styles.headerBtns}>
+        <Button type="primary" href={`/${locale}/managing/import-dictionary`}>
+          {manageT('import_dictionary')}
+        </Button>
+        <Button type="primary" href={`/${locale}/managing/export-dictionary`}>
+          {manageT('export_dictionary')}
+        </Button>
         <Button type="primary" href={`/${locale}/managing/add-word`}>
           {manageT('add_word')}
         </Button>

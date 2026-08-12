@@ -6,4 +6,14 @@
   .startBtn {
     width: max-content;
   }
+
+  .progress {
+    // Фиксированная ширина под "100.00%" + tabular-nums, чтобы полоса
+    // не дёргалась от смены ширины цифр.
+    :global(.ant-progress-indicator) {
+      width: 64px;
+      text-align: end;
+      font-variant-numeric: tabular-nums;
+    }
+  }
 }
