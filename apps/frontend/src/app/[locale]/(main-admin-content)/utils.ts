@@ -17,5 +17,13 @@ export const getStatisticsButtons = (
   t: ReturnType<typeof createTranslator<Messages, 'statistics'>>,
   locale: InterfaceLanguageEnum,
 ) => {
-  return [{ text: t('common_statistics'), href: `/${locale}/statistics/common`, type: 'primary' as const }];
+  return [
+    { text: t('common_statistics'), href: `/${locale}/statistics/common`, type: 'primary' as const },
+    {
+      text: t('translations_statistics'),
+      href: `/${locale}/statistics/translations`,
+      type: 'primary' as const,
+    },
+    { text: t('issues_statistics'), href: `/${locale}/statistics/issues`, type: 'primary' as const },
+  ];
 };

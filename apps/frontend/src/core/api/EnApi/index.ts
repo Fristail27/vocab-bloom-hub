@@ -25,9 +25,15 @@ import {
   EditShortTranslationResT,
   EditWordFormReqT,
   EditWordFormResT,
+  EnIssuesStatisticsT,
   EnPartOfSpeechE,
+  EnStatisticsT,
+  EnTranslationsStatisticsT,
   EnWordT,
   ErrorResT,
+  GetEnIssuesStatisticsResT,
+  GetEnStatisticsResT,
+  GetEnTranslationsStatisticsResT,
   GetWordByIdResT,
   ImportDictionaryChunkT,
   ImportDictionaryReqT,
@@ -190,5 +196,17 @@ export class EnApi extends AbstractBaseApi {
     onProgress?: (loaded: number, total: number) => void,
   ): Promise<DownloadedFileT | ErrorResT> {
     return this.downloadFile(`${this.baseURL}/en/dictionary/export/download/${exportId}`, {}, onProgress);
+  }
+
+  static async getStatistics(): Promise<GetEnStatisticsResT> {
+    return this.get<EnStatisticsT>(`${this.baseURL}/en/statistics`);
+  }
+
+  static async getTranslationsStatistics(): Promise<GetEnTranslationsStatisticsResT> {
+    return this.get<EnTranslationsStatisticsT>(`${this.baseURL}/en/statistics/translations`);
+  }
+
+  static async getIssuesStatistics(): Promise<GetEnIssuesStatisticsResT> {
+    return this.get<EnIssuesStatisticsT>(`${this.baseURL}/en/statistics/issues`);
   }
 }
