@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EnEntry } from './entities/en_entry.entity';
@@ -28,6 +28,8 @@ import { EditPhrasalBaseReqDTO } from './dto/EditPhrasalBase.dto';
 
 @Injectable()
 export class EnService {
+  private readonly logger = new Logger(EnService.name);
+
   constructor(
     @InjectRepository(EnEntry)
     private readonly enEntriesRep: Repository<EnEntry>,
@@ -170,6 +172,8 @@ export class EnService {
 
     await Promise.all([...saveMeaningsPromises, ...saveShortTranslationsPromises]);
 
+    this.logger.log(`Word "${body.word}" (${body.part_of_speech}) created, id=${baseWord.id}`);
+
     return body;
   }
 
@@ -179,6 +183,7 @@ export class EnService {
       relations: { word: true, forms: { word: true } },
     });
     if (!word) {
+      this.logger.warn(`Delete requested for missing word, id=${id}`);
       return { success: false };
     }
     const formEntries: string[] = word.forms.map((f) => f.word.word);
@@ -191,6 +196,7 @@ export class EnService {
         await this.enEntriesRep.delete({ word: entryStr });
       }
     }
+    this.logger.log(`Word "${word.word.word}" deleted, id=${id}`);
     return { success: true };
   }
 
@@ -258,6 +264,7 @@ export class EnService {
     if (pattern && pattern.join() !== word.pattern?.join()) word.pattern = pattern;
     word.version = CustomVersionDictionaryOfWord;
     await this.enWordsRep.save(word);
+    this.logger.log(`Word common info updated, id=${id}`);
     return { success: true };
   }
 
@@ -275,6 +282,7 @@ export class EnService {
     }
     word.base_phrasal = phrasalBase;
     await this.enWordsRep.save(word);
+    this.logger.log(`Phrasal base of word id=${body.id} set to id=${body.phrasal_base_id}`);
     return { success: true };
   }
 
@@ -326,6 +334,8 @@ export class EnService {
       transcription: body.transcription,
     });
 
+    this.logger.log(`Word form "${body.word}" added to word id=${body.base_word_id}, id=${res.id}`);
+
     return { success: true, id: res.id };
   }
 
@@ -362,6 +372,8 @@ export class EnService {
     }
 
     await this.enWordsRep.save(word);
+
+    this.logger.log(`Word form updated, id=${body.id}`);
 
     return { success: true };
   }

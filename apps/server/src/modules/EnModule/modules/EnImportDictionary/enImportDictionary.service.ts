@@ -65,6 +65,9 @@ export class EnImportDictionaryService {
   ): Promise<void> {
     const filePath = await this.downloadFile(fileName, res, EnDictionaryImportPhasesE.downloading_database);
 
+    const startedAt = Date.now();
+    this.logger.log(`Import stage "${stage}" started (file "${fileName}")`);
+
     try {
       const rl = readline.createInterface({
         input: createReadStream(filePath, { encoding: 'utf-8' }),
@@ -96,6 +99,10 @@ export class EnImportDictionaryService {
 
         await this.reportImportProgress(res, count, allLength, stage);
       }
+
+      this.logger.log(
+        `Import stage "${stage}" finished: ${lineNo} lines from "${fileName}" in ${Date.now() - startedAt}ms`,
+      );
     } finally {
       await unlink(filePath).catch(() => {});
     }
@@ -110,8 +117,14 @@ export class EnImportDictionaryService {
     if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true });
     const filePath = path.join(tmpDir, fileName);
 
-    const response = await fetch(`${DATASET_BASE_URL}/${fileName}`);
+    this.logger.log(`Downloading dataset file "${fileName}"`);
+
+    const response = await fetch(`${DATASET_BASE_URL}/${fileName}`).catch((error: Error) => {
+      this.logger.error(`Failed to download dataset file "${fileName}"`, error.stack);
+      throw new InternalServerErrorException(ErrorCodes.internal_server_error);
+    });
     if (!response.ok || !response.body) {
+      this.logger.error(`Failed to download dataset file "${fileName}": HTTP ${response.status}`);
       throw new InternalServerErrorException(ErrorCodes.internal_server_error);
     }
 
@@ -243,6 +256,9 @@ export class EnImportDictionaryService {
     res.setHeader('Transfer-Encoding', 'chunked');
     res.setHeader('X-Accel-Buffering', 'no');
 
+    const startedAt = Date.now();
+    this.logger.log('Dictionary import started');
+
     let count = 0;
     const plusCount = () => count++;
     const allLength = 87074 + 912 + 28560 + 28;
@@ -260,6 +276,8 @@ export class EnImportDictionaryService {
     res.write(JSON.stringify(finalChunk) + '\n');
 
     res.end();
+
+    this.logger.log(`Dictionary import completed: ${count} records in ${Date.now() - startedAt}ms`);
   }
 
   private getExportTmpDir(): string {
@@ -310,7 +328,8 @@ export class EnImportDictionaryService {
         onProgress(total > 0 ? Math.min(100, (processedSoFar() / total) * 100) : 100, stage);
         await new Promise((r) => setTimeout(r, 1));
       }
-    } catch {
+    } catch (error) {
+      this.logger.error(`Export stage "${stage}" failed`, error instanceof Error ? error.stack : String(error));
       outStream.close();
       throw new InternalServerErrorException(ErrorCodes.internal_server_error);
     }
@@ -341,7 +360,9 @@ export class EnImportDictionaryService {
     const grammarPath = path.join(runDir, 'vocab-bloom-hub-en-grammar-patterns.jsonl');
     const zipPath = path.join(tmpDir, `${exportId}.zip`);
 
+    const startedAt = Date.now();
     const total = await this.enWordsRep.count({ where: { form_of_word: EnWordFormsE.base_form } });
+    this.logger.log(`Dictionary export ${exportId} started: ${total} base records to export`);
 
     let processed = 0;
     const addProcessed = (n: number) => (processed += n);
@@ -400,6 +421,10 @@ export class EnImportDictionaryService {
       const timeout = setTimeout(() => this.cleanupExport(exportId), EXPORT_TTL_MS);
       this.pendingExports.set(exportId, { filePath: zipPath, createdAt: Date.now(), timeout });
 
+      this.logger.log(
+        `Dictionary export ${exportId} completed: ${processed} records in ${Date.now() - startedAt}ms, archive registered for ${EXPORT_TTL_MS / 1000}s`,
+      );
+
       const finalChunk: ImportDictionaryChunkT = {
         percent: 100,
         stage: EnDictionaryImportPhasesE.completed,
@@ -431,6 +456,7 @@ export class EnImportDictionaryService {
     if (!entry) return;
     this.pendingExports.delete(exportId);
     unlink(entry.filePath).catch(() => {});
+    this.logger.log(`Export archive ${exportId} cleaned up`);
   }
 
   /**
@@ -439,6 +465,7 @@ export class EnImportDictionaryService {
   async streamExportFile(exportId: string, res: Response): Promise<void> {
     const entry = this.pendingExports.get(exportId);
     if (!entry || !existsSync(entry.filePath)) {
+      this.logger.warn(`Download requested for missing or expired export ${exportId}`);
       throw new NotFoundException(ErrorCodes.internal_server_error);
     }
 
@@ -450,6 +477,7 @@ export class EnImportDictionaryService {
     const fileStream = createReadStream(entry.filePath);
     try {
       await pipeline(fileStream, res);
+      this.logger.log(`Export archive ${exportId} downloaded (${size} bytes)`);
     } finally {
       clearTimeout(entry.timeout);
       this.cleanupExport(exportId);

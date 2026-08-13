@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -14,6 +14,8 @@ import { EnMeaning } from '../../entities/en_meaning.entity';
 
 @Injectable()
 export class EnMeaningTranslationService {
+  private readonly logger = new Logger(EnMeaningTranslationService.name);
+
   constructor(
     @InjectRepository(EnMeaning)
     private readonly enMeaningsRep: Repository<EnMeaning>,
@@ -31,6 +33,7 @@ export class EnMeaningTranslationService {
     }
 
     const res = await this.enMeaningTranslationRep.save({ meaning, ...newMeaning });
+    this.logger.log(`Meaning translation added to meaning id=${meaning_id}, id=${res.id}`);
     return { success: true, id: res.id };
   }
 
@@ -48,11 +51,14 @@ export class EnMeaningTranslationService {
       meaningTr.variants_of_words = body.variant_of_words;
 
     await this.enMeaningTranslationRep.save(meaningTr);
+    this.logger.log(`Meaning translation updated, id=${body.id}`);
     return { success: true };
   }
 
   async deleteMeaningTranslation(id: number): Promise<DeleteMeaningTranslationResT> {
     await this.enMeaningTranslationRep.delete({ id });
+
+    this.logger.log(`Meaning translation deleted, id=${id}`);
 
     return { success: true };
   }
