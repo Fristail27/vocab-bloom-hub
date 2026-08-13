@@ -16,7 +16,7 @@ const { TextArea } = AntdInput;
 type MeaningItemP = {
   meaning: EnMeaningT;
   onChange: (meaning: EnMeaningT) => void;
-  onDelete: (sortOrder: number) => void;
+  onDelete: (id: number) => void;
 };
 
 export const MeaningItem: React.FC<MeaningItemP> = ({ meaning, onChange, onDelete }) => {
@@ -41,12 +41,7 @@ export const MeaningItem: React.FC<MeaningItemP> = ({ meaning, onChange, onDelet
 
   return (
     <div className={styles.meaningItemContainer}>
-      <Button
-        className={styles.deleteMeaning}
-        type="primary"
-        danger
-        onClick={() => onDelete(meaning.sort_order)}
-      >
+      <Button className={styles.deleteMeaning} type="primary" danger onClick={() => onDelete(meaning.id)}>
         <CloseOutlined />
       </Button>
       <Badge className={styles.sortOrder} color="blue" count={meaning.sort_order} />
