@@ -51,7 +51,7 @@ A global `ValidationPipe` runs with `whitelist: true, forbidNonWhitelisted: true
 
 ### Auth: single admin from env
 
-There is no user table. `AuthService` derives hashes from the `USERNAME`/`PASSWORD` env vars, issues a JWT with the admin role (signed via `core/utils/auth`, `jsonwebtoken`), and sets it as a `bearer` cookie. `AdminGuard` in `AuthModule` validates the token on protected routes; the frontend reads the cookie and sends it as a Bearer header.
+There is no user table. `AuthService` derives hashes from the `USERNAME`/`PASSWORD` env vars, issues a JWT with the admin role (signed via `core/utils/auth`, `jsonwebtoken`), and sets it as an httpOnly `bearer` cookie (`secure` in production). `AdminGuard` in `AuthModule` validates the token on protected routes, reading it from the Authorization header or the cookie. Browser requests carry the cookie via `credentials: 'include'`; during SSR the `Server*Api` wrappers forward the incoming cookie as a Bearer header.
 
 ### Frontend API layer: error unions, not exceptions
 

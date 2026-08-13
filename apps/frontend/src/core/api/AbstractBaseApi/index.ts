@@ -1,4 +1,3 @@
-import cookies from 'js-cookie';
 import { ErrorResT } from 'server/types';
 import { ErrorCodes } from 'server/core/constants/error_codes';
 
@@ -28,7 +27,12 @@ export class AbstractBaseApi {
   }
 
   static async getToken(): Promise<string | undefined> {
-    return cookies.get('bearer');
+    return undefined;
+  }
+
+  private static async buildAuthHeader(): Promise<Record<string, string>> {
+    const token = await this.getToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
   static async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T | ErrorResT> {
@@ -40,7 +44,7 @@ export class AbstractBaseApi {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${await this.getToken()}`,
+          ...(await this.buildAuthHeader()),
           ...headers,
         },
         ...(body && { body: JSON.stringify(body) }),
@@ -96,7 +100,7 @@ export class AbstractBaseApi {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${await this.getToken()}`,
+          ...(await this.buildAuthHeader()),
           ...headers,
         },
         ...(body && { body: JSON.stringify(body) }),
@@ -155,7 +159,7 @@ export class AbstractBaseApi {
       const res = await fetch(url, {
         credentials: 'include',
         headers: {
-          Authorization: `Bearer ${await this.getToken()}`,
+          ...(await this.buildAuthHeader()),
           ...headers,
         },
         ...(body && { body: JSON.stringify(body) }),
