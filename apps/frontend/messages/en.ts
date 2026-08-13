@@ -14,6 +14,7 @@ export default {
     [ErrorCodes.setting_field_doesnt_found]: 'Field not found',
     [ErrorCodes.setting_field_already_exists]: 'Field already exists',
     [ErrorCodes.unknown_error]: 'Unknown error',
+    [ErrorCodes.too_many_requests]: 'Too many requests. Please try again later.',
   },
   common: {
     theme: {

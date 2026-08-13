@@ -1,13 +1,17 @@
-import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 
 import type { CheckTokenResBody, LoginReqBody, LoginResBody } from '../../../types';
 import { AuthService } from './auth.service';
+import { AppThrottlerGuard } from '../../core/guards/app-throttler.guard';
 
 @Controller('/api/auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @UseGuards(AppThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('login')
   async login(
     @Body() { hash }: LoginReqBody,

@@ -4,6 +4,7 @@ import type { Request, Response } from 'express';
 
 import { AuthController } from '../auth.controller';
 import { AuthService } from '../auth.service';
+import { AppThrottlerGuard } from '../../../core/guards/app-throttler.guard';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -33,7 +34,10 @@ describe('AuthController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [{ provide: AuthService, useValue: mockAuthService }],
-    }).compile();
+    })
+      .overrideGuard(AppThrottlerGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<AuthController>(AuthController);
   });
