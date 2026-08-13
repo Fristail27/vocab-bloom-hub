@@ -1,5 +1,7 @@
 import { getTranslations } from 'next-intl/server';
-import { Breadcrumb } from 'antd';
+import Link from 'next/link';
+import { Breadcrumb, Button, Result } from 'antd';
+import { ErrorCodes } from 'server/core/constants/error_codes';
 import { Title } from '@/core/ui/Title';
 import { Icon } from '@/core/ui/Icon';
 import { BreadcrumbSection } from '@/core/ui/Breadcrumb/components/ManagingBreadcrumbSection';
@@ -16,12 +18,25 @@ type EditPageP = {
 export default async function EditWordPage({ params }: CommonPageP<EditPageP>) {
   const { locale, wordId } = await params;
   const wordData = await ServerEnApi.getWordById(+wordId);
-  if ('error' in wordData) {
-    // TODO
-    return <div>3333</div>;
-  }
   const t = await getTranslations('menu');
   const manageT = await getTranslations('managing');
+  if ('error' in wordData) {
+    const tError = await getTranslations('errors');
+    const isKnownCode = (Object.values(ErrorCodes) as string[]).includes(wordData.message);
+    return (
+      <div className={styles.page}>
+        <Result
+          status={wordData.message === ErrorCodes.word_doesnt_found ? '404' : 'error'}
+          title={tError(isKnownCode ? wordData.message : ErrorCodes.unknown_error)}
+          extra={
+            <Link href={`/${locale}/managing`}>
+              <Button type="primary">{manageT('back_to_managing')}</Button>
+            </Link>
+          }
+        />
+      </div>
+    );
+  }
   const breadCrumbs = [
     { href: `/${locale}`, title: <Icon name="home" size="medium" /> },
     { href: `/${locale}/managing`, title: <BreadcrumbSection icon="managing" name={t('managing')} /> },

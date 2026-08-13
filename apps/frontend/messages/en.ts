@@ -39,6 +39,7 @@ export default {
     add_word: 'Add word',
     edit: 'Edit data',
     edit_word: 'Edit word',
+    back_to_managing: 'Back to word management',
     import_dictionary: 'Import Dictionary',
     export_dictionary: 'Export Dictionary',
   },
