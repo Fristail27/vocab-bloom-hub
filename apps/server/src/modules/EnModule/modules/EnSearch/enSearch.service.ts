@@ -5,6 +5,7 @@ import { EnWord } from '../../entities/en_word.entity';
 import { SearchReqDTO } from './dto/SearchReq.dto';
 import { EnEntryTypesE, EnWordT } from '../../../../../types';
 import { mapSearchResults } from './utils/mapSearchResults';
+import { escapeLike } from './utils/escapeLike';
 
 @Injectable()
 export class EnSearchService {
@@ -44,14 +45,17 @@ export class EnSearchService {
     return { exactSet, phrasalSet };
   }
 
-  private async getWordsStartsFromSearch(search: string, excludedIds: number[]) {
+  private async getWordsStartsFromSearch(search: string, excludedIds: number[], limit: number) {
     const wordsStartFromSet = new Set<number>();
+    if (limit <= 0) {
+      return wordsStartFromSet;
+    }
 
     const qb = this.enWordsRep
       .createQueryBuilder('w')
       .innerJoinAndSelect('w.word', 'entry')
       .leftJoinAndSelect('w.base_form', 'baseForm')
-      .where('LOWER(entry.word) LIKE :word', { word: `${search}%` })
+      .where("entry.word LIKE :word ESCAPE '\\'", { word: `${escapeLike(search)}%` })
       .andWhere('entry.type NOT IN (:...excludedTypes)', {
         excludedTypes: [EnEntryTypesE.phrase, EnEntryTypesE.grammar_pattern],
       });
@@ -63,7 +67,7 @@ export class EnSearchService {
       );
     }
 
-    const wordsStartFrom = await qb.getMany();
+    const wordsStartFrom = await qb.take(limit).getMany();
 
     wordsStartFrom.forEach((w) => {
       if (w.base_form) {
@@ -89,7 +93,7 @@ export class EnSearchService {
         .createQueryBuilder('w')
         .innerJoinAndSelect('w.word', 'entry')
         .leftJoinAndSelect('w.base_form', 'baseForm')
-        .where('LOWER(entry.word) LIKE :word', { word: `%${search}` })
+        .where("entry.word LIKE :word ESCAPE '\\'", { word: `%${escapeLike(search)}` })
         .andWhere('entry.type NOT IN (:...excludedTypes)', {
           excludedTypes: [EnEntryTypesE.phrase, EnEntryTypesE.grammar_pattern],
         });
@@ -125,7 +129,7 @@ export class EnSearchService {
         .createQueryBuilder('w')
         .innerJoinAndSelect('w.word', 'entry')
         .leftJoinAndSelect('w.base_form', 'baseForm')
-        .where('LOWER(entry.word) LIKE :word', { word: `%${search}%` })
+        .where("entry.word LIKE :word ESCAPE '\\'", { word: `%${escapeLike(search)}%` })
         .andWhere('entry.type IN (:...includedTypes)', { includedTypes });
 
       if (excludedIds.length > 0) {
@@ -143,10 +147,15 @@ export class EnSearchService {
     return anyMatchesWordsSet;
   }
 
-  private async getPhrases(search: string, type: EnEntryTypesE | undefined, excludedIds: number[]) {
+  private async getPhrases(
+    search: string,
+    type: EnEntryTypesE | undefined,
+    excludedIds: number[],
+    limit: number,
+  ) {
     const phrasesExactSet = new Set<number>();
 
-    if (!type || type === EnEntryTypesE.phrase || type === EnEntryTypesE.grammar_pattern) {
+    if ((!type || type === EnEntryTypesE.phrase || type === EnEntryTypesE.grammar_pattern) && limit > 0) {
       const includedTypes = [];
       if (type === EnEntryTypesE.phrase) includedTypes.push(EnEntryTypesE.phrase);
       if (type === EnEntryTypesE.grammar_pattern) includedTypes.push(EnEntryTypesE.grammar_pattern);
@@ -159,15 +168,19 @@ export class EnSearchService {
         .createQueryBuilder('w')
         .innerJoinAndSelect('w.word', 'entry')
         .where(
-          `(LOWER(entry.word) LIKE :start OR LOWER(entry.word) LIKE :middle OR LOWER(entry.word) LIKE :end)`,
-          { start: `${search} %`, middle: `% ${search} %`, end: `% ${search}` },
+          `(entry.word LIKE :start ESCAPE '\\' OR entry.word LIKE :middle ESCAPE '\\' OR entry.word LIKE :end ESCAPE '\\')`,
+          {
+            start: `${escapeLike(search)} %`,
+            middle: `% ${escapeLike(search)} %`,
+            end: `% ${escapeLike(search)}`,
+          },
         )
         .andWhere('entry.type NOT IN (:...excludedTypes)', { excludedTypes: [EnEntryTypesE.word] });
 
       if (excludedIds.length > 0) {
         qb.andWhere('w.id NOT IN (:...excludedIds)', { excludedIds });
       }
-      const phrasesExact = await qb.getMany();
+      const phrasesExact = await qb.take(limit).getMany();
 
       phrasesExact.forEach((w) => phrasesExactSet.add(w.id));
     }
@@ -181,13 +194,15 @@ export class EnSearchService {
 
     excludedIds = [...excludedIds, ...exactSet, ...phrasalSet];
 
+    const wordsStartFromLimit = limit - exactSet.size - phrasalSet.size;
     const wordsStartFromSet =
       !type || type === EnEntryTypesE.word
-        ? await this.getWordsStartsFromSearch(search, excludedIds)
+        ? await this.getWordsStartsFromSearch(search, excludedIds, wordsStartFromLimit)
         : new Set<number>();
 
     excludedIds = [...excludedIds, ...wordsStartFromSet];
-    const phrasesExactSet = await this.getPhrases(search, type, excludedIds);
+    const phrasesLimit = wordsStartFromLimit - wordsStartFromSet.size;
+    const phrasesExactSet = await this.getPhrases(search, type, excludedIds, phrasesLimit);
     excludedIds = [...excludedIds, ...phrasesExactSet];
 
     // TODO add a check to add other matches
