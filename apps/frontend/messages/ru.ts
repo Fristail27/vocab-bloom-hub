@@ -126,6 +126,7 @@ export default {
     translation_full_meaning: 'Полный перевод значения',
     add_translation: 'Добавить перевод',
     insert_json: 'Добавить JSON',
+    invalid_json: 'В буфере обмена нет корректного JSON',
     added_success: 'Добавлено успешно!',
     dictionary_search: 'Поиск в словаре',
     delete_word: 'Удалить слово',
