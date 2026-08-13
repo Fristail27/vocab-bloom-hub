@@ -39,6 +39,7 @@ export default {
     add_word: 'Добавить слово',
     edit: 'Редактировать',
     edit_word: 'Редактирование слова',
+    back_to_managing: 'Вернуться к управлению словами',
     import_dictionary: 'Загрузить словарь',
     export_dictionary: 'Выгрузить словарь',
   },
