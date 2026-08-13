@@ -14,6 +14,7 @@ export default {
     [ErrorCodes.translation_doesnt_found]: 'Перевод не найден',
     [ErrorCodes.setting_field_doesnt_found]: 'Поле не найдено',
     [ErrorCodes.setting_field_already_exists]: 'Поле уже существует',
+    [ErrorCodes.too_many_requests]: 'Слишком много запросов. Попробуйте позже.',
   },
   common: {
     theme: {

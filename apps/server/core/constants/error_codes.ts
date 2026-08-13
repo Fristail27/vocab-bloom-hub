@@ -11,4 +11,5 @@ export enum ErrorCodes {
   setting_field_doesnt_found = 'setting_field_doesnt_found',
   setting_field_already_exists = 'setting_field_already_exists',
   unknown_error = 'unknown_error',
+  too_many_requests = 'too_many_requests',
 }
