@@ -126,6 +126,7 @@ export default {
     translation_full_meaning: 'Full translation of meaning',
     add_translation: 'Add translation',
     insert_json: 'Insert JSON',
+    invalid_json: 'Clipboard does not contain valid JSON',
     added_success: 'Added successfully!',
     dictionary_search: 'Dictionary search',
     delete_word: 'Delete word',

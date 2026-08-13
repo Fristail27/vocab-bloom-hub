@@ -24,7 +24,6 @@ import { getInitCommonInfo, getInitMeanings, getStepItems, mapInitForms } from '
 import { CheckWordBlock } from './components/CheckWordBlock';
 import { EnApi } from '@/core/api/EnApi';
 import { Title } from '@/core/ui/Title';
-import { tres } from './info';
 import styles from './styles.module.scss';
 
 type AddWordFormP = {
@@ -106,22 +105,33 @@ export const EnWordForm: React.FC<AddWordFormP> = ({ initData, mode = EnWordForm
     }
   };
   const insertJSON = async () => {
-    // TODO const te = await navigator.clipboard.readText();
-    // TODO const { meanings, forms, short_translations, word: w, part_of_speech: p, ...commonInfo } = JSON.parse(te);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { meanings, forms, short_translations, word: w, part_of_speech: p, ...commonInfo } = tres;
-    setMeanings(
-      meanings.map((m: EnMeaningT, i: number) => ({
-        ...m,
-        id: i,
-        translations: m.translations.map((t, ind: number) => ({ ...t, id: ind })),
-      })),
-    );
-    if (forms) {
-      setForms(forms.map((f: EnWordFormT, i: number) => ({ ...f, id: i })));
+    try {
+      const text = await navigator.clipboard.readText();
+      const {
+        meanings: parsedMeanings,
+        forms: parsedForms,
+        short_translations: parsedShortTranslations,
+        word: _word,
+        part_of_speech: _partOfSpeech,
+        ...parsedCommonInfo
+      } = JSON.parse(text) as EnWordT;
+      setMeanings(
+        (parsedMeanings || []).map((m: EnMeaningT, i: number) => ({
+          ...m,
+          id: i,
+          translations: (m.translations || []).map((tr, ind: number) => ({ ...tr, id: ind })),
+        })),
+      );
+      if (parsedForms) {
+        setForms(parsedForms.map((f: EnWordFormT, i: number) => ({ ...f, id: i })));
+      }
+      setCommonInfo({ ...parsedCommonInfo, generated: true });
+      if (parsedShortTranslations) {
+        setShortTranslations(parsedShortTranslations);
+      }
+    } catch {
+      message.error(t('invalid_json'));
     }
-    setCommonInfo({ ...commonInfo, generated: true });
-    setShortTranslations(short_translations);
   };
 
   const onClickCommonNext = () => setStep(2);
