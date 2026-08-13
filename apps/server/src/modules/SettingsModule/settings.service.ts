@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Settings } from './entities/settings.entity';
@@ -8,6 +8,8 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class SettingsService {
+  private readonly logger = new Logger(SettingsService.name);
+
   constructor(
     @InjectRepository(Settings)
     private readonly settingsRepository: Repository<Settings>,
@@ -48,6 +50,8 @@ export class SettingsService {
 
     await this.settingsRepository.save({ field, value });
 
+    this.logger.log(`Setting "${field}" created`);
+
     return { success: true };
   }
 
@@ -59,6 +63,7 @@ export class SettingsService {
     setting.value = value;
 
     await this.settingsRepository.save(setting);
+    this.logger.log(`Setting "${field}" updated`);
     return { success: true };
   }
 
@@ -68,6 +73,8 @@ export class SettingsService {
     if (!result.affected) {
       throw new NotFoundException(ErrorCodes.setting_field_doesnt_found);
     }
+
+    this.logger.log(`Setting "${field}" deleted`);
 
     return { success: true };
   }

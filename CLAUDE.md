@@ -30,7 +30,7 @@ Test files are `*.spec.ts(x)`, colocated with code (e.g. in `__tests__/` dirs). 
 
 ## Environment
 
-A single `.env` at the repo root is used by both apps (frontend scripts wrap with `dotenv -e ../../.env`; server loads it at the top of `src/main.ts`). Relevant vars: `SERVER_PORT`, `FRONT_PORT`, `DATABASE_URL`, `USERNAME`, `PASSWORD`, `NEXT_PUBLIC_BASE_API_URL`.
+A single `.env` at the repo root is used by both apps (frontend scripts wrap with `dotenv -e ../../.env`; server loads it at the top of `src/main.ts`). Relevant vars: `SERVER_PORT`, `FRONT_PORT`, `DATABASE_URL`, `USERNAME`, `PASSWORD`, `NEXT_PUBLIC_BASE_API_URL`, `LOG_LEVEL` (server log verbosity: `verbose`/`debug`/`log`/`warn`/`error`/`fatal`; defaults to `debug` in development, `log` otherwise).
 
 Database: if `DATABASE_URL` is set, TypeORM connects to Postgres; otherwise it falls back to `dev.sqlite` at the repo root (better-sqlite3). There are no migrations — `synchronize: true` when `NODE_ENV === 'development'`, so entity changes reshape the schema automatically in dev.
 

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EnWord } from '../../entities/en_word.entity';
@@ -14,6 +14,8 @@ import { EditShortTranslationReqDTO } from './dto/EditShortTranslationReq.dto';
 
 @Injectable()
 export class EnShortTranslationService {
+  private readonly logger = new Logger(EnShortTranslationService.name);
+
   constructor(
     @InjectRepository(EnWord)
     private readonly enWordsRep: Repository<EnWord>,
@@ -36,11 +38,14 @@ export class EnShortTranslationService {
       variants_of_words: body.variant_of_words,
     });
 
+    this.logger.log(`Short translation added to word id=${body.word_id}, id=${res.id}`);
+
     return { success: true, id: res.id };
   }
 
   async deleteShortTranslation(id: number): Promise<DeleteShortTranslationResT> {
     await this.enShortTranslationRep.delete({ id });
+    this.logger.log(`Short translation deleted, id=${id}`);
     return { success: true };
   }
 
@@ -62,6 +67,7 @@ export class EnShortTranslationService {
     }
 
     await this.enShortTranslationRep.save(tr);
+    this.logger.log(`Short translation updated, id=${body.id}`);
     return { success: true };
   }
 }

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import type { Response } from 'express';
 import { createJwt, validateJwt } from '../../../core/utils/auth';
 import { hashLoginString } from '../../../core/utils/crypto';
@@ -7,6 +7,8 @@ import { ErrorCodes } from '../../../core/constants/error_codes';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor() {}
 
   private async getLoginHash(): Promise<{
@@ -43,8 +45,11 @@ export class AuthService {
     const username = process.env.USERNAME as string;
     const { loginHash, secretHash } = await this.getLoginHash();
     if (loginHash !== hash) {
+      this.logger.warn(`Failed login attempt for user "${username}"`);
       throw new BadRequestException(ErrorCodes.login_or_pass_wrong);
     }
+
+    this.logger.log(`User "${username}" logged in`);
 
     return createJwt({ username, roles: [RoleE.admin] }, secretHash + loginHash);
   }
