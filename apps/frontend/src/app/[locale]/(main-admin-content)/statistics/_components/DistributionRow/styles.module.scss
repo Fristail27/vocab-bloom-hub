@@ -1,0 +1,23 @@
+.distributionRow {
+  display: grid;
+  grid-template-columns: 160px auto 130px;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 0;
+}
+
+.distributionLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.distributionCount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.distributionPercent {
+  color: rgba(128, 128, 128, 0.9);
+}

@@ -1,5 +1,6 @@
 import { ErrorResT } from '../../errors';
-import { EnWordT } from '.';
+import { EnPartOfSpeechE, EnWordT } from '.';
+import type { AvailableTranslationLanguagesE, WordLevelE } from '../index';
 import { AddWordFormReqDTO } from '../../../src/modules/EnModule/dto/AddWordFormReq.dto';
 import { EditWordFormReqDTO } from '../../../src/modules/EnModule/dto/EditWordFormReq.dto';
 import { AddShortTranslationReqDTO } from '../../../src/modules/EnModule/modules/EnShortTranslation/dto/AddShortTranslationReq.dto';
@@ -55,3 +56,59 @@ export type ImportDictionaryChunkT = {
   total?: number | undefined;
   exportId?: string | undefined;
 };
+
+export type EnPosStatT = { part_of_speech: EnPartOfSpeechE; count: number };
+export type EnWordLevelStatT = { word_level: WordLevelE | null; count: number };
+export type EnStatisticsT = {
+  totals: {
+    entries: number;
+    words: number;
+    phrases: number;
+    grammar_patterns: number;
+    word_forms: number;
+    meanings: number;
+    meaning_translations: number;
+    short_translations: number;
+  };
+  coverage: {
+    words_with_meanings: number;
+    words_with_short_translations: number;
+    generated_words: number;
+    obsolete_words: number;
+    phrasal_verbs: number;
+  };
+  by_part_of_speech: EnPosStatT[];
+  by_word_level: EnWordLevelStatT[];
+};
+export type GetEnStatisticsResT = EnStatisticsT | ErrorResT;
+
+export type EnTranslationsStatisticsT = {
+  totals: {
+    meanings: number;
+    meaning_translations: number;
+    short_translations: number;
+    meanings_without_translations: number;
+    avg_meanings_per_word: number;
+  };
+  by_language: {
+    language: AvailableTranslationLanguagesE;
+    meaning_translations: number;
+    short_translations: number;
+  }[];
+  meanings_by_level: { meaning_level: WordLevelE | null; count: number }[];
+};
+export type GetEnTranslationsStatisticsResT = EnTranslationsStatisticsT | ErrorResT;
+
+export type EnStatisticsIssueKeyT =
+  | 'words_without_meanings'
+  | 'words_without_short_translations'
+  | 'words_without_level'
+  | 'words_without_transcription'
+  | 'words_without_description'
+  | 'meanings_without_translations'
+  | 'meanings_without_examples'
+  | 'empty_meaning_translations'
+  | 'empty_short_translations';
+export type EnIssueStatT = { key: EnStatisticsIssueKeyT; count: number; total: number };
+export type EnIssuesStatisticsT = { issues: EnIssueStatT[] };
+export type GetEnIssuesStatisticsResT = EnIssuesStatisticsT | ErrorResT;

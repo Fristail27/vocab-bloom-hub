@@ -16,10 +16,15 @@ import { EnImportDictionaryService } from './modules/EnImportDictionary/enImport
 import { EnImportDictionaryController } from './modules/EnImportDictionary/enImportDictionary.controller';
 import { EnSearchController } from './modules/EnSearch/enSearch.controller';
 import { EnSearchService } from './modules/EnSearch/enSearch.service';
+import { EnStatisticsController } from './modules/EnStatistics/enStatistics.controller';
+import { EnStatisticsService } from './modules/EnStatistics/enStatistics.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([EnEntry, EnWord, EnMeaning, EnMeaningTranslation, EnShortTranslation])],
   controllers: [
+    // EnStatisticsController must be registered before EnController,
+    // otherwise GET /api/en/statistics is swallowed by the GET /api/en/:id route
+    EnStatisticsController,
     EnController,
     EnShortTranslationController,
     EnMeaningTranslationController,
@@ -34,6 +39,7 @@ import { EnSearchService } from './modules/EnSearch/enSearch.service';
     EnMeaningService,
     EnImportDictionaryService,
     EnSearchService,
+    EnStatisticsService,
   ],
   exports: [EnService],
 })
