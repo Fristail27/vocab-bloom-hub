@@ -5,6 +5,7 @@ import type { Request, Response } from 'express';
 import type { CheckTokenResBody, LoginReqBody, LoginResBody } from '../../../types';
 import { AuthService } from './auth.service';
 import { AppThrottlerGuard } from '../../core/guards/app-throttler.guard';
+import { getBearerFromRequest } from '../../core/utils/get-bearer-from-request';
 
 @Controller('/api/auth')
 export class AuthController {
@@ -25,10 +26,10 @@ export class AuthController {
 
   @Get('check-token')
   async checkToken(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<CheckTokenResBody> {
-    if (!req.headers.authorization) {
+    const jwt = getBearerFromRequest(req);
+    if (!jwt) {
       return { isValid: false };
     }
-    const jwt = req.headers.authorization.replace('Bearer ', '');
     const isValid = await this.authService.checkToken(jwt);
 
     if (isValid) {

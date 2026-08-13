@@ -149,7 +149,8 @@ describe('AuthService', () => {
         'bearer',
         FAKE_TOKEN,
         expect.objectContaining({
-          httpOnly: false,
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',
           maxAge: 24 * 60 * 60 * 1000,
         }),
