@@ -1,24 +1,27 @@
 import React from 'react';
-import { useParams } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import { Typography } from 'antd';
+import { ErrorCodes } from 'server/core/constants/error_codes';
 import styles from './styles.module.scss';
 
 const { Text, Link } = Typography;
 
 type WordAlreadyExistBlockP = {
   word: string;
+  wordId?: number | null;
 };
 
-export const WordAlreadyExistBlock: React.FC<WordAlreadyExistBlockP> = ({ word }) => {
-  const params = useParams();
-  const { lang } = params;
+export const WordAlreadyExistBlock: React.FC<WordAlreadyExistBlockP> = ({ word, wordId }) => {
+  const locale = useLocale();
+  const t = useTranslations('en_managing_words');
+  const tErr = useTranslations('errors');
 
   return (
     <div className={styles.wordAlreadyExistBlock}>
       <Text>
-        Слово <Text strong>{word}</Text> уже существет
+        <Text strong>{word}</Text> — {tErr(ErrorCodes.word_already_exists)}
       </Text>
-      <Link href={`/${lang}/admin-panel/dictionary/en/edit-word/${word}`}>Редактировать слово?</Link>
+      {wordId && <Link href={`/${locale}/managing/edit-word/${wordId}`}>{t('edit_word_link')}</Link>}
     </div>
   );
 };
