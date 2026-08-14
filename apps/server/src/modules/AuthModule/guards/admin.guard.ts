@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { validateJwt } from '../../../../core/utils/auth';
 import { hashLoginString } from '../../../../core/utils/crypto';
 import { ErrorCodes } from '../../../../core/constants/error_codes';
@@ -10,7 +10,7 @@ export class AdminGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const token = getBearerFromRequest(request);
     if (!token) {
-      throw new ForbiddenException(ErrorCodes.invalid_token);
+      throw new UnauthorizedException(ErrorCodes.invalid_token);
     }
     const username = process.env.USERNAME as string;
     const pass = process.env.PASSWORD as string;
@@ -19,7 +19,7 @@ export class AdminGuard implements CanActivate {
     const isValid = validateJwt(token, secretHash + hashByEnv);
 
     if (!isValid) {
-      throw new ForbiddenException(ErrorCodes.invalid_token);
+      throw new UnauthorizedException(ErrorCodes.invalid_token);
     }
 
     return true;
