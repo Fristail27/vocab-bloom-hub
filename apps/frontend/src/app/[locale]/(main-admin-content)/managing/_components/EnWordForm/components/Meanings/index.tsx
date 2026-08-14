@@ -3,6 +3,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { MeaningItem } from './components/MeaningItem';
+import { makeTempId } from '../../utils';
 import { EnAreaVariantsE, EnMeaningT, LanguageRegisterE } from 'server/types';
 import styles from './styles.module.scss';
 
@@ -18,7 +19,7 @@ export const Meanings: React.FC<MeaningsP> = ({ meanings, setMeanings, onClickNe
     setMeanings([
       ...meanings,
       {
-        id: Math.random(),
+        id: makeTempId(),
         title: '',
         definition: '',
         is_obsolete: false,

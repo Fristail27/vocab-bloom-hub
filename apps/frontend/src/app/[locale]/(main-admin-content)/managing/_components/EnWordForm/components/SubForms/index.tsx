@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Button } from 'antd';
 import { FormsOfWordLine } from '../FormsOfWordLine';
-import { getDefaultSubForm } from '../../utils';
+import { getDefaultSubForm, makeTempId } from '../../utils';
 import { EnAreaVariantsE, EnPartOfSpeechE, EnWordFormsE, EnWordFormT } from 'server/types';
 import { FormsByPartOfSpeech } from '../../constants';
 import styles from './styles.module.scss';
@@ -31,7 +31,7 @@ export const SubForms: React.FC<SubFormsP> = ({ onClickFormsNext, pos, subForms,
       setSubForms(
         currentForms.map((f) => ({
           form_of_word: f,
-          id: Math.random(),
+          id: makeTempId(),
           word: '',
           transcription: '',
           area_variant: EnAreaVariantsE.common,

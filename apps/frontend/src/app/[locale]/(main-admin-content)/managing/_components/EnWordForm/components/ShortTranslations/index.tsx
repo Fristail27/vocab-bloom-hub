@@ -3,6 +3,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from 'antd';
 import { AvailableTranslationLanguagesE, EnShortTranslationT } from 'server/types';
 import { ShortTranslation } from './components/ShortTranslation';
+import { makeTempId } from '../../utils';
 import styles from './styles.module.scss';
 
 type ShortTranslationsP = {
@@ -24,7 +25,7 @@ export const ShortTranslations: React.FC<ShortTranslationsP> = ({
     setShortTranslations([
       ...shortTranslations,
       {
-        id: Math.random(),
+        id: makeTempId(),
         description: '',
         variants_of_words: [],
         language: AvailableTranslationLanguagesE.ru,

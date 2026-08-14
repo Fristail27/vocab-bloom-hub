@@ -6,6 +6,7 @@ import { MeaningTranslation } from '../MeaningsTranslations/components/MeaningTr
 import styles from './styles.module.scss';
 import { PlusOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
+import { makeTempId } from '../../utils';
 
 type MeaningTranslationsP = {
   meanings: EnMeaningT[];
@@ -21,7 +22,7 @@ export const MeaningsTranslations: React.FC<MeaningTranslationsP> = ({
   const t = useTranslations('en_managing_words');
   const addTranslation = (id: number) => {
     const newTranslation: EnMeaningTranslationT = {
-      id: Math.random(),
+      id: makeTempId(),
       title: '',
       definition: '',
       variants_of_words: [],

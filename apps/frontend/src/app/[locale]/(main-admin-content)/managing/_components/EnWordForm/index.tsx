@@ -20,7 +20,7 @@ import { CommonWordInfo } from './components/CommonWordInfo';
 import { PreviewWord } from './components/PreviewWord';
 import { ShortTranslations } from './components/ShortTranslations';
 import { MeaningsTranslations } from './components/MeaningsTranslations';
-import { getInitCommonInfo, getInitMeanings, getStepItems, mapInitForms } from './utils';
+import { getInitCommonInfo, getInitMeanings, getStepItems, mapInitForms, prepareWordPayload } from './utils';
 import { CheckWordBlock } from './components/CheckWordBlock';
 import { EnApi } from '@/core/api/EnApi';
 import { Title } from '@/core/ui/Title';
@@ -62,7 +62,7 @@ export const EnWordForm: React.FC<AddWordFormP> = ({ initData, mode = EnWordForm
           forms: type === EnEntryTypesE.word ? forms.filter((c) => c.word.trim().length > 0) : [],
         };
         if (body) {
-          const res = await EnApi.addWord(body);
+          const res = await EnApi.addWord(prepareWordPayload(body));
           if ('error' in res) {
             const mes = tError(res.message);
             message.error(mes);
