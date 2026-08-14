@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { EnWord } from '../../entities/en_word.entity';
 import { EnShortTranslation } from '../../entities/en_short_translation.entity';
 import {
@@ -24,14 +24,18 @@ export class EnShortTranslationService {
     private readonly enShortTranslationRep: Repository<EnShortTranslation>,
   ) {}
 
-  async addShortTranslation(body: AddShortTranslationReqDTO): Promise<AddShortTranslationResT> {
-    const word = await this.enWordsRep.findOne({ where: { id: body.word_id } });
+  async addShortTranslation(
+    body: AddShortTranslationReqDTO,
+    manager?: EntityManager,
+  ): Promise<AddShortTranslationResT> {
+    const em = manager ?? this.enShortTranslationRep.manager;
+    const word = await em.getRepository(EnWord).findOne({ where: { id: body.word_id } });
 
     if (!word) {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);
     }
 
-    const res = await this.enShortTranslationRep.save({
+    const res = await em.getRepository(EnShortTranslation).save({
       word: word,
       language: body.language,
       description: body.description,

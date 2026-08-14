@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { AddMeaningResT, DeleteMeaningResT, EditMeaningResT } from '../../../../../types';
 import { ErrorCodes } from '../../../../../core/constants/error_codes';
 import { EnMeaning } from '../../entities/en_meaning.entity';
@@ -23,21 +23,25 @@ export class EnMeaningService {
     private readonly enMeaningTranslationService: EnMeaningTranslationService,
   ) {}
 
-  async addMeaning(body: AddMeaningReqDTO): Promise<AddMeaningResT> {
+  async addMeaning(body: AddMeaningReqDTO, manager?: EntityManager): Promise<AddMeaningResT> {
+    const em = manager ?? this.enMeaningsRep.manager;
     const { word_id, id: _id, ...newMeaning } = body;
-    const word = await this.enWordsRep.findOne({ where: { id: word_id } });
+    const word = await em.getRepository(EnWord).findOne({ where: { id: word_id } });
 
     if (!word) {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);
     }
 
-    const res = await this.enMeaningsRep.save({ word: word, ...newMeaning });
+    const res = await em.getRepository(EnMeaning).save({ word: word, ...newMeaning });
     if (body.translations.length > 0) {
       for (const translation of body.translations) {
-        await this.enMeaningTranslationService.addMeaningTranslation({
-          meaning_id: res.id,
-          ...translation,
-        });
+        await this.enMeaningTranslationService.addMeaningTranslation(
+          {
+            meaning_id: res.id,
+            ...translation,
+          },
+          manager,
+        );
       }
     }
 

@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { EnEntry } from './entities/en_entry.entity';
 import { EnWord } from './entities/en_word.entity';
 import {
@@ -31,11 +31,11 @@ export class EnService {
   private readonly logger = new Logger(EnService.name);
 
   constructor(
-    @InjectRepository(EnEntry)
-    private readonly enEntriesRep: Repository<EnEntry>,
-
     @InjectRepository(EnWord)
     private readonly enWordsRep: Repository<EnWord>,
+
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
 
     private readonly enShortTranslationService: EnShortTranslationService,
     private readonly enMeaningService: EnMeaningService,
@@ -59,11 +59,11 @@ export class EnService {
     return result?.id ?? false;
   }
 
-  private async addEntry(word: string, type: EnEntryTypesE): Promise<EnEntry> {
-    return this.enEntriesRep.save({ word, type });
+  private async addEntry(em: EntityManager, word: string, type: EnEntryTypesE): Promise<EnEntry> {
+    return em.getRepository(EnEntry).save({ word, type });
   }
-  private async addWordRow(entry: EnEntry, data: EnWordT): Promise<EnWord> {
-    const row = await this.getWordRow(data.word, data.part_of_speech, data.form_of_word);
+  private async addWordRow(em: EntityManager, entry: EnEntry, data: EnWordT): Promise<EnWord> {
+    const row = await this.getWordRow(data.word, data.part_of_speech, data.form_of_word, em);
     if (row) {
       throw new ConflictException(ErrorCodes.word_already_exists);
     }
@@ -80,23 +80,28 @@ export class EnService {
     } = data;
     let basePhrasalWord: EnWord | null | undefined;
     if (other.part_of_speech === EnPartOfSpeechE.verb && base_phrasal) {
-      basePhrasalWord = await this.getWordRow(base_phrasal, EnPartOfSpeechE.verb, EnWordFormsE.base_form);
+      basePhrasalWord = await this.getWordRow(base_phrasal, EnPartOfSpeechE.verb, EnWordFormsE.base_form, em);
       if (!basePhrasalWord) {
-        if (!entry.entries || entry.entries.length === 0) {
-          await this.enEntriesRep.delete({ word: entry.word });
-        }
+        // the transaction rollback also removes an entry created for this word
         throw new BadRequestException(ErrorCodes.phrasal_base_doesnt_exist);
       }
     }
-    return this.enWordsRep.save({
+    return em.getRepository(EnWord).save({
       word: entry,
       ...other,
       ...(basePhrasalWord && { base_phrasal: basePhrasalWord }),
     });
   }
 
-  async getWordRow(word: string, pos: EnPartOfSpeechE, formOfWord: EnWordFormsE): Promise<EnWord | null> {
-    return this.enWordsRep
+  async getWordRow(
+    word: string,
+    pos: EnPartOfSpeechE,
+    formOfWord: EnWordFormsE,
+    manager?: EntityManager,
+  ): Promise<EnWord | null> {
+    const em = manager ?? this.enWordsRep.manager;
+    return em
+      .getRepository(EnWord)
       .createQueryBuilder('w')
       .innerJoin('w.word', 'entry')
       .where('entry.word = :word', { word })
@@ -104,22 +109,22 @@ export class EnService {
       .andWhere('w.form_of_word = :formOfWord', { formOfWord })
       .getOne();
   }
-  private async getOrAddEntry(word: string, type: EnEntryTypesE): Promise<EnEntry> {
-    const entry = await this.enEntriesRep.findOne({ where: { word }, relations: { entries: true } });
+  private async getOrAddEntry(em: EntityManager, word: string, type: EnEntryTypesE): Promise<EnEntry> {
+    const entry = await em.getRepository(EnEntry).findOne({ where: { word }, relations: { entries: true } });
     if (entry) {
       return entry;
     }
-    return this.addEntry(word, type);
+    return this.addEntry(em, word, type);
   }
 
-  private async addFormOfWord(wordForm: EnWordFormT, baseWord: EnWord) {
+  private async addFormOfWord(em: EntityManager, wordForm: EnWordFormT, baseWord: EnWord) {
     const { id: _id, word, ...f } = wordForm;
-    const formEntry = await this.getOrAddEntry(word, EnEntryTypesE.word);
-    const wordRow = await this.getWordRow(word, baseWord.part_of_speech, f.form_of_word);
+    const formEntry = await this.getOrAddEntry(em, word, EnEntryTypesE.word);
+    const wordRow = await this.getWordRow(word, baseWord.part_of_speech, f.form_of_word, em);
     if (wordRow) {
       return wordRow;
     } else {
-      return this.enWordsRep.save({
+      return em.getRepository(EnWord).save({
         word: formEntry,
         ...f,
         part_of_speech: baseWord.part_of_speech,
@@ -136,43 +141,45 @@ export class EnService {
     if (body.part_of_speech === EnPartOfSpeechE.grammar_pattern) {
       type = EnEntryTypesE.grammar_pattern;
     }
-    const baseEntry = await this.getOrAddEntry(body.word, type);
-    const baseWord = await this.addWordRow(baseEntry, body);
+    await this.dataSource.transaction(async (em) => {
+      const baseEntry = await this.getOrAddEntry(em, body.word, type);
+      const baseWord = await this.addWordRow(em, baseEntry, body);
 
-    const saveMeaningsPromises = [];
-    const saveShortTranslationsPromises = [];
-    if (body.forms) {
-      for (const form of body.forms) await this.addFormOfWord(form, baseWord);
-    }
+      if (body.forms) {
+        for (const form of body.forms) await this.addFormOfWord(em, form, baseWord);
+      }
 
-    if (body.meanings) {
-      for (const m of body.meanings)
-        saveMeaningsPromises.push(
-          this.enMeaningService.addMeaning({
-            word_id: baseWord.id,
-            meaning_level: m.meaning_level,
-            language_register: m.language_register,
-            categories: m.categories,
-            ...m,
-          }),
-        );
-    }
+      if (body.meanings) {
+        for (const m of body.meanings) {
+          await this.enMeaningService.addMeaning(
+            {
+              word_id: baseWord.id,
+              meaning_level: m.meaning_level,
+              language_register: m.language_register,
+              categories: m.categories,
+              ...m,
+            },
+            em,
+          );
+        }
+      }
 
-    if (body.short_translations) {
-      for (const s of body.short_translations)
-        saveShortTranslationsPromises.push(
-          this.enShortTranslationService.addShortTranslation({
-            language: s.language,
-            description: s.description,
-            variant_of_words: s.variants_of_words,
-            word_id: baseWord.id,
-          }),
-        );
-    }
+      if (body.short_translations) {
+        for (const s of body.short_translations) {
+          await this.enShortTranslationService.addShortTranslation(
+            {
+              language: s.language,
+              description: s.description,
+              variant_of_words: s.variants_of_words,
+              word_id: baseWord.id,
+            },
+            em,
+          );
+        }
+      }
 
-    await Promise.all([...saveMeaningsPromises, ...saveShortTranslationsPromises]);
-
-    this.logger.log(`Word "${body.word}" (${body.part_of_speech}) created, id=${baseWord.id}`);
+      this.logger.log(`Word "${body.word}" (${body.part_of_speech}) created, id=${baseWord.id}`);
+    });
 
     return body;
   }
@@ -189,22 +196,25 @@ export class EnService {
     const entryWords = new Set<string>(word.forms.map((f) => f.word.word));
     entryWords.add(word.word.word);
 
-    // Form rows used to die via the entry cascade; entries may survive now, so delete forms explicitly
-    if (word.forms.length > 0) {
-      await this.enWordsRep.delete(word.forms.map((f) => f.id));
-    }
-    await this.enWordsRep.delete({ id });
-
-    for (const entryStr of entryWords) {
-      const referencingWordsCount = await this.enWordsRep
-        .createQueryBuilder('w')
-        .where('w.word = :word', { word: entryStr })
-        .getCount();
-
-      if (referencingWordsCount === 0) {
-        await this.enEntriesRep.delete({ word: entryStr });
+    await this.dataSource.transaction(async (em) => {
+      const wordsRep = em.getRepository(EnWord);
+      // Form rows used to die via the entry cascade; entries may survive now, so delete forms explicitly
+      if (word.forms.length > 0) {
+        await wordsRep.delete(word.forms.map((f) => f.id));
       }
-    }
+      await wordsRep.delete({ id });
+
+      for (const entryStr of entryWords) {
+        const referencingWordsCount = await wordsRep
+          .createQueryBuilder('w')
+          .where('w.word = :word', { word: entryStr })
+          .getCount();
+
+        if (referencingWordsCount === 0) {
+          await em.getRepository(EnEntry).delete({ word: entryStr });
+        }
+      }
+    });
     this.logger.log(`Word "${word.word.word}" deleted, id=${id}`);
     return { success: true };
   }
@@ -333,14 +343,16 @@ export class EnService {
     if (!baseWord) {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);
     }
-    const entry = await this.getOrAddEntry(body.word, EnEntryTypesE.word);
-    const res = await this.enWordsRep.save({
-      word: entry,
-      form_of_word: body.form_of_word,
-      area_variant: body.area_variant,
-      base_form: baseWord,
-      part_of_speech: baseWord.part_of_speech,
-      transcription: body.transcription,
+    const res = await this.dataSource.transaction(async (em) => {
+      const entry = await this.getOrAddEntry(em, body.word, EnEntryTypesE.word);
+      return em.getRepository(EnWord).save({
+        word: entry,
+        form_of_word: body.form_of_word,
+        area_variant: body.area_variant,
+        base_form: baseWord,
+        part_of_speech: baseWord.part_of_speech,
+        transcription: body.transcription,
+      });
     });
 
     this.logger.log(`Word form "${body.word}" added to word id=${body.base_word_id}, id=${res.id}`);
@@ -357,30 +369,34 @@ export class EnService {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);
     }
 
-    if (body.word && body.word !== word.word.word) {
-      const newEntry = await this.getOrAddEntry(body.word, EnEntryTypesE.word);
-      const oldWord = word.word.word;
-      word.word = newEntry;
-      await this.enWordsRep.save(word);
+    await this.dataSource.transaction(async (em) => {
+      const wordsRep = em.getRepository(EnWord);
 
-      const oldEntryWordsCount = await this.enWordsRep
-        .createQueryBuilder('w')
-        .where('w.word = :word', { word: oldWord })
-        .getCount();
+      if (body.word && body.word !== word.word.word) {
+        const newEntry = await this.getOrAddEntry(em, body.word, EnEntryTypesE.word);
+        const oldWord = word.word.word;
+        word.word = newEntry;
+        await wordsRep.save(word);
 
-      if (oldEntryWordsCount === 0) {
-        await this.enEntriesRep.delete({ word: oldWord });
+        const oldEntryWordsCount = await wordsRep
+          .createQueryBuilder('w')
+          .where('w.word = :word', { word: oldWord })
+          .getCount();
+
+        if (oldEntryWordsCount === 0) {
+          await em.getRepository(EnEntry).delete({ word: oldWord });
+        }
       }
-    }
 
-    if (body.transcription && body.transcription !== word.transcription) {
-      word.transcription = body.transcription;
-    }
-    if (body.area_variant && body.area_variant !== word.area_variant) {
-      word.area_variant = body.area_variant;
-    }
+      if (body.transcription && body.transcription !== word.transcription) {
+        word.transcription = body.transcription;
+      }
+      if (body.area_variant && body.area_variant !== word.area_variant) {
+        word.area_variant = body.area_variant;
+      }
 
-    await this.enWordsRep.save(word);
+      await wordsRep.save(word);
+    });
 
     this.logger.log(`Word form updated, id=${body.id}`);
 
