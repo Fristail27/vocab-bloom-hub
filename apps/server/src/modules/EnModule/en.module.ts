@@ -11,6 +11,7 @@ import { EnShortTranslationService } from './modules/EnShortTranslation/enShortT
 import { EnShortTranslationController } from './modules/EnShortTranslation/enShortTranslation.controller';
 import { EnMeaningTranslationController } from './modules/EnMeaningTranslation/enMeaningTranslation.controller';
 import { EnMeaningTranslationService } from './modules/EnMeaningTranslation/enMeaningTranslation.service';
+import { EnMeaningController } from './modules/EnMeaning/enMeaning.controller';
 import { EnMeaningService } from './modules/EnMeaning/enMeaning.service';
 import { EnImportDictionaryService } from './modules/EnImportDictionary/enImportDictionary.service';
 import { EnImportDictionaryController } from './modules/EnImportDictionary/enImportDictionary.controller';
@@ -28,7 +29,7 @@ import { EnStatisticsService } from './modules/EnStatistics/enStatistics.service
     EnController,
     EnShortTranslationController,
     EnMeaningTranslationController,
-    EnMeaningTranslationController,
+    EnMeaningController,
     EnImportDictionaryController,
     EnSearchController,
   ],
