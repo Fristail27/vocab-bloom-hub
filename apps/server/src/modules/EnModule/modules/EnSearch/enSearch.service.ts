@@ -120,10 +120,9 @@ export class EnSearchService {
   ) {
     const anyMatchesWordsSet = new Set<number>();
     if (limit > 0) {
-      const includedTypes = [EnEntryTypesE.grammar_pattern, EnEntryTypesE.phrase, EnEntryTypesE.word];
-      if (type) {
-        includedTypes.filter((t) => t === type);
-      }
+      const includedTypes = type
+        ? [type]
+        : [EnEntryTypesE.grammar_pattern, EnEntryTypesE.phrase, EnEntryTypesE.word];
 
       const qb = this.enWordsRep
         .createQueryBuilder('w')
