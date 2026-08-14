@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import {
   AddMeaningTranslationReqT,
   AddMeaningTranslationResT,
@@ -24,15 +24,19 @@ export class EnMeaningTranslationService {
     private readonly enMeaningTranslationRep: Repository<EnMeaningTranslation>,
   ) {}
 
-  async addMeaningTranslation(body: AddMeaningTranslationReqT): Promise<AddMeaningTranslationResT> {
+  async addMeaningTranslation(
+    body: AddMeaningTranslationReqT,
+    manager?: EntityManager,
+  ): Promise<AddMeaningTranslationResT> {
+    const em = manager ?? this.enMeaningTranslationRep.manager;
     const { meaning_id, id: _id, ...newMeaning } = body;
-    const meaning = await this.enMeaningsRep.findOne({ where: { id: meaning_id } });
+    const meaning = await em.getRepository(EnMeaning).findOne({ where: { id: meaning_id } });
 
     if (!meaning) {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);
     }
 
-    const res = await this.enMeaningTranslationRep.save({ meaning, ...newMeaning });
+    const res = await em.getRepository(EnMeaningTranslation).save({ meaning, ...newMeaning });
     this.logger.log(`Meaning translation added to meaning id=${meaning_id}, id=${res.id}`);
     return { success: true, id: res.id };
   }

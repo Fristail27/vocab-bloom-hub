@@ -27,8 +27,8 @@ describe('EnService.deleteWord (issue #164)', () => {
     await ds.initialize();
 
     service = new EnService(
-      ds.getRepository(EnEntry),
       ds.getRepository(EnWord),
+      ds,
       null as unknown as EnShortTranslationService,
       null as unknown as EnMeaningService,
     );
