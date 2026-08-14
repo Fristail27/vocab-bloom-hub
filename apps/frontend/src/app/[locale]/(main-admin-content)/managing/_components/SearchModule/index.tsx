@@ -41,7 +41,11 @@ export const SearchModule: React.FC = () => {
       />
       <div>
         {words.map((w) => (
-          <FoundWord key={w.id} w={w} />
+          <FoundWord
+            key={w.id}
+            w={w}
+            onDeleted={(id) => setWords((prev) => prev.filter((word) => word.id !== id))}
+          />
         ))}
       </div>
     </section>

@@ -9,11 +9,12 @@ import styles from './styles.module.scss';
 
 type FoundWordP = {
   w: EnWordT;
+  onDeleted: (id: EnWordT['id']) => void;
 };
 
 const { Text } = Typography;
 
-export const FoundWord: React.FC<FoundWordP> = ({ w }) => {
+export const FoundWord: React.FC<FoundWordP> = ({ w, onDeleted }) => {
   const locale = useLocale();
   const tErr = useTranslations('errors');
   const t = useTranslations('en_managing_words');
@@ -28,6 +29,7 @@ export const FoundWord: React.FC<FoundWordP> = ({ w }) => {
     } else {
       const mes = t('word_deleted_successfully');
       message.success(mes);
+      onDeleted(w.id);
     }
   };
 
