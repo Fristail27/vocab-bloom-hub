@@ -7,7 +7,16 @@ import {
   EnWordT,
   WordLevelE,
 } from 'server/types';
-import { getDefaultSubForm, getInitCommonInfo, getInitMeanings, getStepItems, mapInitForms } from '../utils';
+import {
+  getDefaultSubForm,
+  getInitCommonInfo,
+  getInitMeanings,
+  getStepItems,
+  isTempId,
+  makeTempId,
+  mapInitForms,
+  prepareWordPayload,
+} from '../utils';
 import { DefaultCommonData, EnWordFormModeE } from '../constants';
 import { TranslatorT } from '@/types/common';
 
@@ -15,7 +24,7 @@ const identityT = ((key: string) => key) as unknown as TranslatorT;
 
 describe('EnWordForm/utils', () => {
   describe('getDefaultSubForm', () => {
-    it('создаёт пустую форму с указанным типом', () => {
+    it('создаёт пустую форму с указанным типом и временным id', () => {
       const form = getDefaultSubForm(EnWordFormsE.past_simple);
 
       expect(form).toMatchObject({
@@ -24,7 +33,55 @@ describe('EnWordForm/utils', () => {
         area_variant: EnAreaVariantsE.common,
         form_of_word: EnWordFormsE.past_simple,
       });
-      expect(typeof form.id).toBe('number');
+      expect(isTempId(form.id)).toBe(true);
+    });
+  });
+
+  describe('makeTempId (issue #178)', () => {
+    it('выдаёт уникальные отрицательные целые', () => {
+      const ids = [makeTempId(), makeTempId(), makeTempId()];
+
+      ids.forEach((id) => {
+        expect(Number.isInteger(id)).toBe(true);
+        expect(id).toBeLessThan(0);
+      });
+      expect(new Set(ids).size).toBe(3);
+    });
+  });
+
+  describe('prepareWordPayload (issue #178)', () => {
+    it('вычищает временные id (включая вложенные переводы), сохраняя реальные', () => {
+      const body = {
+        word: 'run',
+        forms: [
+          { id: makeTempId(), word: 'runs' },
+          { id: 42, word: 'ran' },
+        ],
+        short_translations: [{ id: makeTempId(), description: 'бежать' }],
+        meanings: [
+          {
+            id: makeTempId(),
+            title: 'to move fast',
+            translations: [
+              { id: makeTempId(), title: 'бежать' },
+              { id: 7, title: 'старый' },
+            ],
+          },
+          { id: 10, title: 'persisted', translations: [] },
+        ],
+      } as unknown as EnWordT;
+
+      const payload = prepareWordPayload(body);
+
+      expect(payload.forms?.[0]).not.toHaveProperty('id');
+      expect(payload.forms?.[1].id).toBe(42);
+      expect(payload.short_translations?.[0]).not.toHaveProperty('id');
+      expect(payload.meanings?.[0]).not.toHaveProperty('id');
+      expect(payload.meanings?.[0].translations[0]).not.toHaveProperty('id');
+      expect(payload.meanings?.[0].translations[1].id).toBe(7);
+      expect(payload.meanings?.[1].id).toBe(10);
+      // the original body must stay untouched — the wizard state still needs its keys
+      expect(body.forms?.[0].id).toBeLessThan(0);
     });
   });
 
