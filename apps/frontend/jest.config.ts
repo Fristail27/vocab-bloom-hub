@@ -9,6 +9,7 @@ export default {
           jsx: 'react-jsx',
           esModuleInterop: true,
           types: ['jest', 'node'],
+          rootDir: './', // fixes TS5011, same as in the server config
         },
       },
     ],
