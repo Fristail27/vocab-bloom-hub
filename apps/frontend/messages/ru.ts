@@ -63,6 +63,7 @@ export default {
   },
   en_managing_words: {
     word: 'Слово',
+    edit_word_link: 'Редактировать слово?',
     part_of_speech: 'Часть речи',
     checking_word: 'Проверка слова',
     basic_information: 'Основная информация',

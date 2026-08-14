@@ -63,6 +63,7 @@ export default {
   },
   en_managing_words: {
     word: 'Word',
+    edit_word_link: 'Edit word?',
     part_of_speech: 'Part of speech',
     checking_word: 'Checking Word',
     basic_information: 'Basic Information',

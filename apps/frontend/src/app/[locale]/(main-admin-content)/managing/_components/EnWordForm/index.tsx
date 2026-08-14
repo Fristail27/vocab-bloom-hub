@@ -49,6 +49,7 @@ export const EnWordForm: React.FC<AddWordFormP> = ({ initData, mode = EnWordForm
   const [statusOfPresence, setStatusOfPresence] = useState<StatusOfWordPresenceE>(
     StatusOfWordPresenceE.notChecked,
   );
+  const [existingWordId, setExistingWordId] = useState<number | null>(null);
   const addWord = async () => {
     try {
       if (partOfSpeech) {
@@ -70,6 +71,7 @@ export const EnWordForm: React.FC<AddWordFormP> = ({ initData, mode = EnWordForm
             message.success(mes);
             setWord('');
             setStatusOfPresence(StatusOfWordPresenceE.notChecked);
+            setExistingWordId(null);
             setShortTranslations(DefaultShortTranslation);
             setPartOfSpeech(null);
             setCommonInfo(DefaultCommonData);
@@ -95,8 +97,10 @@ export const EnWordForm: React.FC<AddWordFormP> = ({ initData, mode = EnWordForm
       } else {
         if (res.hasWord) {
           setStatusOfPresence(StatusOfWordPresenceE.present);
+          setExistingWordId(res.id ?? null);
         } else {
           setStatusOfPresence(StatusOfWordPresenceE.absent);
+          setExistingWordId(null);
           setStep(1);
           setStepItems(getStepItems(t, mode));
           return true;
@@ -187,7 +191,9 @@ export const EnWordForm: React.FC<AddWordFormP> = ({ initData, mode = EnWordForm
               setPartOfSpeech={setPartOfSpeech}
               partOfSpeech={partOfSpeech}
             />
-            {statusOfPresence === StatusOfWordPresenceE.present && <WordAlreadyExistBlock word={word} />}
+            {statusOfPresence === StatusOfWordPresenceE.present && (
+              <WordAlreadyExistBlock word={word} wordId={existingWordId} />
+            )}
           </>
         )}
         {step === stepItems.length - 6 && (
