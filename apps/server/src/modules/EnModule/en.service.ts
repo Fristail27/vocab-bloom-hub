@@ -186,13 +186,22 @@ export class EnService {
       this.logger.warn(`Delete requested for missing word, id=${id}`);
       return { success: false };
     }
-    const formEntries: string[] = word.forms.map((f) => f.word.word);
-    formEntries.push(word.word.word);
+    const entryWords = new Set<string>(word.forms.map((f) => f.word.word));
+    entryWords.add(word.word.word);
+
+    // Form rows used to die via the entry cascade; entries may survive now, so delete forms explicitly
+    if (word.forms.length > 0) {
+      await this.enWordsRep.delete(word.forms.map((f) => f.id));
+    }
     await this.enWordsRep.delete({ id });
 
-    for (const entryStr of formEntries) {
-      const entry = await this.enEntriesRep.findOne({ where: { word: entryStr } });
-      if (entry) {
+    for (const entryStr of entryWords) {
+      const referencingWordsCount = await this.enWordsRep
+        .createQueryBuilder('w')
+        .where('w.word = :word', { word: entryStr })
+        .getCount();
+
+      if (referencingWordsCount === 0) {
         await this.enEntriesRep.delete({ word: entryStr });
       }
     }
