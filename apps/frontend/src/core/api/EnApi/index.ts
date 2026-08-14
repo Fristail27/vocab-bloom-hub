@@ -96,27 +96,27 @@ export class EnApi extends AbstractBaseApi {
   }
 
   static async addMeaning(body: AddMeaningReqT): Promise<AddMeaningResT> {
-    return this.post<AddMeaningResT>(`${this.baseURL}/en/meaning`, body);
+    return this.post<AddMeaningResT>(`${this.baseURL}/en/word/meaning`, body);
   }
 
   static async editMeaning(body: EditMeaningReqT): Promise<EditMeaningResT> {
-    return this.patch<EditMeaningResT>(`${this.baseURL}/en/meaning`, body);
+    return this.patch<EditMeaningResT>(`${this.baseURL}/en/word/meaning`, body);
   }
 
   static async deleteMeaning(id: string | number): Promise<DeleteMeaningResT> {
-    return this.delete<DeleteMeaningResT>(`${this.baseURL}/en/meaning/${id}`);
+    return this.delete<DeleteMeaningResT>(`${this.baseURL}/en/word/meaning/${id}`);
   }
 
   static async addMeaningTranslation(body: AddMeaningTranslationReqT): Promise<AddMeaningTranslationResT> {
-    return this.post<AddMeaningTranslationResT>(`${this.baseURL}/en/meaning-translation`, body);
+    return this.post<AddMeaningTranslationResT>(`${this.baseURL}/en/word/meaning-translation`, body);
   }
 
   static async editMeaningTranslation(body: EditMeaningTranslationReqT): Promise<EditMeaningTranslationResT> {
-    return this.patch<EditMeaningTranslationResT>(`${this.baseURL}/en/meaning-translation`, body);
+    return this.patch<EditMeaningTranslationResT>(`${this.baseURL}/en/word/meaning-translation`, body);
   }
 
   static async deleteMeaningTranslation(id: string | number): Promise<DeleteMeaningTranslationResT> {
-    return this.delete<DeleteMeaningTranslationResT>(`${this.baseURL}/en/meaning-translation/${id}`);
+    return this.delete<DeleteMeaningTranslationResT>(`${this.baseURL}/en/word/meaning-translation/${id}`);
   }
 
   private static async readNdjsonStream(
