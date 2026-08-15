@@ -2,8 +2,8 @@ import { CheckTokenResBody, LoginReqBody, LoginResBody } from 'server/types';
 import { AbstractBaseApi } from '../AbstractBaseApi';
 
 export class AuthApi extends AbstractBaseApi {
-  static async login(hash: LoginReqBody): Promise<LoginResBody> {
-    return this.post(`${this.baseURL}/auth/login`, hash, { credentials: 'include' });
+  static async login(body: LoginReqBody): Promise<LoginResBody> {
+    return this.post(`${this.baseURL}/auth/login`, body, { credentials: 'include' });
   }
 
   static async checkToken(): Promise<CheckTokenResBody> {

@@ -1,5 +1,4 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { BadRequestException } from '@nestjs/common';
 
 import { hashLoginString } from '../../../../core/utils/crypto';
 import { AuthService } from '../auth.service';
@@ -44,28 +43,8 @@ describe('AuthService', () => {
     jest.clearAllMocks();
   });
 
-  // ─── login ────────────────────────────────────────────────────────────────
-
-  describe('login', () => {
-    it('возвращает JWT при правильном хэше', async () => {
-      const result = await service.login(FAKE_LOGIN_HASH);
-
-      expect(result).toBe(FAKE_TOKEN);
-      expect(mockCreateJwt).toHaveBeenCalledWith(
-        { username: ENV_USERNAME, roles: expect.any(Array) },
-        FAKE_SECRET_HASH + FAKE_LOGIN_HASH,
-      );
-    });
-
-    it('бросает BadRequestException при неверном хэше', async () => {
-      await expect(service.login('wrong-hash')).rejects.toThrow(BadRequestException);
-      expect(mockCreateJwt).not.toHaveBeenCalled();
-    });
-
-    it('бросает ошибку с нужным сообщением', async () => {
-      await expect(service.login('wrong-hash')).rejects.toThrow('login_or_pass_wrong');
-    });
-  });
+  // The time-slot proof login logic is covered in auth.service.login-proof.spec.ts
+  // with real crypto instead of mocks
 
   // ─── createJwtToken ───────────────────────────────────────────────────────
 

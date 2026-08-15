@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button, Typography } from 'antd';
 import { AuthApi } from '@/core/api/AuthApi';
-import { hashLoginString } from '../../../../../../../server/core/utils/crypto';
+import { createLoginProof } from '../../../../../../../server/core/utils/crypto';
 import { StateContext } from '@/components/StateContext';
 import { Input } from '@/core/ui/Input';
 import styles from './styles.module.scss';
@@ -22,8 +22,7 @@ export const LoginForm = () => {
   const tErr = useTranslations('errors');
 
   const submitLogin = async () => {
-    const hash = await hashLoginString(username, pass);
-    const res = await AuthApi.login({ hash });
+    const res = await AuthApi.login(await createLoginProof(username, pass));
     if ('error' in res) {
       setError(tErr(res.message));
     } else {
