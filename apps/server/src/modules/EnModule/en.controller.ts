@@ -22,11 +22,11 @@ import {
   EditPhrasalBaseResT,
   EditWordFormResT,
   EnEntryTypesE,
-  EnPartOfSpeechE,
-  type EnWordT,
   GetWordByIdResT,
 } from '../../../types';
 import { ErrorCodes } from '../../../core/constants/error_codes';
+import { AddWordReqDTO } from './dto/AddWordReq.dto';
+import { CheckWordQueryDTO } from './dto/CheckWordQuery.dto';
 import { AddWordFormReqDTO } from './dto/AddWordFormReq.dto';
 import { EditWordFormReqDTO } from './dto/EditWordFormReq.dto';
 import { EditCommonInfoOfWordReqDTO } from './dto/EditCommonInfoOfWordReq.dto';
@@ -39,10 +39,7 @@ export class EnController {
 
   @UseGuards(AdminGuard)
   @Get('check-word/:word')
-  async checkWord(
-    @Param('word') word: string,
-    @Query() query: { partOfSpeech: EnPartOfSpeechE; forPhrasal: string },
-  ): Promise<CheckWordResT> {
+  async checkWord(@Param('word') word: string, @Query() query: CheckWordQueryDTO): Promise<CheckWordResT> {
     try {
       const { partOfSpeech, forPhrasal } = query;
       const id = await this.enService.checkWord(word, partOfSpeech, forPhrasal === 'true');
@@ -54,7 +51,7 @@ export class EnController {
 
   @UseGuards(AdminGuard)
   @Post('add/:entryType')
-  async add(@Param('entryType') entryType: EnEntryTypesE, @Body() body: EnWordT): Promise<AddResT> {
+  async add(@Param('entryType') entryType: EnEntryTypesE, @Body() body: AddWordReqDTO): Promise<AddResT> {
     return this.enService.addWord(body);
   }
 

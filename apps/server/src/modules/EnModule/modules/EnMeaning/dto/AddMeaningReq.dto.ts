@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsArray, IsBoolean, IsEnum, ValidateNested } from 'class-validator';
+import { IsString, IsNumber, IsArray, IsBoolean, IsEnum, IsOptional, ValidateNested } from 'class-validator';
 import { CategoryE, EnAreaVariantsE, EnMeaningT, LanguageRegisterE, WordLevelE } from '../../../../../../types';
 import { MeaningTranslationDto } from '../../EnMeaningTranslation/dto/MeaningTranslation.dto';
 import { Type } from 'class-transformer';
@@ -9,6 +9,7 @@ export class AddMeaningReqDTO {
   @IsNumber()
   word_id!: number;
 
+  @IsOptional()
   @IsNumber()
   id?: number | undefined;
 
@@ -34,6 +35,7 @@ export class AddMeaningReqDTO {
   is_obsolete!: EnMeaningT['is_obsolete'];
 
   @ApiProperty()
+  @IsOptional()
   @IsEnum(WordLevelE)
   meaning_level!: EnMeaningT['meaning_level'];
 
@@ -42,10 +44,12 @@ export class AddMeaningReqDTO {
   area_variant!: EnMeaningT['area_variant'];
 
   @ApiProperty()
+  @IsOptional()
   @IsEnum(LanguageRegisterE)
   language_register!: EnMeaningT['language_register'];
 
   @ApiProperty({ enum: CategoryE, isArray: true })
+  @IsOptional()
   @IsArray()
   @IsEnum(CategoryE, { each: true })
   categories!: EnMeaningT['categories'];
