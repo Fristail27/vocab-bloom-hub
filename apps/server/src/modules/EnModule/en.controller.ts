@@ -58,11 +58,7 @@ export class EnController {
   @UseGuards(AdminGuard)
   @Delete(':id')
   async deleteWord(@Param('id') id: string): Promise<DeleteResT> {
-    try {
-      return this.enService.deleteWord(+id);
-    } catch {
-      throw new InternalServerErrorException(ErrorCodes.internal_server_error);
-    }
+    return this.enService.deleteWord(+id);
   }
 
   @UseGuards(AdminGuard)
