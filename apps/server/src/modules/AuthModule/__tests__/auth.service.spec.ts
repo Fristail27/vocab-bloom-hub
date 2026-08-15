@@ -63,7 +63,7 @@ describe('AuthService', () => {
     });
 
     it('бросает ошибку с нужным сообщением', async () => {
-      await expect(service.login('wrong-hash')).rejects.toThrow('login or password is wrong');
+      await expect(service.login('wrong-hash')).rejects.toThrow('login_or_pass_wrong');
     });
   });
 
