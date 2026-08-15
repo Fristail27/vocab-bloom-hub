@@ -11,7 +11,7 @@ import {
   EnWordFormT,
   EnWordT,
 } from 'server/types';
-import { DefaultCommonData, DefaultShortTranslation, EnWordFormModeE } from './constants';
+import { DefaultCommonData, DefaultShortTranslation } from './constants';
 import { WordAlreadyExistBlock } from './components/WordAlreadyExistBlock';
 import { CommonInfoDataT, StatusOfWordPresenceE } from './types';
 import { Meanings } from './components/Meanings';
@@ -20,32 +20,25 @@ import { CommonWordInfo } from './components/CommonWordInfo';
 import { PreviewWord } from './components/PreviewWord';
 import { ShortTranslations } from './components/ShortTranslations';
 import { MeaningsTranslations } from './components/MeaningsTranslations';
-import { getInitCommonInfo, getInitMeanings, getStepItems, mapInitForms, prepareWordPayload } from './utils';
+import { getStepItems, prepareWordPayload } from './utils';
 import { CheckWordBlock } from './components/CheckWordBlock';
 import { EnApi } from '@/core/api/EnApi';
 import { Title } from '@/core/ui/Title';
 import styles from './styles.module.scss';
 
-type AddWordFormP = {
-  initData?: EnWordT | undefined;
-  mode?: EnWordFormModeE | undefined;
-};
-
-export const EnWordForm: React.FC<AddWordFormP> = ({ initData, mode = EnWordFormModeE.add }) => {
+export const EnWordForm: React.FC = () => {
   const t = useTranslations('en_managing_words');
   const tError = useTranslations('errors');
   const { message } = App.useApp();
   const [step, setStep] = useState<number>(0);
-  const [stepItems, setStepItems] = useState(getStepItems(t, mode, mode === EnWordFormModeE.add));
-  const [word, setWord] = useState<string>(initData?.word || '');
-  const [partOfSpeech, setPartOfSpeech] = useState<EnPartOfSpeechE | null>(initData?.part_of_speech || null);
+  const [stepItems, setStepItems] = useState(getStepItems(t, true));
+  const [word, setWord] = useState<string>('');
+  const [partOfSpeech, setPartOfSpeech] = useState<EnPartOfSpeechE | null>(null);
   const [type, setType] = useState<EnEntryTypesE>(EnEntryTypesE.word);
-  const [commonInfo, setCommonInfo] = useState<CommonInfoDataT>(getInitCommonInfo(initData));
-  const [shortTranslations, setShortTranslations] = useState<EnShortTranslationT[]>(
-    initData?.short_translations || DefaultShortTranslation,
-  );
-  const [meanings, setMeanings] = useState<EnMeaningT[]>(getInitMeanings(initData?.meanings) || []);
-  const [forms, setForms] = useState<EnWordFormT[]>(mapInitForms(initData?.forms || []));
+  const [commonInfo, setCommonInfo] = useState<CommonInfoDataT>(DefaultCommonData);
+  const [shortTranslations, setShortTranslations] = useState<EnShortTranslationT[]>(DefaultShortTranslation);
+  const [meanings, setMeanings] = useState<EnMeaningT[]>([]);
+  const [forms, setForms] = useState<EnWordFormT[]>([]);
   const [statusOfPresence, setStatusOfPresence] = useState<StatusOfWordPresenceE>(
     StatusOfWordPresenceE.notChecked,
   );
@@ -78,7 +71,7 @@ export const EnWordForm: React.FC<AddWordFormP> = ({ initData, mode = EnWordForm
             setForms([]);
             setMeanings([]);
             setStep(0);
-            setStepItems(getStepItems(t, mode, true));
+            setStepItems(getStepItems(t, true));
           }
         }
       }
@@ -102,7 +95,7 @@ export const EnWordForm: React.FC<AddWordFormP> = ({ initData, mode = EnWordForm
           setStatusOfPresence(StatusOfWordPresenceE.absent);
           setExistingWordId(null);
           setStep(1);
-          setStepItems(getStepItems(t, mode));
+          setStepItems(getStepItems(t));
           return true;
         }
       }
@@ -239,7 +232,6 @@ export const EnWordForm: React.FC<AddWordFormP> = ({ initData, mode = EnWordForm
               part_of_speech: partOfSpeech as EnPartOfSpeechE,
               word,
             }}
-            mode={mode}
             addWord={addWord}
           />
         )}

@@ -72,6 +72,7 @@ export default {
     short_translations: 'Краткие переводы',
     meaning_translations: 'Перевод значений',
     save_word: 'Сохранение',
+    next_step: 'Далее',
     is_obsolete: 'Устаревшее',
     is_ai_generated: 'Сгенерировано ИИ',
     is_abbreviation: 'Аббревиатура',

@@ -1,0 +1,167 @@
+import React from 'react';
+import { useTranslations } from 'next-intl';
+import { Checkbox, Input as AntdInput, Typography } from 'antd';
+import { CategoryE, EnAreaVariantsE, EnPartOfSpeechE, EnVerbTransitivityE, WordLevelE } from 'server/types';
+import { Input } from '@/core/ui/Input';
+import { LanguageRegisterSelect } from '../EnWordForm/components/LanguageRegisterSelect';
+import { WordLevelSelect } from '../EnWordForm/components/WordLevelSelect';
+import { RegionalLabelSelect } from '../EnWordForm/components/RegionalLabelSelect';
+import { CategorySelect } from '../EnWordForm/components/CategoriesSelect';
+import { VerbTransitivitySelect } from '../EnWordForm/components/VerbTransitivitySelect';
+import { PhrasalObjectPatternSelect } from '../EnWordForm/components/PhrasalObjectPatternSelect';
+import { PatternEditor } from '../EnWordForm/components/PatternEditor';
+import { CommonInfoDataT } from '../EnWordForm/types';
+import styles from './styles.module.scss';
+
+const { TextArea } = AntdInput;
+const { Text } = Typography;
+
+export type CommonInfoFieldsValueT = Omit<CommonInfoDataT, 'id' | 'form_of_word' | 'base_phrasal'>;
+
+type CommonInfoFieldsP = {
+  pos: EnPartOfSpeechE;
+  value: CommonInfoFieldsValueT;
+  onChange: (v: CommonInfoFieldsValueT) => void;
+};
+
+// Shared body of the word common-info form: used by the add-word wizard
+// (CommonWordInfo) and the WordCard edit modal (EditCommonDataModal)
+export const CommonInfoFields: React.FC<CommonInfoFieldsP> = ({ pos, value, onChange }) => {
+  const t = useTranslations('en_managing_words');
+
+  const changeField = (
+    v: boolean | string | CategoryE[] | string[] | null,
+    field: keyof CommonInfoFieldsValueT,
+  ) => {
+    onChange({ ...value, [field]: v });
+  };
+
+  return (
+    <>
+      <div className={styles.line}>
+        <Checkbox checked={!!value.is_obsolete} onChange={(e) => changeField(e.target.checked, 'is_obsolete')}>
+          {t('is_obsolete')}
+        </Checkbox>
+        <Checkbox checked={value.generated} onChange={(e) => changeField(e.target.checked, 'generated')}>
+          {t('is_ai_generated')}
+        </Checkbox>
+        {pos === EnPartOfSpeechE.noun && (
+          <Checkbox
+            checked={!!value.is_abbreviation}
+            onChange={(e) => changeField(e.target.checked, 'is_abbreviation')}
+          >
+            {t('is_abbreviation')}
+          </Checkbox>
+        )}
+        {pos === EnPartOfSpeechE.noun && (
+          <Checkbox
+            checked={!!value.noun___is_proper}
+            onChange={(e) => changeField(e.target.checked, 'noun___is_proper')}
+          >
+            {t('is_proper_noun')}
+          </Checkbox>
+        )}
+        {pos === EnPartOfSpeechE.noun && (
+          <Checkbox
+            checked={!!value.noun___uncountable}
+            onChange={(e) => changeField(e.target.checked, 'noun___uncountable')}
+          >
+            {t('is_uncountable')}
+          </Checkbox>
+        )}
+        {pos === EnPartOfSpeechE.noun && (
+          <Checkbox
+            checked={!!value.noun___irregular_plural}
+            onChange={(e) => changeField(e.target.checked, 'noun___irregular_plural')}
+          >
+            {t('has_irregular_plural')}
+          </Checkbox>
+        )}
+        {pos === EnPartOfSpeechE.noun && (
+          <Checkbox
+            checked={!!value.noun___always_plural}
+            onChange={(e) => changeField(e.target.checked, 'noun___always_plural')}
+          >
+            {t('is_plural_only')}
+          </Checkbox>
+        )}
+        {pos === EnPartOfSpeechE.verb && (
+          <Checkbox
+            checked={!!value.verb___is_irregular}
+            onChange={(e) => changeField(e.target.checked, 'verb___is_irregular')}
+          >
+            {t('verb_is_irregular')}
+          </Checkbox>
+        )}
+      </div>
+      <div className={styles.line}>
+        <LanguageRegisterSelect
+          onChange={(v) => changeField(v, 'language_register')}
+          value={value.language_register}
+        />
+        <WordLevelSelect
+          value={value.word_level as WordLevelE}
+          onChange={(v) => changeField(v as WordLevelE, 'word_level')}
+        />
+        <RegionalLabelSelect
+          value={value.area_variant}
+          onChange={(v) => changeField(v as EnAreaVariantsE, 'area_variant')}
+        />
+        <CategorySelect
+          value={value.categories as CategoryE[]}
+          onChange={(v) => changeField(v as CategoryE[], 'categories')}
+        />
+      </div>
+      <div className={styles.line}>
+        {value.generated && (
+          <Input
+            style={{ width: 240 }}
+            label={t('source_model')}
+            placeholder={t('source_model')}
+            value={value.generated_by_model || ''}
+            onChange={(e) => changeField(e.currentTarget.value, 'generated_by_model')}
+          />
+        )}
+        <Input
+          style={{ width: 240 }}
+          label={t('pronunciation')}
+          placeholder={t('pronunciation')}
+          value={value.transcription || ''}
+          onChange={(e) => changeField(e.currentTarget.value, 'transcription')}
+        />
+        {pos === EnPartOfSpeechE.verb && (
+          <VerbTransitivitySelect
+            onChange={(v) => changeField(v as EnVerbTransitivityE, 'verb___transitivity')}
+            value={value.verb___transitivity}
+          />
+        )}
+      </div>
+      <div>
+        <Text strong>{t('description')}</Text>
+        <TextArea
+          rows={6}
+          value={value.description || ''}
+          onChange={(e) => changeField(e.currentTarget.value, 'description')}
+          placeholder={t('description')}
+        />
+      </div>
+      {pos === EnPartOfSpeechE.verb && (
+        <Checkbox
+          checked={!!value.verb___is_phrasal}
+          onChange={(e) => changeField(e.target.checked, 'verb___is_phrasal')}
+        >
+          <Text strong>{t('verb_is_phrasal')}</Text>
+        </Checkbox>
+      )}
+      {pos === EnPartOfSpeechE.verb && value.verb___is_phrasal && (
+        <PhrasalObjectPatternSelect
+          onChange={(v) => changeField(v, 'verb___phrasal_object_pattern')}
+          value={value.verb___phrasal_object_pattern}
+        />
+      )}
+      {pos === EnPartOfSpeechE.grammar_pattern && (
+        <PatternEditor value={value.pattern || []} onChange={(v) => changeField(v, 'pattern')} />
+      )}
+    </>
+  );
+};
