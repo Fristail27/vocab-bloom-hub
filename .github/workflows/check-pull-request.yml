@@ -44,3 +44,9 @@ jobs:
 
       - name: Typecheck server
         run: yarn workspace server tsc --noEmit
+
+      - name: Unit tests
+        run: yarn test
+
+      - name: Server e2e tests
+        run: yarn workspace server test:e2e

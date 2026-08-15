@@ -6,8 +6,6 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import configuration from '../../../configuration';
 import { AuthModule } from '../AuthModule/auth.module';
 import { EnModule } from '../EnModule/en.module';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { EnWord } from '../EnModule/entities/en_word.entity';
 import { EnMeaning } from '../EnModule/entities/en_meaning.entity';
 import { EnMeaningTranslation } from '../EnModule/entities/en_meaning_translation.entity';
@@ -57,7 +55,5 @@ import { Settings } from '../SettingsModule/entities/settings.entity';
       load: [configuration],
     }),
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}

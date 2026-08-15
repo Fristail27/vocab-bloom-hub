@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { App } from 'antd';
 import { EnWordFormsE, EnPartOfSpeechE, EnWordT } from 'server/types';
 
@@ -43,7 +43,10 @@ const searchFor = async (value: string, firstExpectedWord: string) => {
 const clickDeleteInPopover = async (wordIndex: number) => {
   fireEvent.click(screen.getAllByRole('button', { name: 'delete' })[wordIndex]);
   const confirmButton = await screen.findByText('delete_word');
-  fireEvent.click(confirmButton);
+  // the confirm handler is async (API call + toast + state update) — flush it inside act
+  await act(async () => {
+    fireEvent.click(confirmButton);
+  });
 };
 
 describe('SearchModule (issue #176)', () => {
