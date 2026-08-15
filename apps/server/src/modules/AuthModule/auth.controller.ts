@@ -2,8 +2,9 @@ import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 
-import type { CheckTokenResBody, LoginReqBody, LoginResBody } from '../../../types';
+import type { CheckTokenResBody, LoginResBody } from '../../../types';
 import { AuthService } from './auth.service';
+import { LoginReqDTO } from './dto/LoginReq.dto';
 import { AppThrottlerGuard } from '../../core/guards/app-throttler.guard';
 import { getBearerFromRequest } from '../../core/utils/get-bearer-from-request';
 
@@ -15,10 +16,10 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('login')
   async login(
-    @Body() { hash }: LoginReqBody,
+    @Body() { hash, salt }: LoginReqDTO,
     @Res({ passthrough: true }) res: Response,
   ): Promise<LoginResBody> {
-    const token = await this.authService.login(hash);
+    const token = await this.authService.login(hash, salt);
     this.authService.setTokenToCookie(token, res);
 
     return { token };
