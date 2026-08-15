@@ -1,0 +1,26 @@
+name: Setup workspace
+description: Install Node with yarn caching, activate Yarn 4 and install dependencies
+
+runs:
+  using: composite
+  steps:
+    # Corepack must be enabled before setup-node so its yarn cache resolution
+    # uses Yarn 4 (the repo's packageManager) instead of the preinstalled Yarn 1
+    - name: Enable Corepack
+      shell: bash
+      run: corepack enable
+
+    - name: Prepare Yarn 4
+      shell: bash
+      # picks the version pinned in the packageManager field of package.json
+      run: corepack prepare --activate
+
+    - name: Setup Node
+      uses: actions/setup-node@v7
+      with:
+        node-version: 24
+        cache: yarn
+
+    - name: Install dependencies
+      shell: bash
+      run: yarn install --immutable
