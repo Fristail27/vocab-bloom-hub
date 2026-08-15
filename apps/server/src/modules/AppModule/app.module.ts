@@ -3,7 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
-import configuration from '../../../configuration';
+import configuration, { checkIsPostgres } from '../../../configuration';
 import { AuthModule } from '../AuthModule/auth.module';
 import { EnModule } from '../EnModule/en.module';
 import { EnWord } from '../EnModule/entities/en_word.entity';
@@ -24,19 +24,19 @@ import { Settings } from '../SettingsModule/entities/settings.entity';
     ThrottlerModule.forRoot({ throttlers: [{ ttl: 60_000, limit: 100 }] }),
     TypeOrmModule.forRootAsync({
       useFactory: (): TypeOrmModuleOptions => {
-        const databaseUrl = process.env.DATABASE_URL;
-
         const base = {
           entities: [EnEntry, EnWord, EnMeaning, EnMeaningTranslation, EnShortTranslation, Settings],
           autoLoadEntities: true,
           synchronize: process.env.NODE_ENV === 'development',
         };
 
-        if (databaseUrl) {
+        // checkIsPostgres() is locked at the first call (entity import), so the
+        // DataSource driver can never diverge from the entity column types
+        if (checkIsPostgres()) {
           return {
             ...base,
             type: 'postgres',
-            url: databaseUrl,
+            url: process.env.DATABASE_URL,
           };
         }
 

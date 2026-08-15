@@ -1,16 +1,39 @@
 import { config } from 'dotenv';
 import path from 'path';
-config({ path: path.resolve(__dirname, '../../../../.env') });
+// The env must be loaded before any entity import: column types are resolved
+// inside entity decorators at import time (see checkIsPostgres)
+const envPath = path.resolve(__dirname, '../../../../.env');
+const dotenvResult = config({ path: envPath });
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './modules/AppModule/app.module';
 import { AllExceptionsFilter } from './core/filters/all-exceptions.filter';
 import { getLogLevels } from './core/logging/get-log-levels';
-import { checkIsPostgres } from '../configuration';
+import {
+  assertDatabaseDriverConsistent,
+  assertRequiredConfig,
+  checkIsPostgres,
+  ConfigurationError,
+} from '../configuration';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
+
+  if (dotenvResult.error) {
+    logger.warn(`Root .env not loaded from ${envPath} — relying on the process environment`);
+  }
+  try {
+    assertRequiredConfig();
+    assertDatabaseDriverConsistent();
+  } catch (error) {
+    if (error instanceof ConfigurationError) {
+      logger.error(error.message);
+      process.exit(1);
+    }
+    throw error;
+  }
+
   const app = await NestFactory.create(AppModule, { logger: getLogLevels() });
   const httpServer = app.getHttpServer();
   httpServer.requestTimeout = 20 * 60 * 1000;
