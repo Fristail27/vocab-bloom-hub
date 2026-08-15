@@ -75,7 +75,12 @@ export const MeaningsTranslations: React.FC<MeaningTranslationsP> = ({
           </div>
         </div>
       ))}
-      <Button onClick={onClickNext}>{t('next_step')}</Button>
+      <Button
+        onClick={onClickNext}
+        disabled={meanings.some((m) => m.translations.some((tr) => !tr.title.trim() || !tr.definition.trim()))}
+      >
+        {t('next_step')}
+      </Button>
     </div>
   );
 };

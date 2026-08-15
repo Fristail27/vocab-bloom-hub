@@ -17,6 +17,7 @@ type CheckWordBlockP = {
   partOfSpeech: EnPartOfSpeechE | null;
   setPartOfSpeech: (p: EnPartOfSpeechE) => void;
   checkWord: () => void;
+  checking: boolean;
   type: EnEntryTypesE;
   setType: (t: EnEntryTypesE) => void;
 };
@@ -27,6 +28,7 @@ export const CheckWordBlock: React.FC<CheckWordBlockP> = ({
   partOfSpeech,
   setPartOfSpeech,
   checkWord,
+  checking,
   type,
   setType,
 }) => {
@@ -52,7 +54,8 @@ export const CheckWordBlock: React.FC<CheckWordBlockP> = ({
       )}
       <Button
         className={styles.checkButton}
-        disabled={!word || !partOfSpeech}
+        disabled={!word.trim() || !partOfSpeech || checking}
+        loading={checking}
         onClick={() => checkWord()}
         size="middle"
         type="primary"

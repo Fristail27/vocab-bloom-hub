@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Button } from 'antd';
+import { useTranslations } from 'next-intl';
 import { FormsOfWordLine } from '../FormsOfWordLine';
 import { getDefaultSubForm, makeTempId } from '../../utils';
 import { EnAreaVariantsE, EnPartOfSpeechE, EnWordFormsE, EnWordFormT } from 'server/types';
@@ -14,6 +15,7 @@ type SubFormsP = {
 };
 
 export const SubForms: React.FC<SubFormsP> = ({ onClickFormsNext, pos, subForms, setSubForms }) => {
+  const t = useTranslations('en_managing_words');
   const currentForms = FormsByPartOfSpeech[pos as keyof typeof FormsByPartOfSpeech] || [];
   const onChange = (w: EnWordFormT) => {
     setSubForms(subForms.map((f) => (f.id === w.id ? w : f)));
@@ -55,7 +57,7 @@ export const SubForms: React.FC<SubFormsP> = ({ onClickFormsNext, pos, subForms,
         ))}
       </div>
       <Button onClick={onClickFormsNext} className={styles.nextButton} type="primary">
-        Далее
+        {t('next_step')}
       </Button>
     </div>
   );

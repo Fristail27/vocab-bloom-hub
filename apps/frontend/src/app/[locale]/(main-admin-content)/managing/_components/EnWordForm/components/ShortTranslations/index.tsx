@@ -50,7 +50,7 @@ export const ShortTranslations: React.FC<ShortTranslationsP> = ({
         />
       ))}
       <Button className={styles.nextButton} type="primary" onClick={onClickNext}>
-        Далее
+        {t('next_step')}
       </Button>
     </div>
   );

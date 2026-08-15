@@ -14,17 +14,34 @@ import styles from './styles.module.scss';
 type EditCommonDataModalP = {
   isOpen: boolean;
   onClose: () => void;
-  submit: (values: CommonInfoFieldsValueT) => void;
+  submit: (values: CommonInfoFieldsValueT) => void | Promise<void>;
   data: EnWordT;
   pos: EnPartOfSpeechE;
 };
 
 export const EditCommonDataModal: React.FC<EditCommonDataModalP> = ({ isOpen, onClose, submit, data, pos }) => {
   const [d, setD] = useState<CommonInfoFieldsValueT>(getDefaultValue(data));
+  const [submitting, setSubmitting] = useState(false);
   const t = useTranslations('en_managing_words');
 
+  const handleOk = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await submit(d);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
-    <Modal open={isOpen} title={t('edit_common_data')} onCancel={onClose} onOk={() => submit(d)}>
+    <Modal
+      open={isOpen}
+      title={t('edit_common_data')}
+      onCancel={onClose}
+      confirmLoading={submitting}
+      onOk={handleOk}
+    >
       <div className={styles.fields}>
         <CommonInfoFields pos={pos} value={d} onChange={setD} />
       </div>

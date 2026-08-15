@@ -7,15 +7,22 @@ import styles from './styles.module.scss';
 
 type PreviewWordP = {
   addWord: () => void;
+  submitting: boolean;
   word: Omit<EnWordT, 'word'> & { word: string };
 };
 
-export const PreviewWord: React.FC<PreviewWordP> = ({ addWord, word }) => {
+export const PreviewWord: React.FC<PreviewWordP> = ({ addWord, submitting, word }) => {
   const t = useTranslations('managing');
   return (
     <div className={styles.previewWord}>
       <WordCard word={word} />
-      <Button className={styles.saveBtn} type="primary" onClick={addWord}>
+      <Button
+        className={styles.saveBtn}
+        type="primary"
+        onClick={addWord}
+        loading={submitting}
+        disabled={submitting}
+      >
         {t('add_word')}
       </Button>
     </div>

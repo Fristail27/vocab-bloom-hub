@@ -23,6 +23,7 @@ export const AddOrEditWordFormModal: React.FC<AddOrEditWordFormModalP> = ({
   updateFormOfWord,
 }) => {
   const [values, setValues] = useState<ValuesStateT>(DefaultValues);
+  const [submitting, setSubmitting] = useState(false);
   const { wordId } = useParams();
   const { message } = App.useApp();
   const tError = useTranslations('errors');
@@ -62,11 +63,22 @@ export const AddOrEditWordFormModal: React.FC<AddOrEditWordFormModalP> = ({
     }
   }, [data]);
 
+  const handleOk = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await (data?.id === 0 ? submitData() : editData());
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <Modal
       title={data?.id === 0 ? t('add_word_form') : t('edit_word_form')}
       open={!!data}
-      onOk={data?.id === 0 ? submitData : editData}
+      onOk={handleOk}
+      confirmLoading={submitting}
       onCancel={onClose}
     >
       {data && <Input value={getTitle(data?.form_of_word as string)} disabled />}

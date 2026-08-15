@@ -7,6 +7,12 @@ jest.mock('next-intl', () => ({
   useLocale: () => 'en',
 }));
 
+// The translation editor pulls in antd Select internals that need browser APIs
+// missing from jsdom; the step-level tests only care about the Next button
+jest.mock('../components/MeaningTranslation', () => ({
+  MeaningTranslation: () => <div data-testid="meaning-translation" />,
+}));
+
 import { MeaningsTranslations } from '../index';
 import { MeaningPreview } from '../components/MeaningPreview';
 
@@ -40,5 +46,29 @@ describe('wizard localization (issue #174)', () => {
 
     expect(screen.getByText('next_step')).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/[А-Яа-яЁё]/);
+  });
+});
+
+describe('MeaningsTranslations step validation (issue #189)', () => {
+  const translation = {
+    id: 1,
+    title: 'искать',
+    definition: 'искать информацию',
+    variants_of_words: [],
+    language: 'ru',
+  };
+
+  const nextButton = () => screen.getByText('next_step').closest('button')!;
+
+  it('enables Next when every translation has a title and a definition', () => {
+    const filled = { ...meaning, translations: [translation] } as EnMeaningT;
+    render(<MeaningsTranslations meanings={[filled]} setMeanings={jest.fn()} onClickNext={jest.fn()} />);
+    expect(nextButton()).toBeEnabled();
+  });
+
+  it('disables Next while a translation has a blank title', () => {
+    const blank = { ...meaning, translations: [{ ...translation, title: '  ' }] } as EnMeaningT;
+    render(<MeaningsTranslations meanings={[blank]} setMeanings={jest.fn()} onClickNext={jest.fn()} />);
+    expect(nextButton()).toBeDisabled();
   });
 });
