@@ -7,9 +7,12 @@ const dotenvResult = config({ path: envPath });
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
+import compression from 'compression';
 import { AppModule } from './modules/AppModule/app.module';
 import { AllExceptionsFilter } from './core/filters/all-exceptions.filter';
 import { getLogLevels } from './core/logging/get-log-levels';
+import { getCorsOrigins, isSwaggerEnabled, shouldCompress } from './core/utils/http-hardening';
 import {
   assertDatabaseDriverConsistent,
   assertRequiredConfig,
@@ -40,19 +43,40 @@ async function bootstrap() {
   httpServer.headersTimeout = 20 * 60 * 1000 + 1000; // должен быть чуть больше keepAliveTimeout
   httpServer.keepAliveTimeout = 20 * 60 * 1000;
 
-  const config = new DocumentBuilder()
-    .setTitle('VocabBloom API')
-    .setDescription('API documentation for VocabBloom backend')
-    .setVersion('1.0')
-    .addBearerAuth() // если используешь JWT
-    .build();
+  // Swagger UI relies on an inline bootstrap script, so script-src additionally
+  // allows inline scripts while it is served; production keeps the full defaults
+  app.use(
+    helmet(
+      isSwaggerEnabled()
+        ? {
+            contentSecurityPolicy: {
+              directives: {
+                ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+                'script-src': ["'self'", "'unsafe-inline'"],
+              },
+            },
+          }
+        : {},
+    ),
+  );
+  app.use(compression({ filter: shouldCompress }));
 
-  const document = SwaggerModule.createDocument(app, config);
+  if (isSwaggerEnabled()) {
+    const config = new DocumentBuilder()
+      .setTitle('VocabBloom API')
+      .setDescription('API documentation for VocabBloom backend')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
 
-  SwaggerModule.setup('api', app, document);
+    const document = SwaggerModule.createDocument(app, config);
 
+    SwaggerModule.setup('api', app, document);
+  }
+
+  const corsOrigins = getCorsOrigins();
   app.enableCors({
-    origin: [`http://localhost:3000`],
+    origin: corsOrigins,
     credentials: true,
   });
   app.useGlobalPipes(
@@ -73,5 +97,7 @@ async function bootstrap() {
   logger.log(
     `Database: ${isPostgres ? 'Postgres (DATABASE_URL)' : 'better-sqlite3 fallback (dev.sqlite)'}, synchronize=${process.env.NODE_ENV === 'development'}`,
   );
+  logger.log(`CORS origins: ${corsOrigins.join(', ')}`);
+  logger.log(`Swagger UI: ${isSwaggerEnabled() ? 'enabled at /api' : 'disabled (production)'}`);
 }
 bootstrap();

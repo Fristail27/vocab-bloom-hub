@@ -11,16 +11,17 @@ server logs a warning when the root `.env` could not be loaded.
 
 ## Variables
 
-| Variable                   | Required          | Default                            | Used by  | Description                                                                                                                                                   |
-| -------------------------- | ----------------- | ---------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `USERNAME`                 | **yes**           | —                                  | server   | Admin login. Together with `PASSWORD` it derives the login-proof key and the JWT signing secret (see [authentication.md](./authentication.md)).               |
-| `PASSWORD`                 | **yes**           | —                                  | server   | Admin password. The server refuses to start when it is missing or blank.                                                                                      |
-| `DATABASE_URL`             | **in production** | SQLite fallback (dev only)         | server   | Postgres connection string (`postgres://user:pass@host:5432/db`). When absent in development, TypeORM falls back to `dev.sqlite` at the repo root.            |
-| `SERVER_PORT`              | no                | `3010`                             | server   | Port the NestJS API listens on.                                                                                                                               |
-| `FRONT_PORT`               | no                | `3000`                             | frontend | Port the Next.js dev server listens on (wired through `next.config.ts`).                                                                                      |
-| `NEXT_PUBLIC_BASE_API_URL` | no                | `/api`                             | frontend | Base URL the browser uses for API requests. Inlined at build time (`NEXT_PUBLIC_` prefix), so a change requires a rebuild.                                    |
-| `LOG_LEVEL`                | no                | `debug` in development, else `log` | server   | Minimum server log level: `verbose` / `debug` / `log` / `warn` / `error` / `fatal`. Unknown values fall back to the default.                                  |
-| `NODE_ENV`                 | no                | —                                  | both     | `development` enables TypeORM `synchronize` (schema auto-reshape) and debug logging; `production` makes the auth cookie `secure` and requires `DATABASE_URL`. |
+| Variable                   | Required          | Default                            | Used by  | Description                                                                                                                                                                                      |
+| -------------------------- | ----------------- | ---------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `USERNAME`                 | **yes**           | —                                  | server   | Admin login. Together with `PASSWORD` it derives the login-proof key and the JWT signing secret (see [authentication.md](./authentication.md)).                                                  |
+| `PASSWORD`                 | **yes**           | —                                  | server   | Admin password. The server refuses to start when it is missing or blank.                                                                                                                         |
+| `DATABASE_URL`             | **in production** | SQLite fallback (dev only)         | server   | Postgres connection string (`postgres://user:pass@host:5432/db`). When absent in development, TypeORM falls back to `dev.sqlite` at the repo root.                                               |
+| `SERVER_PORT`              | no                | `3010`                             | server   | Port the NestJS API listens on.                                                                                                                                                                  |
+| `FRONT_PORT`               | no                | `3000`                             | frontend | Port the Next.js dev server listens on (wired through `next.config.ts`).                                                                                                                         |
+| `NEXT_PUBLIC_BASE_API_URL` | no                | `/api`                             | frontend | Base URL the browser uses for API requests. Inlined at build time (`NEXT_PUBLIC_` prefix), so a change requires a rebuild.                                                                       |
+| `CORS_ORIGINS`             | no                | `http://localhost:<FRONT_PORT>`    | server   | Comma-separated list of allowed CORS origins, e.g. `https://admin.example.com,https://staging.example.com`.                                                                                      |
+| `LOG_LEVEL`                | no                | `debug` in development, else `log` | server   | Minimum server log level: `verbose` / `debug` / `log` / `warn` / `error` / `fatal`. Unknown values fall back to the default.                                                                     |
+| `NODE_ENV`                 | no                | —                                  | both     | `development` enables TypeORM `synchronize` (schema auto-reshape) and debug logging; `production` makes the auth cookie `secure`, requires `DATABASE_URL` and disables the Swagger UI at `/api`. |
 
 > `JWT_SECRET_KEY` found in older `.env` files is **not read by the code** — the JWT signing secret
 > is derived from `USERNAME`/`PASSWORD` (see [authentication.md](./authentication.md)).
@@ -59,4 +60,6 @@ PASSWORD=change-me
 # Optional in development (falls back to dev.sqlite), required in production:
 DATABASE_URL=postgres://user:password@localhost:5432/vocab_bloom
 NEXT_PUBLIC_BASE_API_URL=http://localhost:3010/api
+# Optional, defaults to http://localhost:<FRONT_PORT>:
+CORS_ORIGINS=http://localhost:3000
 ```
