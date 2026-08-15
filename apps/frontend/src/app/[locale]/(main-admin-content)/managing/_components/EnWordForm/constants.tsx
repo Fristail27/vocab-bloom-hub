@@ -11,11 +11,6 @@ import {
   LanguageRegisterE,
 } from 'server/types';
 
-export enum EnWordFormModeE {
-  edit = 'edit',
-  add = 'add',
-}
-
 export const EnPartsOfSpeech = [
   { value: 'noun', label: 'noun' },
   { value: 'verb', label: 'verb' },

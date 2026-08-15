@@ -1,6 +1,5 @@
-.line {
+.fields {
   display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 12px;
 }

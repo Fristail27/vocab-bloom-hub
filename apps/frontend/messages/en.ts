@@ -72,6 +72,7 @@ export default {
     short_translations: 'Short Translations',
     meaning_translations: 'Meaning Translations',
     save_word: 'Save',
+    next_step: 'Next',
     is_obsolete: 'Obsolete',
     is_ai_generated: 'AI Generated',
     is_abbreviation: 'Abbreviation',

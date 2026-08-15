@@ -3,18 +3,6 @@
   flex-direction: column;
   gap: 12px;
 
-  .line {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .inputContainer {
-    display: flex;
-    flex-direction: column;
-    width: 200px;
-  }
-
   .btn {
     width: max-content;
   }
