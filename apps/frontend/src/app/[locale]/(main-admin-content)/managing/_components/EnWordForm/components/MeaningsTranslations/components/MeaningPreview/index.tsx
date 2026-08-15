@@ -1,6 +1,7 @@
 import React from 'react';
 import { Typography } from 'antd';
-import { EnMeaningT } from '../../../../../../../../../../../../server/types';
+import { useTranslations } from 'next-intl';
+import { EnMeaningT } from 'server/types';
 import styles from './styles.module.scss';
 
 const { Text } = Typography;
@@ -10,6 +11,8 @@ type MeaningPreviewP = {
 };
 
 export const MeaningPreview: React.FC<MeaningPreviewP> = ({ m }) => {
+  const t = useTranslations('en_managing_words');
+
   return (
     <div className={styles.meaningPreview}>
       <Text strong>
@@ -18,17 +21,17 @@ export const MeaningPreview: React.FC<MeaningPreviewP> = ({ m }) => {
       <Text italic>{m.definition}</Text>
       <div className={styles.meaningInfo}>
         <Text>
-          <Text strong>Уровень:</Text> {m.meaning_level}
+          <Text strong>{t('level')}:</Text> {m.meaning_level}
         </Text>
         <Text>
-          <Text strong>Language register:</Text> {m.language_register}
+          <Text strong>{t('register')}:</Text> {m.language_register}
         </Text>
         <Text>
-          <Text strong>Региональность:</Text> {m.area_variant}
+          <Text strong>{t('regional_label')}:</Text> {m.area_variant}
         </Text>
       </div>
       <div className={styles.examplesContainer}>
-        <Text strong>Примеры:</Text>
+        <Text strong>{t('examples')}:</Text>
         <div className={styles.examples}>
           {m.examples.map((ex) => (
             <Text key={ex} keyboard>

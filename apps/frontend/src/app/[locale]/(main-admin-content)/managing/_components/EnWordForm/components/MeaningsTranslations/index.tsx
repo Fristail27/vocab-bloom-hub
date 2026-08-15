@@ -75,7 +75,7 @@ export const MeaningsTranslations: React.FC<MeaningTranslationsP> = ({
           </div>
         </div>
       ))}
-      <Button onClick={onClickNext}>Далее</Button>
+      <Button onClick={onClickNext}>{t('next_step')}</Button>
     </div>
   );
 };
