@@ -1,7 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import { AdminGuard } from '../AuthModule/guards/admin.guard';
-import type { AddSettingReqT, AddSettingResT } from '../../../types/settings/SettingsApiTypes';
+import type { AddSettingResT } from '../../../types/settings/SettingsApiTypes';
+import { AddSettingReqDTO } from './dto/AddSettingReq.dto';
 
 @Controller('/api/settings')
 export class SettingsController {
@@ -9,7 +10,7 @@ export class SettingsController {
 
   @UseGuards(AdminGuard)
   @Post('add')
-  async addField(@Body() body: AddSettingReqT): Promise<AddSettingResT> {
+  async addField(@Body() body: AddSettingReqDTO): Promise<AddSettingResT> {
     if (body.field === 'version') {
       return { success: false };
     }
@@ -33,7 +34,7 @@ export class SettingsController {
 
   @UseGuards(AdminGuard)
   @Patch('update')
-  async updateField(@Body() body: AddSettingReqT): Promise<AddSettingResT> {
+  async updateField(@Body() body: AddSettingReqDTO): Promise<AddSettingResT> {
     if (body.field === 'version') {
       return { success: false };
     }

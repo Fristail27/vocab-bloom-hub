@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsEnum, IsNumber, IsArray } from 'class-validator';
+import { IsString, IsEnum, IsNumber, IsArray, IsOptional } from 'class-validator';
 import { AvailableTranslationLanguagesE, EnMeaningTranslationT } from '../../../../../../types';
 
 export class AddMeaningTranslationReqDTO {
@@ -7,6 +7,7 @@ export class AddMeaningTranslationReqDTO {
   @IsEnum(AvailableTranslationLanguagesE)
   language!: EnMeaningTranslationT['language'];
 
+  @IsOptional()
   @IsNumber()
   id?: number | undefined;
 

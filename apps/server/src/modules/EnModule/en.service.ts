@@ -14,11 +14,11 @@ import {
   EnEntryTypesE,
   EnPartOfSpeechE,
   EnWordFormsE,
-  EnWordFormT,
   EnWordT,
 } from '../../../types';
 import { ErrorCodes } from '../../../core/constants/error_codes';
 import { prepareWordFromDB } from './utils/prepareWordFromDB';
+import { AddWordReqDTO, AddWordReqFormDTO } from './dto/AddWordReq.dto';
 import { AddWordFormReqDTO } from './dto/AddWordFormReq.dto';
 import { EditWordFormReqDTO } from './dto/EditWordFormReq.dto';
 import { EditCommonInfoOfWordReqDTO } from './dto/EditCommonInfoOfWordReq.dto';
@@ -62,7 +62,7 @@ export class EnService {
   private async addEntry(em: EntityManager, word: string, type: EnEntryTypesE): Promise<EnEntry> {
     return em.getRepository(EnEntry).save({ word, type });
   }
-  private async addWordRow(em: EntityManager, entry: EnEntry, data: EnWordT): Promise<EnWord> {
+  private async addWordRow(em: EntityManager, entry: EnEntry, data: AddWordReqDTO): Promise<EnWord> {
     const row = await this.getWordRow(data.word, data.part_of_speech, data.form_of_word, em);
     if (row) {
       throw new ConflictException(ErrorCodes.word_already_exists);
@@ -117,7 +117,7 @@ export class EnService {
     return this.addEntry(em, word, type);
   }
 
-  private async addFormOfWord(em: EntityManager, wordForm: EnWordFormT, baseWord: EnWord) {
+  private async addFormOfWord(em: EntityManager, wordForm: AddWordReqFormDTO, baseWord: EnWord) {
     const { id: _id, word, ...f } = wordForm;
     const formEntry = await this.getOrAddEntry(em, word, EnEntryTypesE.word);
     const wordRow = await this.getWordRow(word, baseWord.part_of_speech, f.form_of_word, em);
@@ -133,7 +133,7 @@ export class EnService {
     }
   }
 
-  async addWord(body: EnWordT): Promise<AddResT> {
+  async addWord(body: AddWordReqDTO): Promise<AddResT> {
     let type = EnEntryTypesE.word;
     if (body.part_of_speech === EnPartOfSpeechE.phrase) {
       type = EnEntryTypesE.phrase;

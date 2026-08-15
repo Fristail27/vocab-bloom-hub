@@ -9,6 +9,7 @@ import {
   AddShortTranslationResT,
   AddWordFormReqT,
   AddWordFormResT,
+  AddWordReqT,
   DeleteMeaningResT,
   DeleteMeaningTranslationResT,
   DeleteResT,
@@ -29,7 +30,6 @@ import {
   EnPartOfSpeechE,
   EnStatisticsT,
   EnTranslationsStatisticsT,
-  EnWordT,
   ErrorResT,
   GetEnIssuesStatisticsResT,
   GetEnStatisticsResT,
@@ -49,7 +49,7 @@ export class EnApi extends AbstractBaseApi {
     });
   }
 
-  static async addWord(data: EnWordT): Promise<AddResT> {
+  static async addWord(data: AddWordReqT): Promise<AddResT> {
     return this.post<AddResT>(`${this.baseURL}/en/add/word`, data);
   }
 

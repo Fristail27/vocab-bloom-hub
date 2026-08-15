@@ -1,8 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsEnum, IsArray } from 'class-validator';
+import { IsString, IsEnum, IsArray, IsNumber, IsOptional } from 'class-validator';
 import { AvailableTranslationLanguagesE, EnMeaningTranslationT } from '../../../../../../types';
 
 export class MeaningTranslationDto {
+  // Client-side ids may leak through for already-persisted rows; the server ignores them
+  @IsOptional()
+  @IsNumber()
+  id?: EnMeaningTranslationT['id'] | undefined;
+
   @ApiProperty()
   @IsEnum(AvailableTranslationLanguagesE)
   language!: EnMeaningTranslationT['language'];
