@@ -9,6 +9,4 @@ export enum StatusOfWordPresenceE {
   present = 'present',
   absent = 'absent',
   notChecked = 'notChecked',
-  loading = 'loading',
-  error = 'error',
 }
