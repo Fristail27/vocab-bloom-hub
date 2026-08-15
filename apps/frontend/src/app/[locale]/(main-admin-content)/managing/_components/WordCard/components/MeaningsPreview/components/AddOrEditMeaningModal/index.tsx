@@ -34,6 +34,7 @@ export const AddOrEditMeaningModal: React.FC<AddOrEditMeaningModalP> = ({
   updateMeaning,
 }) => {
   const [values, setValues] = useState<AddOrEditStateT>(DefaultState);
+  const [submitting, setSubmitting] = useState(false);
   const t = useTranslations('en_managing_words');
   const tError = useTranslations('errors');
   const { message } = App.useApp();
@@ -96,10 +97,21 @@ export const AddOrEditMeaningModal: React.FC<AddOrEditMeaningModalP> = ({
     }
   }, [data]);
 
+  const handleOk = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await (data?.id === 0 ? submitAdd() : submitEdit());
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <Modal
       open={isOpen}
-      onOk={data?.id === 0 ? submitAdd : submitEdit}
+      onOk={handleOk}
+      confirmLoading={submitting}
       onCancel={onClose}
       title={data?.id === 0 ? t('add_meaning') : t('edit_meaning')}
     >

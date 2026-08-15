@@ -43,47 +43,58 @@ export const EnWordForm: React.FC = () => {
     StatusOfWordPresenceE.notChecked,
   );
   const [existingWordId, setExistingWordId] = useState<number | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const addWord = async () => {
+    if (isSubmitting || !word.trim() || !partOfSpeech) {
+      return;
+    }
+    setIsSubmitting(true);
     try {
-      if (partOfSpeech) {
-        const body: EnWordT = {
-          ...commonInfo,
-          word,
-          part_of_speech: partOfSpeech,
-          meanings,
-          short_translations: shortTranslations,
-          forms: type === EnEntryTypesE.word ? forms.filter((c) => c.word.trim().length > 0) : [],
-        };
-        if (body) {
-          const res = await EnApi.addWord(prepareWordPayload(body));
-          if ('error' in res) {
-            const mes = tError(res.message);
-            message.error(mes);
-          } else {
-            const mes = t('added_success');
-            message.success(mes);
-            setWord('');
-            setStatusOfPresence(StatusOfWordPresenceE.notChecked);
-            setExistingWordId(null);
-            setShortTranslations(DefaultShortTranslation);
-            setPartOfSpeech(null);
-            setCommonInfo(DefaultCommonData);
-            setForms([]);
-            setMeanings([]);
-            setStep(0);
-            setStepItems(getStepItems(t, true));
-          }
-        }
+      const body: EnWordT = {
+        ...commonInfo,
+        word: word.trim(),
+        part_of_speech: partOfSpeech,
+        meanings,
+        // Untouched default rows are dropped the same way as blank word forms
+        short_translations: shortTranslations.filter(
+          (s) => s.description.trim().length > 0 || s.variants_of_words.length > 0,
+        ),
+        forms: type === EnEntryTypesE.word ? forms.filter((c) => c.word.trim().length > 0) : [],
+      };
+      const res = await EnApi.addWord(prepareWordPayload(body));
+      if ('error' in res) {
+        const mes = tError(res.message);
+        message.error(mes);
+      } else {
+        const mes = t('added_success');
+        message.success(mes);
+        setWord('');
+        setStatusOfPresence(StatusOfWordPresenceE.notChecked);
+        setExistingWordId(null);
+        setShortTranslations(DefaultShortTranslation);
+        setPartOfSpeech(null);
+        setCommonInfo(DefaultCommonData);
+        setForms([]);
+        setMeanings([]);
+        setStep(0);
+        setStepItems(getStepItems(t, true));
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'unknown_error';
       message.error(tError(errorMessage));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const checkWord = async () => {
-    if (word && partOfSpeech) {
-      const res = await EnApi.checkWord(word, partOfSpeech);
+    if (isChecking || !word.trim() || !partOfSpeech) {
+      return;
+    }
+    setIsChecking(true);
+    try {
+      const res = await EnApi.checkWord(word.trim(), partOfSpeech);
 
       if ('error' in res) {
         message.error(tError(res.message));
@@ -99,6 +110,8 @@ export const EnWordForm: React.FC = () => {
           return true;
         }
       }
+    } finally {
+      setIsChecking(false);
     }
   };
   const insertJSON = async () => {
@@ -177,6 +190,7 @@ export const EnWordForm: React.FC = () => {
           <>
             <CheckWordBlock
               checkWord={checkWord}
+              checking={isChecking}
               word={word}
               type={type}
               setType={setType}
@@ -233,6 +247,7 @@ export const EnWordForm: React.FC = () => {
               word,
             }}
             addWord={addWord}
+            submitting={isSubmitting}
           />
         )}
       </div>

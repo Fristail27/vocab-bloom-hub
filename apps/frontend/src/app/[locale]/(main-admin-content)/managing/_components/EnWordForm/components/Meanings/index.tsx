@@ -53,8 +53,13 @@ export const Meanings: React.FC<MeaningsP> = ({ meanings, setMeanings, onClickNe
           {t('add_meaning')}
         </Button>
       </div>
-      <Button type="primary" onClick={onClickNext} className={styles.nextButton}>
-        Далее
+      <Button
+        type="primary"
+        onClick={onClickNext}
+        disabled={meanings.some((m) => !m.title.trim() || !m.definition.trim())}
+        className={styles.nextButton}
+      >
+        {t('next_step')}
       </Button>
     </div>
   );
