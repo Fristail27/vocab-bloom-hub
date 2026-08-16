@@ -95,7 +95,11 @@ async function bootstrap() {
   const isPostgres = checkIsPostgres();
   logger.log(`Server listening on port ${port}`);
   logger.log(
-    `Database: ${isPostgres ? 'Postgres (DATABASE_URL)' : 'better-sqlite3 fallback (dev.sqlite)'}, synchronize=${process.env.NODE_ENV === 'development'}`,
+    `Database: ${
+      isPostgres
+        ? 'Postgres (DATABASE_URL), schema managed by migrations (migrationsRun on start)'
+        : 'better-sqlite3 fallback (dev.sqlite), synchronize=true'
+    }`,
   );
   logger.log(`CORS origins: ${corsOrigins.join(', ')}`);
   logger.log(`Swagger UI: ${isSwaggerEnabled() ? 'enabled at /api' : 'disabled (production)'}`);
