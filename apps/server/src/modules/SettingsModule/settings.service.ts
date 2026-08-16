@@ -67,6 +67,13 @@ export class SettingsService {
     return { success: true };
   }
 
+  async upsert(field: string, value: string): Promise<AddSettingResT> {
+    // field is the primary key, so save() inserts or updates in one call
+    await this.settingsRepository.save({ field, value });
+    this.logger.log(`Setting "${field}" upserted`);
+    return { success: true };
+  }
+
   async remove(field: string): Promise<AddSettingResT> {
     const result = await this.settingsRepository.delete({ field });
 

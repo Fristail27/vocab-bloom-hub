@@ -18,12 +18,10 @@ import { ImportDictionarySection } from '../index';
 type HandleChunkT = (c: ImportDictionaryChunkT) => void;
 
 const mockImportStreaming = (chunks: ImportDictionaryChunkT[], result: unknown = { success: true }) => {
-  (EnApi.importDictionary as jest.Mock).mockImplementation(
-    async (_version: string, handleChunk: HandleChunkT) => {
-      chunks.forEach(handleChunk);
-      return result;
-    },
-  );
+  (EnApi.importDictionary as jest.Mock).mockImplementation(async (handleChunk: HandleChunkT) => {
+    chunks.forEach(handleChunk);
+    return result;
+  });
 };
 
 const renderSection = () =>
@@ -48,9 +46,30 @@ describe('ImportDictionarySection', () => {
     fireEvent.click(screen.getByText('start_importing'));
 
     await screen.findByText('100.00%');
-    expect(EnApi.importDictionary).toHaveBeenCalledWith('0.0.1', expect.any(Function), expect.any(Function));
+    expect(EnApi.importDictionary).toHaveBeenCalledWith(expect.any(Function), expect.any(Function));
     expect(screen.queryByText('start_importing')).not.toBeInTheDocument();
     expect(screen.queryByText('retry_importing')).not.toBeInTheDocument();
+  });
+
+  it('показывает версию датасета из manifest-чанка и обновляет установленную после успеха', async () => {
+    mockImportStreaming([
+      {
+        stage: EnDictionaryImportPhasesE.downloading_database,
+        percent: 0,
+        datasetVersion: '0.2.0',
+      } as ImportDictionaryChunkT,
+      { stage: EnDictionaryImportPhasesE.completed, percent: 100 } as ImportDictionaryChunkT,
+    ]);
+
+    renderSection();
+    expect(screen.getByText(/your_version: —/)).toBeInTheDocument();
+    expect(screen.getByText(/latest_version: —/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('start_importing'));
+
+    await screen.findByText(/latest_version: 0\.2\.0/);
+    // после успешного импорта установленная версия равна версии манифеста
+    expect(screen.getByText(/your_version: 0\.2\.0/)).toBeInTheDocument();
   });
 
   it('показывает ошибку и кнопку повтора, если импорт вернул error-юнион', async () => {

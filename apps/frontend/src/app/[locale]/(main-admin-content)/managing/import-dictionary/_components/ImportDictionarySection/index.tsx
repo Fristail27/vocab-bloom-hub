@@ -13,11 +13,18 @@ import styles from './styles.module.scss';
 
 const { Text } = Typography;
 
-export const ImportDictionarySection: React.FC = () => {
+type ImportDictionarySectionP = {
+  // dataset version of the last successful import, from the settings store
+  yourVersion?: string | undefined;
+};
+
+export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({ yourVersion }) => {
   const [percents, setPercents] = React.useState<number>(0);
   const [status, setStatus] = React.useState<ImportStatusE>(ImportStatusE.idle);
   const [statusMessage, setStatusMessage] = React.useState<string>('');
   const [elapsedSeconds, setElapsedSeconds] = React.useState<number>(0);
+  const [installedVersion, setInstalledVersion] = React.useState<string | undefined>(yourVersion);
+  const [latestVersion, setLatestVersion] = React.useState<string | undefined>(undefined);
   const t = useTranslations('import_dictionary');
   const tErr = useTranslations('errors');
   const { message } = App.useApp();
@@ -51,9 +58,15 @@ export const ImportDictionarySection: React.FC = () => {
     setStatusMessage('');
 
     let completedSeen = false;
+    let seenDatasetVersion: string | undefined;
 
     const handleChunk = (c: ImportDictionaryChunkT) => {
       const percent = Math.min(100, Math.max(0, c.percent ?? 0));
+
+      if (c.datasetVersion) {
+        seenDatasetVersion = c.datasetVersion;
+        setLatestVersion(c.datasetVersion);
+      }
 
       if (c.stage === EnDictionaryImportPhasesE.completed) {
         completedSeen = true;
@@ -68,7 +81,7 @@ export const ImportDictionarySection: React.FC = () => {
       }
     };
 
-    const res = await EnApi.importDictionary('0.0.1', handleChunk, onError);
+    const res = await EnApi.importDictionary(handleChunk, onError);
     if ('error' in res) {
       onError(res.message);
       return;
@@ -80,6 +93,9 @@ export const ImportDictionarySection: React.FC = () => {
       return;
     }
 
+    if (seenDatasetVersion) {
+      setInstalledVersion(seenDatasetVersion);
+    }
     setStatus(ImportStatusE.success);
   };
 
@@ -94,8 +110,12 @@ export const ImportDictionarySection: React.FC = () => {
 
   return (
     <div className={styles.importDictionarySection}>
-      <Text strong>{t('your_version')}: 0.0.1</Text>
-      <Text strong>{t('latest_version')}: 0.0.1</Text>
+      <Text strong>
+        {t('your_version')}: {installedVersion || '—'}
+      </Text>
+      <Text strong>
+        {t('latest_version')}: {latestVersion || '—'}
+      </Text>
       <Progress
         className={styles.progress}
         percent={percents}

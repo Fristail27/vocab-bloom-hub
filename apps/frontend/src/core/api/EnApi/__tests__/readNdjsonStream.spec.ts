@@ -19,7 +19,7 @@ const collectChunks = async (streamChunks: string[]) => {
   jest.spyOn(AbstractBaseApi, 'stream').mockResolvedValue(makeReader(streamChunks));
   const received: ImportDictionaryChunkT[] = [];
   const onError = jest.fn();
-  const res = await EnApi.importDictionary('0.0.1', (c) => received.push(c), onError);
+  const res = await EnApi.importDictionary((c) => received.push(c), onError);
   return { res, received, onError };
 };
 
@@ -85,7 +85,7 @@ describe('EnApi NDJSON stream parsing', () => {
     } as unknown as ReadableStreamDefaultReader<Uint8Array>;
     jest.spyOn(AbstractBaseApi, 'stream').mockResolvedValue(reader);
 
-    const res = await EnApi.importDictionary('0.0.1', jest.fn(), jest.fn());
+    const res = await EnApi.importDictionary(jest.fn(), jest.fn());
 
     expect(res).toEqual({ error: true, message: ErrorCodes.failed_fetch });
   });
@@ -94,7 +94,7 @@ describe('EnApi NDJSON stream parsing', () => {
     jest.spyOn(AbstractBaseApi, 'stream').mockResolvedValue({ error: true, message: ErrorCodes.failed_fetch });
 
     const handleChunk = jest.fn();
-    const res = await EnApi.importDictionary('0.0.1', handleChunk, jest.fn());
+    const res = await EnApi.importDictionary(handleChunk, jest.fn());
 
     expect(res).toEqual({ error: true, message: ErrorCodes.failed_fetch });
     expect(handleChunk).not.toHaveBeenCalled();
@@ -119,7 +119,7 @@ describe('EnApi NDJSON stream parsing', () => {
     jest.spyOn(AbstractBaseApi, 'stream').mockResolvedValue(reader);
 
     const received: ImportDictionaryChunkT[] = [];
-    const res = await EnApi.importDictionary('0.0.1', (c) => received.push(c), jest.fn());
+    const res = await EnApi.importDictionary((c) => received.push(c), jest.fn());
 
     expect(res).toEqual({ success: true });
     expect(received).toEqual([{ stage: 'parsing', word: 'словарь' } as unknown as ImportDictionaryChunkT]);

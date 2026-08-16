@@ -257,15 +257,12 @@ describe('EditShortTranslationReqDTO validation (issue #87)', () => {
 });
 
 describe('ImportDictionaryReq validation (issue #87)', () => {
-  it('accepts an empty body and an optional user_version string', async () => {
+  it('accepts an empty body', async () => {
     await expect(validate(ImportDictionaryReq, {})).resolves.toBeInstanceOf(ImportDictionaryReq);
-    await expect(validate(ImportDictionaryReq, { user_version: '1.2.3' })).resolves.toBeInstanceOf(
-      ImportDictionaryReq,
-    );
   });
 
-  it('rejects a non-string user_version and unknown fields', async () => {
-    await expect(validate(ImportDictionaryReq, { user_version: 42 })).rejects.toThrow(BadRequestException);
+  it('rejects unknown fields, including the removed user_version', async () => {
+    await expect(validate(ImportDictionaryReq, { user_version: '1.2.3' })).rejects.toThrow(BadRequestException);
     await expect(validate(ImportDictionaryReq, { hacker_field: 'oops' })).rejects.toThrow(BadRequestException);
   });
 });

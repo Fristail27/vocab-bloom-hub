@@ -27,6 +27,7 @@ import { EnShortTranslationService } from '../../EnShortTranslation/enShortTrans
 import { EnMeaningService } from '../../EnMeaning/enMeaning.service';
 import { EnMeaningTranslationService } from '../../EnMeaningTranslation/enMeaningTranslation.service';
 import { EnImportDictionaryService } from '../enImportDictionary.service';
+import { SettingsService } from '../../../../SettingsModule/settings.service';
 import { EnDictionaryImportPhasesE } from '../constants';
 import {
   AvailableTranslationLanguagesE,
@@ -131,9 +132,19 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
     );
     const enService = new EnService(ds.getRepository(EnWord), ds, shortTranslationService, meaningService);
 
-    service = new EnImportDictionaryService(ds.getRepository(EnWord), enService);
+    const settingsService = { upsert: jest.fn() } as unknown as SettingsService;
+    service = new EnImportDictionaryService(ds.getRepository(EnWord), enService, settingsService);
 
     await enService.addWord(makeWordBody('run'));
+    // a phrasal pair so the export produces a phrasal-verbs linking line
+    await enService.addWord(makeWordBody('give', { forms: [] }));
+    await enService.addWord(
+      makeWordBody('give up', {
+        forms: [],
+        verb___is_phrasal: true,
+        base_phrasal: 'give',
+      } as unknown as Partial<EnWordT>),
+    );
     await enService.addWord(
       makeWordBody('in the long run', {
         part_of_speech: EnPartOfSpeechE.phrase,
@@ -190,8 +201,8 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
   it('writes words as one JSON object per line without system fields', () => {
     const lines = readJsonlLines('vocab-bloom-hub-en-words.jsonl');
 
-    expect(lines).toHaveLength(1);
-    const [word] = lines;
+    expect(lines).toHaveLength(3);
+    const word = lines.find((l) => l.word === 'run') as Record<string, unknown>;
     expect(word.word).toBe('run');
     expect(word.part_of_speech).toBe(EnPartOfSpeechE.verb);
     expect(word.forms).toEqual([
@@ -222,6 +233,26 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
     expect(grammar).toHaveLength(1);
     expect(grammar[0].phrase).toBe('would rather + verb');
     expect(grammar[0].pattern).toEqual(['would rather', 'verb']);
+  });
+
+  it('exports the phrasal-verbs linking file and a manifest matching the jsonl line counts', () => {
+    // one line per base verb that has phrasal variants; run and give up have none
+    const phrasal = readJsonlLines('vocab-bloom-hub-en-phrasal-verbs.jsonl');
+    expect(phrasal).toEqual([{ word: 'give', phrasal_variants: ['give up'] }]);
+
+    const manifest = JSON.parse(readFileSync(path.join(runDir, 'manifest.json'), 'utf-8')) as {
+      version: string;
+      generatedAt: string;
+      files: Record<string, { lines: number }>;
+    };
+    expect(typeof manifest.version).toBe('string');
+    expect(manifest.version.length).toBeGreaterThan(0);
+    expect(manifest.files).toEqual({
+      'vocab-bloom-hub-en-words.jsonl': { lines: 3 },
+      'vocab-bloom-hub-en-phrasal-verbs.jsonl': { lines: 1 },
+      'vocab-bloom-hub-en-grammar-patterns.jsonl': { lines: 1 },
+      'vocab-bloom-hub-en-phrases.jsonl': { lines: 1 },
+    });
   });
 
   it('packs the archive and serves it once via streamExportFile', async () => {

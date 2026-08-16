@@ -11,7 +11,7 @@ import * as yazl from 'yazl';
 import { randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream, existsSync, mkdirSync } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
-import { stat, unlink } from 'node:fs/promises';
+import { stat, unlink, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { Readable } from 'node:stream';
@@ -19,10 +19,18 @@ import * as readline from 'node:readline';
 import { type Response } from 'express';
 import { EnWord } from '../../entities/en_word.entity';
 import { ImportDictionaryReq } from './dto/ImportDictionaryReq.dto';
-import { EnPartOfSpeechE, EnWordFormsE, ImportDictionaryChunkT } from '../../../../../types';
+import { DatasetManifestT, EnPartOfSpeechE, EnWordFormsE, ImportDictionaryChunkT } from '../../../../../types';
 import { EnService } from '../../en.service';
+import { SettingsService } from '../../../SettingsModule/settings.service';
 import { ErrorCodes } from '../../../../../core/constants/error_codes';
-import { EnDictionaryImportPhasesE } from './constants';
+import { getVersion } from '../../../../../configuration';
+import {
+  DATASET_FILE_NAMES,
+  DATASET_VERSION_SETTINGS_FIELD,
+  EnDictionaryImportPhasesE,
+  LEGACY_DATASET_TOTAL_LINES,
+  MANIFEST_FILE_NAME,
+} from './constants';
 import {
   cleanEntity,
   mapGrammarPatternFromSetToDB,
@@ -53,7 +61,37 @@ export class EnImportDictionaryService {
     private readonly enWordsRep: Repository<EnWord>,
 
     private readonly enService: EnService,
+
+    private readonly settingsService: SettingsService,
   ) {}
+
+  private async fetchManifest(): Promise<DatasetManifestT | null> {
+    try {
+      const response = await fetch(`${DATASET_BASE_URL}/${MANIFEST_FILE_NAME}`);
+      if (!response.ok) {
+        this.logger.warn(`Dataset manifest request failed: HTTP ${response.status}`);
+        return null;
+      }
+
+      const manifest = (await response.json()) as DatasetManifestT;
+      const lineCounts = manifest?.files ? Object.values(manifest.files) : [];
+      const isValid =
+        typeof manifest?.version === 'string' &&
+        lineCounts.length > 0 &&
+        lineCounts.every((f) => typeof f?.lines === 'number' && f.lines >= 0);
+      if (!isValid) {
+        this.logger.warn('Dataset manifest has an unexpected shape, ignoring it');
+        return null;
+      }
+
+      return manifest;
+    } catch (error) {
+      this.logger.warn(
+        `Failed to fetch the dataset manifest: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return null;
+    }
+  }
 
   private async streamJsonlImport<T>(
     res: Response,
@@ -183,7 +221,7 @@ export class EnImportDictionaryService {
   private async saveWords(res: Response, allLength: number, plusCount: () => number): Promise<void> {
     await this.streamJsonlImport<DataSetWordT>(
       res,
-      'vocab-bloom-hub-en-words.jsonl',
+      DATASET_FILE_NAMES.words,
       EnDictionaryImportPhasesE.saving_words,
       allLength,
       plusCount,
@@ -196,7 +234,7 @@ export class EnImportDictionaryService {
   private async saveGrammarPatterns(res: Response, allLength: number, plusCount: () => number): Promise<void> {
     await this.streamJsonlImport<DataSetGrammarPatternT>(
       res,
-      'vocab-bloom-hub-en-grammar-patterns.jsonl',
+      DATASET_FILE_NAMES.grammarPatterns,
       EnDictionaryImportPhasesE.saving_grammar_patterns,
       allLength,
       plusCount,
@@ -209,7 +247,7 @@ export class EnImportDictionaryService {
   private async savePhrases(res: Response, allLength: number, plusCount: () => number): Promise<void> {
     await this.streamJsonlImport<DataSetPhraseT>(
       res,
-      'vocab-bloom-hub-en-phrases.jsonl',
+      DATASET_FILE_NAMES.phrases,
       EnDictionaryImportPhasesE.saving_phrases,
       allLength,
       plusCount,
@@ -222,7 +260,7 @@ export class EnImportDictionaryService {
   private async savePhrasalVerbs(res: Response, allLength: number, plusCount: () => number): Promise<void> {
     await this.streamJsonlImport<DataSetWordT>(
       res,
-      'vocab-bloom-hub-en-phrasal-verbs.jsonl',
+      DATASET_FILE_NAMES.phrasalVerbs,
       EnDictionaryImportPhasesE.saving_phrasal_verbs,
       allLength,
       plusCount,
@@ -259,19 +297,43 @@ export class EnImportDictionaryService {
     const startedAt = Date.now();
     this.logger.log('Dictionary import started');
 
+    const manifest = await this.fetchManifest();
+    if (!manifest) {
+      this.logger.warn('Dataset manifest is missing — progress totals fall back to the legacy line counts');
+    }
+
     let count = 0;
     const plusCount = () => count++;
-    const allLength = 87074 + 912 + 28560 + 28;
-    await this.reportImportProgress(res, count, allLength, EnDictionaryImportPhasesE.downloading_database);
+    const allLength = manifest
+      ? Object.values(manifest.files).reduce((sum, f) => sum + f.lines, 0)
+      : LEGACY_DATASET_TOTAL_LINES;
+
+    const firstChunk: ImportDictionaryChunkT = {
+      percent: 0,
+      stage: EnDictionaryImportPhasesE.downloading_database,
+      ...(manifest && { datasetVersion: manifest.version }),
+    };
+    res.write(JSON.stringify(firstChunk) + '\n');
 
     await this.saveWords(res, allLength, plusCount);
     await this.savePhrasalVerbs(res, allLength, plusCount);
     await this.saveGrammarPatterns(res, allLength, plusCount);
     await this.savePhrases(res, allLength, plusCount);
 
+    if (manifest) {
+      // Remember which dataset version this database now holds; a failure
+      // here must not fail an already completed import
+      await this.settingsService.upsert(DATASET_VERSION_SETTINGS_FIELD, manifest.version).catch((error) => {
+        this.logger.warn(
+          `Failed to store the imported dataset version: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      });
+    }
+
     const finalChunk: ImportDictionaryChunkT = {
       percent: 100,
       stage: EnDictionaryImportPhasesE.completed,
+      ...(manifest && { datasetVersion: manifest.version }),
     };
     res.write(JSON.stringify(finalChunk) + '\n');
 
@@ -294,12 +356,14 @@ export class EnImportDictionaryService {
     stage: EnDictionaryImportPhasesE,
     whereExtra: FindOptionsWhere<EnWord>,
     relations: FindOptionsRelations<EnWord>,
-    prepare: (word: EnWord) => T,
+    // prepare may return null to skip a record (e.g. verbs without phrasal variants)
+    prepare: (word: EnWord) => T | null,
     onProgress: (percent: number, stage: EnDictionaryImportPhasesE) => void,
-  ): Promise<void> {
+  ): Promise<number> {
     const outStream = createWriteStream(outPath, { encoding: 'utf-8' });
     const batchSize = 200;
     let lastId = 0;
+    let written = 0;
 
     try {
       while (true) {
@@ -318,8 +382,10 @@ export class EnImportDictionaryService {
 
         for (const word of batch) {
           const prepared = prepare(word);
+          if (prepared === null) continue;
           const cleaned = cleanEntity(prepared);
           outStream.write(JSON.stringify(cleaned) + '\n');
+          written++;
         }
 
         lastId = batch[batch.length - 1].id;
@@ -337,11 +403,13 @@ export class EnImportDictionaryService {
     await new Promise<void>((resolve, reject) => {
       outStream.end((err?: Error) => (err ? reject(err) : resolve()));
     });
+
+    return written;
   }
 
   /**
-   * Собирает 3 jsonl-файла во временной папке, упаковывает их в zip,
-   * регистрирует архив под exportId и возвращает этот id.
+   * Собирает 4 jsonl-файла и manifest.json во временной папке, упаковывает
+   * их в zip, регистрирует архив под exportId и возвращает этот id.
    * Сам процесс идёт через res-стрим (NDJSON прогресс), а скачивание —
    * отдельным GET-запросом на /export/download/:exportId.
    */
@@ -355,14 +423,22 @@ export class EnImportDictionaryService {
     const runDir = path.join(tmpDir, exportId);
     mkdirSync(runDir, { recursive: true });
 
-    const wordsPath = path.join(runDir, 'vocab-bloom-hub-en-words.jsonl');
-    const phrasesPath = path.join(runDir, 'vocab-bloom-hub-en-phrases.jsonl');
-    const grammarPath = path.join(runDir, 'vocab-bloom-hub-en-grammar-patterns.jsonl');
+    const wordsPath = path.join(runDir, DATASET_FILE_NAMES.words);
+    const phrasalVerbsPath = path.join(runDir, DATASET_FILE_NAMES.phrasalVerbs);
+    const phrasesPath = path.join(runDir, DATASET_FILE_NAMES.phrases);
+    const grammarPath = path.join(runDir, DATASET_FILE_NAMES.grammarPatterns);
+    const manifestPath = path.join(runDir, MANIFEST_FILE_NAME);
     const zipPath = path.join(tmpDir, `${exportId}.zip`);
 
     const startedAt = Date.now();
-    const total = await this.enWordsRep.count({ where: { form_of_word: EnWordFormsE.base_form } });
-    this.logger.log(`Dictionary export ${exportId} started: ${total} base records to export`);
+    // the phrasal-verbs stage walks the base verbs a second time, so they
+    // count into the progress total twice
+    const baseTotal = await this.enWordsRep.count({ where: { form_of_word: EnWordFormsE.base_form } });
+    const verbTotal = await this.enWordsRep.count({
+      where: { form_of_word: EnWordFormsE.base_form, part_of_speech: EnPartOfSpeechE.verb },
+    });
+    const total = baseTotal + verbTotal;
+    this.logger.log(`Dictionary export ${exportId} started: ${baseTotal} base records to export`);
 
     let processed = 0;
     const addProcessed = (n: number) => (processed += n);
@@ -372,7 +448,7 @@ export class EnImportDictionaryService {
     };
 
     try {
-      await this.exportEntities(
+      const wordsLines = await this.exportEntities(
         wordsPath,
         total,
         () => processed,
@@ -391,7 +467,24 @@ export class EnImportDictionaryService {
         emit,
       );
 
-      await this.exportEntities(
+      // The linking map the import replays in savePhrasalVerbs: one line per
+      // base verb that has phrasal variants
+      const phrasalVerbsLines = await this.exportEntities(
+        phrasalVerbsPath,
+        total,
+        () => processed,
+        addProcessed,
+        EnDictionaryImportPhasesE.saving_phrasal_verbs,
+        { part_of_speech: EnPartOfSpeechE.verb },
+        { word: true, phrasal_variants: { word: true } },
+        (w) =>
+          w.phrasal_variants?.length
+            ? { word: w.word.word, phrasal_variants: w.phrasal_variants.map((v) => v.word.word) }
+            : null,
+        emit,
+      );
+
+      const phrasesLines = await this.exportEntities(
         phrasesPath,
         total,
         () => processed,
@@ -403,7 +496,7 @@ export class EnImportDictionaryService {
         emit,
       );
 
-      await this.exportEntities(
+      const grammarLines = await this.exportEntities(
         grammarPath,
         total,
         () => processed,
@@ -415,8 +508,22 @@ export class EnImportDictionaryService {
         emit,
       );
 
+      // The manifest travels inside the archive, so the published dataset
+      // always carries line counts matching its jsonl files (issue #159)
+      const manifest: DatasetManifestT = {
+        version: getVersion(),
+        generatedAt: new Date().toISOString(),
+        files: {
+          [DATASET_FILE_NAMES.words]: { lines: wordsLines },
+          [DATASET_FILE_NAMES.phrasalVerbs]: { lines: phrasalVerbsLines },
+          [DATASET_FILE_NAMES.grammarPatterns]: { lines: grammarLines },
+          [DATASET_FILE_NAMES.phrases]: { lines: phrasesLines },
+        },
+      };
+      await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf-8');
+
       emit(100, EnDictionaryImportPhasesE.packing_archive);
-      await this.zipFiles(zipPath, [wordsPath, phrasesPath, grammarPath]);
+      await this.zipFiles(zipPath, [wordsPath, phrasalVerbsPath, phrasesPath, grammarPath, manifestPath]);
 
       const timeout = setTimeout(() => this.cleanupExport(exportId), EXPORT_TTL_MS);
       this.pendingExports.set(exportId, { filePath: zipPath, createdAt: Date.now(), timeout });
@@ -432,7 +539,13 @@ export class EnImportDictionaryService {
       } as ImportDictionaryChunkT;
       res.write(JSON.stringify(finalChunk) + '\n');
     } finally {
-      await Promise.allSettled([unlink(wordsPath), unlink(phrasesPath), unlink(grammarPath)]);
+      await Promise.allSettled([
+        unlink(wordsPath),
+        unlink(phrasalVerbsPath),
+        unlink(phrasesPath),
+        unlink(grammarPath),
+        unlink(manifestPath),
+      ]);
       res.end();
     }
   }
