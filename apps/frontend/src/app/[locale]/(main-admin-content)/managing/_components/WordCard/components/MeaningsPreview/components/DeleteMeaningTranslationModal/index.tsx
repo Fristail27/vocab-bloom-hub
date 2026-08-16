@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Modal, Typography } from 'antd';
 import { EnMeaningTranslationT } from 'server/types';
@@ -8,7 +8,7 @@ import styles from './styles.module.scss';
 const { Text } = Typography;
 type DeleteMeaningTranslationModalP = {
   onClose: () => void;
-  onOk: (tr: EnMeaningTranslationT) => void;
+  onOk: (tr: EnMeaningTranslationT) => void | Promise<void>;
   isOpen: boolean;
   translation: EnMeaningTranslationT | null;
 };
@@ -20,12 +20,25 @@ export const DeleteMeaningTranslationModal: React.FC<DeleteMeaningTranslationMod
   translation,
 }) => {
   const t = useTranslations('en_managing_words');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleOk = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await onOk(translation as EnMeaningTranslationT);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <Modal
       okButtonProps={{ danger: true }}
       title={t('delete_word_form')}
       open={isOpen}
-      onOk={() => onOk(translation as EnMeaningTranslationT)}
+      onOk={handleOk}
+      confirmLoading={submitting}
       onCancel={onClose}
       className={styles.deleteModal}
     >

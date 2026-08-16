@@ -19,17 +19,24 @@ export const FoundWord: React.FC<FoundWordP> = ({ w, onDeleted }) => {
   const tErr = useTranslations('errors');
   const t = useTranslations('en_managing_words');
   const { message } = App.useApp();
+  const [deleting, setDeleting] = React.useState(false);
 
   const onDelete = async () => {
-    const res = await EnApi.deleteWord(w.id);
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      const res = await EnApi.deleteWord(w.id);
 
-    if ('error' in res) {
-      const mes = tErr(res.message);
-      message.error(mes);
-    } else {
-      const mes = t('word_deleted_successfully');
-      message.success(mes);
-      onDeleted(w.id);
+      if ('error' in res) {
+        const mes = tErr(res.message);
+        message.error(mes);
+      } else {
+        const mes = t('word_deleted_successfully');
+        message.success(mes);
+        onDeleted(w.id);
+      }
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -57,7 +64,11 @@ export const FoundWord: React.FC<FoundWordP> = ({ w, onDeleted }) => {
         <Button type="primary" href={`/${locale}/managing/edit-word/${w.id}`}>
           <EditOutlined />
         </Button>
-        <Popover content={<DeletePopoverContent onDelete={onDelete} />} title={w.word} trigger="click">
+        <Popover
+          content={<DeletePopoverContent onDelete={onDelete} deleting={deleting} />}
+          title={w.word}
+          trigger="click"
+        >
           <Button type="primary" danger>
             <DeleteOutlined />
           </Button>

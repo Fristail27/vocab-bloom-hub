@@ -8,16 +8,17 @@ const { Text } = Typography;
 
 type DeletePopoverContentP = {
   onDelete: () => void;
+  deleting?: boolean;
 };
 
-export const DeletePopoverContent: React.FC<DeletePopoverContentP> = ({ onDelete }) => {
+export const DeletePopoverContent: React.FC<DeletePopoverContentP> = ({ onDelete, deleting = false }) => {
   const t = useTranslations('en_managing_words');
 
   return (
     <div className={styles.deletePopoverContent}>
       <Text>{t('delete_word_mes')}</Text>
       <Text strong>{t('cant_undone')}</Text>
-      <Button type="primary" danger onClick={onDelete}>
+      <Button type="primary" danger onClick={onDelete} loading={deleting} disabled={deleting}>
         <DeleteOutlined />
         {t('delete_word')}
       </Button>

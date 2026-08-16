@@ -22,6 +22,12 @@ export default {
       dark: 'Темная',
     },
     dictionary: 'Словарь',
+    something_went_wrong: 'Что-то пошло не так',
+    error_boundary_desc: 'При отображении этой страницы произошла непредвиденная ошибка.',
+    try_again: 'Попробовать снова',
+    page_not_found: 'Страница не найдена',
+    page_not_found_desc: 'Страница, которую вы ищете, не существует или была перемещена.',
+    go_home: 'На главную',
   },
   login: {
     username: 'Имя пользователя',

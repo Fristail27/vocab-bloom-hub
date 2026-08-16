@@ -22,6 +22,12 @@ export default {
       dark: 'dark',
     },
     dictionary: 'Dictionary',
+    something_went_wrong: 'Something went wrong',
+    error_boundary_desc: 'An unexpected error occurred while rendering this page.',
+    try_again: 'Try again',
+    page_not_found: 'Page not found',
+    page_not_found_desc: 'The page you are looking for does not exist or has been moved.',
+    go_home: 'Go to the home page',
   },
   login: {
     username: 'Username',

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Modal, Typography } from 'antd';
 import { AvailableTranslationLanguagesE, EnShortTranslationT } from 'server/types';
@@ -8,7 +8,7 @@ import { TranslationLanguageSelect } from '@/app/[locale]/(main-admin-content)/m
 const { Text } = Typography;
 type DeleteShortTranslationModalP = {
   onClose: () => void;
-  onOk: (t: EnShortTranslationT) => void;
+  onOk: (t: EnShortTranslationT) => void | Promise<void>;
   isOpen: boolean;
   translation: EnShortTranslationT | null;
 };
@@ -20,12 +20,25 @@ export const DeleteShortTranslationModal: React.FC<DeleteShortTranslationModalP>
   translation,
 }) => {
   const t = useTranslations('en_managing_words');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleOk = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await onOk(translation as EnShortTranslationT);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <Modal
       okButtonProps={{ danger: true }}
       title={t('delete_word_form')}
       open={isOpen}
-      onOk={() => onOk(translation as EnShortTranslationT)}
+      onOk={handleOk}
+      confirmLoading={submitting}
       onCancel={onClose}
       className={styles.deleteModal}
     >
