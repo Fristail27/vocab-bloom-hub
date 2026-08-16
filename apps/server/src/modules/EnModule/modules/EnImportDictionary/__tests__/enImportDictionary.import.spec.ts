@@ -1,7 +1,7 @@
 import '../../../__tests__/helpers/clearDatabaseUrl';
 
 import { afterAll, afterEach, beforeAll, describe, expect, it, jest } from '@jest/globals';
-import { InternalServerErrorException } from '@nestjs/common';
+import { InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { type Response as ExpressResponse } from 'express';
 
@@ -148,6 +148,7 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
   afterEach(async () => {
     jest.restoreAllMocks();
     mockUpsert.mockClear();
+    (service as unknown as { manifestCache: unknown }).manifestCache = null;
     await ds.synchronize(true);
   });
 
@@ -318,6 +319,38 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
       // no manifest — no version to report or persist
       expect(parsed.every((c) => c.datasetVersion === undefined)).toBe(true);
       expect(mockUpsert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getManifest (issue #197)', () => {
+    const manifestBody = () =>
+      JSON.stringify({
+        version: '0.3.0',
+        files: { 'vocab-bloom-hub-en-words.jsonl': { lines: 10 } },
+      });
+
+    it('returns the published manifest', async () => {
+      mockDatasetFiles({ 'manifest.json': manifestBody() });
+
+      const manifest = await service.getManifest();
+
+      expect(manifest.version).toBe('0.3.0');
+      expect(manifest.files['vocab-bloom-hub-en-words.jsonl']).toEqual({ lines: 10 });
+    });
+
+    it('caches the manifest instead of re-fetching it on every call', async () => {
+      mockDatasetFiles({ 'manifest.json': manifestBody() });
+
+      await service.getManifest();
+      await service.getManifest();
+
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('throws NotFoundException when no manifest is published', async () => {
+      mockDatasetFiles({}); // manifest responds with 404
+
+      await expect(service.getManifest()).rejects.toThrow(NotFoundException);
     });
   });
 

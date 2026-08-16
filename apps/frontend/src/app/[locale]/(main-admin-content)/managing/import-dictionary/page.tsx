@@ -5,6 +5,7 @@ import { Icon } from '@/core/ui/Icon';
 import { BreadcrumbSection } from '@/core/ui/Breadcrumb/components/ManagingBreadcrumbSection';
 import { CommonPageP } from '@/types/common';
 import { ServerSettingsApi } from '@/core/api/SettingsApi/ServerSettingsApi';
+import { ServerEnApi } from '@/core/api/EnApi/ServerEnApi';
 import { DATASET_VERSION_SETTINGS_FIELD } from 'server/src/modules/EnModule/modules/EnImportDictionary/constants';
 import { ImportDictionarySection } from './_components/ImportDictionarySection';
 import styles from './styles.module.scss';
@@ -13,8 +14,14 @@ export default async function ImportDictionaryPage({ params }: CommonPageP) {
   const { locale } = await params;
   const t = await getTranslations('menu');
   const manageT = await getTranslations('managing');
-  const settings = await ServerSettingsApi.getSettings();
+  const [settings, manifestRes] = await Promise.all([
+    ServerSettingsApi.getSettings(),
+    ServerEnApi.getDatasetManifest(),
+  ]);
   const yourVersion = settings[DATASET_VERSION_SETTINGS_FIELD];
+  // no manifest published yet (or the dataset host is unreachable) — the
+  // section falls back to the version streamed during the import itself
+  const latestVersion = 'error' in manifestRes ? undefined : manifestRes.version;
   const breadCrumbs = [
     { href: `/${locale}`, title: <Icon name="home" size="medium" /> },
     { href: `/${locale}/managing`, title: <BreadcrumbSection icon="managing" name={t('managing')} /> },
@@ -24,7 +31,7 @@ export default async function ImportDictionaryPage({ params }: CommonPageP) {
     <div className={styles.page}>
       <Title level={2}>{manageT('import_dictionary')}</Title>
       <Breadcrumb items={breadCrumbs} />
-      <ImportDictionarySection yourVersion={yourVersion} />
+      <ImportDictionarySection yourVersion={yourVersion} latestVersion={latestVersion} />
     </div>
   );
 }

@@ -16,20 +16,27 @@ const { Text } = Typography;
 type ImportDictionarySectionP = {
   // dataset version of the last successful import, from the settings store
   yourVersion?: string | undefined;
+  // dataset version from the published manifest, fetched server-side;
+  // undefined when the dataset has no manifest yet
+  latestVersion?: string | undefined;
 };
 
-export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({ yourVersion }) => {
+export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
+  yourVersion,
+  latestVersion: latestVersionProp,
+}) => {
   const [percents, setPercents] = React.useState<number>(0);
   const [status, setStatus] = React.useState<ImportStatusE>(ImportStatusE.idle);
   const [statusMessage, setStatusMessage] = React.useState<string>('');
   const [elapsedSeconds, setElapsedSeconds] = React.useState<number>(0);
   const [installedVersion, setInstalledVersion] = React.useState<string | undefined>(yourVersion);
-  const [latestVersion, setLatestVersion] = React.useState<string | undefined>(undefined);
+  const [latestVersion, setLatestVersion] = React.useState<string | undefined>(latestVersionProp);
   const t = useTranslations('import_dictionary');
   const tErr = useTranslations('errors');
   const { message } = App.useApp();
 
   const inProgress = status === ImportStatusE.in_progress;
+  const isUpToDate = !!installedVersion && !!latestVersion && installedVersion === latestVersion;
 
   React.useEffect(() => {
     if (!inProgress) return undefined;
@@ -122,8 +129,14 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({ yo
         status={progressStatus}
         format={(p = 0) => `${p.toFixed(2)}%`}
       />
+      {isUpToDate && !inProgress && <Text type="success">{t('up_to_date')}</Text>}
       {(status === ImportStatusE.idle || status === ImportStatusE.error) && (
-        <Button type="primary" onClick={importDictionary} className={styles.startBtn}>
+        // an up-to-date dictionary demotes the button but keeps re-import possible
+        <Button
+          type={isUpToDate ? 'default' : 'primary'}
+          onClick={importDictionary}
+          className={styles.startBtn}
+        >
           {status === ImportStatusE.error ? t('retry_importing') : t('start_importing')}
         </Button>
       )}

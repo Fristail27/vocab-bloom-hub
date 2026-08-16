@@ -11,6 +11,7 @@ export default {
     [ErrorCodes.word_already_exists]: 'Слово уже существует',
     [ErrorCodes.phrasal_base_doesnt_exist]: 'Базова форма фразового глагола не существует.',
     [ErrorCodes.word_doesnt_found]: 'Слово не найдено',
+    [ErrorCodes.dataset_manifest_not_found]: 'Манифест датасета не найден',
     [ErrorCodes.translation_doesnt_found]: 'Перевод не найден',
     [ErrorCodes.setting_field_doesnt_found]: 'Поле не найдено',
     [ErrorCodes.setting_field_already_exists]: 'Поле уже существует',
@@ -66,6 +67,7 @@ export default {
     retry_importing: 'Повторить',
     retry_exporting: 'Повторить',
     export_again: 'Сохранить снова',
+    up_to_date: 'У вас уже актуальная версия словаря',
   },
   en_managing_words: {
     word: 'Слово',

@@ -49,12 +49,17 @@ import { PendingExport } from './types';
 
 const DATASET_BASE_URL = 'https://huggingface.co/datasets/Fristail27/vocab-bloom-hub-en/resolve/main/data';
 const EXPORT_TTL_MS = 15 * 60 * 1000;
+// The manifest endpoint proxies HuggingFace; cache it briefly so opening the
+// import page repeatedly does not hammer the dataset host
+const MANIFEST_CACHE_TTL_MS = 5 * 60 * 1000;
 
 @Injectable()
 export class EnImportDictionaryService {
   private readonly logger = new Logger(EnImportDictionaryService.name);
 
   private readonly pendingExports = new Map<string, PendingExport>();
+
+  private manifestCache: { manifest: DatasetManifestT; fetchedAt: number } | null = null;
 
   constructor(
     @InjectRepository(EnWord)
@@ -91,6 +96,24 @@ export class EnImportDictionaryService {
       );
       return null;
     }
+  }
+
+  /**
+   * The version check the import UI runs before starting an import.
+   * Serves a briefly cached copy of the published manifest.json.
+   */
+  async getManifest(): Promise<DatasetManifestT> {
+    if (this.manifestCache && Date.now() - this.manifestCache.fetchedAt < MANIFEST_CACHE_TTL_MS) {
+      return this.manifestCache.manifest;
+    }
+
+    const manifest = await this.fetchManifest();
+    if (!manifest) {
+      throw new NotFoundException(ErrorCodes.dataset_manifest_not_found);
+    }
+
+    this.manifestCache = { manifest, fetchedAt: Date.now() };
+    return manifest;
   }
 
   private async streamJsonlImport<T>(
