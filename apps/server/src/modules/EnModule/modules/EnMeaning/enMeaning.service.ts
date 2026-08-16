@@ -66,7 +66,8 @@ export class EnMeaningService {
       meaning.language_register = body.language_register;
     if (body.area_variant && body.area_variant !== meaning.area_variant)
       meaning.area_variant = body.area_variant;
-    if (body.examples && body.examples.join() !== meaning.examples.join()) meaning.examples = body.examples;
+    // examples is a nullable column: rows imported without examples hold NULL
+    if (body.examples && body.examples.join() !== meaning.examples?.join()) meaning.examples = body.examples;
     if (body.categories && body.categories.join() !== meaning.categories?.join())
       meaning.categories = body.categories;
 
