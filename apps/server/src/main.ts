@@ -39,9 +39,11 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule, { logger: getLogLevels() });
   const httpServer = app.getHttpServer();
-  httpServer.requestTimeout = 20 * 60 * 1000;
-  httpServer.headersTimeout = 20 * 60 * 1000 + 1000; // должен быть чуть больше keepAliveTimeout
-  httpServer.keepAliveTimeout = 20 * 60 * 1000;
+  // The batched dictionary import finishes in minutes and streams progress
+  // continuously, so the long-request budget no longer needs 20-minute timeouts
+  httpServer.requestTimeout = 5 * 60 * 1000;
+  httpServer.headersTimeout = 5 * 60 * 1000 + 1000; // должен быть чуть больше keepAliveTimeout
+  httpServer.keepAliveTimeout = 5 * 60 * 1000;
 
   // Swagger UI relies on an inline bootstrap script, so script-src additionally
   // allows inline scripts while it is served; production keeps the full defaults

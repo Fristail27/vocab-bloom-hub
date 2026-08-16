@@ -41,6 +41,7 @@
     "migration:run": "typeorm-ts-node-commonjs migration:run -d src/db/data-source.ts",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/db/data-source.ts",
     "migration:show": "typeorm-ts-node-commonjs migration:show -d src/db/data-source.ts",
+    "db:reset": "typeorm-ts-node-commonjs schema:drop -d src/db/data-source.ts && typeorm-ts-node-commonjs migration:run -d src/db/data-source.ts",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",

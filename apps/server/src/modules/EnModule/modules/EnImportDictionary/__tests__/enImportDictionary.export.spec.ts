@@ -133,7 +133,7 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
     const enService = new EnService(ds.getRepository(EnWord), ds, shortTranslationService, meaningService);
 
     const settingsService = { upsert: jest.fn() } as unknown as SettingsService;
-    service = new EnImportDictionaryService(ds.getRepository(EnWord), enService, settingsService);
+    service = new EnImportDictionaryService(ds.getRepository(EnWord), settingsService);
 
     await enService.addWord(makeWordBody('run'));
     // a phrasal pair so the export produces a phrasal-verbs linking line

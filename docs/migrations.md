@@ -26,7 +26,12 @@ DATABASE_URL=... yarn workspace server migration:run                            
 DATABASE_URL=... yarn workspace server migration:revert                                  # roll back the last one
 DATABASE_URL=... yarn workspace server migration:generate src/db/migrations/MyChange     # diff entities vs DB
 yarn workspace server migration:create src/db/migrations/MyDataFix                       # empty migration skeleton
+DATABASE_URL=... yarn workspace server db:reset                                          # DEV ONLY: wipe schema, re-run all migrations
 ```
+
+`db:reset` drops every table and type in the database and replays all migrations from
+scratch — a factory reset for a broken or half-migrated **development** database. Never point
+it at a database whose data you care about.
 
 `DATABASE_URL` may also come from the root `.env` — the CLI DataSource loads it the same way
 the server does. A variable already set in the shell wins over the `.env` value.
@@ -109,6 +114,13 @@ fail on `CREATE TABLE` statements for tables that already exist.
 
 - **`DATABASE_URL must be set to run migration commands`** — the CLI DataSource refuses to run
   against SQLite. Export `DATABASE_URL` or put it in the root `.env`.
+- **Baseline fails with `type "..." already exists`** — the database holds orphaned enum types
+  (e.g. tables were dropped manually but Postgres types survived). The baseline drops such
+  orphans itself (`DROP TYPE IF EXISTS` before every `CREATE TYPE`), so update to a version
+  that includes it or run `db:reset` to start from a clean schema.
+- **Baseline fails with `cannot drop type ... because other objects depend on it`** — the
+  database has a real schema created by the old `synchronize` but no migrations bookkeeping;
+  adopt it with `migration:run --fake` (see above) instead of executing the baseline.
 - **`migration:generate` produces a huge diff or wants to drop everything** — the target
   database is not at the current schema. Run `migration:run` first (or point at the right
   database), then generate.
