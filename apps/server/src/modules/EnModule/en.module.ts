@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { SettingsModule } from '../SettingsModule/settings.module';
 import { EnController } from './en.controller';
 import { EnService } from './en.service';
 import { EnMeaning } from './entities/en_meaning.entity';
@@ -21,7 +22,11 @@ import { EnStatisticsController } from './modules/EnStatistics/enStatistics.cont
 import { EnStatisticsService } from './modules/EnStatistics/enStatistics.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([EnEntry, EnWord, EnMeaning, EnMeaningTranslation, EnShortTranslation])],
+  imports: [
+    TypeOrmModule.forFeature([EnEntry, EnWord, EnMeaning, EnMeaningTranslation, EnShortTranslation]),
+    // the import service records the dataset version of the last import
+    SettingsModule,
+  ],
   controllers: [
     // EnStatisticsController must be registered before EnController,
     // otherwise GET /api/en/statistics is swallowed by the GET /api/en/:id route

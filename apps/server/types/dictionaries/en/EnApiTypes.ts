@@ -60,6 +60,16 @@ export type ImportDictionaryChunkT = {
   downloaded?: number | undefined;
   total?: number | undefined;
   exportId?: string | undefined;
+  datasetVersion?: string | undefined;
+};
+
+// manifest.json stored next to the jsonl files in the dataset repository;
+// the export writes it into the archive, the import reads it for progress
+// totals and the dataset version
+export type DatasetManifestT = {
+  version: string;
+  generatedAt?: string | undefined;
+  files: Record<string, { lines: number }>;
 };
 
 export type EnPosStatT = { part_of_speech: EnPartOfSpeechE; count: number };

@@ -9,5 +9,6 @@ import { Settings } from './entities/settings.entity';
   imports: [TypeOrmModule.forFeature([Settings])],
   controllers: [SettingsController],
   providers: [SettingsService],
+  exports: [SettingsService],
 })
 export class SettingsModule {}

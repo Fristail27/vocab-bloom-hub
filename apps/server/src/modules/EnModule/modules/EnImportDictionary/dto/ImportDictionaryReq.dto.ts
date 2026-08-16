@@ -1,9 +1,3 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
-
-export class ImportDictionaryReq {
-  @ApiProperty()
-  @IsOptional()
-  @IsString()
-  user_version?: string | undefined;
-}
+// The request body is intentionally empty: the dataset version is read from
+// the manifest.json published with the dataset, not sent by the client
+export class ImportDictionaryReq {}

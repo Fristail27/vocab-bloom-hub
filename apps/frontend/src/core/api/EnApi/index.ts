@@ -161,11 +161,12 @@ export class EnApi extends AbstractBaseApi {
   }
 
   static async importDictionary(
-    version: string,
     handleChunk: (ch: ImportDictionaryChunkT) => void,
     onError: (err: string) => void,
   ): Promise<{ success: boolean } | ErrorResT> {
-    const body: ImportDictionaryReqT = { user_version: version };
+    // The dataset version comes back from the server (manifest.json), the
+    // client no longer sends one
+    const body: ImportDictionaryReqT = {};
     const reader = await AbstractBaseApi.stream(`${this.baseURL}/en/dictionary/import`, {
       method: 'POST',
       body: body as BodyInit,

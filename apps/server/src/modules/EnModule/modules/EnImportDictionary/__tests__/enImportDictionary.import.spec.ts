@@ -15,7 +15,8 @@ import { EnShortTranslationService } from '../../EnShortTranslation/enShortTrans
 import { EnMeaningService } from '../../EnMeaning/enMeaning.service';
 import { EnMeaningTranslationService } from '../../EnMeaningTranslation/enMeaningTranslation.service';
 import { EnImportDictionaryService } from '../enImportDictionary.service';
-import { EnDictionaryImportPhasesE } from '../constants';
+import { SettingsService } from '../../../../SettingsModule/settings.service';
+import { DATASET_VERSION_SETTINGS_FIELD, EnDictionaryImportPhasesE } from '../constants';
 import { AvailableTranslationLanguagesE, EnEntryTypesE, EnPartOfSpeechE } from '../../../../../../types';
 
 type ProgressChunk = {
@@ -23,6 +24,7 @@ type ProgressChunk = {
   stage: EnDictionaryImportPhasesE;
   downloaded?: number;
   total?: number;
+  datasetVersion?: string;
 };
 
 class FakeProgressRes {
@@ -103,6 +105,11 @@ const mockDatasetFiles = (files: Record<string, string>) => {
   });
 };
 
+const mockUpsert = jest.fn<(field: string, value: string) => Promise<{ success: boolean }>>(async () => ({
+  success: true,
+}));
+const mockSettingsService = { upsert: mockUpsert } as unknown as SettingsService;
+
 describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
   let ds: DataSource;
   let service: EnImportDictionaryService;
@@ -131,7 +138,7 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
     );
     const enService = new EnService(ds.getRepository(EnWord), ds, shortTranslationService, meaningService);
 
-    service = new EnImportDictionaryService(ds.getRepository(EnWord), enService);
+    service = new EnImportDictionaryService(ds.getRepository(EnWord), enService, mockSettingsService);
   });
 
   afterAll(async () => {
@@ -140,12 +147,26 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
 
   afterEach(async () => {
     jest.restoreAllMocks();
+    mockUpsert.mockClear();
     await ds.synchronize(true);
   });
 
   describe('full import flow', () => {
-    const runImport = async (): Promise<FakeProgressRes> => {
+    const makeManifest = () =>
+      JSON.stringify({
+        version: '0.2.0',
+        generatedAt: '2026-08-16T00:00:00Z',
+        files: {
+          'vocab-bloom-hub-en-words.jsonl': { lines: 3 },
+          'vocab-bloom-hub-en-phrasal-verbs.jsonl': { lines: 2 },
+          'vocab-bloom-hub-en-grammar-patterns.jsonl': { lines: 1 },
+          'vocab-bloom-hub-en-phrases.jsonl': { lines: 1 },
+        },
+      });
+
+    const runImport = async (withManifest = true): Promise<FakeProgressRes> => {
       mockDatasetFiles({
+        ...(withManifest && { 'manifest.json': makeManifest() }),
         'vocab-bloom-hub-en-words.jsonl':
           toNdjson([
             makeSetWord('give', {
@@ -266,11 +287,37 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
       expect(stages).toContain(EnDictionaryImportPhasesE.completed);
 
       const finalChunk = parsed[parsed.length - 1];
-      expect(finalChunk).toEqual({ percent: 100, stage: EnDictionaryImportPhasesE.completed });
+      expect(finalChunk).toEqual({
+        percent: 100,
+        stage: EnDictionaryImportPhasesE.completed,
+        datasetVersion: '0.2.0',
+      });
 
       // download progress carries byte counters
       const downloadChunk = parsed.find((c) => c.downloaded !== undefined);
       expect(downloadChunk?.total).toBeGreaterThan(0);
+    });
+
+    it('reports the manifest dataset version and stores it after a successful import', async () => {
+      const res = await runImport();
+
+      const firstChunk = JSON.parse(res.chunks[0]) as ProgressChunk;
+      expect(firstChunk.datasetVersion).toBe('0.2.0');
+
+      expect(mockUpsert).toHaveBeenCalledWith(DATASET_VERSION_SETTINGS_FIELD, '0.2.0');
+    });
+
+    it('falls back to the legacy totals when the manifest is missing', async () => {
+      const res = await runImport(false);
+
+      // the import still completes on the legacy line counts
+      expect(await ds.getRepository(EnWord).count()).toBe(4);
+      const parsed = res.chunks.map((c) => JSON.parse(c) as ProgressChunk);
+      expect(parsed[parsed.length - 1].stage).toBe(EnDictionaryImportPhasesE.completed);
+
+      // no manifest — no version to report or persist
+      expect(parsed.every((c) => c.datasetVersion === undefined)).toBe(true);
+      expect(mockUpsert).not.toHaveBeenCalled();
     });
   });
 
