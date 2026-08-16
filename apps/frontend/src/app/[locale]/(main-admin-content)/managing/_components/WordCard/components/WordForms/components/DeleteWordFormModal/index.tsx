@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Modal, Typography } from 'antd';
 import { EnWordFormT } from 'server/types';
@@ -7,19 +7,32 @@ import styles from './styles.module.scss';
 const { Text } = Typography;
 type AddOrEditWordFormModalP = {
   onClose: () => void;
-  onOk: (f: EnWordFormT) => void;
+  onOk: (f: EnWordFormT) => void | Promise<void>;
   isOpen: boolean;
   form: EnWordFormT;
 };
 
 export const DeleteWordFormModal: React.FC<AddOrEditWordFormModalP> = ({ isOpen, onClose, onOk, form }) => {
   const t = useTranslations('en_managing_words');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleOk = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await onOk(form);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <Modal
       okButtonProps={{ danger: true }}
       title={t('delete_word_form')}
       open={isOpen}
-      onOk={() => onOk(form)}
+      onOk={handleOk}
+      confirmLoading={submitting}
       onCancel={onClose}
       className={styles.deleteModal}
     >

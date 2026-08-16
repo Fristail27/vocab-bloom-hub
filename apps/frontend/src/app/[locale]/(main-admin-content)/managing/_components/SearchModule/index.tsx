@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { App } from 'antd';
+import { App, Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
 import { EnWordT } from 'server/types';
 import { Input } from '@/core/ui/Input';
@@ -16,12 +16,15 @@ export const SearchModule: React.FC = () => {
   const { message } = App.useApp();
   const [searchValue, setSearchValue] = useState<string>('');
   const [words, setWords] = useState<EnWordT[]>([]);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
   const debouncedValue = useDebounced(searchValue, 400);
 
   useEffect(() => {
     (async () => {
       if (debouncedValue.length > 0) {
+        setIsSearching(true);
         const res = await EnApi.search(debouncedValue);
+        setIsSearching(false);
         if ('error' in res) {
           const mes = tErr(res.message);
           message.error(mes);
@@ -40,13 +43,15 @@ export const SearchModule: React.FC = () => {
         onChange={(e) => setSearchValue(e.target.value)}
       />
       <div>
-        {words.map((w) => (
-          <FoundWord
-            key={w.id}
-            w={w}
-            onDeleted={(id) => setWords((prev) => prev.filter((word) => word.id !== id))}
-          />
-        ))}
+        {isSearching && <Skeleton active paragraph={{ rows: 4 }} title={false} />}
+        {!isSearching &&
+          words.map((w) => (
+            <FoundWord
+              key={w.id}
+              w={w}
+              onDeleted={(id) => setWords((prev) => prev.filter((word) => word.id !== id))}
+            />
+          ))}
       </div>
     </section>
   );

@@ -27,6 +27,7 @@ export const CheckingBasePhrasalVerb: React.FC<VerbSettingsP> = ({ onChange, val
   const [statusOfPresence, setStatusOfPresence] = useState<StatusOfWordPresenceE>(
     StatusOfWordPresenceE.notChecked,
   );
+  const [checking, setChecking] = useState(false);
 
   const onChangeHandler: ChangeEventHandler<HTMLInputElement, HTMLInputElement> = (e) => {
     setStatusOfPresence(StatusOfWordPresenceE.notChecked);
@@ -34,14 +35,20 @@ export const CheckingBasePhrasalVerb: React.FC<VerbSettingsP> = ({ onChange, val
   };
 
   const checkPhrasalBase = async () => {
-    const res = await EnApi.checkWord(value as string, EnPartOfSpeechE.verb, true);
-    if ('error' in res) {
-      message.error(tError(res.message));
-    } else {
-      setStatusOfPresence(res.hasWord ? StatusOfWordPresenceE.present : StatusOfWordPresenceE.absent);
-      if (setCheckedId && res.hasWord && res.id) {
-        setCheckedId(res.id);
+    if (checking || !value?.trim()) return;
+    setChecking(true);
+    try {
+      const res = await EnApi.checkWord(value, EnPartOfSpeechE.verb, true);
+      if ('error' in res) {
+        message.error(tError(res.message));
+      } else {
+        setStatusOfPresence(res.hasWord ? StatusOfWordPresenceE.present : StatusOfWordPresenceE.absent);
+        if (setCheckedId && res.hasWord && res.id) {
+          setCheckedId(res.id);
+        }
       }
+    } finally {
+      setChecking(false);
     }
   };
 
@@ -56,7 +63,13 @@ export const CheckingBasePhrasalVerb: React.FC<VerbSettingsP> = ({ onChange, val
           onChange={onChangeHandler}
           value={value || ''}
         />
-        <Button onClick={checkPhrasalBase} size="middle" type="primary">
+        <Button
+          onClick={checkPhrasalBase}
+          size="middle"
+          type="primary"
+          loading={checking}
+          disabled={checking || !value?.trim()}
+        >
           <CheckCircleOutlined />
         </Button>
       </div>
