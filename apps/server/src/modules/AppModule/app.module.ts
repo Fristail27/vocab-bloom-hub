@@ -1,18 +1,12 @@
-import * as path from 'path';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
-import configuration, { checkIsPostgres } from '../../../configuration';
+import configuration from '../../../configuration';
 import { AuthModule } from '../AuthModule/auth.module';
 import { EnModule } from '../EnModule/en.module';
-import { EnWord } from '../EnModule/entities/en_word.entity';
-import { EnMeaning } from '../EnModule/entities/en_meaning.entity';
-import { EnMeaningTranslation } from '../EnModule/entities/en_meaning_translation.entity';
-import { EnEntry } from '../EnModule/entities/en_entry.entity';
-import { EnShortTranslation } from '../EnModule/entities/en_short_translation.entity';
 import { SettingsModule } from '../SettingsModule/settings.module';
-import { Settings } from '../SettingsModule/entities/settings.entity';
+import { buildTypeOrmOptions } from '../../db/typeorm-options';
 
 @Module({
   imports: [
@@ -23,32 +17,7 @@ import { Settings } from '../SettingsModule/entities/settings.entity';
     // Гвард (AppThrottlerGuard) вешается точечно на login и search.
     ThrottlerModule.forRoot({ throttlers: [{ ttl: 60_000, limit: 100 }] }),
     TypeOrmModule.forRootAsync({
-      useFactory: (): TypeOrmModuleOptions => {
-        const base = {
-          entities: [EnEntry, EnWord, EnMeaning, EnMeaningTranslation, EnShortTranslation, Settings],
-          autoLoadEntities: true,
-          synchronize: process.env.NODE_ENV === 'development',
-        };
-
-        // checkIsPostgres() is locked at the first call (entity import), so the
-        // DataSource driver can never diverge from the entity column types
-        if (checkIsPostgres()) {
-          return {
-            ...base,
-            type: 'postgres',
-            url: process.env.DATABASE_URL,
-          };
-        }
-
-        return {
-          ...base,
-          type: 'better-sqlite3',
-          database: path.join(process.cwd(), '..', '..', 'dev.sqlite'),
-          prepareDatabase: (db) => {
-            db.pragma('foreign_keys = ON');
-          },
-        };
-      },
+      useFactory: buildTypeOrmOptions,
     }),
     ConfigModule.forRoot({
       isGlobal: true,

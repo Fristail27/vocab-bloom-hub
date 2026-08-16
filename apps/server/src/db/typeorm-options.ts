@@ -1,0 +1,50 @@
+import * as path from 'path';
+import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { checkIsPostgres } from '../../configuration';
+import { EnEntry } from '../modules/EnModule/entities/en_entry.entity';
+import { EnWord } from '../modules/EnModule/entities/en_word.entity';
+import { EnMeaning } from '../modules/EnModule/entities/en_meaning.entity';
+import { EnMeaningTranslation } from '../modules/EnModule/entities/en_meaning_translation.entity';
+import { EnShortTranslation } from '../modules/EnModule/entities/en_short_translation.entity';
+import { Settings } from '../modules/SettingsModule/entities/settings.entity';
+import { migrations } from './migrations';
+
+export const DB_ENTITIES = [EnEntry, EnWord, EnMeaning, EnMeaningTranslation, EnShortTranslation, Settings];
+
+// checkIsPostgres() is locked at the first call (entity import), so the
+// DataSource driver can never diverge from the entity column types
+export const buildTypeOrmOptions = (): TypeOrmModuleOptions => {
+  const base = {
+    entities: DB_ENTITIES,
+    autoLoadEntities: true,
+  };
+
+  if (checkIsPostgres()) {
+    return {
+      ...base,
+      type: 'postgres',
+      url: process.env.DATABASE_URL,
+      // Schema changes reach Postgres only through committed migrations;
+      // auto-DDL against a real database is destructive (see issue #181)
+      synchronize: false,
+      migrations,
+      // Pending migrations run on server start, before requests are accepted.
+      // A failed migration keeps the server down instead of serving a schema
+      // the code does not match.
+      migrationsRun: true,
+    };
+  }
+
+  return {
+    ...base,
+    type: 'better-sqlite3',
+    database: path.join(process.cwd(), '..', '..', 'dev.sqlite'),
+    // The SQLite fallback is a development-only database (production requires
+    // DATABASE_URL, see assertRequiredConfig): auto-DDL keeps it in sync with
+    // the entities without migrations
+    synchronize: true,
+    prepareDatabase: (db) => {
+      db.pragma('foreign_keys = ON');
+    },
+  };
+};

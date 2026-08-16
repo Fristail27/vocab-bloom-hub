@@ -32,7 +32,17 @@ Test files are `*.spec.ts(x)`, colocated with code (e.g. in `__tests__/` dirs). 
 
 A single `.env` at the repo root is used by both apps (frontend scripts wrap with `dotenv -e ../../.env`; server loads it at the top of `src/main.ts`). Relevant vars: `SERVER_PORT`, `FRONT_PORT`, `DATABASE_URL`, `USERNAME`, `PASSWORD`, `NEXT_PUBLIC_BASE_API_URL`, `LOG_LEVEL` (server log verbosity: `verbose`/`debug`/`log`/`warn`/`error`/`fatal`; defaults to `debug` in development, `log` otherwise).
 
-Database: if `DATABASE_URL` is set, TypeORM connects to Postgres; otherwise it falls back to `dev.sqlite` at the repo root (better-sqlite3). There are no migrations — `synchronize: true` when `NODE_ENV === 'development'`, so entity changes reshape the schema automatically in dev.
+Database: if `DATABASE_URL` is set, TypeORM connects to Postgres; otherwise it falls back to `dev.sqlite` at the repo root (better-sqlite3). The two modes manage the schema differently (config in `apps/server/src/db/typeorm-options.ts`):
+
+- **SQLite (dev fallback)** — `synchronize: true`, entity changes reshape the schema automatically. No migrations.
+- **Postgres** — `synchronize` is off; the schema is managed by TypeORM migrations in `apps/server/src/db/migrations/`, which run automatically on server start (`migrationsRun`). After changing an entity, generate a migration against a Postgres instance with the current schema and register the new class in `src/db/migrations/index.ts` (the CLI and the runtime read that explicit list, not a glob):
+
+```bash
+DATABASE_URL=postgres://... yarn workspace server migration:generate src/db/migrations/MyChange
+yarn workspace server migration:run / migration:revert / migration:show   # need DATABASE_URL too
+```
+
+For a pre-existing database whose tables were created by the old `synchronize`, mark the baseline as applied without executing it: `yarn workspace server migration:run --fake`. Full workflow (hand-written migrations, deployment, troubleshooting): `docs/migrations.md`.
 
 ## Architecture
 
