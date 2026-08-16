@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsRelations, FindOptionsWhere, In, MoreThan, Not, Repository } from 'typeorm';
+import { EntityManager, FindOptionsRelations, FindOptionsWhere, In, MoreThan, Not, Repository } from 'typeorm';
 import * as yazl from 'yazl';
 import { randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream, existsSync, mkdirSync } from 'node:fs';
@@ -18,9 +18,19 @@ import { Readable } from 'node:stream';
 import * as readline from 'node:readline';
 import { type Response } from 'express';
 import { EnWord } from '../../entities/en_word.entity';
+import { EnEntry } from '../../entities/en_entry.entity';
+import { EnMeaning } from '../../entities/en_meaning.entity';
+import { EnMeaningTranslation } from '../../entities/en_meaning_translation.entity';
+import { EnShortTranslation } from '../../entities/en_short_translation.entity';
 import { ImportDictionaryReq } from './dto/ImportDictionaryReq.dto';
-import { DatasetManifestT, EnPartOfSpeechE, EnWordFormsE, ImportDictionaryChunkT } from '../../../../../types';
-import { EnService } from '../../en.service';
+import {
+  DatasetManifestT,
+  EnEntryTypesE,
+  EnPartOfSpeechE,
+  EnWordFormsE,
+  EnWordT,
+  ImportDictionaryChunkT,
+} from '../../../../../types';
 import { SettingsService } from '../../../SettingsModule/settings.service';
 import { ErrorCodes } from '../../../../../core/constants/error_codes';
 import { getVersion } from '../../../../../configuration';
@@ -49,6 +59,12 @@ import { PendingExport } from './types';
 
 const DATASET_BASE_URL = 'https://huggingface.co/datasets/Fristail27/vocab-bloom-hub-en/resolve/main/data';
 const EXPORT_TTL_MS = 15 * 60 * 1000;
+// Dataset lines are imported in transactional chunks of this size; each chunk
+// costs a handful of bulk queries instead of ~26 queries per line
+const IMPORT_CHUNK_SIZE = 500;
+// Keep IN (...) lists and multi-row VALUES well below the driver parameter
+// limits (SQLite: 32766, Postgres: 65535)
+const SQL_PARAMS_CHUNK = 500;
 // The manifest endpoint proxies HuggingFace; cache it briefly so opening the
 // import page repeatedly does not hammer the dataset host
 const MANIFEST_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -64,8 +80,6 @@ export class EnImportDictionaryService {
   constructor(
     @InjectRepository(EnWord)
     private readonly enWordsRep: Repository<EnWord>,
-
-    private readonly enService: EnService,
 
     private readonly settingsService: SettingsService,
   ) {}
@@ -122,7 +136,7 @@ export class EnImportDictionaryService {
     stage: EnDictionaryImportPhasesE,
     allLength: number,
     plusCount: () => number,
-    handleLine: (line: T) => Promise<void>,
+    handleChunk: (lines: T[]) => Promise<void>,
   ): Promise<void> {
     const filePath = await this.downloadFile(fileName, res, EnDictionaryImportPhasesE.downloading_database);
 
@@ -136,34 +150,35 @@ export class EnImportDictionaryService {
       });
 
       let lineNo = 0;
+      let chunk: T[] = [];
+
+      const flush = async () => {
+        if (chunk.length === 0) return;
+        const lines = chunk;
+        chunk = [];
+        await handleChunk(lines);
+        let count = 0;
+        for (let i = 0; i < lines.length; i++) count = plusCount();
+        await this.reportImportProgress(res, count + 1, allLength, stage);
+      };
+
       for await (const l of rl) {
         lineNo++;
         if (!l.trim()) continue;
-        const count = plusCount();
-
-        try {
-          const line: T = JSON.parse(l);
-          await handleLine(line);
-        } catch (error) {
-          const isDuplicate = error instanceof Error && error.message === ErrorCodes.word_already_exists;
-          if (!isDuplicate) {
-            this.logger.error(
-              `Import of "${fileName}" failed at line ${lineNo}`,
-              error instanceof Error ? error.stack : String(error),
-            );
-            if (error instanceof HttpException) {
-              throw error;
-            }
-            throw new InternalServerErrorException(ErrorCodes.internal_server_error);
-          }
-        }
-
-        await this.reportImportProgress(res, count, allLength, stage);
+        chunk.push(JSON.parse(l) as T);
+        if (chunk.length >= IMPORT_CHUNK_SIZE) await flush();
       }
+      await flush();
 
       this.logger.log(
         `Import stage "${stage}" finished: ${lineNo} lines from "${fileName}" in ${Date.now() - startedAt}ms`,
       );
+    } catch (error) {
+      this.logger.error(`Import of "${fileName}" failed`, error instanceof Error ? error.stack : String(error));
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(ErrorCodes.internal_server_error);
     } finally {
       await unlink(filePath).catch(() => {});
     }
@@ -226,19 +241,221 @@ export class EnImportDictionaryService {
     return filePath;
   }
 
+  // Called once per imported chunk; the tiny pause lets the progress stream flush
   private async reportImportProgress(
     res: Response,
     count: number,
     allLength: number,
     stage: EnDictionaryImportPhasesE,
   ): Promise<void> {
-    if (count % 50 !== 0) return;
     const chunk: ImportDictionaryChunkT = {
       percent: Math.min(100, (count / allLength) * 100),
       stage,
     };
     res.write(JSON.stringify(chunk) + '\n');
     await new Promise((r) => setTimeout(r, 1));
+  }
+
+  private static chunked<T>(items: T[], size: number): T[][] {
+    const out: T[][] = [];
+    for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+    return out;
+  }
+
+  private static wordKey(word: string, pos: string, form: string): string {
+    return `${word}\u0000${pos}\u0000${form}`;
+  }
+
+  private static entryTypeOf(pos: EnPartOfSpeechE): EnEntryTypesE {
+    if (pos === EnPartOfSpeechE.phrase) return EnEntryTypesE.phrase;
+    if (pos === EnPartOfSpeechE.grammar_pattern) return EnEntryTypesE.grammar_pattern;
+    return EnEntryTypesE.word;
+  }
+
+  // Loads the ids of base-form rows for the given entry spellings in bulk
+  private async selectWordRows(
+    em: EntityManager,
+    names: string[],
+  ): Promise<Array<{ id: number; word: string; pos: string; form: string }>> {
+    const rows: Array<{ id: number; word: string; pos: string; form: string }> = [];
+    for (const batch of EnImportDictionaryService.chunked(names, SQL_PARAMS_CHUNK)) {
+      const raw = await em
+        .getRepository(EnWord)
+        .createQueryBuilder('w')
+        .innerJoin('w.word', 'entry')
+        .select('w.id', 'id')
+        .addSelect('entry.word', 'word')
+        .addSelect('w.part_of_speech', 'pos')
+        .addSelect('w.form_of_word', 'form')
+        .where('entry.word IN (:...batch)', { batch })
+        .getRawMany<{ id: number; word: string; pos: string; form: string }>();
+      rows.push(...raw);
+    }
+    return rows;
+  }
+
+  /**
+   * Saves a chunk of dataset lines with bulk queries in one transaction.
+   * Replays what EnService.addWord does per line — entry reuse, duplicate
+   * skipping, base row + forms + meanings + translations — at a cost of a
+   * handful of queries per chunk instead of ~26 per line.
+   */
+  private async bulkSaveWords(lines: EnWordT[]): Promise<void> {
+    const { chunked, wordKey, entryTypeOf } = EnImportDictionaryService;
+
+    await this.enWordsRep.manager.transaction(async (em) => {
+      // 1. every entry spelling this chunk needs (base words + their forms)
+      const entryTypes = new Map<string, EnEntryTypesE>();
+      for (const line of lines) {
+        if (!entryTypes.has(line.word)) entryTypes.set(line.word, entryTypeOf(line.part_of_speech));
+        for (const f of line.forms ?? []) {
+          if (!entryTypes.has(f.word)) entryTypes.set(f.word, EnEntryTypesE.word);
+        }
+      }
+      const entryNames = [...entryTypes.keys()];
+
+      // 2. reuse existing entries, insert the missing ones
+      const existingEntries = new Set<string>();
+      for (const batch of chunked(entryNames, SQL_PARAMS_CHUNK)) {
+        const rows = await em.getRepository(EnEntry).find({ where: { word: In(batch) } });
+        rows.forEach((r) => existingEntries.add(r.word));
+      }
+      const newEntries = entryNames
+        .filter((w) => !existingEntries.has(w))
+        .map((word) => ({ word, type: entryTypes.get(word) }));
+      for (const batch of chunked(newEntries, SQL_PARAMS_CHUNK)) {
+        await em.getRepository(EnEntry).insert(batch);
+      }
+
+      // 3. skip duplicates: rows with the same (word, pos, form) already in the DB
+      const seen = new Set<string>();
+      (await this.selectWordRows(em, entryNames)).forEach((r) => seen.add(wordKey(r.word, r.pos, r.form)));
+
+      const toInsert: EnWordT[] = [];
+      let skipped = 0;
+      for (const line of lines) {
+        const key = wordKey(line.word, line.part_of_speech, line.form_of_word);
+        if (seen.has(key)) {
+          skipped++;
+          continue;
+        }
+        seen.add(key);
+        toInsert.push(line);
+      }
+      if (skipped > 0) {
+        this.logger.log(`Skipped ${skipped} duplicate dataset lines in this chunk`);
+      }
+      if (toInsert.length === 0) return;
+
+      // 4. base rows in bulk (nested structures stripped, entry linked by its string PK)
+      const toBaseRow = (line: EnWordT) => {
+        const {
+          id: _id,
+          word,
+          base_phrasal: _basePhrasal,
+          base_form: _baseForm,
+          forms: _forms,
+          meanings: _meanings,
+          short_translations: _shortTranslations,
+          phrasal_variants: _phrasalVariants,
+          ...rest
+        } = line;
+        return { ...rest, word: { word } as EnEntry };
+      };
+      for (const batch of chunked(toInsert, SQL_PARAMS_CHUNK)) {
+        await em.getRepository(EnWord).insert(batch.map(toBaseRow));
+      }
+
+      // 5. fetch the generated ids back by natural key
+      const idByKey = new Map<string, number>();
+      const insertedNames = [...new Set(toInsert.map((l) => l.word))];
+      (await this.selectWordRows(em, insertedNames)).forEach((r) =>
+        idByKey.set(wordKey(r.word, r.pos, r.form), r.id),
+      );
+
+      // 6. forms in bulk, deduplicated the same way base rows are
+      const formRows = [];
+      for (const line of toInsert) {
+        const baseId = idByKey.get(wordKey(line.word, line.part_of_speech, line.form_of_word));
+        for (const f of line.forms ?? []) {
+          const key = wordKey(f.word, line.part_of_speech, f.form_of_word);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const { id: _fid, word: formWord, ...fRest } = f;
+          formRows.push({
+            ...fRest,
+            word: { word: formWord } as EnEntry,
+            part_of_speech: line.part_of_speech,
+            base_form: { id: baseId } as EnWord,
+          });
+        }
+      }
+      for (const batch of chunked(formRows, SQL_PARAMS_CHUNK)) {
+        await em.getRepository(EnWord).insert(batch);
+      }
+
+      // 7. meanings need their generated ids for the nested translations, so they
+      // go one insert per meaning (still inside the chunk transaction); the
+      // translations and short translations then go in bulk
+      const translationRows = [];
+      const shortTranslationRows = [];
+      for (const line of toInsert) {
+        const wordId = idByKey.get(wordKey(line.word, line.part_of_speech, line.form_of_word));
+        for (const m of line.meanings ?? []) {
+          const { id: _mid, translations, ...mRest } = m;
+          const res = await em.getRepository(EnMeaning).insert({ ...mRest, word: { id: wordId } as EnWord });
+          const meaningId = res.identifiers[0]?.id as number;
+          for (const t of translations ?? []) {
+            const { id: _tid, ...tRest } = t;
+            translationRows.push({ ...tRest, meaning: { id: meaningId } as EnMeaning });
+          }
+        }
+        for (const st of line.short_translations ?? []) {
+          const { id: _stid, ...stRest } = st;
+          shortTranslationRows.push({ ...stRest, word: { id: wordId } as EnWord });
+        }
+      }
+      for (const batch of chunked(translationRows, SQL_PARAMS_CHUNK)) {
+        await em.getRepository(EnMeaningTranslation).insert(batch);
+      }
+      for (const batch of chunked(shortTranslationRows, SQL_PARAMS_CHUNK)) {
+        await em.getRepository(EnShortTranslation).insert(batch);
+      }
+    });
+  }
+
+  // Links phrasal variants to their base verbs with one lookup per chunk
+  private async bulkLinkPhrasalVerbs(lines: DataSetWordT[]): Promise<void> {
+    await this.enWordsRep.manager.transaction(async (em) => {
+      const names = new Set<string>();
+      for (const line of lines) {
+        names.add(line.word);
+        line.phrasal_variants.forEach((v) => names.add(v));
+      }
+
+      const idByName = new Map<string, number>();
+      (await this.selectWordRows(em, [...names]))
+        .filter((r) => r.pos === EnPartOfSpeechE.verb && r.form === EnWordFormsE.base_form)
+        .forEach((r) => idByName.set(r.word, r.id));
+
+      for (const line of lines) {
+        const baseId = idByName.get(line.word);
+        if (!baseId) {
+          this.logger.warn(`Phrasal base verb "${line.word}" is missing in the dataset, skipping its variants`);
+          continue;
+        }
+        for (const variant of line.phrasal_variants) {
+          const variantId = idByName.get(variant);
+          if (!variantId) {
+            this.logger.warn(
+              `Phrasal variant "${variant}" of "${line.word}" is missing in the dataset, skipping`,
+            );
+            continue;
+          }
+          await em.getRepository(EnWord).update(variantId, { base_phrasal: { id: baseId } as EnWord });
+        }
+      }
+    });
   }
 
   private async saveWords(res: Response, allLength: number, plusCount: () => number): Promise<void> {
@@ -248,8 +465,8 @@ export class EnImportDictionaryService {
       EnDictionaryImportPhasesE.saving_words,
       allLength,
       plusCount,
-      async (line) => {
-        await this.enService.addWord(mapWordFromSetToDB(line));
+      async (lines) => {
+        await this.bulkSaveWords(lines.map(mapWordFromSetToDB) as unknown as EnWordT[]);
       },
     );
   }
@@ -261,8 +478,8 @@ export class EnImportDictionaryService {
       EnDictionaryImportPhasesE.saving_grammar_patterns,
       allLength,
       plusCount,
-      async (line) => {
-        await this.enService.addWord(mapGrammarPatternFromSetToDB(line));
+      async (lines) => {
+        await this.bulkSaveWords(lines.map(mapGrammarPatternFromSetToDB));
       },
     );
   }
@@ -274,8 +491,8 @@ export class EnImportDictionaryService {
       EnDictionaryImportPhasesE.saving_phrases,
       allLength,
       plusCount,
-      async (line) => {
-        await this.enService.addWord(mapPhraseFromSetToDB(line));
+      async (lines) => {
+        await this.bulkSaveWords(lines.map(mapPhraseFromSetToDB));
       },
     );
   }
@@ -287,27 +504,8 @@ export class EnImportDictionaryService {
       EnDictionaryImportPhasesE.saving_phrasal_verbs,
       allLength,
       plusCount,
-      async ({ word, phrasal_variants }) => {
-        const wordEntity = await this.enService.getWordRow(word, EnPartOfSpeechE.verb, EnWordFormsE.base_form);
-        if (!wordEntity) {
-          this.logger.warn(`Phrasal base verb "${word}" is missing in the dataset, skipping its variants`);
-          return;
-        }
-
-        for (const w of phrasal_variants) {
-          const variantEntity = await this.enService.getWordRow(
-            w,
-            EnPartOfSpeechE.verb,
-            EnWordFormsE.base_form,
-          );
-          if (!variantEntity) {
-            this.logger.warn(`Phrasal variant "${w}" of "${word}" is missing in the dataset, skipping`);
-            continue;
-          }
-
-          variantEntity.base_phrasal = wordEntity;
-          await this.enWordsRep.save(variantEntity);
-        }
+      async (lines) => {
+        await this.bulkLinkPhrasalVerbs(lines);
       },
     );
   }

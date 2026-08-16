@@ -4,6 +4,13 @@ export class Baseline1786903614082 implements MigrationInterface {
   name = 'Baseline1786903614082';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // Every CREATE TYPE is preceded by a non-cascading DROP TYPE IF EXISTS:
+    // a database wiped with plain DROP TABLE keeps its enum types around, and
+    // those orphans used to make this baseline fail with "type already
+    // exists". A type still used by real tables (a legacy schema that should
+    // be adopted with `migration:run --fake`) makes the DROP fail loudly
+    // instead of destroying columns.
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."en_meanings_translations_language_enum"`);
     await queryRunner.query(`CREATE TYPE "public"."en_meanings_translations_language_enum" AS ENUM('ru')`);
     await queryRunner.query(
       `CREATE TABLE "en_meanings_translations" ("id" SERIAL NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updateAt" TIMESTAMP NOT NULL DEFAULT now(), "language" "public"."en_meanings_translations_language_enum" NOT NULL, "title" text NOT NULL, "definition" text NOT NULL, "variants_of_words" text array NOT NULL DEFAULT '{}', "meaning" integer, CONSTRAINT "PK_728f8023d2d887223c84d8ca38a" PRIMARY KEY ("id"))`,
@@ -14,15 +21,19 @@ export class Baseline1786903614082 implements MigrationInterface {
     await queryRunner.query(
       `CREATE INDEX "IDX_EN_MEANING_TRANSLATION_MEANING" ON "en_meanings_translations"  ("meaning") `,
     );
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."en_meanings_categories_enum"`);
     await queryRunner.query(
       `CREATE TYPE "public"."en_meanings_categories_enum" AS ENUM('scientific', 'technical', 'medical', 'legal', 'business', 'IT', 'art', 'political', 'sport', 'culinary')`,
     );
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."en_meanings_meaning_level_enum"`);
     await queryRunner.query(
       `CREATE TYPE "public"."en_meanings_meaning_level_enum" AS ENUM('A1', 'A2', 'B1', 'B2', 'C1', 'C2')`,
     );
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."en_meanings_area_variant_enum"`);
     await queryRunner.query(
       `CREATE TYPE "public"."en_meanings_area_variant_enum" AS ENUM('common', 'british', 'american', 'australian')`,
     );
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."en_meanings_language_register_enum"`);
     await queryRunner.query(
       `CREATE TYPE "public"."en_meanings_language_register_enum" AS ENUM('formal', 'informal', 'slang')`,
     );
@@ -33,6 +44,7 @@ export class Baseline1786903614082 implements MigrationInterface {
       `CREATE INDEX "IDX_EN_MEANING_WORD_SORT" ON "en_meanings"  ("word", "sort_order") `,
     );
     await queryRunner.query(`CREATE INDEX "IDX_EN_MEANING_WORD" ON "en_meanings"  ("word") `);
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."en_short_translations_language_enum"`);
     await queryRunner.query(`CREATE TYPE "public"."en_short_translations_language_enum" AS ENUM('ru')`);
     await queryRunner.query(
       `CREATE TABLE "en_short_translations" ("id" SERIAL NOT NULL, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updateAt" TIMESTAMP NOT NULL DEFAULT now(), "description" text NOT NULL, "language" "public"."en_short_translations_language_enum" NOT NULL, "variants_of_words" text array NOT NULL DEFAULT '{}', "word" integer, CONSTRAINT "PK_e4c646d7a3c393bb665bf72c3d7" PRIMARY KEY ("id"))`,
@@ -43,27 +55,35 @@ export class Baseline1786903614082 implements MigrationInterface {
     await queryRunner.query(
       `CREATE INDEX "IDX_EN_SHORT_TRANSLATION_WORD" ON "en_short_translations"  ("word") `,
     );
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."en_words_word_level_enum"`);
     await queryRunner.query(
       `CREATE TYPE "public"."en_words_word_level_enum" AS ENUM('A1', 'A2', 'B1', 'B2', 'C1', 'C2')`,
     );
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."en_words_area_variant_enum"`);
     await queryRunner.query(
       `CREATE TYPE "public"."en_words_area_variant_enum" AS ENUM('common', 'british', 'american', 'australian')`,
     );
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."en_words_categories_enum"`);
     await queryRunner.query(
       `CREATE TYPE "public"."en_words_categories_enum" AS ENUM('scientific', 'technical', 'medical', 'legal', 'business', 'IT', 'art', 'political', 'sport', 'culinary')`,
     );
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."en_words_language_register_enum"`);
     await queryRunner.query(
       `CREATE TYPE "public"."en_words_language_register_enum" AS ENUM('formal', 'informal', 'slang')`,
     );
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."en_words_part_of_speech_enum"`);
     await queryRunner.query(
       `CREATE TYPE "public"."en_words_part_of_speech_enum" AS ENUM('noun', 'verb', 'modal_verb', 'adjective', 'adverb', 'pronoun', 'numeral', 'numeral_fractional', 'determiner', 'interjection', 'article', 'preposition', 'conjunction', 'letter', 'phrase', 'grammar_pattern')`,
     );
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."en_words_form_of_word_enum"`);
     await queryRunner.query(
       `CREATE TYPE "public"."en_words_form_of_word_enum" AS ENUM('base_form', 'plural_form', 'possessive_singular_form', 'possessive_plural_form', 'past_simple', 'past_participle', 'present_participle', 'third_person_singular', 'comparative_form', 'superlative_form', 'object', 'possessive_adjective', 'possessive_pronoun', 'reflexive', 'ordinal', 'multiplicative')`,
     );
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."en_words_verb___transitivity_enum"`);
     await queryRunner.query(
       `CREATE TYPE "public"."en_words_verb___transitivity_enum" AS ENUM('transitive', 'intransitive', 'both')`,
     );
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."en_words_verb___phrasal_object_pattern_enum"`);
     await queryRunner.query(
       `CREATE TYPE "public"."en_words_verb___phrasal_object_pattern_enum" AS ENUM('no_object', 'inseparable', 'separable', 'separable_pronoun_only')`,
     );
@@ -80,6 +100,7 @@ export class Baseline1786903614082 implements MigrationInterface {
       `CREATE INDEX "IDX_EN_WORD_LOOKUP" ON "en_words"  ("word", "part_of_speech", "form_of_word") `,
     );
     await queryRunner.query(`CREATE INDEX "IDX_EN_WORD" ON "en_words"  ("word") `);
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."en_entries_type_enum"`);
     await queryRunner.query(
       `CREATE TYPE "public"."en_entries_type_enum" AS ENUM('word', 'grammar_pattern', 'phrase')`,
     );

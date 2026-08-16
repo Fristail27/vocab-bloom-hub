@@ -10,10 +10,6 @@ import { EnWord } from '../../../entities/en_word.entity';
 import { EnMeaning } from '../../../entities/en_meaning.entity';
 import { EnMeaningTranslation } from '../../../entities/en_meaning_translation.entity';
 import { EnShortTranslation } from '../../../entities/en_short_translation.entity';
-import { EnService } from '../../../en.service';
-import { EnShortTranslationService } from '../../EnShortTranslation/enShortTranslation.service';
-import { EnMeaningService } from '../../EnMeaning/enMeaning.service';
-import { EnMeaningTranslationService } from '../../EnMeaningTranslation/enMeaningTranslation.service';
 import { EnImportDictionaryService } from '../enImportDictionary.service';
 import { SettingsService } from '../../../../SettingsModule/settings.service';
 import { DATASET_VERSION_SETTINGS_FIELD, EnDictionaryImportPhasesE } from '../constants';
@@ -123,22 +119,7 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
     });
     await ds.initialize();
 
-    const shortTranslationService = new EnShortTranslationService(
-      ds.getRepository(EnWord),
-      ds.getRepository(EnShortTranslation),
-    );
-    const meaningTranslationService = new EnMeaningTranslationService(
-      ds.getRepository(EnMeaning),
-      ds.getRepository(EnMeaningTranslation),
-    );
-    const meaningService = new EnMeaningService(
-      ds.getRepository(EnWord),
-      ds.getRepository(EnMeaning),
-      meaningTranslationService,
-    );
-    const enService = new EnService(ds.getRepository(EnWord), ds, shortTranslationService, meaningService);
-
-    service = new EnImportDictionaryService(ds.getRepository(EnWord), enService, mockSettingsService);
+    service = new EnImportDictionaryService(ds.getRepository(EnWord), mockSettingsService);
   });
 
   afterAll(async () => {
