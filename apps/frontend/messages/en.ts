@@ -10,6 +10,7 @@ export default {
     [ErrorCodes.word_already_exists]: 'Word already exists',
     [ErrorCodes.phrasal_base_doesnt_exist]: "The base form of the phrasal verb doesn't exist.",
     [ErrorCodes.word_doesnt_found]: 'Word not found',
+    [ErrorCodes.dataset_manifest_not_found]: 'The dataset manifest was not found',
     [ErrorCodes.translation_doesnt_found]: 'Translation not found',
     [ErrorCodes.setting_field_doesnt_found]: 'Field not found',
     [ErrorCodes.setting_field_already_exists]: 'Field already exists',
@@ -66,6 +67,7 @@ export default {
     retry_importing: 'Retry',
     retry_exporting: 'Retry',
     export_again: 'Export again',
+    up_to_date: 'You already have the latest dictionary version',
   },
   en_managing_words: {
     word: 'Word',

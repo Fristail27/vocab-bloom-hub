@@ -72,6 +72,8 @@ export type DatasetManifestT = {
   files: Record<string, { lines: number }>;
 };
 
+export type GetDatasetManifestResT = DatasetManifestT | ErrorResT;
+
 export type EnPosStatT = { part_of_speech: EnPartOfSpeechE; count: number };
 export type EnWordLevelStatT = { word_level: WordLevelE | null; count: number };
 export type EnStatisticsT = {

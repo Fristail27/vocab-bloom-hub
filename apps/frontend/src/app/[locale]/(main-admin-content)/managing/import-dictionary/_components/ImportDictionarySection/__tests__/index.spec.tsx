@@ -24,10 +24,10 @@ const mockImportStreaming = (chunks: ImportDictionaryChunkT[], result: unknown =
   });
 };
 
-const renderSection = () =>
+const renderSection = (props: React.ComponentProps<typeof ImportDictionarySection> = {}) =>
   render(
     <App>
-      <ImportDictionarySection />
+      <ImportDictionarySection {...props} />
     </App>,
   );
 
@@ -49,6 +49,22 @@ describe('ImportDictionarySection', () => {
     expect(EnApi.importDictionary).toHaveBeenCalledWith(expect.any(Function), expect.any(Function));
     expect(screen.queryByText('start_importing')).not.toBeInTheDocument();
     expect(screen.queryByText('retry_importing')).not.toBeInTheDocument();
+  });
+
+  it('показывает версии из пропсов и подсказку об актуальной версии', () => {
+    renderSection({ yourVersion: '0.2.0', latestVersion: '0.2.0' });
+
+    expect(screen.getByText(/your_version: 0\.2\.0/)).toBeInTheDocument();
+    expect(screen.getByText(/latest_version: 0\.2\.0/)).toBeInTheDocument();
+    expect(screen.getByText('up_to_date')).toBeInTheDocument();
+    // re-import stays possible even when the versions match
+    expect(screen.getByText('start_importing')).toBeInTheDocument();
+  });
+
+  it('не показывает подсказку, когда доступна более новая версия', () => {
+    renderSection({ yourVersion: '0.1.0', latestVersion: '0.2.0' });
+
+    expect(screen.queryByText('up_to_date')).not.toBeInTheDocument();
   });
 
   it('показывает версию датасета из manifest-чанка и обновляет установленную после успеха', async () => {

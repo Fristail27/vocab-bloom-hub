@@ -35,6 +35,7 @@ import {
   GetEnStatisticsResT,
   GetEnTranslationsStatisticsResT,
   GetWordByIdResT,
+  GetDatasetManifestResT,
   ImportDictionaryChunkT,
   ImportDictionaryReqT,
   SearchResT,
@@ -158,6 +159,10 @@ export class EnApi extends AbstractBaseApi {
     }
 
     return { success: true };
+  }
+
+  static async getDatasetManifest(): Promise<GetDatasetManifestResT> {
+    return this.get<GetDatasetManifestResT>(`${this.baseURL}/en/dictionary/manifest`);
   }
 
   static async importDictionary(

@@ -3,12 +3,19 @@ import { ApiTags } from '@nestjs/swagger';
 import { EnImportDictionaryService } from './enImportDictionary.service';
 import { AdminGuard } from '../../../AuthModule/guards/admin.guard';
 import { ImportDictionaryReq } from './dto/ImportDictionaryReq.dto';
+import { DatasetManifestT } from '../../../../../types';
 import type { Response } from 'express';
 
 @ApiTags('En_Words')
 @Controller('/api/en/dictionary/')
 export class EnImportDictionaryController {
   constructor(private readonly enImportDictionaryService: EnImportDictionaryService) {}
+
+  @UseGuards(AdminGuard)
+  @Get('manifest')
+  async getManifest(): Promise<DatasetManifestT> {
+    return this.enImportDictionaryService.getManifest();
+  }
 
   @UseGuards(AdminGuard)
   @Post('import')
