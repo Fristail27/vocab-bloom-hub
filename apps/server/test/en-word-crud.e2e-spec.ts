@@ -1,0 +1,289 @@
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule } from '@nestjs/throttler';
+import request from 'supertest';
+import { App } from 'supertest/types';
+
+import { EnModule } from '../src/modules/EnModule/en.module';
+import { EnEntry } from '../src/modules/EnModule/entities/en_entry.entity';
+import { EnWord } from '../src/modules/EnModule/entities/en_word.entity';
+import { EnMeaning } from '../src/modules/EnModule/entities/en_meaning.entity';
+import { EnMeaningTranslation } from '../src/modules/EnModule/entities/en_meaning_translation.entity';
+import { EnShortTranslation } from '../src/modules/EnModule/entities/en_short_translation.entity';
+import { hashLoginString } from '../core/utils/crypto';
+import { createJwt } from '../core/utils/auth';
+import { AvailableTranslationLanguagesE, EnAreaVariantsE, EnPartOfSpeechE, EnWordFormsE } from '../types';
+
+const E2E_USERNAME = 'e2e-admin';
+const E2E_PASSWORD = 'e2e-password';
+
+const makeAddWordBody = () => ({
+  word: 'run',
+  part_of_speech: EnPartOfSpeechE.verb,
+  form_of_word: EnWordFormsE.base_form,
+  description: 'to move fast on foot',
+  forms: [
+    {
+      word: 'ran',
+      form_of_word: EnWordFormsE.past_simple,
+      area_variant: EnAreaVariantsE.common,
+      transcription: 'ræn',
+    },
+  ],
+  meanings: [
+    {
+      title: 'to move fast',
+      definition: 'to move fast on foot',
+      is_obsolete: false,
+      sort_order: 1,
+      examples: ['I run every morning'],
+      area_variant: EnAreaVariantsE.common,
+      translations: [
+        {
+          language: AvailableTranslationLanguagesE.ru,
+          title: 'бежать',
+          definition: 'быстро перемещаться',
+          variants_of_words: ['бежать'],
+        },
+      ],
+    },
+  ],
+  short_translations: [
+    {
+      language: AvailableTranslationLanguagesE.ru,
+      description: 'бежать',
+      variants_of_words: ['бежать'],
+    },
+  ],
+});
+
+describe('En word add/edit routes (e2e, issue #87)', () => {
+  let app: INestApplication<App>;
+  let token: string;
+  let wordId: number;
+  let meaningId: number;
+
+  const server = () => app.getHttpServer();
+  const auth = { Authorization: '' };
+
+  beforeAll(async () => {
+    // AdminGuard derives the JWT secret from these on every request
+    process.env.USERNAME = E2E_USERNAME;
+    process.env.PASSWORD = E2E_PASSWORD;
+
+    const hashByEnv = await hashLoginString(E2E_USERNAME, E2E_PASSWORD);
+    const secretHash = await hashLoginString(E2E_USERNAME, hashByEnv);
+    token = createJwt({ role: 'admin' }, secretHash + hashByEnv);
+    auth.Authorization = `Bearer ${token}`;
+
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [
+        ThrottlerModule.forRoot({ throttlers: [{ ttl: 60_000, limit: 100 }] }),
+        TypeOrmModule.forRoot({
+          type: 'better-sqlite3',
+          database: ':memory:',
+          entities: [EnEntry, EnWord, EnMeaning, EnMeaningTranslation, EnShortTranslation],
+          synchronize: true,
+          prepareDatabase: (db) => {
+            db.pragma('foreign_keys = ON');
+          },
+        }),
+        EnModule,
+      ],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    // Same options as the global pipe in main.ts
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+    await app.init();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  describe('auth', () => {
+    it('rejects add/edit requests without a token', async () => {
+      await request(server()).post('/api/en/add/word').send(makeAddWordBody()).expect(401);
+      await request(server()).patch('/api/en/common-info/1').send({ description: 'x' }).expect(401);
+      await request(server()).post('/api/en/word/meaning').send({}).expect(401);
+    });
+
+    it('rejects a token signed with a wrong secret', async () => {
+      const forged = createJwt({ role: 'admin' }, 'not-the-real-secret');
+
+      await request(server())
+        .post('/api/en/add/word')
+        .set('Authorization', `Bearer ${forged}`)
+        .send(makeAddWordBody())
+        .expect(401);
+    });
+  });
+
+  describe('adding a word', () => {
+    it('creates the word with forms, meanings and translations through the HTTP layer', async () => {
+      await request(server()).post('/api/en/add/word').set(auth).send(makeAddWordBody()).expect(201);
+
+      const checkRes = await request(server())
+        .get('/api/en/check-word/run')
+        .set(auth)
+        .query({ partOfSpeech: EnPartOfSpeechE.verb })
+        .expect(200);
+      expect(checkRes.body.hasWord).toBe(true);
+      wordId = checkRes.body.id;
+
+      const wordRes = await request(server()).get(`/api/en/${wordId}`).set(auth).expect(200);
+      expect(wordRes.body.word).toBe('run');
+      expect(wordRes.body.forms).toEqual([expect.objectContaining({ word: 'ran' })]);
+      expect(wordRes.body.meanings).toEqual([
+        expect.objectContaining({
+          title: 'to move fast',
+          translations: [expect.objectContaining({ title: 'бежать' })],
+        }),
+      ]);
+      expect(wordRes.body.short_translations).toEqual([expect.objectContaining({ description: 'бежать' })]);
+      meaningId = wordRes.body.meanings[0].id;
+    });
+
+    it('rejects a body with an unknown field via the global pipe (forbidNonWhitelisted)', async () => {
+      await request(server())
+        .post('/api/en/add/word')
+        .set(auth)
+        .send({ ...makeAddWordBody(), word: 'walk', hacker_field: 'oops' })
+        .expect(400);
+    });
+
+    it('rejects a malformed nested meaning via the global pipe', async () => {
+      const body = makeAddWordBody();
+      body.word = 'walk';
+      (body.meanings[0] as Record<string, unknown>).sort_order = 'first';
+
+      await request(server()).post('/api/en/add/word').set(auth).send(body).expect(400);
+    });
+
+    it('responds with 409 for a duplicate word', async () => {
+      await request(server()).post('/api/en/add/word').set(auth).send(makeAddWordBody()).expect(409);
+    });
+  });
+
+  describe('editing a word', () => {
+    it('updates the common info through PATCH /api/en/common-info/:id', async () => {
+      await request(server())
+        .patch(`/api/en/common-info/${wordId}`)
+        .set(auth)
+        .send({ description: 'updated description', verb___is_irregular: true })
+        .expect(200)
+        .expect({ success: true });
+
+      const wordRes = await request(server()).get(`/api/en/${wordId}`).set(auth).expect(200);
+      expect(wordRes.body.description).toBe('updated description');
+      expect(wordRes.body.verb___is_irregular).toBe(true);
+    });
+
+    it('rejects unknown fields on the edit endpoint', async () => {
+      await request(server())
+        .patch(`/api/en/common-info/${wordId}`)
+        .set(auth)
+        .send({ hacker_field: 'oops' })
+        .expect(400);
+    });
+
+    it('edits a word form through PATCH /api/en/word-form', async () => {
+      const wordRes = await request(server()).get(`/api/en/${wordId}`).set(auth).expect(200);
+      const formId = wordRes.body.forms[0].id;
+
+      await request(server())
+        .patch('/api/en/word-form')
+        .set(auth)
+        .send({ id: formId, transcription: 'ræn (updated)' })
+        .expect(200)
+        .expect({ success: true });
+
+      const updated = await request(server()).get(`/api/en/${wordId}`).set(auth).expect(200);
+      expect(updated.body.forms[0].transcription).toBe('ræn (updated)');
+    });
+  });
+
+  describe('meaning sub-resource', () => {
+    it('adds a meaning through POST /api/en/word/meaning', async () => {
+      const res = await request(server())
+        .post('/api/en/word/meaning')
+        .set(auth)
+        .send({
+          word_id: wordId,
+          title: 'to manage',
+          definition: 'to operate or be in charge',
+          is_obsolete: false,
+          sort_order: 2,
+          examples: ['she runs a bakery'],
+          area_variant: EnAreaVariantsE.common,
+          meaning_level: null,
+          language_register: null,
+          categories: [],
+          translations: [],
+        })
+        .expect(201);
+
+      expect(res.body).toEqual({ success: true, id: expect.any(Number) });
+    });
+
+    it('edits a meaning through PATCH /api/en/word/meaning', async () => {
+      await request(server())
+        .patch('/api/en/word/meaning')
+        .set(auth)
+        .send({ id: meaningId, title: 'to sprint' })
+        .expect(200)
+        .expect({ success: true });
+
+      const wordRes = await request(server()).get(`/api/en/${wordId}`).set(auth).expect(200);
+      const titles = (wordRes.body.meanings as Array<{ title: string }>).map((m) => m.title);
+      expect(titles).toContain('to sprint');
+    });
+
+    it('deletes a meaning through DELETE /api/en/word/meaning/:id', async () => {
+      await request(server()).delete(`/api/en/word/meaning/${meaningId}`).set(auth).expect(200);
+
+      const wordRes = await request(server()).get(`/api/en/${wordId}`).set(auth).expect(200);
+      const ids = (wordRes.body.meanings as Array<{ id: number }>).map((m) => m.id);
+      expect(ids).not.toContain(meaningId);
+    });
+  });
+
+  describe('short translation sub-resource', () => {
+    it('adds and edits a short translation through the HTTP layer', async () => {
+      const addRes = await request(server())
+        .post('/api/en/word/short-translation')
+        .set(auth)
+        .send({
+          word_id: wordId,
+          language: AvailableTranslationLanguagesE.ru,
+          description: 'управлять',
+          variant_of_words: ['управлять'],
+        })
+        .expect(201);
+      const shortTranslationId = addRes.body.id as number;
+
+      await request(server())
+        .patch('/api/en/word/short-translation')
+        .set(auth)
+        .send({ id: shortTranslationId, description: 'руководить' })
+        .expect(200)
+        .expect({ success: true });
+
+      const wordRes = await request(server()).get(`/api/en/${wordId}`).set(auth).expect(200);
+      const descriptions = (wordRes.body.short_translations as Array<{ description: string }>).map(
+        (s) => s.description,
+      );
+      expect(descriptions).toContain('руководить');
+    });
+  });
+
+  describe('deleting a word', () => {
+    it('removes the word through DELETE /api/en/:id', async () => {
+      await request(server()).delete(`/api/en/${wordId}`).set(auth).expect(200).expect({ success: true });
+
+      await request(server()).get(`/api/en/${wordId}`).set(auth).expect(404);
+    });
+  });
+});
