@@ -18,6 +18,7 @@ import {
   assertRequiredConfig,
   checkIsPostgres,
   ConfigurationError,
+  parseDatabaseUrl,
 } from '../configuration';
 
 async function bootstrap() {
@@ -95,12 +96,13 @@ async function bootstrap() {
   await app.listen(port);
 
   const isPostgres = checkIsPostgres();
+  const { sqlitePath } = parseDatabaseUrl(process.env.DATABASE_URL);
   logger.log(`Server listening on port ${port}`);
   logger.log(
     `Database: ${
       isPostgres
         ? 'Postgres (DATABASE_URL), schema managed by migrations (migrationsRun on start)'
-        : 'better-sqlite3 fallback (dev.sqlite), synchronize=true'
+        : `better-sqlite3 (${sqlitePath ?? 'dev.sqlite fallback'}), synchronize=true`
     }`,
   );
   logger.log(`CORS origins: ${corsOrigins.join(', ')}`);

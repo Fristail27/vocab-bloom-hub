@@ -8,6 +8,7 @@ Vocab Bloom Hub — a monorepo for a multilingual dictionary/vocabulary platform
 
 - `apps/frontend` — Next.js 16 (App Router) admin UI with Ant Design, Sass modules, and next-intl (en/ru locales via the `[locale]` route segment; middleware in `src/proxy.ts`).
 - `apps/server` — NestJS 11 API with TypeORM. Swagger UI is served at `/api` on the running server.
+- `apps/e2e` — Playwright browser tests that boot both apps against an isolated SQLite database (own tsconfig on purpose: jest and Playwright globals must not share a TS project).
 
 ## Commands
 
@@ -19,7 +20,11 @@ yarn front:dev      # Next.js dev (port FRONT_PORT, default 3000)
 yarn test           # all tests (root jest config with projects: server + frontend)
 yarn jest path/to/file.spec.ts            # single test file
 yarn jest --selectProjects server         # only server tests (or: frontend)
-yarn workspace server test:e2e            # server e2e tests
+yarn workspace server test:e2e            # server e2e tests (supertest, in-memory sqlite)
+
+yarn e2e            # browser e2e: prod frontend build + Playwright (boots API :3011, frontend :3001)
+yarn e2e:ui         # the same with the Playwright UI
+yarn workspace e2e test                   # rerun without rebuilding the frontend
 
 yarn lint / yarn lint:fix                 # ESLint 10 flat config (eslint.config.ts)
 yarn format / yarn format:check           # Prettier
@@ -32,7 +37,7 @@ Test files are `*.spec.ts(x)`, colocated with code (e.g. in `__tests__/` dirs). 
 
 A single `.env` at the repo root is used by both apps (frontend scripts wrap with `dotenv -e ../../.env`; server loads it at the top of `src/main.ts`). Relevant vars: `SERVER_PORT`, `FRONT_PORT`, `DATABASE_URL`, `USERNAME`, `PASSWORD`, `NEXT_PUBLIC_BASE_API_URL`, `LOG_LEVEL` (server log verbosity: `verbose`/`debug`/`log`/`warn`/`error`/`fatal`; defaults to `debug` in development, `log` otherwise).
 
-Database: if `DATABASE_URL` is set, TypeORM connects to Postgres; otherwise it falls back to `dev.sqlite` at the repo root (better-sqlite3). The two modes manage the schema differently (config in `apps/server/src/db/typeorm-options.ts`):
+Database: the `DATABASE_URL` scheme selects the driver — `postgres://` connects to Postgres, `sqlite:<path>` (e.g. `sqlite:./e2e.sqlite`, `sqlite::memory:`) runs better-sqlite3 on that file, any other scheme fails startup. When unset, it falls back to `dev.sqlite` at the repo root. The two modes manage the schema differently (config in `apps/server/src/db/typeorm-options.ts`):
 
 - **SQLite (dev fallback)** — `synchronize: true`, entity changes reshape the schema automatically. No migrations.
 - **Postgres** — `synchronize` is off; the schema is managed by TypeORM migrations in `apps/server/src/db/migrations/`, which run automatically on server start (`migrationsRun`). After changing an entity, generate a migration against a Postgres instance with the current schema and register the new class in `src/db/migrations/index.ts` (the CLI and the runtime read that explicit list, not a glob):

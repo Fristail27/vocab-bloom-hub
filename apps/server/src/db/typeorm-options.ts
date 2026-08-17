@@ -1,6 +1,6 @@
 import * as path from 'path';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { checkIsPostgres } from '../../configuration';
+import { checkIsPostgres, parseDatabaseUrl } from '../../configuration';
 import { EnEntry } from '../modules/EnModule/entities/en_entry.entity';
 import { EnWord } from '../modules/EnModule/entities/en_word.entity';
 import { EnMeaning } from '../modules/EnModule/entities/en_meaning.entity';
@@ -35,13 +35,22 @@ export const buildTypeOrmOptions = (): TypeOrmModuleOptions => {
     };
   }
 
+  // An explicit sqlite:<path> DATABASE_URL (e.g. an isolated e2e database)
+  // resolves relative to the server workspace cwd; :memory: is passed through
+  const { sqlitePath } = parseDatabaseUrl(process.env.DATABASE_URL);
+  const database = sqlitePath
+    ? sqlitePath === ':memory:'
+      ? sqlitePath
+      : path.resolve(sqlitePath)
+    : path.join(process.cwd(), '..', '..', 'dev.sqlite');
+
   return {
     ...base,
     type: 'better-sqlite3',
-    database: path.join(process.cwd(), '..', '..', 'dev.sqlite'),
-    // The SQLite fallback is a development-only database (production requires
-    // DATABASE_URL, see assertRequiredConfig): auto-DDL keeps it in sync with
-    // the entities without migrations
+    database,
+    // The SQLite mode is a development/test database (production requires a
+    // postgres:// DATABASE_URL, see assertRequiredConfig): auto-DDL keeps it
+    // in sync with the entities without migrations
     synchronize: true,
     prepareDatabase: (db) => {
       db.pragma('foreign_keys = ON');
