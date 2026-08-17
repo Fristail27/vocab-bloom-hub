@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 
-import { assertRequiredConfig, ConfigurationError } from '../configuration';
+import { assertRequiredConfig, ConfigurationError, parseDatabaseUrl } from '../configuration';
 
 type ConfigurationModule = typeof import('../configuration');
 
@@ -61,6 +61,50 @@ describe('assertRequiredConfig (issue #186)', () => {
       DATABASE_URL: 'postgres://db',
     };
     expect(() => assertRequiredConfig(env)).not.toThrow();
+  });
+
+  it('fails in production with an explicit sqlite: DATABASE_URL (issue #217)', () => {
+    const env = {
+      ...validEnv(),
+      NODE_ENV: 'production',
+      DATABASE_URL: 'sqlite:./prod.sqlite',
+    };
+    expect(() => assertRequiredConfig(env)).toThrow(ConfigurationError);
+    expect(() => assertRequiredConfig(env)).toThrow(/postgres/);
+  });
+});
+
+describe('parseDatabaseUrl (issue #217)', () => {
+  it('falls back to the dev sqlite mode when the variable is unset or blank', () => {
+    expect(parseDatabaseUrl(undefined)).toEqual({ isPostgres: false });
+    expect(parseDatabaseUrl('')).toEqual({ isPostgres: false });
+    expect(parseDatabaseUrl('   ')).toEqual({ isPostgres: false });
+  });
+
+  it('recognizes both postgres schemes', () => {
+    expect(parseDatabaseUrl('postgres://user:pass@host:5432/db').isPostgres).toBe(true);
+    expect(parseDatabaseUrl('postgresql://user:pass@host:5432/db').isPostgres).toBe(true);
+  });
+
+  it('extracts the file path from a sqlite: url', () => {
+    expect(parseDatabaseUrl('sqlite:./e2e.sqlite')).toEqual({
+      isPostgres: false,
+      sqlitePath: './e2e.sqlite',
+    });
+    expect(parseDatabaseUrl('sqlite:/tmp/e2e.sqlite')).toEqual({
+      isPostgres: false,
+      sqlitePath: '/tmp/e2e.sqlite',
+    });
+    expect(parseDatabaseUrl('sqlite::memory:')).toEqual({ isPostgres: false, sqlitePath: ':memory:' });
+  });
+
+  it('rejects a sqlite: url without a path', () => {
+    expect(() => parseDatabaseUrl('sqlite:')).toThrow(ConfigurationError);
+  });
+
+  it('rejects unknown schemes instead of guessing the driver', () => {
+    expect(() => parseDatabaseUrl('mysql://user:pass@host/db')).toThrow(ConfigurationError);
+    expect(() => parseDatabaseUrl('dev.sqlite')).toThrow(ConfigurationError);
   });
 });
 

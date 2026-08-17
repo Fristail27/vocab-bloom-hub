@@ -80,6 +80,33 @@ describe('buildTypeOrmOptions (issue #181)', () => {
     });
   });
 
+  describe('with an explicit sqlite: DATABASE_URL (issue #217)', () => {
+    it('uses the given file path resolved against the cwd and keeps synchronize on', () => {
+      process.env.DATABASE_URL = 'sqlite:./tmp/e2e.sqlite';
+      const { buildTypeOrmOptions } = loadFreshOptions();
+
+      const options = buildTypeOrmOptions() as { type?: string; database?: string; synchronize?: boolean };
+
+      expect(options.type).toBe('better-sqlite3');
+      expect(options.database).toBe(path.resolve('./tmp/e2e.sqlite'));
+      expect(options.synchronize).toBe(true);
+    });
+
+    it('keeps an absolute path as is', () => {
+      process.env.DATABASE_URL = 'sqlite:/tmp/e2e.sqlite';
+      const { buildTypeOrmOptions } = loadFreshOptions();
+
+      expect((buildTypeOrmOptions() as { database?: string }).database).toBe('/tmp/e2e.sqlite');
+    });
+
+    it('passes :memory: through without path resolution', () => {
+      process.env.DATABASE_URL = 'sqlite::memory:';
+      const { buildTypeOrmOptions } = loadFreshOptions();
+
+      expect((buildTypeOrmOptions() as { database?: string }).database).toBe(':memory:');
+    });
+  });
+
   it('registers every entity in both modes', () => {
     const { buildTypeOrmOptions, DB_ENTITIES } = loadFreshOptions();
 

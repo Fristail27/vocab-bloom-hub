@@ -9,6 +9,44 @@ export default () => ({
 
 export class ConfigurationError extends Error {}
 
+const POSTGRES_SCHEMES = ['postgres://', 'postgresql://'];
+const SQLITE_SCHEME = 'sqlite:';
+
+export type DatabaseUrlConfigT = {
+  isPostgres: boolean;
+  // Set only for an explicit sqlite: URL; the dev fallback (unset DATABASE_URL)
+  // leaves it undefined and typeorm-options resolves the default dev.sqlite path
+  sqlitePath?: string | undefined;
+};
+
+// DATABASE_URL selects the driver by scheme: postgres:// (or postgresql://)
+// runs Postgres with migrations, sqlite:<path> runs better-sqlite3 with
+// synchronize (e.g. sqlite:/tmp/e2e.sqlite or sqlite::memory:). An unset or
+// empty variable keeps the historical dev fallback to dev.sqlite. Any other
+// scheme is a hard error: guessing here would silently switch how the schema
+// is managed (auto-DDL vs migrations, see issue #181).
+export const parseDatabaseUrl = (raw: string | undefined): DatabaseUrlConfigT => {
+  const url = raw?.trim();
+  if (!url) {
+    return { isPostgres: false };
+  }
+  if (POSTGRES_SCHEMES.some((scheme) => url.startsWith(scheme))) {
+    return { isPostgres: true };
+  }
+  if (url.startsWith(SQLITE_SCHEME)) {
+    const sqlitePath = url.slice(SQLITE_SCHEME.length);
+    if (!sqlitePath) {
+      throw new ConfigurationError(
+        'DATABASE_URL with the sqlite: scheme must include a file path, e.g. sqlite:./dev.sqlite or sqlite::memory:',
+      );
+    }
+    return { isPostgres: false, sqlitePath };
+  }
+  throw new ConfigurationError(
+    `Unsupported DATABASE_URL scheme in "${url}". Use postgres://user:pass@host:port/db or sqlite:<path>.`,
+  );
+};
+
 // USERNAME alone proves nothing: the OS commonly sets it to the current system
 // user even when the .env file failed to load, and PASSWORD would then silently
 // hash as the literal string "undefined". Failing fast closes that fail-open login.
@@ -21,9 +59,9 @@ export const assertRequiredConfig = (env: NodeJS.ProcessEnv = process.env): void
     );
   }
 
-  if (env.NODE_ENV === 'production' && !env.DATABASE_URL) {
+  if (env.NODE_ENV === 'production' && !parseDatabaseUrl(env.DATABASE_URL).isPostgres) {
     throw new ConfigurationError(
-      'DATABASE_URL must be set in production — refusing to fall back to the local SQLite database.',
+      'DATABASE_URL must be a postgres:// connection string in production — refusing to run on SQLite.',
     );
   }
 };
@@ -34,14 +72,14 @@ export const assertRequiredConfig = (env: NodeJS.ProcessEnv = process.env): void
 let lockedIsPostgres: boolean | undefined;
 
 export const checkIsPostgres = (): boolean => {
-  lockedIsPostgres ??= !!process.env.DATABASE_URL;
+  lockedIsPostgres ??= parseDatabaseUrl(process.env.DATABASE_URL).isPostgres;
   return lockedIsPostgres;
 };
 
 // Detects entry points that imported the entities before the environment was
 // loaded: the column types are already locked to the wrong driver in that case
 export const assertDatabaseDriverConsistent = (env: NodeJS.ProcessEnv = process.env): void => {
-  const wantsPostgres = !!env.DATABASE_URL;
+  const wantsPostgres = parseDatabaseUrl(env.DATABASE_URL).isPostgres;
   if (lockedIsPostgres !== undefined && lockedIsPostgres !== wantsPostgres) {
     throw new ConfigurationError(
       `Database driver mismatch: entity column types were locked for ${lockedIsPostgres ? 'Postgres' : 'SQLite'} ` +
