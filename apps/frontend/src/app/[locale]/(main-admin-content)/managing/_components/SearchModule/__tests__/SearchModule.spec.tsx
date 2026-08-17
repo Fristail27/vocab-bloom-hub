@@ -1,7 +1,7 @@
 import React from 'react';
 import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { App } from 'antd';
-import { EnWordFormsE, EnPartOfSpeechE, EnWordT } from 'server/types';
+import { EnWordFormsE, EnPartOfSpeechE, EnSearchWordT } from 'server/types';
 
 jest.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
@@ -19,14 +19,14 @@ jest.mock('@/core/api/EnApi', () => ({
 import { EnApi } from '@/core/api/EnApi';
 import { SearchModule } from '../index';
 
-const makeWord = (id: number, word: string): EnWordT =>
+const makeWord = (id: number, word: string): EnSearchWordT =>
   ({
     id,
     word,
     part_of_speech: EnPartOfSpeechE.verb,
     form_of_word: EnWordFormsE.base_form,
     forms: [],
-  }) as unknown as EnWordT;
+  }) as unknown as EnSearchWordT;
 
 const renderModule = () =>
   render(

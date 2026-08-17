@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { FindOptionsRelations, In, Repository } from 'typeorm';
 import { EnWord } from '../../entities/en_word.entity';
 import { SearchReqDTO } from './dto/SearchReq.dto';
-import { EnEntryTypesE, EnWordT } from '../../../../../types';
+import { SearchDetailedReqDTO } from './dto/SearchDetailedReq.dto';
+import { EnEntryTypesE, EnSearchWordT, SearchDetailedItemsT } from '../../../../../types';
 import { mapSearchResults } from './utils/mapSearchResults';
+import { mapDetailedSearchResults } from './utils/mapDetailedSearchResults';
 import { escapeLike } from './utils/escapeLike';
 
 @Injectable()
@@ -186,96 +188,107 @@ export class EnSearchService {
     return phrasesExactSet;
   }
 
-  async search({ search: s, type, limit }: SearchReqDTO): Promise<EnWordT[]> {
-    const search = s.trim().toLowerCase();
-    let excludedIds: number[] = [];
+  /**
+   * Runs every tier in relevance order (exact, phrasal, starts-with, phrases,
+   * ends-with, any) and returns up to `target` word ids in that order.
+   */
+  private async collectOrderedIds(
+    search: string,
+    type: EnEntryTypesE | undefined,
+    target: number,
+  ): Promise<number[]> {
+    const ordered: number[] = [];
+    const pushUpToTarget = (set: Set<number>) => {
+      for (const id of set) {
+        if (ordered.length >= target) return;
+        ordered.push(id);
+      }
+    };
+
     const { exactSet, phrasalSet } = await this.getExactMatchesAndPhrasalVerbsIds(search);
+    pushUpToTarget(exactSet);
+    pushUpToTarget(phrasalSet);
+    // exact/phrasal ids beyond the target still must not resurface in lower tiers
+    let excludedIds = [...exactSet, ...phrasalSet];
 
-    excludedIds = [...excludedIds, ...exactSet, ...phrasalSet];
-
-    const wordsStartFromLimit = limit - exactSet.size - phrasalSet.size;
     const wordsStartFromSet =
       !type || type === EnEntryTypesE.word
-        ? await this.getWordsStartsFromSearch(search, excludedIds, wordsStartFromLimit)
+        ? await this.getWordsStartsFromSearch(search, excludedIds, target - ordered.length)
         : new Set<number>();
-
+    pushUpToTarget(wordsStartFromSet);
     excludedIds = [...excludedIds, ...wordsStartFromSet];
-    const phrasesLimit = wordsStartFromLimit - wordsStartFromSet.size;
-    const phrasesExactSet = await this.getPhrases(search, type, excludedIds, phrasesLimit);
+
+    const phrasesExactSet = await this.getPhrases(search, type, excludedIds, target - ordered.length);
+    pushUpToTarget(phrasesExactSet);
     excludedIds = [...excludedIds, ...phrasesExactSet];
 
-    // TODO add a check to add other matches
-
-    const resPromises = [];
-
-    if (exactSet.size > 0) {
-      resPromises.push(
-        this.enWordsRep.find({
-          where: { id: In([...exactSet]) },
-          relations: { word: true, forms: { word: true } },
-          take: limit,
-        }),
-      );
-    }
-
-    if (limit - exactSet.size > 0 && phrasalSet.size > 0) {
-      resPromises.push(
-        this.enWordsRep.find({
-          where: { id: In([...phrasalSet]) },
-          relations: { word: true, forms: { word: true } },
-          take: limit - exactSet.size,
-        }),
-      );
-    }
-
-    if (limit - exactSet.size - phrasalSet.size > 0 && wordsStartFromSet.size > 0) {
-      resPromises.push(
-        this.enWordsRep.find({
-          where: { id: In([...wordsStartFromSet]) },
-          relations: { word: true, forms: { word: true } },
-          take: limit - exactSet.size - phrasalSet.size,
-        }),
-      );
-    }
-
-    if (limit - exactSet.size - phrasalSet.size - wordsStartFromSet.size > 0 && phrasesExactSet.size > 0) {
-      resPromises.push(
-        this.enWordsRep.find({
-          where: { id: In([...phrasesExactSet]) },
-          relations: { word: true, forms: { word: true } },
-          take: limit - exactSet.size - phrasalSet.size - wordsStartFromSet.size,
-        }),
-      );
-    }
-    const wordsEndsFromLimit =
-      limit - exactSet.size - phrasalSet.size - wordsStartFromSet.size - phrasesExactSet.size;
-    const wordsEndsFromSet = await this.getWordsEndsFromSearch(search, type, excludedIds, wordsEndsFromLimit);
+    const wordsEndsFromSet = await this.getWordsEndsFromSearch(
+      search,
+      type,
+      excludedIds,
+      target - ordered.length,
+    );
+    pushUpToTarget(wordsEndsFromSet);
     excludedIds = [...excludedIds, ...wordsEndsFromSet];
 
-    if (wordsEndsFromSet && wordsEndsFromSet?.size > 0) {
-      if (wordsEndsFromSet.size > 0) {
-        resPromises.push(
-          this.enWordsRep.find({
-            where: { id: In([...wordsEndsFromSet]) },
-            relations: { word: true, forms: { word: true } },
-            take: wordsEndsFromLimit,
-          }),
-        );
-      }
+    const anyMatchesWordsSet = await this.getAnyMatchesWords(
+      search,
+      type,
+      excludedIds,
+      target - ordered.length,
+    );
+    pushUpToTarget(anyMatchesWordsSet);
+
+    return ordered;
+  }
+
+  private async findWordsByIdsOrdered(
+    ids: number[],
+    relations: FindOptionsRelations<EnWord>,
+  ): Promise<EnWord[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+    const rows = await this.enWordsRep.find({ where: { id: In(ids) }, relations });
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    return ids.map((id) => byId.get(id)).filter((row): row is EnWord => row !== undefined);
+  }
+
+  async search({ search: s, type, limit }: SearchReqDTO): Promise<EnSearchWordT[]> {
+    const search = s.trim().toLowerCase();
+    const ids = await this.collectOrderedIds(search, type, limit);
+    const words = await this.findWordsByIdsOrdered(ids, { word: true, forms: { word: true } });
+    return mapSearchResults(words);
+  }
+
+  async searchDetailed({
+    search: s,
+    type,
+    limit = 10,
+    page = 1,
+    with_meanings = false,
+    with_translations = false,
+    translation_languages,
+  }: SearchDetailedReqDTO): Promise<SearchDetailedItemsT> {
+    const search = s.trim().toLowerCase();
+    // one id past the requested page tells whether the next page exists
+    const ids = await this.collectOrderedIds(search, type, page * limit + 1);
+    const pageIds = ids.slice((page - 1) * limit, page * limit);
+
+    const relations: FindOptionsRelations<EnWord> = { word: true, forms: { word: true } };
+    if (with_meanings) {
+      relations.meanings = { translations: true };
+    }
+    if (with_translations) {
+      relations.short_translations = true;
     }
 
-    const anyMatchesWordsLimit = wordsEndsFromLimit - wordsEndsFromSet.size;
-    const anyMatchesWordsSet = await this.getAnyMatchesWords(search, type, excludedIds, anyMatchesWordsLimit);
-    if (anyMatchesWordsSet.size > 0) {
-      resPromises.push(
-        this.enWordsRep.find({
-          where: { id: In([...anyMatchesWordsSet]) },
-          relations: { word: true, forms: { word: true } },
-          take: anyMatchesWordsLimit,
-        }),
-      );
-    }
-    const res = await Promise.all(resPromises);
-    return mapSearchResults(res.flat());
+    const words = await this.findWordsByIdsOrdered(pageIds, relations);
+    return {
+      items: mapDetailedSearchResults(words, { with_meanings, with_translations, translation_languages }),
+      page,
+      limit,
+      has_more: ids.length > page * limit,
+    };
   }
 }

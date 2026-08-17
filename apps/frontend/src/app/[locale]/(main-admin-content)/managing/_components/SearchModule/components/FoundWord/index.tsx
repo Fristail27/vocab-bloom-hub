@@ -2,14 +2,14 @@ import React from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { App, Button, Popover, Tag, Typography } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { EnWordT } from 'server/types';
+import { EnSearchWordT } from 'server/types';
 import { DeletePopoverContent } from '../DeletePopoverContent';
 import { EnApi } from '@/core/api/EnApi';
 import styles from './styles.module.scss';
 
 type FoundWordP = {
-  w: EnWordT;
-  onDeleted: (id: EnWordT['id']) => void;
+  w: EnSearchWordT;
+  onDeleted: (id: EnSearchWordT['id']) => void;
 };
 
 const { Text } = Typography;

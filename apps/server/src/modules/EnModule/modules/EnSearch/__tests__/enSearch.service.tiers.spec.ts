@@ -9,7 +9,12 @@ import { EnMeaning } from '../../../entities/en_meaning.entity';
 import { EnMeaningTranslation } from '../../../entities/en_meaning_translation.entity';
 import { EnShortTranslation } from '../../../entities/en_short_translation.entity';
 import { EnSearchService } from '../enSearch.service';
-import { EnEntryTypesE, EnPartOfSpeechE, EnWordFormsE } from '../../../../../../types';
+import {
+  AvailableTranslationLanguagesE,
+  EnEntryTypesE,
+  EnPartOfSpeechE,
+  EnWordFormsE,
+} from '../../../../../../types';
 
 describe('EnSearchService tier categorization (issue #187)', () => {
   let ds: DataSource;
@@ -176,5 +181,103 @@ describe('EnSearchService tier categorization (issue #187)', () => {
     await seedRunDataset();
 
     expect(await service.search({ search: 'zzz', type: undefined, limit: 10 })).toEqual([]);
+  });
+
+  describe('searchDetailed (issue #170)', () => {
+    const seedTranslations = async (word: EnWord) => {
+      await ds.getRepository(EnShortTranslation).save({
+        word,
+        description: 'бежать',
+        language: AvailableTranslationLanguagesE.ru,
+        variants_of_words: ['бежать', 'бегать'],
+      });
+      const meaning = await ds.getRepository(EnMeaning).save({
+        word,
+        sort_order: 0,
+        title: 'to move fast',
+        definition: 'to move at a speed faster than a walk',
+        is_obsolete: false,
+      });
+      await ds.getRepository(EnMeaningTranslation).save({
+        meaning,
+        language: AvailableTranslationLanguagesE.ru,
+        title: 'бежать',
+        definition: 'быстро передвигаться',
+        variants_of_words: [],
+      });
+    };
+
+    it('without flags returns items with empty meanings and translations plus paging meta', async () => {
+      const { runVerb } = await seedRunDataset();
+      await seedTranslations(runVerb);
+
+      const res = await service.searchDetailed({ search: 'run', limit: 5, page: 1 });
+
+      expect(res.page).toBe(1);
+      expect(res.limit).toBe(5);
+      expect(res.has_more).toBe(true);
+      expect(res.items.length).toBe(5);
+      res.items.forEach((item) => {
+        expect(item.meanings).toEqual([]);
+        expect(item.short_translations).toEqual([]);
+      });
+    });
+
+    it('with_translations populates short translations of the found word', async () => {
+      const { runVerb } = await seedRunDataset();
+      await seedTranslations(runVerb);
+
+      const res = await service.searchDetailed({ search: 'run', limit: 5, with_translations: true });
+
+      const verb = res.items.find((item) => item.id === runVerb.id);
+      expect(verb?.short_translations.map((st) => st.description)).toEqual(['бежать']);
+      // meanings stay empty without their flag
+      expect(verb?.meanings).toEqual([]);
+    });
+
+    it('with_meanings populates meanings together with their translations', async () => {
+      const { runVerb } = await seedRunDataset();
+      await seedTranslations(runVerb);
+
+      const res = await service.searchDetailed({
+        search: 'run',
+        limit: 5,
+        with_meanings: true,
+        translation_languages: [AvailableTranslationLanguagesE.ru],
+      });
+
+      const verb = res.items.find((item) => item.id === runVerb.id);
+      expect(verb?.meanings.map((m) => m.title)).toEqual(['to move fast']);
+      expect(verb?.meanings[0].translations.map((t) => t.definition)).toEqual(['быстро передвигаться']);
+    });
+
+    it('paginates the tiered results without overlaps and reports has_more', async () => {
+      await seedRunDataset(); // 10 matches for "run" in total
+
+      const page1 = await service.searchDetailed({ search: 'run', limit: 3, page: 1 });
+      const page2 = await service.searchDetailed({ search: 'run', limit: 3, page: 2 });
+      const page4 = await service.searchDetailed({ search: 'run', limit: 3, page: 4 });
+
+      // page 1 is the top of the tier order, identical to the base search
+      expect(page1.items.map((w) => w.word)).toEqual(['run', 'run', 'run out']);
+      expect(page1.has_more).toBe(true);
+
+      expect(page2.items).toHaveLength(3);
+      const page1Ids = new Set(page1.items.map((w) => w.id));
+      page2.items.forEach((w) => expect(page1Ids.has(w.id)).toBe(false));
+
+      // 10 items with limit 3 leave a single item on the last page
+      expect(page4.items).toHaveLength(1);
+      expect(page4.has_more).toBe(false);
+    });
+
+    it('returns an empty page when nothing matches', async () => {
+      await seedRunDataset();
+
+      const res = await service.searchDetailed({ search: 'zzz' });
+
+      expect(res.items).toEqual([]);
+      expect(res.has_more).toBe(false);
+    });
   });
 });

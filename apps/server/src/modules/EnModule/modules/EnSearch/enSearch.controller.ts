@@ -3,7 +3,8 @@ import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { EnSearchService } from './enSearch.service';
 import { SearchReqDTO } from './dto/SearchReq.dto';
-import { SearchResT } from '../../../../../types';
+import { SearchDetailedReqDTO } from './dto/SearchDetailedReq.dto';
+import { SearchDetailedResT, SearchResT } from '../../../../../types';
 import { AppThrottlerGuard } from '../../../../core/guards/app-throttler.guard';
 
 @ApiTags('En_Words')
@@ -16,5 +17,12 @@ export class EnSearchController {
   @Post('/')
   async search(@Body() body: SearchReqDTO): Promise<SearchResT> {
     return this.enSearchService.search(body);
+  }
+
+  @UseGuards(AppThrottlerGuard)
+  @Throttle({ default: { limit: 30, ttl: 10_000 } })
+  @Post('/detailed')
+  async searchDetailed(@Body() body: SearchDetailedReqDTO): Promise<SearchDetailedResT> {
+    return this.enSearchService.searchDetailed(body);
   }
 }

@@ -1,5 +1,5 @@
 import { ErrorResT } from '../../errors';
-import { EnPartOfSpeechE, EnWordT } from '.';
+import { EnPartOfSpeechE, EnSearchWordT, EnWordT } from '.';
 import type { AvailableTranslationLanguagesE, WordLevelE } from '../index';
 import { AddWordReqDTO } from '../../../src/modules/EnModule/dto/AddWordReq.dto';
 import { CheckWordQueryDTO } from '../../../src/modules/EnModule/dto/CheckWordQuery.dto';
@@ -14,6 +14,7 @@ import { EditMeaningTranslationReqDTO } from '../../../src/modules/EnModule/modu
 import { EditCommonInfoOfWordReqDTO } from '../../../src/modules/EnModule/dto/EditCommonInfoOfWordReq.dto';
 import { EditPhrasalBaseReqDTO } from '../../../src/modules/EnModule/dto/EditPhrasalBase.dto';
 import { ImportDictionaryReq } from '../../../src/modules/EnModule/modules/EnImportDictionary/dto/ImportDictionaryReq.dto';
+import { SearchDetailedReqDTO } from '../../../src/modules/EnModule/modules/EnSearch/dto/SearchDetailedReq.dto';
 import { EnDictionaryImportPhasesE } from '../../../src/modules/EnModule/modules/EnImportDictionary/constants';
 
 export type CheckWordResT = { hasWord: boolean; id?: number } | ErrorResT;
@@ -21,7 +22,15 @@ export type CheckWordQueryT = CheckWordQueryDTO;
 // The add endpoint echoes the request body back, so the response mirrors the request type
 export type AddWordReqT = AddWordReqDTO;
 export type AddResT = AddWordReqT | ErrorResT;
-export type SearchResT = EnWordT[] | ErrorResT;
+export type SearchResT = EnSearchWordT[] | ErrorResT;
+export type SearchDetailedReqT = SearchDetailedReqDTO;
+export type SearchDetailedItemsT = {
+  items: EnWordT[];
+  page: number;
+  limit: number;
+  has_more: boolean;
+};
+export type SearchDetailedResT = SearchDetailedItemsT | ErrorResT;
 export type DeleteResT = { success: boolean } | ErrorResT;
 export type AddWordFormResT = { success: boolean; id: number } | ErrorResT;
 export type AddWordFormReqT = AddWordFormReqDTO;

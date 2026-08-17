@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { App, Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
-import { EnWordT } from 'server/types';
+import { EnSearchWordT } from 'server/types';
 import { Input } from '@/core/ui/Input';
 import { EnApi } from '@/core/api/EnApi';
 import { useDebounced } from '@/core/hooks';
@@ -15,7 +15,7 @@ export const SearchModule: React.FC = () => {
   const tErr = useTranslations('errors');
   const { message } = App.useApp();
   const [searchValue, setSearchValue] = useState<string>('');
-  const [words, setWords] = useState<EnWordT[]>([]);
+  const [words, setWords] = useState<EnSearchWordT[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const debouncedValue = useDebounced(searchValue, 400);
 
