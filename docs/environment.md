@@ -23,9 +23,6 @@ server logs a warning when the root `.env` could not be loaded.
 | `LOG_LEVEL`                | no                | `debug` in development, else `log` | server   | Minimum server log level: `verbose` / `debug` / `log` / `warn` / `error` / `fatal`. Unknown values fall back to the default.                                                                                                                                        |
 | `NODE_ENV`                 | no                | —                                  | both     | `development` enables debug logging; `production` makes the auth cookie `secure`, requires `DATABASE_URL` and disables the Swagger UI at `/api`. Schema management does not depend on it: the SQLite fallback always synchronizes, Postgres always uses migrations. |
 
-> `JWT_SECRET_KEY` found in older `.env` files is **not read by the code** — the JWT signing secret
-> is derived from `USERNAME`/`PASSWORD` (see [authentication.md](./authentication.md)).
-
 ## Startup validation
 
 The server validates its configuration before Nest is created (`assertRequiredConfig` in

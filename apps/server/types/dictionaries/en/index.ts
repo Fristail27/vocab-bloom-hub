@@ -99,4 +99,8 @@ export type EnWordT = Omit<
   base_form?: Omit<EnWordT, 'base_form'> | undefined;
 };
 
+// Base search results carry no meanings/translations — use the detailed search
+// endpoint (or GET /en/:id) when that data is needed
+export type EnSearchWordT = Omit<EnWordT, 'meanings' | 'short_translations'>;
+
 export const CustomVersionDictionaryOfWord = 'custom_version';

@@ -38,6 +38,8 @@ import {
   GetDatasetManifestResT,
   ImportDictionaryChunkT,
   ImportDictionaryReqT,
+  SearchDetailedReqT,
+  SearchDetailedResT,
   SearchResT,
 } from 'server/types';
 import { CheckWordResT } from 'server/types';
@@ -56,6 +58,10 @@ export class EnApi extends AbstractBaseApi {
 
   static async search(search: string): Promise<SearchResT> {
     return this.post<SearchResT>(`${this.baseURL}/en/search`, { search, limit: 100 });
+  }
+
+  static async searchDetailed(body: SearchDetailedReqT): Promise<SearchDetailedResT> {
+    return this.post<SearchDetailedResT>(`${this.baseURL}/en/search/detailed`, body);
   }
 
   static async deleteWord(id: number): Promise<DeleteResT> {
