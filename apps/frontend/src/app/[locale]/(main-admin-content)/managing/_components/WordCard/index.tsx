@@ -40,7 +40,10 @@ export const WordCard: React.FC<WordCardP> = ({ word, mode = WordCardModeE.view 
   const formNames = FormsByPartOfSpeech[word.part_of_speech];
 
   const editCommonInfo = async (data: Omit<CommonInfoDataT, 'id' | 'form_of_word' | 'base_phrasal'>) => {
-    const res = await EnApi.editCommonInfoOfWord(wordId as string, data);
+    // The card data carries `version` (loaded with the word), but the edit
+    // endpoint whitelists its request fields and rejects unknown ones
+    const { version: _version, ...payload } = data;
+    const res = await EnApi.editCommonInfoOfWord(wordId as string, payload);
     if ('error' in res) {
       message.error(tError(res.message));
     } else {
