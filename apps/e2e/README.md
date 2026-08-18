@@ -26,6 +26,13 @@ First run on a new machine: `yarn workspace e2e exec playwright install chromium
   `storageState` (httpOnly bearer cookie) authenticates every other test.
 - Tests seed data through the real admin API (`helpers/seed.ts`) and assert through the UI and
   the API.
+- The UI-driven CRUD specs drive changes through the real forms and modals and verify
+  persistence through the API against the isolated database; only prerequisite data is seeded
+  via the API. `tests/word-crud.spec.ts` covers the create flows (add-word wizard, word-card
+  modals), `tests/word-edit-delete.spec.ts` the edit/delete modals of every card entity,
+  `tests/add-word-wizard.spec.ts` the wizard branches (forms + meanings + translations,
+  already-exists, phrase and grammar-pattern entry types), and `tests/phrasal-verbs.spec.ts`
+  the phrasal-base linking in the wizard and in the card.
 - The database file is deleted by the server `webServer` command right before boot — not in
   `globalSetup`, which runs only after the servers are already up (deleting the file under a live
   server turns every write into `SQLITE_READONLY_DBMOVED`).
