@@ -1,5 +1,6 @@
 import type { createTranslator, Messages } from 'use-intl/core';
 import { InterfaceLanguageEnum } from '@/types/common';
+import { DOCUMENTED_ENDPOINTS } from './documentation/constants';
 
 export const getManagingButtons = (
   t: ReturnType<typeof createTranslator<Messages, 'managing'>>,
@@ -26,4 +27,15 @@ export const getStatisticsButtons = (
     },
     { text: t('issues_statistics'), href: `/${locale}/statistics/issues`, type: 'primary' as const },
   ];
+};
+
+export const getDocumentationButtons = (
+  t: ReturnType<typeof createTranslator<Messages, 'documentation'>>,
+  locale: InterfaceLanguageEnum,
+) => {
+  return DOCUMENTED_ENDPOINTS.map((endpoint) => ({
+    text: t(`endpoint_${endpoint.key}`),
+    href: `/${locale}/documentation/${endpoint.slug}`,
+    type: 'primary' as const,
+  }));
 };

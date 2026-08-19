@@ -1,0 +1,22 @@
+.meanings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.meaning {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.definition {
+  margin-bottom: 0 !important;
+}
+
+.translation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
