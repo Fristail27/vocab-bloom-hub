@@ -14,6 +14,7 @@ import { EditMeaningTranslationReqDTO } from '../../../src/modules/EnModule/modu
 import { EditCommonInfoOfWordReqDTO } from '../../../src/modules/EnModule/dto/EditCommonInfoOfWordReq.dto';
 import { EditPhrasalBaseReqDTO } from '../../../src/modules/EnModule/dto/EditPhrasalBase.dto';
 import { ImportDictionaryReq } from '../../../src/modules/EnModule/modules/EnImportDictionary/dto/ImportDictionaryReq.dto';
+import { SearchReqDTO } from '../../../src/modules/EnModule/modules/EnSearch/dto/SearchReq.dto';
 import { SearchDetailedReqDTO } from '../../../src/modules/EnModule/modules/EnSearch/dto/SearchDetailedReq.dto';
 import { EnDictionaryImportPhasesE } from '../../../src/modules/EnModule/modules/EnImportDictionary/constants';
 
@@ -22,6 +23,7 @@ export type CheckWordQueryT = CheckWordQueryDTO;
 // The add endpoint echoes the request body back, so the response mirrors the request type
 export type AddWordReqT = AddWordReqDTO;
 export type AddResT = AddWordReqT | ErrorResT;
+export type SearchReqT = SearchReqDTO;
 export type SearchResT = EnSearchWordT[] | ErrorResT;
 export type SearchDetailedReqT = SearchDetailedReqDTO;
 export type SearchDetailedItemsT = {

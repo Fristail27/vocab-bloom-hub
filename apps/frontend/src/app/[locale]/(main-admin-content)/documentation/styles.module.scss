@@ -1,0 +1,11 @@
+.mainPage {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.intro {
+  margin: 0;
+  max-width: 720px;
+}

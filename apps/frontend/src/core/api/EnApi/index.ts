@@ -40,6 +40,7 @@ import {
   ImportDictionaryReqT,
   SearchDetailedReqT,
   SearchDetailedResT,
+  SearchReqT,
   SearchResT,
 } from 'server/types';
 import { CheckWordResT } from 'server/types';
@@ -57,7 +58,12 @@ export class EnApi extends AbstractBaseApi {
   }
 
   static async search(search: string): Promise<SearchResT> {
-    return this.post<SearchResT>(`${this.baseURL}/en/search`, { search, limit: 100 });
+    return this.searchByFilters({ search, limit: 100 });
+  }
+
+  // Mirrors the raw endpoint contract: every filter the DTO accepts is passed through as is
+  static async searchByFilters(body: SearchReqT): Promise<SearchResT> {
+    return this.post<SearchResT>(`${this.baseURL}/en/search`, body);
   }
 
   static async searchDetailed(body: SearchDetailedReqT): Promise<SearchDetailedResT> {
