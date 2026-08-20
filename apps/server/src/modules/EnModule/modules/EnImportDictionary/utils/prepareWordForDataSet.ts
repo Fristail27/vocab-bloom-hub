@@ -10,6 +10,13 @@ import { EnMeaningTranslation } from '../../../entities/en_meaning_translation.e
 import { EnMeaning } from '../../../entities/en_meaning.entity';
 import { EnAreaVariantsE } from '../../../../../../types';
 import { EnShortTranslation } from '../../../entities/en_short_translation.entity';
+import {
+  sortFormsForDS,
+  sortMeaningTranslationsForDS,
+  sortMeaningsForDS,
+  sortShortTranslationsForDS,
+  sortStrings,
+} from './sortForDataSet';
 
 export const mapMeaningTranslationsForDS = (t: EnMeaningTranslation): EnMeaningTranslationDST => {
   return {
@@ -30,16 +37,15 @@ export const mapMeaningForDS = (m: EnMeaning): EnMeaningDST => {
     definition: m.definition || '',
     sort_order: m.sort_order || 0,
     examples: m.examples || [],
-    categories: m.categories || [],
-    translations: m.translations.map(mapMeaningTranslationsForDS),
+    categories: sortStrings(m.categories),
+    translations: sortMeaningTranslationsForDS(m.translations.map(mapMeaningTranslationsForDS)),
   };
 };
 
-// TypeORM не гарантирует порядок элементов в relations, поэтому сортируем сами
+// TypeORM does not guarantee the order of relation rows, so every collection
+// is sorted by its natural keys (see sortForDataSet.ts)
 export const mapMeaningsForDS = (meanings: EnMeaning[]): EnMeaningDST[] => {
-  return [...meanings]
-    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || a.id - b.id)
-    .map(mapMeaningForDS);
+  return sortMeaningsForDS(meanings.map(mapMeaningForDS));
 };
 
 export const mapShortTranslationForDS = (t: EnShortTranslation): EnShortTranslationDST => {
@@ -63,7 +69,7 @@ export const mapFormsForDS = (f: EnWord): EnWordFormDST => {
 export const prepareWordForDataSet = (word: EnWord): DataSetWordT => {
   const { pattern: _p, form_of_word: _f, ...w } = word;
   return {
-    categories: w.categories || [],
+    categories: sortStrings(w.categories),
     generated: Boolean(w.generated),
     generated_by_model: w.generated_by_model || '',
     transcription: w.transcription || '',
@@ -84,10 +90,10 @@ export const prepareWordForDataSet = (word: EnWord): DataSetWordT => {
     noun___irregular_plural: Boolean(w.noun___irregular_plural),
     word: w.word.word,
     base_phrasal: w.base_phrasal?.word.word || '',
-    phrasal_variants: w.phrasal_variants?.map((v) => v.word.word) || [],
+    phrasal_variants: sortStrings(w.phrasal_variants?.map((v) => v.word.word)),
     meanings: mapMeaningsForDS(w.meanings),
-    short_translations: w.short_translations.map(mapShortTranslationForDS) || [],
-    forms: w.forms.map(mapFormsForDS) || [],
+    short_translations: sortShortTranslationsForDS(w.short_translations.map(mapShortTranslationForDS)),
+    forms: sortFormsForDS(w.forms.map(mapFormsForDS)),
     version: w.version,
   };
 };

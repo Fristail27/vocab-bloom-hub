@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, FindOptionsRelations, FindOptionsWhere, In, MoreThan, Not, Repository } from 'typeorm';
+import { EntityManager, FindOptionsRelations, FindOptionsWhere, In, Not, Repository } from 'typeorm';
 import * as yazl from 'yazl';
 import { randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream, existsSync, mkdirSync } from 'node:fs';
@@ -43,11 +43,13 @@ import {
 } from './constants';
 import {
   cleanEntity,
+  compareExportLineKeys,
   mapGrammarPatternFromSetToDB,
   mapWordFromSetToDB,
   prepareGrammarPatternForDataSet,
   preparePhraseForDataSet,
   prepareWordForDataSet,
+  sortStrings,
 } from './utils';
 import {
   DataSetGrammarPatternT,
@@ -583,25 +585,35 @@ export class EnImportDictionaryService {
   ): Promise<number> {
     const outStream = createWriteStream(outPath, { encoding: 'utf-8' });
     const batchSize = 200;
-    let lastId = 0;
     let written = 0;
 
     try {
-      while (true) {
-        const batch = await this.enWordsRep.find({
-          where: {
-            id: MoreThan(lastId),
-            form_of_word: EnWordFormsE.base_form,
-            ...whereExtra,
-          },
-          order: { id: 'ASC' },
-          take: batchSize,
-          relations,
-        });
+      // Lines are written in natural-key order (word, part of speech, area
+      // variant), not in id order: the ids differ between databases and the
+      // published files must not depend on them (issue #247). The keys are
+      // sorted in JS so the order does not depend on the DB collation either.
+      const keys = await this.enWordsRep.find({
+        select: { id: true, part_of_speech: true, area_variant: true, word: { word: true } },
+        relations: { word: true },
+        where: { form_of_word: EnWordFormsE.base_form, ...whereExtra },
+      });
+      const orderedKeys = keys
+        .map((k) => ({
+          id: k.id,
+          word: k.word.word,
+          part_of_speech: k.part_of_speech,
+          area_variant: k.area_variant,
+        }))
+        .sort(compareExportLineKeys);
 
-        if (batch.length === 0) break;
+      for (let offset = 0; offset < orderedKeys.length; offset += batchSize) {
+        const chunk = orderedKeys.slice(offset, offset + batchSize);
+        const rows = await this.enWordsRep.find({ where: { id: In(chunk.map((k) => k.id)) }, relations });
+        const rowsById = new Map(rows.map((row) => [row.id, row]));
 
-        for (const word of batch) {
+        for (const key of chunk) {
+          const word = rowsById.get(key.id);
+          if (!word) continue;
           const prepared = prepare(word);
           if (prepared === null) continue;
           const cleaned = cleanEntity(prepared);
@@ -609,8 +621,7 @@ export class EnImportDictionaryService {
           written++;
         }
 
-        lastId = batch[batch.length - 1].id;
-        addProcessed(batch.length);
+        addProcessed(chunk.length);
 
         onProgress(total > 0 ? Math.min(100, (processedSoFar() / total) * 100) : 100, stage);
         await new Promise((r) => setTimeout(r, 1));
@@ -700,7 +711,7 @@ export class EnImportDictionaryService {
         { word: true, phrasal_variants: { word: true } },
         (w) =>
           w.phrasal_variants?.length
-            ? { word: w.word.word, phrasal_variants: w.phrasal_variants.map((v) => v.word.word) }
+            ? { word: w.word.word, phrasal_variants: sortStrings(w.phrasal_variants.map((v) => v.word.word)) }
             : null,
         emit,
       );

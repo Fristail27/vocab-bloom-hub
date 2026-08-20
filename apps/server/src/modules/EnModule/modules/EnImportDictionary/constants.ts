@@ -10,6 +10,10 @@ export enum EnDictionaryImportPhasesE {
 
 export const SYSTEM_FIELDS = ['id', 'createdAt', 'updateAt', 'updatedAt'];
 
+// Every jsonl file is written in a deterministic order: lines by
+// (word, part_of_speech, area_variant) and every nested collection by its
+// natural keys, so re-exports of the same data are byte-identical. The exact
+// rules live in utils/sortForDataSet.ts (issue #247)
 export const DATASET_FILE_NAMES = {
   words: 'vocab-bloom-hub-en-words.jsonl',
   phrasalVerbs: 'vocab-bloom-hub-en-phrasal-verbs.jsonl',

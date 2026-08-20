@@ -1,11 +1,12 @@
 import { DataSetGrammarPatternT } from '../../../../../../types/dictionaries/en/EnDataSetTypes';
 import { EnWord } from '../../../entities/en_word.entity';
 import { mapMeaningsForDS, mapShortTranslationForDS } from './prepareWordForDataSet';
+import { sortShortTranslationsForDS, sortStrings } from './sortForDataSet';
 
 export const prepareGrammarPatternForDataSet = (word: EnWord): DataSetGrammarPatternT => {
   const { form_of_word: _f, ...w } = word;
   return {
-    categories: w.categories || [],
+    categories: sortStrings(w.categories),
     generated: Boolean(w.generated),
     pattern: w.pattern as string[],
     generated_by_model: w.generated_by_model || '',
@@ -16,7 +17,7 @@ export const prepareGrammarPatternForDataSet = (word: EnWord): DataSetGrammarPat
     is_obsolete: Boolean(w.is_obsolete),
     phrase: w.word.word,
     meanings: mapMeaningsForDS(w.meanings),
-    short_translations: w.short_translations.map(mapShortTranslationForDS) || [],
+    short_translations: sortShortTranslationsForDS(w.short_translations.map(mapShortTranslationForDS)),
     version: w.version,
   };
 };
