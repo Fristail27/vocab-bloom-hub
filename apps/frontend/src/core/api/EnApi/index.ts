@@ -38,6 +38,12 @@ import {
   GetDatasetManifestResT,
   ImportDictionaryChunkT,
   ImportDictionaryReqT,
+  ListMeaningsQueryT,
+  ListMeaningsResT,
+  ListMeaningTranslationsQueryT,
+  ListMeaningTranslationsResT,
+  ListWordsQueryT,
+  ListWordsResT,
   SearchDetailedReqT,
   SearchDetailedResT,
   SearchReqT,
@@ -68,6 +74,23 @@ export class EnApi extends AbstractBaseApi {
 
   static async searchDetailed(body: SearchDetailedReqT): Promise<SearchDetailedResT> {
     return this.post<SearchDetailedResT>(`${this.baseURL}/en/search/detailed`, body);
+  }
+
+  // Admin listings with filters and pagination (bulk-request page, issue #249)
+  static async listWords(query: ListWordsQueryT): Promise<ListWordsResT> {
+    return this.get<ListWordsResT>(`${this.baseURL}/en/words`, { query: { ...query } });
+  }
+
+  static async listMeanings(query: ListMeaningsQueryT): Promise<ListMeaningsResT> {
+    return this.get<ListMeaningsResT>(`${this.baseURL}/en/meanings`, { query: { ...query } });
+  }
+
+  static async listMeaningTranslations(
+    query: ListMeaningTranslationsQueryT,
+  ): Promise<ListMeaningTranslationsResT> {
+    return this.get<ListMeaningTranslationsResT>(`${this.baseURL}/en/meaning-translations`, {
+      query: { ...query },
+    });
   }
 
   static async deleteWord(id: number): Promise<DeleteResT> {

@@ -1,6 +1,6 @@
 import { ErrorResT } from '../../errors';
-import { EnPartOfSpeechE, EnSearchWordT, EnWordT } from '.';
-import type { AvailableTranslationLanguagesE, WordLevelE } from '../index';
+import { EnAreaVariantsE, EnPartOfSpeechE, EnSearchWordT, EnWordT } from '.';
+import type { AvailableTranslationLanguagesE, CategoryE, LanguageRegisterE, WordLevelE } from '../index';
 import { AddWordReqDTO } from '../../../src/modules/EnModule/dto/AddWordReq.dto';
 import { CheckWordQueryDTO } from '../../../src/modules/EnModule/dto/CheckWordQuery.dto';
 import { AddWordFormReqDTO } from '../../../src/modules/EnModule/dto/AddWordFormReq.dto';
@@ -16,6 +16,9 @@ import { EditPhrasalBaseReqDTO } from '../../../src/modules/EnModule/dto/EditPhr
 import { ImportDictionaryReq } from '../../../src/modules/EnModule/modules/EnImportDictionary/dto/ImportDictionaryReq.dto';
 import { SearchReqDTO } from '../../../src/modules/EnModule/modules/EnSearch/dto/SearchReq.dto';
 import { SearchDetailedReqDTO } from '../../../src/modules/EnModule/modules/EnSearch/dto/SearchDetailedReq.dto';
+import { ListWordsQueryDTO } from '../../../src/modules/EnModule/modules/EnAdminLists/dto/ListWordsQuery.dto';
+import { ListMeaningsQueryDTO } from '../../../src/modules/EnModule/modules/EnAdminLists/dto/ListMeaningsQuery.dto';
+import { ListMeaningTranslationsQueryDTO } from '../../../src/modules/EnModule/modules/EnAdminLists/dto/ListMeaningTranslationsQuery.dto';
 import { EnDictionaryImportPhasesE } from '../../../src/modules/EnModule/modules/EnImportDictionary/constants';
 
 export type CheckWordResT = { hasWord: boolean; id?: number } | ErrorResT;
@@ -33,6 +36,75 @@ export type SearchDetailedItemsT = {
   has_more: boolean;
 };
 export type SearchDetailedResT = SearchDetailedItemsT | ErrorResT;
+
+// Admin listings (GET /api/en/words, /meanings, /meaning-translations) used by the bulk-request page
+export type PaginatedListT<T> = {
+  items: T[];
+  page: number;
+  limit: number;
+  total: number;
+  has_more: boolean;
+};
+
+export type ListWordsQueryT = ListWordsQueryDTO;
+export type EnWordListItemT = {
+  id: number;
+  word: string;
+  part_of_speech: EnPartOfSpeechE;
+  area_variant: EnAreaVariantsE | null;
+  word_level: WordLevelE | null;
+  language_register: LanguageRegisterE | null;
+  generated: boolean;
+  generated_by_model: string | null;
+  version: string;
+  is_obsolete: boolean;
+  transcription: string | null;
+  description: string | null;
+  categories: CategoryE[];
+  meanings_count: number;
+  short_translations_count: number;
+};
+export type EnWordsListT = PaginatedListT<EnWordListItemT>;
+export type ListWordsResT = EnWordsListT | ErrorResT;
+
+export type ListMeaningsQueryT = ListMeaningsQueryDTO;
+// a meaning next to the word it belongs to
+export type EnMeaningListItemT = {
+  id: number;
+  word_id: number;
+  word: string;
+  part_of_speech: EnPartOfSpeechE;
+  title: string;
+  definition: string;
+  sort_order: number;
+  area_variant: EnAreaVariantsE;
+  meaning_level: WordLevelE | null;
+  language_register: LanguageRegisterE | null;
+  categories: CategoryE[];
+  is_obsolete: boolean;
+  examples: string[];
+  translations_count: number;
+};
+export type EnMeaningsListT = PaginatedListT<EnMeaningListItemT>;
+export type ListMeaningsResT = EnMeaningsListT | ErrorResT;
+
+export type ListMeaningTranslationsQueryT = ListMeaningTranslationsQueryDTO;
+// a meaning translation next to its meaning and word
+export type EnMeaningTranslationListItemT = {
+  id: number;
+  meaning_id: number;
+  word_id: number;
+  word: string;
+  part_of_speech: EnPartOfSpeechE;
+  meaning_title: string;
+  meaning_definition: string;
+  language: AvailableTranslationLanguagesE;
+  title: string;
+  definition: string;
+  variants_of_words: string[];
+};
+export type EnMeaningTranslationsListT = PaginatedListT<EnMeaningTranslationListItemT>;
+export type ListMeaningTranslationsResT = EnMeaningTranslationsListT | ErrorResT;
 export type DeleteResT = { success: boolean } | ErrorResT;
 export type AddWordFormResT = { success: boolean; id: number } | ErrorResT;
 export type AddWordFormReqT = AddWordFormReqDTO;

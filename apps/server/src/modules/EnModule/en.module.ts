@@ -20,6 +20,8 @@ import { EnSearchController } from './modules/EnSearch/enSearch.controller';
 import { EnSearchService } from './modules/EnSearch/enSearch.service';
 import { EnStatisticsController } from './modules/EnStatistics/enStatistics.controller';
 import { EnStatisticsService } from './modules/EnStatistics/enStatistics.service';
+import { EnAdminListsController } from './modules/EnAdminLists/enAdminLists.controller';
+import { EnAdminListsService } from './modules/EnAdminLists/enAdminLists.service';
 
 @Module({
   imports: [
@@ -28,9 +30,11 @@ import { EnStatisticsService } from './modules/EnStatistics/enStatistics.service
     SettingsModule,
   ],
   controllers: [
-    // EnStatisticsController must be registered before EnController,
-    // otherwise GET /api/en/statistics is swallowed by the GET /api/en/:id route
+    // EnStatisticsController and EnAdminListsController must be registered before
+    // EnController, otherwise GET /api/en/statistics, /api/en/words, /api/en/meanings
+    // and /api/en/meaning-translations are swallowed by the GET /api/en/:id route
     EnStatisticsController,
+    EnAdminListsController,
     EnController,
     EnShortTranslationController,
     EnMeaningTranslationController,
@@ -46,6 +50,7 @@ import { EnStatisticsService } from './modules/EnStatistics/enStatistics.service
     EnImportDictionaryService,
     EnSearchService,
     EnStatisticsService,
+    EnAdminListsService,
   ],
   exports: [EnService],
 })

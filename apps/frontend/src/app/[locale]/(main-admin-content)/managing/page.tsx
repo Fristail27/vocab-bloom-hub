@@ -30,6 +30,9 @@ export default async function ManagingPage({ params }: CommonPageP) {
         <Button type="primary" href={`/${locale}/managing/add-word`}>
           {manageT('add_word')}
         </Button>
+        <Button type="primary" href={`/${locale}/managing/bulk-request`}>
+          {manageT('bulk_request')}
+        </Button>
       </div>
       <SearchModule />
     </div>

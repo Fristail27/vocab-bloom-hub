@@ -1,0 +1,29 @@
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+
+  .small {
+    min-width: 120px;
+  }
+
+  .medium {
+    min-width: 180px;
+  }
+
+  .wide {
+    min-width: 260px;
+    flex: 1 1 260px;
+  }
+
+  .reset {
+    align-self: flex-end;
+  }
+}

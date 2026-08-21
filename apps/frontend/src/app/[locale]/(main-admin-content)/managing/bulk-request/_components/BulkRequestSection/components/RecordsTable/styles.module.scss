@@ -1,0 +1,12 @@
+.table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .toolbar {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+}
