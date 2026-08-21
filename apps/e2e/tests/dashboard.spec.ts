@@ -6,6 +6,7 @@ const dashboardLinks = [
   { name: 'Import Dictionary', path: '/en/managing/import-dictionary' },
   { name: 'Export Dictionary', path: '/en/managing/export-dictionary' },
   { name: 'Add word', path: '/en/managing/add-word' },
+  { name: 'Bulk request', path: '/en/managing/bulk-request' },
   { name: 'Edit data', path: '/en/managing' },
   { name: 'Common statistics', path: '/en/statistics/common' },
   { name: 'Meanings & translations', path: '/en/statistics/translations' },

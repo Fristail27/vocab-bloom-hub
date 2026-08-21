@@ -1,8 +1,11 @@
 import { ErrorResT } from 'server/types';
 import { ErrorCodes } from 'server/core/constants/error_codes';
 
+type QueryScalarT = string | number | boolean;
 type RequestOptions = RequestInit & {
-  query?: Record<string, string | number | boolean | undefined>;
+  // an array value is sent as a repeated key (?a=1&a=2), which is how the
+  // server DTOs receive list filters
+  query?: Record<string, QueryScalarT | QueryScalarT[] | undefined | null>;
 };
 
 export type DownloadedFileT = { blob: Blob; filename?: string };
@@ -17,9 +20,9 @@ export class AbstractBaseApi {
 
     if (query) {
       Object.entries(query).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          url.searchParams.append(key, String(value));
-        }
+        if (value === undefined || value === null) return;
+        const values = Array.isArray(value) ? value : [value];
+        values.forEach((v) => url.searchParams.append(key, String(v)));
       });
     }
 
