@@ -138,6 +138,8 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
       JSON.stringify({
         version: '0.2.0',
         generatedAt: '2026-08-16T00:00:00Z',
+        // 3 for "to hand over" + 1 for "eventually" (issue #259)
+        synonym_links: 4,
         files: {
           'vocab-bloom-hub-en-words.jsonl': { lines: 3 },
           'vocab-bloom-hub-en-phrasal-verbs.jsonl': { lines: 2 },
@@ -159,6 +161,15 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
                   sort_order: 1,
                   is_obsolete: false,
                   examples: ['give me the book'],
+                  // the headword, a phrase from the last dataset file and an
+                  // unknown word: only the phrase becomes a link (issue #259)
+                  synonyms: [
+                    { word: 'Give', part_of_speech: EnPartOfSpeechE.verb },
+                    { word: 'in the long run', part_of_speech: EnPartOfSpeechE.phrase },
+                    { word: 'hand over', part_of_speech: EnPartOfSpeechE.verb },
+                    // a spelling variant of the phrasal verb from the same file
+                    { word: 'give-up', part_of_speech: EnPartOfSpeechE.verb },
+                  ],
                   area_variant: '',
                   language_register: '',
                   meaning_level: '',
@@ -193,7 +204,39 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
         'vocab-bloom-hub-en-grammar-patterns.jsonl': toNdjson([
           makeSetPhrase('would rather + verb', { pattern: ['would rather', 'verb'] }),
         ]),
-        'vocab-bloom-hub-en-phrases.jsonl': toNdjson([makeSetPhrase('in the long run')]),
+        'vocab-bloom-hub-en-phrases.jsonl': toNdjson([
+          makeSetPhrase('in the long run', {
+            meanings: [
+              {
+                title: 'eventually',
+                definition: 'over a long period of time',
+                sort_order: 1,
+                is_obsolete: false,
+                examples: [],
+                // the plain-string form of files exported before the part of speech was added
+                synonyms: ['give up'],
+                area_variant: '',
+                language_register: '',
+                meaning_level: '',
+                categories: [],
+                translations: [],
+              },
+              // a dataset line written before synonyms existed must still import
+              {
+                title: 'legacy meaning',
+                definition: 'without a synonyms field',
+                sort_order: 2,
+                is_obsolete: false,
+                examples: [],
+                area_variant: '',
+                language_register: '',
+                meaning_level: '',
+                categories: [],
+                translations: [],
+              },
+            ],
+          }),
+        ]),
       });
 
       const res = new FakeProgressRes();
@@ -220,7 +263,7 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
       expect(entryTypes.get('would rather + verb')).toBe(EnEntryTypesE.grammar_pattern);
 
       // nested structures came through EnService.addWord
-      expect(await ds.getRepository(EnMeaning).count()).toBe(1);
+      expect(await ds.getRepository(EnMeaning).count()).toBe(3);
       expect(await ds.getRepository(EnMeaningTranslation).count()).toBe(1);
       expect(await ds.getRepository(EnShortTranslation).count()).toBe(1);
     });
@@ -240,6 +283,30 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
       expect(giveUp.base_phrasal?.word.word).toBe('give');
       // neither the missing base verb nor the unknown variant created rows
       expect(await ds.getRepository(EnWord).count()).toBe(4);
+    });
+
+    it('links meaning synonyms once every file is in and skips unknown words (issue #259)', async () => {
+      const res = await runImport();
+
+      const meanings = await ds.getRepository(EnMeaning).find({ relations: { synonyms: true } });
+      const byTitle = new Map(meanings.map((m) => [m.title, m.synonyms.map((e) => e.word).sort()]));
+      // "in the long run" is imported after "give", yet the link resolves; the
+      // headword and the unknown word are dropped
+      expect(byTitle.get('to hand over')).toEqual(['give up', 'in the long run']);
+      expect(byTitle.get('eventually')).toEqual(['give up']);
+      expect(byTitle.get('legacy meaning')).toEqual([]);
+      // no stub entries were created for unknown synonyms
+      expect(await ds.getRepository(EnEntry).findOneBy({ word: 'hand over' })).toBeNull();
+      const stages = res.chunks.map((c) => (JSON.parse(c) as ProgressChunk).stage);
+      expect(stages).toContain(EnDictionaryImportPhasesE.linking_synonyms);
+      // the linking stage counts into the progress total: its chunks stay
+      // within 100% and the batch report lands at the very end of the total
+      const linking = res.chunks
+        .map((c) => JSON.parse(c) as ProgressChunk)
+        .filter((c) => c.stage === EnDictionaryImportPhasesE.linking_synonyms);
+      expect(linking.length).toBeGreaterThanOrEqual(2);
+      expect(Math.max(...linking.map((c) => c.percent))).toBe(100);
+      expect(linking.every((c) => c.percent <= 100)).toBe(true);
     });
 
     it('tolerates duplicate lines instead of aborting the import', async () => {

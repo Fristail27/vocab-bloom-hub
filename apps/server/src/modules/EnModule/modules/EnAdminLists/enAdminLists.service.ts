@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import { EnWord } from '../../entities/en_word.entity';
 import { EnMeaning } from '../../entities/en_meaning.entity';
 import { EnMeaningTranslation } from '../../entities/en_meaning_translation.entity';
@@ -20,6 +20,7 @@ import { ListMeaningsQueryDTO } from './dto/ListMeaningsQuery.dto';
 import { ListMeaningTranslationsQueryDTO } from './dto/ListMeaningTranslationsQuery.dto';
 import { LIST_DEFAULT_LIMIT, PaginationQueryDTO } from './dto/PaginationQuery.dto';
 import { escapeLike } from '../EnSearch/utils/escapeLike';
+import { normalizeSynonyms } from '../../utils/normalizeSynonyms';
 
 type PageT = { page: number; limit: number };
 
@@ -207,7 +208,22 @@ export class EnAdminListsService {
     }
   }
 
-  private mapMeaning(row: EnMeaning, translationsCount: number): EnMeaningListItemT {
+  /**
+   * Synonyms are a many-to-many relation: joining them into the paginated
+   * query would multiply rows and break OFFSET/LIMIT, so the page's links are
+   * loaded with a second query
+   */
+  private async loadSynonymsByMeaningId(ids: number[]): Promise<Map<number, string[]>> {
+    if (ids.length === 0) return new Map();
+    const rows = await this.enMeaningsRep.find({
+      where: { id: In(ids) },
+      relations: { synonyms: true },
+      select: { id: true, synonyms: { word: true } },
+    });
+    return new Map(rows.map((r) => [r.id, normalizeSynonyms(r.synonyms.map((e) => e.word))]));
+  }
+
+  private mapMeaning(row: EnMeaning, translationsCount: number, synonyms: string[]): EnMeaningListItemT {
     return {
       id: row.id,
       word_id: row.word.id,
@@ -222,6 +238,7 @@ export class EnAdminListsService {
       categories: row.categories ?? [],
       is_obsolete: Boolean(row.is_obsolete),
       examples: row.examples ?? [],
+      synonyms,
       translations_count: translationsCount,
     };
   }
@@ -257,9 +274,10 @@ export class EnAdminListsService {
       .getRawAndEntities<{ m_id: number; translations_count: unknown }>();
 
     const countsById = new Map(raw.map((r) => [Number(r.m_id), toCount(r.translations_count)]));
+    const synonymsById = await this.loadSynonymsByMeaningId(entities.map((row) => row.id));
 
     return this.paginated(
-      entities.map((row) => this.mapMeaning(row, countsById.get(row.id) ?? 0)),
+      entities.map((row) => this.mapMeaning(row, countsById.get(row.id) ?? 0, synonymsById.get(row.id) ?? [])),
       page,
       total,
     );

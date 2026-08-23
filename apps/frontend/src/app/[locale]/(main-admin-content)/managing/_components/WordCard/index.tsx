@@ -195,7 +195,12 @@ export const WordCard: React.FC<WordCardP> = ({ word, mode = WordCardModeE.view 
           mode={mode}
           updateShortTranslation={updateShortTranslation}
         />
-        <MeaningsPreview meanings={state.meanings} mode={mode} updateMeaning={updateMeaning} />
+        <MeaningsPreview
+          meanings={state.meanings}
+          mode={mode}
+          updateMeaning={updateMeaning}
+          headword={word.word}
+        />
       </section>
     </>
   );

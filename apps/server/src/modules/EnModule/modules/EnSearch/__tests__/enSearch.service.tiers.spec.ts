@@ -280,4 +280,26 @@ describe('EnSearchService tier categorization (issue #187)', () => {
       expect(res.has_more).toBe(false);
     });
   });
+
+  it('detailed search returns meaning synonyms as headwords when with_meanings is set (issue #259)', async () => {
+    const run = await addWord(await addEntry('run'), EnPartOfSpeechE.verb);
+    const sprint = await addEntry('sprint');
+    const dash = await addEntry('dash');
+    await ds.getRepository(EnMeaning).save({
+      word: run,
+      title: 'to move fast',
+      definition: 'to move fast on foot',
+      sort_order: 1,
+      examples: [],
+      synonyms: [sprint, dash],
+    });
+
+    const withMeanings = await service.searchDetailed({ search: 'run', with_meanings: true });
+    expect(withMeanings.items[0].meanings).toEqual([
+      expect.objectContaining({ title: 'to move fast', synonyms: ['dash', 'sprint'] }),
+    ]);
+
+    const withoutMeanings = await service.searchDetailed({ search: 'run' });
+    expect(withoutMeanings.items[0].meanings).toEqual([]);
+  });
 });

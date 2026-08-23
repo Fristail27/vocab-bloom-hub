@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { AddMeaningResT, DeleteMeaningResT, EditMeaningResT } from '../../../../../types';
@@ -7,7 +7,10 @@ import { EnMeaning } from '../../entities/en_meaning.entity';
 import { AddMeaningReqDTO } from './dto/AddMeaningReq.dto';
 import { EditMeaningReqDTO } from './dto/EditMeaningReq.dto';
 import { EnWord } from '../../entities/en_word.entity';
+import { EnEntry } from '../../entities/en_entry.entity';
 import { EnMeaningTranslationService } from '../EnMeaningTranslation/enMeaningTranslation.service';
+import { normalizeSynonyms } from '../../utils/normalizeSynonyms';
+import { loadEntries, resolveBaseFormHeadwords } from '../../utils/findBaseFormHeadwords';
 
 @Injectable()
 export class EnMeaningService {
@@ -23,16 +26,50 @@ export class EnMeaningService {
     private readonly enMeaningTranslationService: EnMeaningTranslationService,
   ) {}
 
+  /**
+   * Turns a synonym list into links to existing dictionary entries. The list is
+   * normalized first (trimmed, lowercase, unique, without the headword); every
+   * remaining word must name the headword of a base-form entry (inflected forms
+   * like "ran" do not qualify) — directly or through a spelling variant such as
+   * "absent-minded" for "absentminded" — otherwise the request is rejected: a
+   * synonym is a reference to a word, not free text. The stored link always
+   * uses the dictionary spelling.
+   */
+  async resolveSynonymEntries(
+    synonyms: readonly string[] | null | undefined,
+    headword: string,
+    manager?: EntityManager,
+  ): Promise<EnEntry[]> {
+    const em = manager ?? this.enMeaningsRep.manager;
+    const words = normalizeSynonyms(synonyms, headword);
+    if (words.length === 0) return [];
+
+    const resolved = await resolveBaseFormHeadwords(em, words);
+    const missing = words.filter((w) => !resolved.has(w));
+    if (missing.length > 0) {
+      this.logger.warn(`Synonyms not found as base-form words for "${headword}": ${missing.join(', ')}`);
+      throw new BadRequestException(ErrorCodes.synonym_doesnt_exist);
+    }
+    // dictionary spellings, deduplicated (two variants may name one word) and
+    // without the headword itself, in a stable order
+    const headwords = normalizeSynonyms(
+      words.map((w) => resolved.get(w) as string),
+      headword,
+    );
+    return loadEntries(em, headwords);
+  }
+
   async addMeaning(body: AddMeaningReqDTO, manager?: EntityManager): Promise<AddMeaningResT> {
     const em = manager ?? this.enMeaningsRep.manager;
-    const { word_id, id: _id, ...newMeaning } = body;
-    const word = await em.getRepository(EnWord).findOne({ where: { id: word_id } });
+    const { word_id, id: _id, synonyms, ...newMeaning } = body;
+    const word = await em.getRepository(EnWord).findOne({ where: { id: word_id }, relations: { word: true } });
 
     if (!word) {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);
     }
 
-    const res = await em.getRepository(EnMeaning).save({ word: word, ...newMeaning });
+    const synonymEntries = await this.resolveSynonymEntries(synonyms, word.word.word, em);
+    const res = await em.getRepository(EnMeaning).save({ word: word, ...newMeaning, synonyms: synonymEntries });
     if (body.translations.length > 0) {
       for (const translation of body.translations) {
         await this.enMeaningTranslationService.addMeaningTranslation(
@@ -51,7 +88,10 @@ export class EnMeaningService {
   }
 
   async editMeaning(body: EditMeaningReqDTO): Promise<EditMeaningResT> {
-    const meaning = await this.enMeaningsRep.findOne({ where: { id: body.id } });
+    const meaning = await this.enMeaningsRep.findOne({
+      where: { id: body.id },
+      relations: { synonyms: true, word: { word: true } },
+    });
 
     if (!meaning) {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);
@@ -70,6 +110,14 @@ export class EnMeaningService {
     if (body.examples && body.examples.join() !== meaning.examples?.join()) meaning.examples = body.examples;
     if (body.categories && body.categories.join() !== meaning.categories?.join())
       meaning.categories = body.categories;
+    // synonyms replace the whole set; TypeORM diffs the junction rows on save
+    if (body.synonyms) {
+      const current = normalizeSynonyms(meaning.synonyms.map((e) => e.word));
+      const next = normalizeSynonyms(body.synonyms, meaning.word.word.word);
+      if (current.join() !== next.join()) {
+        meaning.synonyms = await this.resolveSynonymEntries(next, meaning.word.word.word);
+      }
+    }
 
     await this.enMeaningsRep.save(meaning);
     this.logger.log(`Meaning updated, id=${body.id}`);

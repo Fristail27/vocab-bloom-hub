@@ -5,6 +5,7 @@ export const DefaultMeaningData: EnMeaningT = {
   meaning_level: WordLevelE.A1,
   sort_order: 0,
   examples: [],
+  synonyms: [],
   area_variant: EnAreaVariantsE.common,
   categories: [],
   definition: '',

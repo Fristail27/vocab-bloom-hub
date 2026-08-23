@@ -11,9 +11,11 @@ type MeaningsP = {
   onClickNext: () => void;
   meanings: EnMeaningT[];
   setMeanings: (values: EnMeaningT[]) => void;
+  // the word being added; it is never offered as a synonym of its own meanings
+  headword?: string | undefined;
 };
 
-export const Meanings: React.FC<MeaningsP> = ({ meanings, setMeanings, onClickNext }) => {
+export const Meanings: React.FC<MeaningsP> = ({ meanings, setMeanings, onClickNext, headword }) => {
   const t = useTranslations('en_managing_words');
   const addMeaning = () => {
     setMeanings([
@@ -27,6 +29,7 @@ export const Meanings: React.FC<MeaningsP> = ({ meanings, setMeanings, onClickNe
         area_variant: EnAreaVariantsE.common,
         language_register: LanguageRegisterE.formal,
         examples: [],
+        synonyms: [],
         meaning_level: null,
         translations: [],
       },
@@ -45,7 +48,7 @@ export const Meanings: React.FC<MeaningsP> = ({ meanings, setMeanings, onClickNe
   return (
     <div className={styles.meanings}>
       {meanings.map((m) => (
-        <MeaningItem key={m.id} onDelete={onDelete} onChange={onChange} meaning={m} />
+        <MeaningItem key={m.id} onDelete={onDelete} onChange={onChange} meaning={m} headword={headword} />
       ))}
       <div className={styles.title}>
         <Button className={styles.addBtn} onClick={addMeaning} type="primary">

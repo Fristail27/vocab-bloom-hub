@@ -2,6 +2,7 @@ import { EnWord } from '../../../src/modules/EnModule/entities/en_word.entity';
 import {
   EnMeaningT,
   EnMeaningTranslationT,
+  EnPartOfSpeechE,
   EnPhrasalObjectPatternE,
   EnShortTranslationT,
   EnVerbTransitivityE,
@@ -11,8 +12,15 @@ import {
 } from '../';
 
 export type EnMeaningTranslationDST = Omit<EnMeaningTranslationT, 'id'>;
-export type EnMeaningDST = Omit<EnMeaningT, 'id' | 'translations' | 'meaning_level' | 'language_register'> & {
+// A synonym in the dataset names the word together with its part of speech,
+// so the file is readable on its own; the database stores the link by headword
+export type EnSynonymDST = { word: string; part_of_speech: EnPartOfSpeechE };
+export type EnMeaningDST = Omit<
+  EnMeaningT,
+  'id' | 'translations' | 'meaning_level' | 'language_register' | 'synonyms'
+> & {
   translations: EnMeaningTranslationDST[];
+  synonyms: EnSynonymDST[];
   meaning_level: WordLevelE | '';
   language_register: LanguageRegisterE | '';
 };

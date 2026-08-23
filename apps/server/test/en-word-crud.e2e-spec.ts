@@ -246,6 +246,47 @@ describe('En word add/edit routes (e2e, issue #87)', () => {
       expect(titles).toContain('to sprint');
     });
 
+    it('links synonyms to existing words and rejects unknown ones (issue #259)', async () => {
+      // "teleport" is not in the dictionary; "ran" exists only as a form of "run"
+      for (const synonym of ['teleport', 'ran']) {
+        await request(server())
+          .patch('/api/en/word/meaning')
+          .set(auth)
+          .send({ id: meaningId, synonyms: [synonym] })
+          .expect(400)
+          .expect((res) => expect(res.body.message).toBe('synonym_doesnt_exist'));
+      }
+
+      await request(server())
+        .post('/api/en/add/word')
+        .set(auth)
+        .send({ word: 'sprint', part_of_speech: EnPartOfSpeechE.verb, form_of_word: EnWordFormsE.base_form })
+        .expect(201);
+
+      await request(server())
+        .patch('/api/en/word/meaning')
+        .set(auth)
+        .send({ id: meaningId, synonyms: [' Sprint ', 'run'] })
+        .expect(200)
+        .expect({ success: true });
+
+      const wordRes = await request(server()).get(`/api/en/${wordId}`).set(auth).expect(200);
+      const meaning = (wordRes.body.meanings as Array<{ id: number; synonyms: string[] }>).find(
+        (m) => m.id === meaningId,
+      );
+      // normalized, without the headword itself
+      expect(meaning?.synonyms).toEqual(['sprint']);
+
+      const searchRes = await request(server())
+        .post('/api/en/search/detailed')
+        .send({ search: 'run', with_meanings: true })
+        .expect(201);
+      const found = (
+        searchRes.body.items as Array<{ id: number; meanings: Array<{ synonyms: string[] }> }>
+      ).find((w) => w.id === wordId);
+      expect(found?.meanings.map((m) => m.synonyms)).toContainEqual(['sprint']);
+    });
+
     it('deletes a meaning through DELETE /api/en/word/meaning/:id', async () => {
       await request(server()).delete(`/api/en/word/meaning/${meaningId}`).set(auth).expect(200);
 

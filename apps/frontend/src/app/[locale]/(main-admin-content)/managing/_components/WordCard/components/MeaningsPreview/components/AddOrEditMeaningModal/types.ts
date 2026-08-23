@@ -4,6 +4,7 @@ export type AddOrEditStateT = {
   title: EnMeaningT['title'];
   definition: EnMeaningT['definition'];
   examples: EnMeaningT['examples'];
+  synonyms: EnMeaningT['synonyms'];
   sort_order: EnMeaningT['sort_order'];
   language_register: EnMeaningT['language_register'];
   meaning_level: EnMeaningT['meaning_level'];

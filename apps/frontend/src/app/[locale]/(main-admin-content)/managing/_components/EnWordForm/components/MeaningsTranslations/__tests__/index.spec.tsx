@@ -26,6 +26,7 @@ const meaning: EnMeaningT = {
   language_register: LanguageRegisterE.formal,
   meaning_level: WordLevelE.B1,
   examples: ['I looked it up in the dictionary'],
+  synonyms: ['search', 'find'],
   translations: [],
 };
 

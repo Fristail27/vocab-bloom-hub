@@ -1,0 +1,10 @@
+.synonymLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+
+  .tag {
+    margin-inline-end: 0;
+    cursor: pointer;
+  }
+}

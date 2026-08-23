@@ -29,6 +29,7 @@ export const SOURCE_PLACEHOLDERS: Record<SourceKindE, readonly string[]> = {
     'title',
     'definition',
     'examples',
+    'synonyms',
     'area_variant',
     'meaning_level',
     'language_register',

@@ -12,6 +12,12 @@ jest.mock('@/core/hooks', () => ({
   useDebounced: (value: string) => value,
 }));
 
+// the module reads `?search=` to deep-link into a word (synonym tags, issue #259)
+let searchParam: string | null = null;
+jest.mock('next/navigation', () => ({
+  useSearchParams: () => ({ get: (key: string) => (key === 'search' ? searchParam : null) }),
+}));
+
 jest.mock('@/core/api/EnApi', () => ({
   EnApi: { search: jest.fn(), deleteWord: jest.fn() },
 }));
@@ -52,6 +58,18 @@ const clickDeleteInPopover = async (wordIndex: number) => {
 describe('SearchModule (issue #176)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    searchParam = null;
+  });
+
+  it('starts the search from the `search` query parameter (issue #259)', async () => {
+    searchParam = 'clever';
+    (EnApi.search as jest.Mock).mockResolvedValue([makeWord(1, 'clever')]);
+
+    renderModule();
+
+    expect(screen.getByRole('textbox')).toHaveValue('clever');
+    await screen.findByText('clever');
+    expect(EnApi.search).toHaveBeenCalledWith('clever');
   });
 
   it('убирает слово из списка после успешного удаления', async () => {

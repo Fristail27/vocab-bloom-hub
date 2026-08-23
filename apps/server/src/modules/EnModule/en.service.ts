@@ -310,7 +310,7 @@ export class EnService {
       where: { id },
       relations: {
         forms: { word: true },
-        meanings: { translations: true },
+        meanings: { translations: true, synonyms: true },
         phrasal_variants: { word: true },
         base_phrasal: { word: true },
         short_translations: true,

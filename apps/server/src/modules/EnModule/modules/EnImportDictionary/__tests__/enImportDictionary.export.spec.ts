@@ -149,6 +149,17 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
       makeWordBody('in the long run', {
         part_of_speech: EnPartOfSpeechE.phrase,
         forms: [],
+        // synonyms are links to the entries added above (issue #259)
+        meanings: [
+          {
+            title: 'eventually',
+            definition: 'over a long period of time',
+            sort_order: 1,
+            examples: [],
+            synonyms: ['run', 'Give up'],
+            translations: [],
+          },
+        ] as unknown as EnMeaningT[],
       }),
     );
     await enService.addWord(
@@ -211,6 +222,7 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
     expect(word.meanings).toEqual([
       expect.objectContaining({
         title: 'to move fast',
+        synonyms: [],
         translations: [expect.objectContaining({ title: 'бежать' })],
       }),
     ]);
@@ -228,6 +240,16 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
     expect(phrases).toHaveLength(1);
     expect(phrases[0].phrase).toBe('in the long run');
     expect(phrases[0]).not.toHaveProperty('part_of_speech');
+    // synonyms are exported as word + part of speech, sorted by word; "run" is
+    // a verb here because the phrase has no verb sense and run's only base form is the verb
+    expect(phrases[0].meanings).toEqual([
+      expect.objectContaining({
+        synonyms: [
+          { word: 'give up', part_of_speech: EnPartOfSpeechE.verb },
+          { word: 'run', part_of_speech: EnPartOfSpeechE.verb },
+        ],
+      }),
+    ]);
 
     const grammar = readJsonlLines('vocab-bloom-hub-en-grammar-patterns.jsonl');
     expect(grammar).toHaveLength(1);
@@ -244,9 +266,12 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
       version: string;
       generatedAt: string;
       files: Record<string, { lines: number }>;
+      synonym_links: number;
     };
     expect(typeof manifest.version).toBe('string');
     expect(manifest.version.length).toBeGreaterThan(0);
+    // "in the long run" links to run and give up (issue #259)
+    expect(manifest.synonym_links).toBe(2);
     expect(manifest.files).toEqual({
       'vocab-bloom-hub-en-words.jsonl': { lines: 3 },
       'vocab-bloom-hub-en-phrasal-verbs.jsonl': { lines: 1 },

@@ -1,5 +1,6 @@
 import { AvailableTranslationLanguagesE, EnWordT } from '../../../../../../types';
 import { prepareWordForm } from '../../../utils/prepareWordForm';
+import { prepareMeaningFromDB } from '../../../utils/prepareMeaningFromDB';
 import { EnWord } from '../../../entities/en_word.entity';
 
 type DetailedSearchOptionsT = {
@@ -21,10 +22,10 @@ export const mapDetailedSearchResults = (
     word: w.word.word,
     forms: (w.forms || [])?.map(prepareWordForm),
     meanings: with_meanings
-      ? (w.meanings || []).map((m) => ({
-          ...m,
-          translations: (m.translations || []).filter((t) => matchesLanguage(t.language)),
-        }))
+      ? (w.meanings || []).map((m) => {
+          const meaning = prepareMeaningFromDB(m);
+          return { ...meaning, translations: meaning.translations.filter((t) => matchesLanguage(t.language)) };
+        })
       : [],
     short_translations: with_translations
       ? (w.short_translations || []).filter((t) => matchesLanguage(t.language))

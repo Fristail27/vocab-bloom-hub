@@ -7,6 +7,7 @@ import {
   LanguageRegisterE,
 } from '../../../../../../types';
 import { getVersion } from '../../../../../../configuration';
+import { synonymsFromDataSet } from './synonymsFromDataSet';
 
 export const mapGrammarPatternFromSetToDB = (ph: DataSetGrammarPatternT): EnWordT => {
   return {
@@ -45,6 +46,7 @@ export const mapGrammarPatternFromSetToDB = (ph: DataSetGrammarPatternT): EnWord
       meaning_level: m.meaning_level || null,
       language_register: m.language_register || LanguageRegisterE.formal,
       area_variant: m.area_variant || EnAreaVariantsE.common,
+      synonyms: synonymsFromDataSet(m.synonyms),
       translations: m.translations.map((t) => ({ id: 0, ...t })),
     })),
   };

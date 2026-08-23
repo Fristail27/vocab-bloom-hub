@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsArray, IsBoolean, IsEnum, IsOptional } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 import { CategoryE, EnAreaVariantsE, EnMeaningT, LanguageRegisterE, WordLevelE } from '../../../../../../types';
+import { MAX_SYNONYMS_PER_MEANING } from '../../../utils/normalizeSynonyms';
 
 export class EditMeaningReqDTO {
   @ApiProperty()
@@ -22,6 +23,14 @@ export class EditMeaningReqDTO {
   @IsArray()
   @IsString({ each: true })
   examples?: EnMeaningT['examples'];
+
+  // Replaces the whole synonym set when present; omit it to leave the links untouched
+  @ApiProperty({ isArray: true, required: false })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_SYNONYMS_PER_MEANING)
+  @IsString({ each: true })
+  synonyms?: EnMeaningT['synonyms'];
 
   @ApiProperty()
   @IsOptional()

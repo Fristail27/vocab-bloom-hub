@@ -129,6 +129,11 @@ export const EnWordForm: React.FC = () => {
         (parsedMeanings || []).map((m: EnMeaningT, i: number) => ({
           ...m,
           id: i,
+          // an exported word carries { word, part_of_speech } objects, older exports
+          // plain strings or nothing; the form works with headwords
+          synonyms: ((m.synonyms || []) as Array<string | { word: string }>).map((s) =>
+            typeof s === 'string' ? s : s.word,
+          ),
           translations: (m.translations || []).map((tr, ind: number) => ({ ...tr, id: ind })),
         })),
       );
@@ -220,7 +225,12 @@ export const EnWordForm: React.FC = () => {
           />
         )}
         {step === stepItems.length - 4 && (
-          <Meanings onClickNext={onClickMeaningsNext} meanings={meanings} setMeanings={setMeanings} />
+          <Meanings
+            onClickNext={onClickMeaningsNext}
+            meanings={meanings}
+            setMeanings={setMeanings}
+            headword={word}
+          />
         )}
         {step === stepItems.length - 3 && (
           <ShortTranslations

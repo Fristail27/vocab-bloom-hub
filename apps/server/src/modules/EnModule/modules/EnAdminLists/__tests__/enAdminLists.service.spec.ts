@@ -144,6 +144,11 @@ describe('EnAdminListsService (issue #249)', () => {
       language_register: LanguageRegisterE.informal,
       is_obsolete: true,
       examples: ['a run of luck'],
+      // synonyms are links to other entries (issue #259)
+      synonyms: [
+        await entriesRep.save({ word: 'streak', type: EnEntryTypesE.word }),
+        await entriesRep.save({ word: 'series', type: EnEntryTypesE.word }),
+      ],
     });
     await seed({ word: 'abandon', part_of_speech: EnPartOfSpeechE.verb, version: '2.0.0', is_obsolete: true });
     await seed({
@@ -312,9 +317,14 @@ describe('EnAdminListsService (issue #249)', () => {
         categories: [],
         is_obsolete: true,
         examples: ['a run of luck'],
+        synonyms: ['series', 'streak'],
         translations_count: 0,
       });
       expect(typeof res.items[0].id).toBe('number');
+      // a meaning without links gets an empty list, and the join never duplicates pages
+      const all = await service.listMeanings({ page: 1, limit: 50 });
+      expect(all.items).toHaveLength(4);
+      expect(all.items.filter((i) => i.synonyms.length === 0)).toHaveLength(3);
       expect(typeof res.items[0].word_id).toBe('number');
 
       const translated = await service.listMeanings({ part_of_speech: [EnPartOfSpeechE.verb] });

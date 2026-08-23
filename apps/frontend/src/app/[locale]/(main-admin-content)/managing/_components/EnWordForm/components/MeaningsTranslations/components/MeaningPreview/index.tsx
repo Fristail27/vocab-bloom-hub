@@ -2,6 +2,7 @@ import React from 'react';
 import { Typography } from 'antd';
 import { useTranslations } from 'next-intl';
 import { EnMeaningT } from 'server/types';
+import { SynonymLinks } from '../../../SynonymLinks';
 import styles from './styles.module.scss';
 
 const { Text } = Typography;
@@ -30,6 +31,12 @@ export const MeaningPreview: React.FC<MeaningPreviewP> = ({ m }) => {
           <Text strong>{t('regional_label')}:</Text> {m.area_variant}
         </Text>
       </div>
+      {(m.synonyms ?? []).length > 0 && (
+        <div className={styles.synonymsContainer}>
+          <Text strong>{t('synonyms')}:</Text>
+          <SynonymLinks synonyms={m.synonyms} />
+        </div>
+      )}
       <div className={styles.examplesContainer}>
         <Text strong>{t('examples')}:</Text>
         <div className={styles.examples}>

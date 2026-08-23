@@ -19,6 +19,7 @@ const makeMeaning = (overrides: Partial<EnMeaningT> = {}): EnMeaningT => ({
   language_register: LanguageRegisterE.formal,
   meaning_level: null,
   examples: [],
+  synonyms: [],
   translations: [],
   ...overrides,
 });

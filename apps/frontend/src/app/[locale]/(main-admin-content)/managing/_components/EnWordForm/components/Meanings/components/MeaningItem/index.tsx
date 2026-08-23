@@ -8,6 +8,7 @@ import { RegionalLabelSelect } from '../../../RegionalLabelSelect';
 import { WordLevelSelect } from '../../../WordLevelSelect';
 import { LanguageRegisterSelect } from '../../../LanguageRegisterSelect';
 import { CategorySelect } from '../../../CategoriesSelect';
+import { SynonymsSelect } from '../../../SynonymsSelect';
 import styles from './styles.module.scss';
 
 const { Text } = Typography;
@@ -17,9 +18,10 @@ type MeaningItemP = {
   meaning: EnMeaningT;
   onChange: (meaning: EnMeaningT) => void;
   onDelete: (id: number) => void;
+  headword?: string | undefined;
 };
 
-export const MeaningItem: React.FC<MeaningItemP> = ({ meaning, onChange, onDelete }) => {
+export const MeaningItem: React.FC<MeaningItemP> = ({ meaning, onChange, onDelete, headword }) => {
   const t = useTranslations('en_managing_words');
   const onChangeExample = (v: string, i: number) => {
     onChange({
@@ -77,6 +79,11 @@ export const MeaningItem: React.FC<MeaningItemP> = ({ meaning, onChange, onDelet
           onChange={(e) => onChange({ ...meaning, definition: e.target.value })}
         />
       </div>
+      <SynonymsSelect
+        value={meaning.synonyms ?? []}
+        onChange={(synonyms) => onChange({ ...meaning, synonyms })}
+        headword={headword}
+      />
       <div className={styles.examples}>
         <div className={styles.examplesTitle}>
           <Text strong>{t('examples')}</Text>

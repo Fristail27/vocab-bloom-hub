@@ -155,4 +155,40 @@ describe('EnService.addWord transactions (issue #180)', () => {
       shortTranslations: 0,
     });
   });
+
+  it('links meaning synonyms to existing entries and returns them from getWordById (issue #259)', async () => {
+    await service.addWord(makeWordBody('sprint'));
+    await service.addWord(makeWordBody('dash'));
+    const body = makeWordBody('run');
+    (body.meanings as unknown as Array<Record<string, unknown>>)[0].synonyms = ['Dash', 'sprint', 'run'];
+
+    await service.addWord(body);
+
+    const saved = await ds
+      .getRepository(EnWord)
+      .createQueryBuilder('w')
+      .innerJoin('w.word', 'entry')
+      .where('entry.word = :word', { word: 'run' })
+      .andWhere('w.form_of_word = :form', { form: EnWordFormsE.base_form })
+      .getOneOrFail();
+    const word = await service.getWordById(saved.id);
+    expect(word.meanings[0].synonyms).toEqual(['dash', 'sprint']);
+    // the plain-entity relation does not leak into the API shape
+    expect(word.meanings[0]).not.toHaveProperty('createdAt');
+  });
+
+  it('rolls back the whole word when a meaning names an unknown synonym (issue #259)', async () => {
+    const body = makeWordBody('run');
+    (body.meanings as unknown as Array<Record<string, unknown>>)[0].synonyms = ['teleport'];
+
+    await expect(service.addWord(body)).rejects.toThrow(BadRequestException);
+
+    expect(await counts()).toEqual({
+      entries: 0,
+      words: 0,
+      meanings: 0,
+      meaningTranslations: 0,
+      shortTranslations: 0,
+    });
+  });
 });

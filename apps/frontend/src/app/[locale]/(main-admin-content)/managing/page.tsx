@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { Breadcrumb, Button } from 'antd';
 import { Title } from '@/core/ui/Title';
@@ -34,7 +35,10 @@ export default async function ManagingPage({ params }: CommonPageP) {
           {manageT('bulk_request')}
         </Button>
       </div>
-      <SearchModule />
+      {/* SearchModule reads the query string, which needs a Suspense boundary */}
+      <Suspense fallback={null}>
+        <SearchModule />
+      </Suspense>
     </div>
   );
 }

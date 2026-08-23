@@ -21,6 +21,9 @@ import { cleanEntity } from '../cleanEntity';
 import { mapWordFromSetToDB } from '../mapWordFromSetToDB';
 import { mapPhraseFromSetToDB } from '../mapPhraseFromSetToDB';
 import { mapGrammarPatternFromSetToDB } from '../mapGrammarPatternFromSetToDB';
+import { mapSynonymForDS } from '../prepareWordForDataSet';
+import { synonymsFromDataSet } from '../synonymsFromDataSet';
+import { EnEntry } from '../../../../entities/en_entry.entity';
 
 const makeDataSetWord = (extra: Partial<DataSetWordT> = {}): DataSetWordT =>
   ({
@@ -69,6 +72,7 @@ const makeDataSetWord = (extra: Partial<DataSetWordT> = {}): DataSetWordT =>
         definition: 'to move fast on foot',
         sort_order: 1,
         examples: [],
+        synonyms: [],
         categories: [],
         area_variant: EnAreaVariantsE.common,
         meaning_level: WordLevelE.A1,
@@ -225,5 +229,50 @@ describe('cleanEntity', () => {
   it('keeps Date instances untouched', () => {
     const date = new Date(0);
     expect(cleanEntity({ date })).toEqual({ date });
+  });
+});
+
+describe('dataset synonyms (issue #259)', () => {
+  const entry = (word: string, basePos: EnPartOfSpeechE[], formPos: EnPartOfSpeechE[] = []): EnEntry =>
+    ({
+      word,
+      entries: [
+        ...basePos.map((part_of_speech) => ({ part_of_speech, form_of_word: EnWordFormsE.base_form })),
+        ...formPos.map((part_of_speech) => ({ part_of_speech, form_of_word: EnWordFormsE.past_simple })),
+      ],
+    }) as EnEntry;
+
+  it('exports the meaning part of speech when the synonym has a base form with it', () => {
+    expect(
+      mapSynonymForDS(entry('run', [EnPartOfSpeechE.noun, EnPartOfSpeechE.verb]), EnPartOfSpeechE.verb),
+    ).toEqual({
+      word: 'run',
+      part_of_speech: EnPartOfSpeechE.verb,
+    });
+  });
+
+  it('falls back to the first base form of the synonym, ignoring inflected rows', () => {
+    expect(
+      mapSynonymForDS(
+        entry('dash', [EnPartOfSpeechE.verb, EnPartOfSpeechE.noun], [EnPartOfSpeechE.adjective]),
+        EnPartOfSpeechE.adjective,
+      ),
+    ).toEqual({ word: 'dash', part_of_speech: EnPartOfSpeechE.noun });
+  });
+
+  it('falls back to the meaning part of speech when the entries were not loaded', () => {
+    expect(mapSynonymForDS({ word: 'dash' } as EnEntry, EnPartOfSpeechE.adverb)).toEqual({
+      word: 'dash',
+      part_of_speech: EnPartOfSpeechE.adverb,
+    });
+  });
+
+  it('reads both the object and the legacy string form of dataset synonyms', () => {
+    expect(synonymsFromDataSet([{ word: 'dash', part_of_speech: EnPartOfSpeechE.verb }, 'sprint'])).toEqual([
+      'dash',
+      'sprint',
+    ]);
+    expect(synonymsFromDataSet(undefined)).toEqual([]);
+    expect(mapWordFromSetToDB(makeDataSetWord()).meanings[0].synonyms).toEqual([]);
   });
 });

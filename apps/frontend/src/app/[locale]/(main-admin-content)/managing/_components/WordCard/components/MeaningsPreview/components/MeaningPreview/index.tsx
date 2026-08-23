@@ -15,6 +15,7 @@ import { DefaultTranslation } from './constants';
 import styles from './styles.module.scss';
 import { AddOrEditMeaningTranslationModal } from '@/app/[locale]/(main-admin-content)/managing/_components/WordCard/components/MeaningsPreview/components/AddOrEditMeaningTranslationModal';
 import { DeleteMeaningTranslationModal } from '@/app/[locale]/(main-admin-content)/managing/_components/WordCard/components/MeaningsPreview/components/DeleteMeaningTranslationModal';
+import { SynonymLinks } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/SynonymLinks';
 
 const { Text } = Typography;
 type MeaningPreviewP = {
@@ -192,6 +193,10 @@ export const MeaningPreview: React.FC<MeaningPreviewP> = ({ meaning, mode, setEd
               />
             ))}
           </div>
+        </div>
+        <div className={styles.synonymsContainer}>
+          <Text className={styles.title}>{t('synonyms')}:</Text>
+          <SynonymLinks synonyms={meaning.synonyms ?? []} />
         </div>
         <div className={styles.examplesContainer}>
           <Text className={styles.title}>{t('examples')}:</Text>

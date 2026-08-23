@@ -15,9 +15,10 @@ type MeaningsPreviewP = {
   meanings: EnMeaningT[];
   mode: WordCardModeE;
   updateMeaning: (v: EnMeaningT, type: UpdateTypeE) => void;
+  headword?: string | undefined;
 };
 
-export const MeaningsPreview: React.FC<MeaningsPreviewP> = ({ meanings, mode, updateMeaning }) => {
+export const MeaningsPreview: React.FC<MeaningsPreviewP> = ({ meanings, mode, updateMeaning, headword }) => {
   const [modalData, setModalData] = useState<EnMeaningT | null>(null);
   const t = useTranslations('en_managing_words');
 
@@ -28,6 +29,7 @@ export const MeaningsPreview: React.FC<MeaningsPreviewP> = ({ meanings, mode, up
         isOpen={!!modalData}
         onClose={() => setModalData(null)}
         data={modalData}
+        headword={headword}
       />
       <div className={styles.meaningsPreview}>
         <div className={styles.title}>

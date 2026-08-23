@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { App, Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
 import { EnSearchWordT } from 'server/types';
@@ -14,7 +15,9 @@ export const SearchModule: React.FC = () => {
   const t = useTranslations('en_managing_words');
   const tErr = useTranslations('errors');
   const { message } = App.useApp();
-  const [searchValue, setSearchValue] = useState<string>('');
+  // `?search=` deep-links into the search (synonym tags link here); the input stays editable
+  const searchParams = useSearchParams();
+  const [searchValue, setSearchValue] = useState<string>(searchParams.get('search') ?? '');
   const [words, setWords] = useState<EnSearchWordT[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const debouncedValue = useDebounced(searchValue, 400);
