@@ -4,12 +4,15 @@ import {
   Entity,
   Index,
   JoinColumn,
+  JoinTable,
+  ManyToMany,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { EnWord } from './en_word.entity';
+import { EnEntry } from './en_entry.entity';
 import { IsDate, IsNotEmpty, IsNumber, IsPositive } from 'class-validator';
 import { EnMeaningTranslation } from './en_meaning_translation.entity';
 import { CategoryE, EnAreaVariantsE, LanguageRegisterE, WordLevelE } from '../../../../types';
@@ -66,4 +69,15 @@ export class EnMeaning {
 
   @OneToMany(() => EnMeaningTranslation, (entry) => entry.meaning, { onDelete: 'CASCADE' })
   translations!: EnMeaningTranslation[];
+
+  // Synonymy is a property of a meaning (each sense has its own set), but every
+  // synonym points at a dictionary headword: the junction row is removed with
+  // either side, so links never dangle. The API exposes this as `string[]`
+  @ManyToMany(() => EnEntry)
+  @JoinTable({
+    name: 'en_meaning_synonyms',
+    joinColumn: { name: 'meaning_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'word', referencedColumnName: 'word' },
+  })
+  synonyms!: EnEntry[];
 }

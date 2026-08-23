@@ -7,6 +7,7 @@ export enum ErrorCodes {
   word_already_exists = 'word_already_exists',
   phrasal_base_doesnt_exist = 'phrasal_base_doesnt_exist',
   word_doesnt_found = 'word_doesnt_found',
+  synonym_doesnt_exist = 'synonym_doesnt_exist',
   dataset_manifest_not_found = 'dataset_manifest_not_found',
   translation_doesnt_found = 'translation_doesnt_found',
   setting_field_doesnt_found = 'setting_field_doesnt_found',

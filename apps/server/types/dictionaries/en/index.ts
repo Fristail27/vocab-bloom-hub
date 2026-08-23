@@ -68,8 +68,11 @@ export enum EnVerbTransitivityE {
 }
 
 export type EnMeaningTranslationT = Omit<EnMeaningTranslation, 'updateAt' | 'createdAt' | 'meaning'>;
-export type EnMeaningT = Omit<EnMeaning, 'updateAt' | 'createdAt' | 'translations' | 'word'> & {
+// `synonyms` are stored as links to `en_entries`, but travel through the API
+// as the plain headwords (sorted, lowercase)
+export type EnMeaningT = Omit<EnMeaning, 'updateAt' | 'createdAt' | 'translations' | 'word' | 'synonyms'> & {
   translations: EnMeaningTranslationT[];
+  synonyms: string[];
 };
 export type EnShortTranslationT = Omit<EnShortTranslation, 'updateAt' | 'createdAt' | 'word_entry' | 'word'>;
 

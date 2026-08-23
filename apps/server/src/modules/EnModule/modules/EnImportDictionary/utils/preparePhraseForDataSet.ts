@@ -1,5 +1,6 @@
 import { DataSetPhraseT } from '../../../../../../types/dictionaries/en/EnDataSetTypes';
 import { EnWord } from '../../../entities/en_word.entity';
+import { EnPartOfSpeechE } from '../../../../../../types';
 import { mapMeaningsForDS, mapShortTranslationForDS } from './prepareWordForDataSet';
 import { sortShortTranslationsForDS, sortStrings } from './sortForDataSet';
 
@@ -16,7 +17,7 @@ export const preparePhraseForDataSet = (word: EnWord): DataSetPhraseT => {
     level: w.word_level || '',
     is_obsolete: Boolean(w.is_obsolete),
     phrase: w.word.word,
-    meanings: mapMeaningsForDS(w.meanings),
+    meanings: mapMeaningsForDS(w.meanings, EnPartOfSpeechE.phrase),
     short_translations: sortShortTranslationsForDS(w.short_translations.map(mapShortTranslationForDS)),
     version: w.version,
   };

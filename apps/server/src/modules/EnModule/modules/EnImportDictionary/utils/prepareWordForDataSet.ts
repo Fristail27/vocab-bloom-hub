@@ -3,19 +3,23 @@ import {
   EnMeaningDST,
   EnMeaningTranslationDST,
   EnShortTranslationDST,
+  EnSynonymDST,
   EnWordFormDST,
 } from '../../../../../../types/dictionaries/en/EnDataSetTypes';
+import { EnEntry } from '../../../entities/en_entry.entity';
 import { EnWord } from '../../../entities/en_word.entity';
 import { EnMeaningTranslation } from '../../../entities/en_meaning_translation.entity';
 import { EnMeaning } from '../../../entities/en_meaning.entity';
-import { EnAreaVariantsE } from '../../../../../../types';
+import { EnAreaVariantsE, EnPartOfSpeechE, EnWordFormsE } from '../../../../../../types';
 import { EnShortTranslation } from '../../../entities/en_short_translation.entity';
 import {
+  compareStrings,
   sortFormsForDS,
   sortMeaningTranslationsForDS,
   sortMeaningsForDS,
   sortShortTranslationsForDS,
   sortStrings,
+  sortSynonymsForDS,
 } from './sortForDataSet';
 
 export const mapMeaningTranslationsForDS = (t: EnMeaningTranslation): EnMeaningTranslationDST => {
@@ -27,7 +31,25 @@ export const mapMeaningTranslationsForDS = (t: EnMeaningTranslation): EnMeaningT
   };
 };
 
-export const mapMeaningForDS = (m: EnMeaning): EnMeaningDST => {
+/**
+ * The link stores only the headword, so the exported part of speech is
+ * derived: the meaning's own part of speech when the synonym has a base-form
+ * entry with it (synonyms share it by construction), otherwise the first base
+ * form of the synonym; a synonym loaded without its entries falls back to the
+ * meaning's part of speech.
+ */
+export const mapSynonymForDS = (entry: EnEntry, partOfSpeech: EnPartOfSpeechE): EnSynonymDST => {
+  const basePos = (entry.entries ?? [])
+    .filter((w) => w.form_of_word === EnWordFormsE.base_form)
+    .map((w) => w.part_of_speech)
+    .sort(compareStrings);
+  return {
+    word: entry.word,
+    part_of_speech: basePos.includes(partOfSpeech) ? partOfSpeech : (basePos[0] ?? partOfSpeech),
+  };
+};
+
+export const mapMeaningForDS = (m: EnMeaning, partOfSpeech: EnPartOfSpeechE): EnMeaningDST => {
   return {
     title: m.title || '',
     area_variant: m.area_variant || EnAreaVariantsE.common,
@@ -37,6 +59,7 @@ export const mapMeaningForDS = (m: EnMeaning): EnMeaningDST => {
     definition: m.definition || '',
     sort_order: m.sort_order || 0,
     examples: m.examples || [],
+    synonyms: sortSynonymsForDS((m.synonyms ?? []).map((entry) => mapSynonymForDS(entry, partOfSpeech))),
     categories: sortStrings(m.categories),
     translations: sortMeaningTranslationsForDS(m.translations.map(mapMeaningTranslationsForDS)),
   };
@@ -44,8 +67,8 @@ export const mapMeaningForDS = (m: EnMeaning): EnMeaningDST => {
 
 // TypeORM does not guarantee the order of relation rows, so every collection
 // is sorted by its natural keys (see sortForDataSet.ts)
-export const mapMeaningsForDS = (meanings: EnMeaning[]): EnMeaningDST[] => {
-  return sortMeaningsForDS(meanings.map(mapMeaningForDS));
+export const mapMeaningsForDS = (meanings: EnMeaning[], partOfSpeech: EnPartOfSpeechE): EnMeaningDST[] => {
+  return sortMeaningsForDS(meanings.map((m) => mapMeaningForDS(m, partOfSpeech)));
 };
 
 export const mapShortTranslationForDS = (t: EnShortTranslation): EnShortTranslationDST => {
@@ -91,7 +114,7 @@ export const prepareWordForDataSet = (word: EnWord): DataSetWordT => {
     word: w.word.word,
     base_phrasal: w.base_phrasal?.word.word || '',
     phrasal_variants: sortStrings(w.phrasal_variants?.map((v) => v.word.word)),
-    meanings: mapMeaningsForDS(w.meanings),
+    meanings: mapMeaningsForDS(w.meanings, w.part_of_speech),
     short_translations: sortShortTranslationsForDS(w.short_translations.map(mapShortTranslationForDS)),
     forms: sortFormsForDS(w.forms.map(mapFormsForDS)),
     version: w.version,

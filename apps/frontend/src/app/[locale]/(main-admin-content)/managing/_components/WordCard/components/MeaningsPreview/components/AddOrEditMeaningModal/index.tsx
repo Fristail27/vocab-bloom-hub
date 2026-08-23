@@ -14,6 +14,7 @@ import { RegionalLabelSelect } from '@/app/[locale]/(main-admin-content)/managin
 import { WordLevelSelect } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/WordLevelSelect';
 import { LanguageRegisterSelect } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/LanguageRegisterSelect';
 import { CategorySelect } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/CategoriesSelect';
+import { SynonymsSelect } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/SynonymsSelect';
 import styles from './styles.module.scss';
 import { UpdateTypeE } from '@/app/[locale]/(main-admin-content)/managing/_components/WordCard/constants';
 
@@ -25,6 +26,8 @@ type AddOrEditMeaningModalP = {
   onClose: () => void;
   data: EnMeaningT | null;
   updateMeaning: (v: EnMeaningT, type: UpdateTypeE) => void;
+  // the word the meanings belong to; never offered as its own synonym
+  headword?: string | undefined;
 };
 
 export const AddOrEditMeaningModal: React.FC<AddOrEditMeaningModalP> = ({
@@ -32,6 +35,7 @@ export const AddOrEditMeaningModal: React.FC<AddOrEditMeaningModalP> = ({
   onClose,
   data,
   updateMeaning,
+  headword,
 }) => {
   const [values, setValues] = useState<AddOrEditStateT>(DefaultState);
   const [submitting, setSubmitting] = useState(false);
@@ -85,6 +89,7 @@ export const AddOrEditMeaningModal: React.FC<AddOrEditMeaningModalP> = ({
     if (data) {
       setValues({
         examples: data.examples,
+        synonyms: data.synonyms ?? [],
         definition: data.definition,
         title: data.title,
         is_obsolete: data.is_obsolete,
@@ -156,6 +161,11 @@ export const AddOrEditMeaningModal: React.FC<AddOrEditMeaningModalP> = ({
               onChange={(e) => setValues({ ...values, definition: e.target.value })}
             />
           </div>
+          <SynonymsSelect
+            value={values.synonyms}
+            onChange={(synonyms) => setValues({ ...values, synonyms })}
+            headword={headword}
+          />
           <div className={styles.examples}>
             <div className={styles.examplesTitle}>
               <Text strong>{t('examples')}</Text>

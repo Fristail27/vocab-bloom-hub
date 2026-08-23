@@ -277,7 +277,7 @@ export class EnSearchService {
 
     const relations: FindOptionsRelations<EnWord> = { word: true, forms: { word: true } };
     if (with_meanings) {
-      relations.meanings = { translations: true };
+      relations.meanings = { translations: true, synonyms: true };
     }
     if (with_translations) {
       relations.short_translations = true;

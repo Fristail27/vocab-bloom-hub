@@ -57,6 +57,7 @@ const makeMeaning = (id: number, word: string, title: string): EnMeaningListItem
   categories: [],
   is_obsolete: false,
   examples: [],
+  synonyms: [],
   translations_count: 0,
 });
 

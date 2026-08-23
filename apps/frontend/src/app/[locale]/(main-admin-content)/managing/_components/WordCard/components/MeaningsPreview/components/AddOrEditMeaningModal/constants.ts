@@ -5,6 +5,7 @@ export const DefaultState: AddOrEditStateT = {
   title: '',
   definition: '',
   examples: [],
+  synonyms: [],
   categories: [],
   is_obsolete: false,
   sort_order: 0,

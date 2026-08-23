@@ -83,6 +83,7 @@ export type EnMeaningListItemT = {
   categories: CategoryE[];
   is_obsolete: boolean;
   examples: string[];
+  synonyms: string[];
   translations_count: number;
 };
 export type EnMeaningsListT = PaginatedListT<EnMeaningListItemT>;
@@ -153,6 +154,9 @@ export type DatasetManifestT = {
   version: string;
   generatedAt?: string | undefined;
   files: Record<string, { lines: number }>;
+  // meaning → synonym links across all files; counts into the import progress
+  // total for the linking stage (absent in datasets published before #259)
+  synonym_links?: number | undefined;
 };
 
 export type GetDatasetManifestResT = DatasetManifestT | ErrorResT;

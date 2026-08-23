@@ -1,8 +1,18 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsArray, IsBoolean, IsEnum, IsOptional, ValidateNested } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { CategoryE, EnAreaVariantsE, EnMeaningT, LanguageRegisterE, WordLevelE } from '../../../../../../types';
 import { MeaningTranslationDto } from '../../EnMeaningTranslation/dto/MeaningTranslation.dto';
 import { Type } from 'class-transformer';
+import { MAX_SYNONYMS_PER_MEANING } from '../../../utils/normalizeSynonyms';
 
 export class AddMeaningReqDTO {
   @ApiProperty()
@@ -25,6 +35,14 @@ export class AddMeaningReqDTO {
   @IsArray()
   @IsString({ each: true })
   examples!: EnMeaningT['examples'];
+
+  // Headwords of other dictionary entries; unknown words are rejected by the service
+  @ApiProperty({ isArray: true, required: false })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_SYNONYMS_PER_MEANING)
+  @IsString({ each: true })
+  synonyms?: EnMeaningT['synonyms'] | undefined;
 
   @ApiProperty()
   @IsNumber()

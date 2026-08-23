@@ -22,6 +22,8 @@ import { EnEntry } from '../../entities/en_entry.entity';
 import { EnMeaning } from '../../entities/en_meaning.entity';
 import { EnMeaningTranslation } from '../../entities/en_meaning_translation.entity';
 import { EnShortTranslation } from '../../entities/en_short_translation.entity';
+import { normalizeSynonyms } from '../../utils/normalizeSynonyms';
+import { resolveBaseFormHeadwords } from '../../utils/findBaseFormHeadwords';
 import { ImportDictionaryReq } from './dto/ImportDictionaryReq.dto';
 import {
   DatasetManifestT,
@@ -57,7 +59,7 @@ import {
   DataSetWordT,
 } from '../../../../../types/dictionaries/en/EnDataSetTypes';
 import { mapPhraseFromSetToDB } from './utils/mapPhraseFromSetToDB';
-import { PendingExport } from './types';
+import { PendingExport, PendingSynonymLinkT } from './types';
 
 const DATASET_BASE_URL = 'https://huggingface.co/datasets/Fristail27/vocab-bloom-hub-en/resolve/main/data';
 const EXPORT_TTL_MS = 15 * 60 * 1000;
@@ -99,7 +101,9 @@ export class EnImportDictionaryService {
       const isValid =
         typeof manifest?.version === 'string' &&
         lineCounts.length > 0 &&
-        lineCounts.every((f) => typeof f?.lines === 'number' && f.lines >= 0);
+        lineCounts.every((f) => typeof f?.lines === 'number' && f.lines >= 0) &&
+        (manifest.synonym_links === undefined ||
+          (typeof manifest.synonym_links === 'number' && manifest.synonym_links >= 0));
       if (!isValid) {
         this.logger.warn('Dataset manifest has an unexpected shape, ignoring it');
         return null;
@@ -302,7 +306,7 @@ export class EnImportDictionaryService {
    * skipping, base row + forms + meanings + translations — at a cost of a
    * handful of queries per chunk instead of ~26 per line.
    */
-  private async bulkSaveWords(lines: EnWordT[]): Promise<void> {
+  private async bulkSaveWords(lines: EnWordT[], pendingSynonyms?: PendingSynonymLinkT[]): Promise<void> {
     const { chunked, wordKey, entryTypeOf } = EnImportDictionaryService;
 
     await this.enWordsRep.manager.transaction(async (em) => {
@@ -404,9 +408,15 @@ export class EnImportDictionaryService {
       for (const line of toInsert) {
         const wordId = idByKey.get(wordKey(line.word, line.part_of_speech, line.form_of_word));
         for (const m of line.meanings ?? []) {
-          const { id: _mid, translations, ...mRest } = m;
+          const { id: _mid, translations, synonyms, ...mRest } = m;
           const res = await em.getRepository(EnMeaning).insert({ ...mRest, word: { id: wordId } as EnWord });
           const meaningId = res.identifiers[0]?.id as number;
+          // synonyms link to entries that may only appear later in the dataset
+          // (or in another file), so they are resolved once every file is in
+          const synonymWords = normalizeSynonyms(synonyms, line.word);
+          if (pendingSynonyms && synonymWords.length > 0) {
+            pendingSynonyms.push({ meaningId, headword: line.word, synonyms: synonymWords });
+          }
           for (const t of translations ?? []) {
             const { id: _tid, ...tRest } = t;
             translationRows.push({ ...tRest, meaning: { id: meaningId } as EnMeaning });
@@ -460,7 +470,93 @@ export class EnImportDictionaryService {
     });
   }
 
-  private async saveWords(res: Response, allLength: number, plusCount: () => number): Promise<void> {
+  /**
+   * Synonym links the export writes: one per synonym of every base-form
+   * meaning. Recorded in the manifest so the import can count the linking
+   * stage into its progress total.
+   */
+  private async countExportedSynonymLinks(): Promise<number> {
+    const row = await this.enWordsRep.manager
+      .getRepository(EnMeaning)
+      .createQueryBuilder('m')
+      .innerJoin('m.synonyms', 's')
+      .innerJoin('m.word', 'w')
+      .where('w.form_of_word = :baseForm', { baseForm: EnWordFormsE.base_form })
+      .select('COUNT(*)', 'cnt')
+      .getRawOne<{ cnt: unknown }>();
+    return Number(row?.cnt) || 0;
+  }
+
+  /**
+   * Inserts the meaning → entry links collected while saving the dataset.
+   * Synonyms naming a word the dictionary does not have are skipped with a
+   * warning, the same way unknown phrasal variants are.
+   */
+  private async bulkLinkSynonyms(
+    pending: PendingSynonymLinkT[],
+    onBatchDone?: (processedLinks: number) => Promise<void>,
+  ): Promise<void> {
+    const { chunked } = EnImportDictionaryService;
+    if (pending.length === 0) return;
+
+    // the junction table is owned by the ManyToMany relation, so its name is read from the metadata
+    const junctionTable = this.enWordsRep.manager.connection
+      .getMetadata(EnMeaning)
+      .findRelationWithPropertyPath('synonyms')?.junctionEntityMetadata?.tableName;
+    if (!junctionTable) {
+      throw new InternalServerErrorException(ErrorCodes.internal_server_error);
+    }
+
+    let skipped = 0;
+    for (const batch of chunked(pending, IMPORT_CHUNK_SIZE)) {
+      await this.enWordsRep.manager.transaction(async (em) => {
+        // only base-form headwords qualify (directly or through a spelling
+        // variant), the same rule the admin API applies
+        const names = [...new Set(batch.flatMap((p) => p.synonyms))];
+        const resolved = new Map<string, string>();
+        for (const nameBatch of chunked(names, SQL_PARAMS_CHUNK)) {
+          (await resolveBaseFormHeadwords(em, nameBatch)).forEach((headword, name) =>
+            resolved.set(name, headword),
+          );
+        }
+
+        const links: Array<{ meaning_id: number; word: string }> = [];
+        const seen = new Set<string>();
+        for (const p of batch) {
+          for (const synonym of p.synonyms) {
+            const headword = resolved.get(synonym);
+            if (headword === undefined) {
+              skipped++;
+              this.logger.debug(
+                `Synonym "${synonym}" of "${p.headword}" is missing in the dictionary, skipping`,
+              );
+              continue;
+            }
+            // two spellings may resolve to one word; the headword itself is never its own synonym
+            const key = `${p.meaningId}\u0000${headword}`;
+            if (headword === p.headword || seen.has(key)) continue;
+            seen.add(key);
+            links.push({ meaning_id: p.meaningId, word: headword });
+          }
+        }
+        for (const linkBatch of chunked(links, SQL_PARAMS_CHUNK)) {
+          await em.createQueryBuilder().insert().into(junctionTable).values(linkBatch).execute();
+        }
+      });
+      // every collected link counts as processed, resolved or skipped
+      await onBatchDone?.(batch.reduce((n, p) => n + p.synonyms.length, 0));
+    }
+    if (skipped > 0) {
+      this.logger.warn(`Skipped ${skipped} synonyms that name words missing in the dictionary`);
+    }
+  }
+
+  private async saveWords(
+    res: Response,
+    allLength: number,
+    plusCount: () => number,
+    pendingSynonyms: PendingSynonymLinkT[],
+  ): Promise<void> {
     await this.streamJsonlImport<DataSetWordT>(
       res,
       DATASET_FILE_NAMES.words,
@@ -468,12 +564,17 @@ export class EnImportDictionaryService {
       allLength,
       plusCount,
       async (lines) => {
-        await this.bulkSaveWords(lines.map(mapWordFromSetToDB) as unknown as EnWordT[]);
+        await this.bulkSaveWords(lines.map(mapWordFromSetToDB) as unknown as EnWordT[], pendingSynonyms);
       },
     );
   }
 
-  private async saveGrammarPatterns(res: Response, allLength: number, plusCount: () => number): Promise<void> {
+  private async saveGrammarPatterns(
+    res: Response,
+    allLength: number,
+    plusCount: () => number,
+    pendingSynonyms: PendingSynonymLinkT[],
+  ): Promise<void> {
     await this.streamJsonlImport<DataSetGrammarPatternT>(
       res,
       DATASET_FILE_NAMES.grammarPatterns,
@@ -481,12 +582,17 @@ export class EnImportDictionaryService {
       allLength,
       plusCount,
       async (lines) => {
-        await this.bulkSaveWords(lines.map(mapGrammarPatternFromSetToDB));
+        await this.bulkSaveWords(lines.map(mapGrammarPatternFromSetToDB), pendingSynonyms);
       },
     );
   }
 
-  private async savePhrases(res: Response, allLength: number, plusCount: () => number): Promise<void> {
+  private async savePhrases(
+    res: Response,
+    allLength: number,
+    plusCount: () => number,
+    pendingSynonyms: PendingSynonymLinkT[],
+  ): Promise<void> {
     await this.streamJsonlImport<DataSetPhraseT>(
       res,
       DATASET_FILE_NAMES.phrases,
@@ -494,7 +600,7 @@ export class EnImportDictionaryService {
       allLength,
       plusCount,
       async (lines) => {
-        await this.bulkSaveWords(lines.map(mapPhraseFromSetToDB));
+        await this.bulkSaveWords(lines.map(mapPhraseFromSetToDB), pendingSynonyms);
       },
     );
   }
@@ -527,8 +633,11 @@ export class EnImportDictionaryService {
 
     let count = 0;
     const plusCount = () => count++;
+    // the linking stage counts one unit per synonym link named in the dataset;
+    // manifests published before #259 carry no synonym_links and fall back to
+    // a single progress chunk for that stage
     const allLength = manifest
-      ? Object.values(manifest.files).reduce((sum, f) => sum + f.lines, 0)
+      ? Object.values(manifest.files).reduce((sum, f) => sum + f.lines, 0) + (manifest.synonym_links ?? 0)
       : LEGACY_DATASET_TOTAL_LINES;
 
     const firstChunk: ImportDictionaryChunkT = {
@@ -538,10 +647,25 @@ export class EnImportDictionaryService {
     };
     res.write(JSON.stringify(firstChunk) + '\n');
 
-    await this.saveWords(res, allLength, plusCount);
+    // meaning → synonym links are collected across every file and written last,
+    // once all the entries they can point at exist
+    const pendingSynonyms: PendingSynonymLinkT[] = [];
+    await this.saveWords(res, allLength, plusCount, pendingSynonyms);
     await this.savePhrasalVerbs(res, allLength, plusCount);
-    await this.saveGrammarPatterns(res, allLength, plusCount);
-    await this.savePhrases(res, allLength, plusCount);
+    await this.saveGrammarPatterns(res, allLength, plusCount, pendingSynonyms);
+    await this.savePhrases(res, allLength, plusCount, pendingSynonyms);
+
+    if (pendingSynonyms.length > 0) {
+      const linkStartedAt = Date.now();
+      await this.reportImportProgress(res, count, allLength, EnDictionaryImportPhasesE.linking_synonyms);
+      await this.bulkLinkSynonyms(pendingSynonyms, async (processedLinks) => {
+        count += processedLinks;
+        await this.reportImportProgress(res, count, allLength, EnDictionaryImportPhasesE.linking_synonyms);
+      });
+      this.logger.log(
+        `Linked synonyms of ${pendingSynonyms.length} meanings in ${Date.now() - linkStartedAt}ms`,
+      );
+    }
 
     if (manifest) {
       // Remember which dataset version this database now holds; a failure
@@ -693,7 +817,7 @@ export class EnImportDictionaryService {
           word: true,
           forms: { word: true },
           short_translations: true,
-          meanings: { translations: true },
+          meanings: { translations: true, synonyms: { entries: true } },
         },
         prepareWordForDataSet,
         emit,
@@ -723,7 +847,7 @@ export class EnImportDictionaryService {
         addProcessed,
         EnDictionaryImportPhasesE.saving_phrases,
         { part_of_speech: EnPartOfSpeechE.phrase },
-        { word: true, short_translations: true, meanings: { translations: true } },
+        { word: true, short_translations: true, meanings: { translations: true, synonyms: { entries: true } } },
         preparePhraseForDataSet,
         emit,
       );
@@ -735,7 +859,7 @@ export class EnImportDictionaryService {
         addProcessed,
         EnDictionaryImportPhasesE.saving_grammar_patterns,
         { part_of_speech: EnPartOfSpeechE.grammar_pattern },
-        { word: true, short_translations: true, meanings: { translations: true } },
+        { word: true, short_translations: true, meanings: { translations: true, synonyms: { entries: true } } },
         prepareGrammarPatternForDataSet,
         emit,
       );
@@ -745,6 +869,7 @@ export class EnImportDictionaryService {
       const manifest: DatasetManifestT = {
         version: getVersion(),
         generatedAt: new Date().toISOString(),
+        synonym_links: await this.countExportedSynonymLinks(),
         files: {
           [DATASET_FILE_NAMES.words]: { lines: wordsLines },
           [DATASET_FILE_NAMES.phrasalVerbs]: { lines: phrasalVerbsLines },

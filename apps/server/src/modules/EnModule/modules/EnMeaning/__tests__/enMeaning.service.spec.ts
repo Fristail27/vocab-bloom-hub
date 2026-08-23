@@ -1,7 +1,7 @@
 import '../../../__tests__/helpers/clearDatabaseUrl';
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
 import { EnEntry } from '../../../entities/en_entry.entity';
@@ -195,6 +195,142 @@ describe('EnMeaningService (issue #87)', () => {
 
     it('throws NotFoundException for a missing meaning', async () => {
       await expect(service.editMeaning({ id: 9999, title: 'nope' })).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('synonyms (issue #259)', () => {
+    const junctionRows = async () =>
+      ds
+        .getRepository(EnMeaning)
+        .find({ relations: { synonyms: true } })
+        .then((rows) => rows.flatMap((m) => m.synonyms.map((e) => e.word).sort()));
+
+    it('links the meaning to the existing entries and stores them normalized', async () => {
+      const word = await addWordRow('run');
+      await addWordRow('sprint');
+      await addWordRow('dash');
+
+      const res = await service.addMeaning(
+        makeAddBody(word.id, { synonyms: [' Sprint ', 'dash', 'sprint', 'RUN', ''] }),
+      );
+
+      const saved = await ds.getRepository(EnMeaning).findOneOrFail({
+        where: { id: addedId(res) },
+        relations: { synonyms: true },
+      });
+      // trimmed + lowercase + unique, without the headword itself, sorted
+      expect(saved.synonyms.map((e) => e.word).sort()).toEqual(['dash', 'sprint']);
+    });
+
+    it('accepts a meaning without synonyms', async () => {
+      const word = await addWordRow();
+      const res = await service.addMeaning(makeAddBody(word.id));
+      const saved = await ds.getRepository(EnMeaning).findOneOrFail({
+        where: { id: addedId(res) },
+        relations: { synonyms: true },
+      });
+      expect(saved.synonyms).toEqual([]);
+    });
+
+    it('rejects synonyms missing from the dictionary and creates nothing', async () => {
+      const word = await addWordRow('run');
+      await addWordRow('sprint');
+
+      await expect(
+        service.addMeaning(makeAddBody(word.id, { synonyms: ['sprint', 'teleport'] })),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(await ds.getRepository(EnMeaning).count()).toBe(0);
+    });
+
+    it('rejects an inflected form that exists only as a form entry', async () => {
+      const word = await addWordRow('run');
+      const sprint = await addWordRow('sprint');
+      // "sprinted" has an entry row, but only as the past simple of "sprint"
+      const formEntry = await ds.getRepository(EnEntry).save({ word: 'sprinted', type: EnEntryTypesE.word });
+      await ds.getRepository(EnWord).save({
+        word: formEntry,
+        part_of_speech: EnPartOfSpeechE.verb,
+        form_of_word: EnWordFormsE.past_simple,
+        base_form: sprint,
+      });
+
+      await expect(service.addMeaning(makeAddBody(word.id, { synonyms: ['sprinted'] }))).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.addMeaning(makeAddBody(word.id, { synonyms: ['sprint'] }))).resolves.toMatchObject({
+        success: true,
+      });
+    });
+
+    it('resolves spelling variants to the dictionary headword and stores that spelling', async () => {
+      const word = await addWordRow('run');
+      await addWordRow('absentminded');
+      await addWordRow('about turn');
+      await addWordRow('add-in');
+      await addWordRow('sprint');
+
+      const res = await service.addMeaning(
+        makeAddBody(word.id, {
+          // hyphen dropped, hyphen -> space, space -> hyphen, article dropped, exact + variant of one word
+          synonyms: ['absent-minded', 'about-turn', 'add in', 'the sprint', 'sprint', 'to run'],
+        }),
+      );
+
+      expect(await junctionRows()).toEqual(['about turn', 'absentminded', 'add-in', 'sprint']);
+      expect(res).toMatchObject({ success: true });
+    });
+
+    it('never drops a particle to find a match', async () => {
+      const word = await addWordRow('run');
+      await addWordRow('put up');
+
+      await expect(service.addMeaning(makeAddBody(word.id, { synonyms: ['put up with'] }))).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('replaces the whole synonym set on edit and leaves it untouched when omitted', async () => {
+      const word = await addWordRow('run');
+      await addWordRow('sprint');
+      await addWordRow('dash');
+      await addWordRow('jog');
+      const id = addedId(await service.addMeaning(makeAddBody(word.id, { synonyms: ['sprint', 'dash'] })));
+
+      await service.editMeaning({ id, title: 'to move quickly' });
+      expect(await junctionRows()).toEqual(['dash', 'sprint']);
+
+      await service.editMeaning({ id, synonyms: ['jog', 'dash', 'run'] });
+      expect(await junctionRows()).toEqual(['dash', 'jog']);
+
+      await service.editMeaning({ id, synonyms: [] });
+      expect(await junctionRows()).toEqual([]);
+    });
+
+    it('rejects an edit naming an unknown synonym and keeps the stored links', async () => {
+      const word = await addWordRow('run');
+      await addWordRow('sprint');
+      const id = addedId(await service.addMeaning(makeAddBody(word.id, { synonyms: ['sprint'] })));
+
+      await expect(service.editMeaning({ id, synonyms: ['teleport'] })).rejects.toThrow(BadRequestException);
+      expect(await junctionRows()).toEqual(['sprint']);
+    });
+
+    it('drops the links when the synonym word or the meaning is deleted', async () => {
+      const word = await addWordRow('run');
+      await addWordRow('sprint');
+      const id = addedId(await service.addMeaning(makeAddBody(word.id, { synonyms: ['sprint'] })));
+
+      // removing the entry (cascade from its word rows) removes the junction row
+      await ds.getRepository(EnEntry).delete({ word: 'sprint' });
+      expect(await junctionRows()).toEqual([]);
+
+      await addWordRow('dash');
+      await service.editMeaning({ id, synonyms: ['dash'] });
+      expect(await junctionRows()).toEqual(['dash']);
+      await service.deleteMeaning(id);
+      expect(await ds.getRepository(EnEntry).findOneBy({ word: 'dash' })).not.toBeNull();
+      expect(await junctionRows()).toEqual([]);
     });
   });
 

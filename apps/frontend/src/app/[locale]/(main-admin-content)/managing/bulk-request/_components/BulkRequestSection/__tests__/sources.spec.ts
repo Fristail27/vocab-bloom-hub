@@ -56,6 +56,7 @@ const meaning: EnMeaningListItemT = {
   categories: [],
   is_obsolete: false,
   examples: ['never give up', 'he gave up'],
+  synonyms: ['quit', 'surrender'],
   translations_count: 1,
 };
 
@@ -92,6 +93,7 @@ describe('sources', () => {
       title: 'stop trying',
       definition: 'to stop doing something',
       examples: ['never give up', 'he gave up'],
+      synonyms: ['quit', 'surrender'],
       area_variant: 'british',
       meaning_level: 'B1',
       language_register: '',

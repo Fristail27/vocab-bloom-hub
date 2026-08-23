@@ -173,6 +173,24 @@ describe('AddMeaningReqDTO validation (issue #87)', () => {
       BadRequestException,
     );
   });
+
+  it('accepts synonyms as an optional list of strings and rejects anything else (issue #259)', async () => {
+    await expect(
+      validate(AddMeaningReqDTO, { ...makeBody(), synonyms: ['sprint', 'dash'] }),
+    ).resolves.toMatchObject({ synonyms: ['sprint', 'dash'] });
+    await expect(validate(AddMeaningReqDTO, { ...makeBody(), synonyms: [] })).resolves.toBeInstanceOf(
+      AddMeaningReqDTO,
+    );
+    await expect(validate(AddMeaningReqDTO, { ...makeBody(), synonyms: 'sprint' })).rejects.toThrow(
+      BadRequestException,
+    );
+    await expect(validate(AddMeaningReqDTO, { ...makeBody(), synonyms: [42] })).rejects.toThrow(
+      BadRequestException,
+    );
+    await expect(
+      validate(AddMeaningReqDTO, { ...makeBody(), synonyms: Array.from({ length: 51 }, (_, i) => `w${i}`) }),
+    ).rejects.toThrow(BadRequestException);
+  });
 });
 
 describe('EditMeaningReqDTO validation (issue #87)', () => {
@@ -190,6 +208,13 @@ describe('EditMeaningReqDTO validation (issue #87)', () => {
     await expect(validate(EditMeaningReqDTO, { id: 1, hacker_field: 'oops' })).rejects.toThrow(
       BadRequestException,
     );
+  });
+
+  it('accepts a synonyms list and rejects non-string items (issue #259)', async () => {
+    await expect(validate(EditMeaningReqDTO, { id: 1, synonyms: ['sprint'] })).resolves.toMatchObject({
+      synonyms: ['sprint'],
+    });
+    await expect(validate(EditMeaningReqDTO, { id: 1, synonyms: [null] })).rejects.toThrow(BadRequestException);
   });
 });
 

@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsEnum,
@@ -27,6 +28,7 @@ import {
   WordLevelE,
 } from '../../../../types';
 import { MeaningTranslationDto } from '../modules/EnMeaningTranslation/dto/MeaningTranslation.dto';
+import { MAX_SYNONYMS_PER_MEANING } from '../utils/normalizeSynonyms';
 
 // The admin UI sends null for untouched fields, but these columns are NOT NULL
 // with a DB default; dropping the value lets TypeORM apply that default
@@ -107,6 +109,14 @@ export class AddWordReqMeaningDTO {
   @IsArray()
   @IsString({ each: true })
   examples!: EnMeaningT['examples'];
+
+  // Headwords of other dictionary entries; unknown words fail the whole request
+  @ApiProperty({ isArray: true, required: false })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_SYNONYMS_PER_MEANING)
+  @IsString({ each: true })
+  synonyms?: EnMeaningT['synonyms'] | undefined;
 
   @ApiProperty()
   @IsEnum(EnAreaVariantsE)
