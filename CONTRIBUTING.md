@@ -72,10 +72,17 @@ Examples:
 
 Before submitting a pull request:
 
-- Ensure the project builds successfully
+- Ensure the project builds successfully and `yarn check` passes
 - Keep PRs focused and minimal
 - Avoid unrelated changes in the same PR
 - Update documentation if needed
+
+### Documentation languages
+
+The README exists in two languages: `README.md` (English) and `docs/README.ru.md` (Russian).
+Any change to one of them must be applied to the other in the same PR so the two stay in sync
+section by section. Everything else (`docs/`, code comments, issue and PR templates) is written
+in English only.
 
 ### Pull Request Checklist
 
@@ -130,13 +137,17 @@ If you have questions, feel free to open an Issue or start a Discussion.
 ```text
 .
 ├── apps
-│   ├── frontend    # Next.js frontend application
-│   └── server      # NestJS backend application
+│   ├── frontend    # Next.js admin UI
+│   ├── server      # NestJS API + shared types/constants for the frontend
+│   └── e2e         # Playwright browser tests
+├── docs            # environment, authentication, migrations, README.ru.md
+├── eslint          # shared ESLint config pieces
 ├── package.json    # Root workspace configuration
 ├── tsconfig.base.json
 ├── tsconfig.json
 ├── jest.config.ts
-├── README.md
+├── eslint.config.ts
+├── README.md       # English README (Russian version: docs/README.ru.md)
 └── yarn.lock
 ```
 
