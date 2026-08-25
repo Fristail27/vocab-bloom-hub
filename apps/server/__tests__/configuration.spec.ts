@@ -17,35 +17,45 @@ const loadFreshConfiguration = (): ConfigurationModule => {
 
 describe('assertRequiredConfig (issue #186)', () => {
   const validEnv = (): NodeJS.ProcessEnv => ({
-    USERNAME: 'admin',
-    PASSWORD: 'secret',
+    ADMIN_USERNAME: 'admin',
+    ADMIN_PASSWORD: 'secret',
   });
 
-  it('passes with USERNAME and PASSWORD set (dev, sqlite fallback allowed)', () => {
+  it('passes with ADMIN_USERNAME and ADMIN_PASSWORD set (dev, sqlite fallback allowed)', () => {
     expect(() => assertRequiredConfig(validEnv())).not.toThrow();
   });
 
-  it('fails when USERNAME is missing', () => {
-    const env = validEnv();
-    delete env.USERNAME;
+  it('ignores the OS-provided USERNAME and requires ADMIN_USERNAME', () => {
+    // The OS commonly sets USERNAME to the current system user; it must not
+    // satisfy the admin login requirement
+    const env: NodeJS.ProcessEnv = { USERNAME: 'os-user', ADMIN_PASSWORD: 'secret' };
     expect(() => assertRequiredConfig(env)).toThrow(ConfigurationError);
-    expect(() => assertRequiredConfig(env)).toThrow(/USERNAME/);
+    expect(() => assertRequiredConfig(env)).toThrow(/ADMIN_USERNAME/);
   });
 
-  it('fails when PASSWORD is missing even though the OS provides USERNAME', () => {
-    // The fail-open scenario: .env did not load, USERNAME comes from the OS,
-    // PASSWORD would silently hash as the string "undefined"
-    const env: NodeJS.ProcessEnv = { USERNAME: 'os-user' };
+  it('fails when ADMIN_USERNAME is missing', () => {
+    const env = validEnv();
+    delete env.ADMIN_USERNAME;
     expect(() => assertRequiredConfig(env)).toThrow(ConfigurationError);
-    expect(() => assertRequiredConfig(env)).toThrow(/PASSWORD/);
+    expect(() => assertRequiredConfig(env)).toThrow(/ADMIN_USERNAME/);
+  });
+
+  it('fails when ADMIN_PASSWORD is missing even though ADMIN_USERNAME is set', () => {
+    // The fail-open scenario: .env did not load and only one credential is
+    // present, so ADMIN_PASSWORD would silently hash as the string "undefined"
+    const env: NodeJS.ProcessEnv = { ADMIN_USERNAME: 'admin' };
+    expect(() => assertRequiredConfig(env)).toThrow(ConfigurationError);
+    expect(() => assertRequiredConfig(env)).toThrow(/ADMIN_PASSWORD/);
   });
 
   it('lists every missing variable at once', () => {
-    expect(() => assertRequiredConfig({})).toThrow(/USERNAME, PASSWORD/);
+    expect(() => assertRequiredConfig({})).toThrow(/ADMIN_USERNAME, ADMIN_PASSWORD/);
   });
 
   it('rejects blank values, not only missing ones', () => {
-    expect(() => assertRequiredConfig({ USERNAME: 'admin', PASSWORD: '   ' })).toThrow(/PASSWORD/);
+    expect(() => assertRequiredConfig({ ADMIN_USERNAME: 'admin', ADMIN_PASSWORD: '   ' })).toThrow(
+      /ADMIN_PASSWORD/,
+    );
   });
 
   it('fails in production without DATABASE_URL instead of silently using SQLite', () => {

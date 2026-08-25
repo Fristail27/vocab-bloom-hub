@@ -32,8 +32,8 @@ export class AuthService {
     loginHash: string;
     secretHash: string;
   }> {
-    const username = process.env.USERNAME as string;
-    const pass = process.env.PASSWORD as string;
+    const username = process.env.ADMIN_USERNAME as string;
+    const pass = process.env.ADMIN_PASSWORD as string;
     const loginHash = await hashLoginString(username, pass);
     const secretHash = await hashLoginString(username, loginHash);
 
@@ -52,7 +52,7 @@ export class AuthService {
   }
 
   async createJwtToken(): Promise<string> {
-    const username = process.env.USERNAME as string;
+    const username = process.env.ADMIN_USERNAME as string;
     const { loginHash, secretHash } = await this.getLoginHash();
 
     return createJwt({ username, roles: [RoleE.admin] }, secretHash + loginHash);
@@ -67,8 +67,8 @@ export class AuthService {
   }
 
   async login(hash: string, salt: string): Promise<string> {
-    const username = process.env.USERNAME as string;
-    const pass = process.env.PASSWORD as string;
+    const username = process.env.ADMIN_USERNAME as string;
+    const pass = process.env.ADMIN_PASSWORD as string;
     const now = Date.now();
     const currentSlot = getLoginProofTimeSlot(now);
 
@@ -95,8 +95,8 @@ export class AuthService {
 
   async checkToken(jwt: string): Promise<boolean> {
     try {
-      const username = process.env.USERNAME as string;
-      const pass = process.env.PASSWORD as string;
+      const username = process.env.ADMIN_USERNAME as string;
+      const pass = process.env.ADMIN_PASSWORD as string;
       const hashByEnv = await hashLoginString(username, pass);
       const secretHash = await hashLoginString(username, hashByEnv);
 

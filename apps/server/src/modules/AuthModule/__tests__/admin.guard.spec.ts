@@ -17,8 +17,8 @@ describe('AdminGuard (issue #165)', () => {
   let validToken: string;
 
   beforeAll(async () => {
-    process.env.USERNAME = ENV_USERNAME;
-    process.env.PASSWORD = ENV_PASSWORD;
+    process.env.ADMIN_USERNAME = ENV_USERNAME;
+    process.env.ADMIN_PASSWORD = ENV_PASSWORD;
     guard = new AdminGuard();
 
     // same derivation as AuthService.login

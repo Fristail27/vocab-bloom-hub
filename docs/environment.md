@@ -11,10 +11,15 @@ server logs a warning when the root `.env` could not be loaded.
 
 ## Variables
 
+> **Renamed in #261:** the admin credentials used to be `USERNAME` / `PASSWORD`. They are now
+> `ADMIN_USERNAME` / `ADMIN_PASSWORD`; the old names are not read anymore, so update existing
+> `.env` files and deployment configs. The rename avoids the collision with the `USERNAME`
+> variable that most operating systems set to the current system user.
+
 | Variable                   | Required          | Default                            | Used by  | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | -------------------------- | ----------------- | ---------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `USERNAME`                 | **yes**           | —                                  | server   | Admin login. Together with `PASSWORD` it derives the login-proof key and the JWT signing secret (see [authentication.md](./authentication.md)).                                                                                                                                                                                                                                                                                                                                    |
-| `PASSWORD`                 | **yes**           | —                                  | server   | Admin password. The server refuses to start when it is missing or blank.                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `ADMIN_USERNAME`           | **yes**           | —                                  | server   | Admin login. Together with `ADMIN_PASSWORD` it derives the login-proof key and the JWT signing secret (see [authentication.md](./authentication.md)).                                                                                                                                                                                                                                                                                                                              |
+| `ADMIN_PASSWORD`           | **yes**           | —                                  | server   | Admin password. The server refuses to start when it is missing or blank.                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `DATABASE_URL`             | **in production** | SQLite fallback (dev only)         | server   | Database URL; the scheme selects the driver. `postgres://user:pass@host:5432/db` (or `postgresql://`) runs Postgres with the schema managed by migrations (see [migrations.md](./migrations.md)). `sqlite:<path>` (e.g. `sqlite:./my.sqlite`, `sqlite::memory:`) runs better-sqlite3 with `synchronize` — used by the browser e2e tests for an isolated database. Any other scheme fails startup. When absent in development, TypeORM falls back to `dev.sqlite` at the repo root. |
 | `SERVER_PORT`              | no                | `3010`                             | server   | Port the NestJS API listens on.                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `FRONT_PORT`               | no                | `3000`                             | frontend | Port the Next.js dev server listens on (wired through `next.config.ts`).                                                                                                                                                                                                                                                                                                                                                                                                           |
@@ -28,9 +33,10 @@ server logs a warning when the root `.env` could not be loaded.
 The server validates its configuration before Nest is created (`assertRequiredConfig` in
 `apps/server/configuration.ts`) and exits with code 1 and a clear error message when:
 
-- `USERNAME` or `PASSWORD` is missing or blank — this also protects against the silent fail-open
-  where an unloaded `.env` leaves `USERNAME` set by the OS and the password hashes as the literal
-  string `"undefined"`;
+- `ADMIN_USERNAME` or `ADMIN_PASSWORD` is missing or blank — this protects against the silent
+  fail-open where an unloaded `.env` leaves the credentials undefined and the password hashes as
+  the literal string `"undefined"`. The `ADMIN_` prefix is deliberate: a bare `USERNAME` is
+  commonly set by the OS to the current system user and would silently satisfy the check;
 - `NODE_ENV=production` and `DATABASE_URL` is not a `postgres://` connection string — production
   never runs on SQLite silently;
 - `DATABASE_URL` is set but its scheme is not recognized (`postgres://`, `postgresql://` or
@@ -55,8 +61,8 @@ were imported before the environment was loaded (e.g. a custom entry point that 
 SERVER_PORT=3010
 FRONT_PORT=3000
 NODE_ENV=development
-USERNAME=admin
-PASSWORD=change-me
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=change-me
 # Optional in development (falls back to dev.sqlite), required in production.
 # The scheme picks the driver: postgres://... or an explicit sqlite:<path>
 DATABASE_URL=postgres://user:password@localhost:5432/vocab_bloom

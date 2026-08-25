@@ -11,8 +11,8 @@ import { AuthService } from '../auth.service';
 
 // Real crypto and JWT: this spec verifies the actual time-slot + replay logic
 describe('AuthService.login proof exchange (issue #184)', () => {
-  const USERNAME = 'admin';
-  const PASSWORD = 'secret';
+  const ADMIN_USERNAME = 'admin';
+  const ADMIN_PASSWORD = 'secret';
   const NOW = 1_000_000 * LOGIN_PROOF_WINDOW_MS + 10_000;
   const SALT = 'aabbccddeeff00112233445566778899';
 
@@ -21,15 +21,15 @@ describe('AuthService.login proof exchange (issue #184)', () => {
   let prevPassword: string | undefined;
 
   beforeAll(() => {
-    prevUsername = process.env.USERNAME;
-    prevPassword = process.env.PASSWORD;
-    process.env.USERNAME = USERNAME;
-    process.env.PASSWORD = PASSWORD;
+    prevUsername = process.env.ADMIN_USERNAME;
+    prevPassword = process.env.ADMIN_PASSWORD;
+    process.env.ADMIN_USERNAME = ADMIN_USERNAME;
+    process.env.ADMIN_PASSWORD = ADMIN_PASSWORD;
   });
 
   afterAll(() => {
-    process.env.USERNAME = prevUsername;
-    process.env.PASSWORD = prevPassword;
+    process.env.ADMIN_USERNAME = prevUsername;
+    process.env.ADMIN_PASSWORD = prevPassword;
   });
 
   beforeEach(() => {
@@ -41,7 +41,8 @@ describe('AuthService.login proof exchange (issue #184)', () => {
     jest.restoreAllMocks();
   });
 
-  const proofForSlot = (slot: number, salt: string = SALT) => hashLoginProof(USERNAME, PASSWORD, slot, salt);
+  const proofForSlot = (slot: number, salt: string = SALT) =>
+    hashLoginProof(ADMIN_USERNAME, ADMIN_PASSWORD, slot, salt);
 
   const currentSlot = () => getLoginProofTimeSlot(NOW);
 
@@ -68,7 +69,7 @@ describe('AuthService.login proof exchange (issue #184)', () => {
   });
 
   it('rejects a proof built from wrong credentials', async () => {
-    const wrong = await hashLoginProof(USERNAME, 'wrong-password', currentSlot(), SALT);
+    const wrong = await hashLoginProof(ADMIN_USERNAME, 'wrong-password', currentSlot(), SALT);
     await expect(service.login(wrong, SALT)).rejects.toThrow('login_or_pass_wrong');
   });
 
@@ -91,7 +92,7 @@ describe('AuthService.login proof exchange (issue #184)', () => {
   it('allows an immediate re-login within the same slot thanks to a fresh salt', async () => {
     await expect(service.login(await proofForSlot(currentSlot()), SALT)).resolves.toEqual(expect.any(String));
 
-    const fresh = await createLoginProof(USERNAME, PASSWORD);
+    const fresh = await createLoginProof(ADMIN_USERNAME, ADMIN_PASSWORD);
     await expect(service.login(fresh.hash, fresh.salt)).resolves.toEqual(expect.any(String));
   });
 

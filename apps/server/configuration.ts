@@ -47,11 +47,13 @@ export const parseDatabaseUrl = (raw: string | undefined): DatabaseUrlConfigT =>
   );
 };
 
-// USERNAME alone proves nothing: the OS commonly sets it to the current system
-// user even when the .env file failed to load, and PASSWORD would then silently
-// hash as the literal string "undefined". Failing fast closes that fail-open login.
+// The admin credentials live under the ADMIN_ prefix on purpose: the OS commonly
+// sets a bare USERNAME to the current system user, so a project-specific name
+// cannot be silently satisfied by the environment when the .env file failed to
+// load. Both are still validated here so a missing .env fails fast instead of
+// hashing the literal string "undefined" as a credential (fail-open login).
 export const assertRequiredConfig = (env: NodeJS.ProcessEnv = process.env): void => {
-  const missing = ['USERNAME', 'PASSWORD'].filter((name) => !env[name]?.trim());
+  const missing = ['ADMIN_USERNAME', 'ADMIN_PASSWORD'].filter((name) => !env[name]?.trim());
   if (missing.length > 0) {
     throw new ConfigurationError(
       `Missing required environment variables: ${missing.join(', ')}. ` +
