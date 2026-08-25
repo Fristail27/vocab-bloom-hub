@@ -23,8 +23,8 @@ describe('AuthService', () => {
   const FAKE_TOKEN = 'fake.jwt.token';
 
   beforeAll(() => {
-    process.env.USERNAME = ENV_USERNAME;
-    process.env.PASSWORD = ENV_PASSWORD;
+    process.env.ADMIN_USERNAME = ENV_USERNAME;
+    process.env.ADMIN_PASSWORD = ENV_PASSWORD;
   });
 
   beforeEach(() => {

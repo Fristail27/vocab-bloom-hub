@@ -5,7 +5,7 @@ This document describes the full authentication flow of Vocab Bloom Hub as imple
 ## Overview
 
 The platform has a **single admin user** and no user table. Credentials live in the environment
-(`USERNAME` / `PASSWORD` in the root `.env`), and everything else — the login proof, the JWT signing
+(`ADMIN_USERNAME` / `ADMIN_PASSWORD` in the root `.env`), and everything else — the login proof, the JWT signing
 secret, the guard checks — is derived from them at runtime.
 
 Key properties of the design:
@@ -165,7 +165,7 @@ sequenceDiagram
 
 ## Environment variables involved
 
-| Variable               | Role                                                  |
-| ---------------------- | ----------------------------------------------------- |
-| `USERNAME`, `PASSWORD` | The only credentials; everything is derived from them |
-| `NODE_ENV`             | `production` switches the cookie to `secure`          |
+| Variable                           | Role                                                  |
+| ---------------------------------- | ----------------------------------------------------- |
+| `ADMIN_USERNAME`, `ADMIN_PASSWORD` | The only credentials; everything is derived from them |
+| `NODE_ENV`                         | `production` switches the cookie to `secure`          |

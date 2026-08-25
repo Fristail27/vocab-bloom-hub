@@ -72,8 +72,8 @@ describe('En word add/edit routes (e2e, issue #87)', () => {
 
   beforeAll(async () => {
     // AdminGuard derives the JWT secret from these on every request
-    process.env.USERNAME = E2E_USERNAME;
-    process.env.PASSWORD = E2E_PASSWORD;
+    process.env.ADMIN_USERNAME = E2E_USERNAME;
+    process.env.ADMIN_PASSWORD = E2E_PASSWORD;
 
     const hashByEnv = await hashLoginString(E2E_USERNAME, E2E_PASSWORD);
     const secretHash = await hashLoginString(E2E_USERNAME, hashByEnv);

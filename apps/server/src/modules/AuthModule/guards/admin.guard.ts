@@ -12,8 +12,8 @@ export class AdminGuard implements CanActivate {
     if (!token) {
       throw new UnauthorizedException(ErrorCodes.invalid_token);
     }
-    const username = process.env.USERNAME as string;
-    const pass = process.env.PASSWORD as string;
+    const username = process.env.ADMIN_USERNAME as string;
+    const pass = process.env.ADMIN_PASSWORD as string;
     const hashByEnv = await hashLoginString(username, pass);
     const secretHash = await hashLoginString(username, hashByEnv);
     const isValid = validateJwt(token, secretHash + hashByEnv);

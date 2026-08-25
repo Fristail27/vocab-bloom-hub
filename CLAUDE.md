@@ -35,7 +35,7 @@ Test files are `*.spec.ts(x)`, colocated with code (e.g. in `__tests__/` dirs). 
 
 ## Environment
 
-A single `.env` at the repo root is used by both apps (frontend scripts wrap with `dotenv -e ../../.env`; server loads it at the top of `src/main.ts`). Relevant vars: `SERVER_PORT`, `FRONT_PORT`, `DATABASE_URL`, `USERNAME`, `PASSWORD`, `NEXT_PUBLIC_BASE_API_URL`, `LOG_LEVEL` (server log verbosity: `verbose`/`debug`/`log`/`warn`/`error`/`fatal`; defaults to `debug` in development, `log` otherwise).
+A single `.env` at the repo root is used by both apps (frontend scripts wrap with `dotenv -e ../../.env`; server loads it at the top of `src/main.ts`). Relevant vars: `SERVER_PORT`, `FRONT_PORT`, `DATABASE_URL`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `NEXT_PUBLIC_BASE_API_URL`, `LOG_LEVEL` (server log verbosity: `verbose`/`debug`/`log`/`warn`/`error`/`fatal`; defaults to `debug` in development, `log` otherwise).
 
 Database: the `DATABASE_URL` scheme selects the driver — `postgres://` connects to Postgres, `sqlite:<path>` (e.g. `sqlite:./e2e.sqlite`, `sqlite::memory:`) runs better-sqlite3 on that file, any other scheme fails startup. When unset, it falls back to `dev.sqlite` at the repo root. The two modes manage the schema differently (config in `apps/server/src/db/typeorm-options.ts`):
 
@@ -66,7 +66,7 @@ A global `ValidationPipe` runs with `whitelist: true, forbidNonWhitelisted: true
 
 ### Auth: single admin from env
 
-There is no user table. `AuthService` derives hashes from the `USERNAME`/`PASSWORD` env vars, issues a JWT with the admin role (signed via `core/utils/auth`, `jsonwebtoken`), and sets it as an httpOnly `bearer` cookie (`secure` in production). `AdminGuard` in `AuthModule` validates the token on protected routes, reading it from the Authorization header or the cookie. Browser requests carry the cookie via `credentials: 'include'`; during SSR the `Server*Api` wrappers forward the incoming cookie as a Bearer header.
+There is no user table. `AuthService` derives hashes from the `ADMIN_USERNAME`/`ADMIN_PASSWORD` env vars, issues a JWT with the admin role (signed via `core/utils/auth`, `jsonwebtoken`), and sets it as an httpOnly `bearer` cookie (`secure` in production). `AdminGuard` in `AuthModule` validates the token on protected routes, reading it from the Authorization header or the cookie. Browser requests carry the cookie via `credentials: 'include'`; during SSR the `Server*Api` wrappers forward the incoming cookie as a Bearer header.
 
 ### Frontend API layer: error unions, not exceptions
 
