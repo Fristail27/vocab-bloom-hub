@@ -220,6 +220,8 @@ export class EnStatisticsService {
       wordsWithoutDescription,
       meaningsWithoutTranslations,
       meaningsWithoutExamples,
+      meaningsWithoutSynonyms,
+      meaningsWithoutAntonyms,
       emptyMeaningTranslations,
       emptyShortTranslations,
     ] = await Promise.all([
@@ -239,6 +241,9 @@ export class EnStatisticsService {
           emptyLiterals: EMPTY_ARRAY_LITERALS,
         })
         .getCount(),
+      // linked words live in junction tables: a meaning without a join row has none
+      this.enMeaningsRep.createQueryBuilder('m').leftJoin('m.synonyms', 's').where('s.word IS NULL').getCount(),
+      this.enMeaningsRep.createQueryBuilder('m').leftJoin('m.antonyms', 'a').where('a.word IS NULL').getCount(),
       this.enMeaningTranslationsRep
         .createQueryBuilder('t')
         .where("TRIM(t.title) = '' OR TRIM(t.definition) = ''")
@@ -254,6 +259,8 @@ export class EnStatisticsService {
       { key: 'words_without_description', count: wordsWithoutDescription, total: words },
       { key: 'meanings_without_translations', count: meaningsWithoutTranslations, total: meanings },
       { key: 'meanings_without_examples', count: meaningsWithoutExamples, total: meanings },
+      { key: 'meanings_without_synonyms', count: meaningsWithoutSynonyms, total: meanings },
+      { key: 'meanings_without_antonyms', count: meaningsWithoutAntonyms, total: meanings },
       { key: 'empty_meaning_translations', count: emptyMeaningTranslations, total: meaningTranslations },
       { key: 'empty_short_translations', count: emptyShortTranslations, total: shortTranslations },
     ];

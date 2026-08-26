@@ -1,0 +1,13 @@
+.wordLinksSelect {
+  width: 100%;
+}
+
+.option {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+
+  .partOfSpeech {
+    font-size: 12px;
+  }
+}

@@ -20,10 +20,11 @@ export const DEFAULT_PROMPT_TEMPLATES: Record<SourceKindE, string> = {
     'Give synonyms for the English {{part_of_speech}} "{{word}}" in the form {"synonyms": ["...", "..."]}. ' +
     'If the word is a proper noun or an abbreviation, answer {"synonyms": []}.',
   [SourceKindE.meanings]:
-    'Give synonyms for the English {{part_of_speech}} "{{word}}" only in the meaning "{{title}}" ({{definition}}): ' +
-    'single words of the same part of speech that can replace it in this meaning, in their base form, ' +
-    'excluding "{{word}}" itself and its inflected forms, in the form {"synonyms": ["...", "..."]}. ' +
-    'If this meaning has no synonyms, answer {"synonyms": []}.',
+    'Give synonyms and antonyms for the English {{part_of_speech}} "{{word}}" only in the meaning "{{title}}" ({{definition}}): ' +
+    'single words of the same part of speech in their base form — synonyms that can replace it in this meaning, ' +
+    'antonyms that mean the opposite in this meaning — excluding "{{word}}" itself and its inflected forms, ' +
+    'in the form {"synonyms": ["...", "..."], "antonyms": ["...", "..."]}. ' +
+    'Use an empty list for a side this meaning does not have, e.g. {"synonyms": [], "antonyms": []}.',
   [SourceKindE.translations]:
     'Check the translation into "{{language}}" of the English {{part_of_speech}} "{{word}}" in the meaning ' +
     '"{{meaning_title}}" ({{meaning_definition}}): title "{{title}}", definition "{{definition}}". ' +

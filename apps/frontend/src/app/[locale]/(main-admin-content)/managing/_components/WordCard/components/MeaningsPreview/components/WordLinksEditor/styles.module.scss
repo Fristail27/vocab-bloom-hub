@@ -1,0 +1,20 @@
+.wordLinksEditor {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  .title {
+    font-weight: 500;
+  }
+
+  .select {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .iconBtn {
+    height: 18px;
+    width: 22px;
+  }
+}

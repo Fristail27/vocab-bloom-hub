@@ -83,18 +83,28 @@ const makeWord = (word: string, part_of_speech: EnPartOfSpeechE, meanings: Parti
       sort_order: i + 1,
       examples: [],
       synonyms: [],
+      antonyms: [],
       translations: [],
       ...m,
     })),
   }) as unknown as EnWordT;
 
-/** meaning title -> sorted synonym headwords, across the whole database */
-const synonymsByTitle = async (ds: DataSource): Promise<Record<string, string[]>> => {
-  const meanings = await ds.getRepository(EnMeaning).find({ relations: { synonyms: true } });
-  return Object.fromEntries(meanings.map((m) => [m.title, m.synonyms.map((e) => e.word).sort()]));
+/** meaning title -> sorted linked headwords of one kind, across the whole database */
+const linksByTitle = async (
+  ds: DataSource,
+  kind: 'synonyms' | 'antonyms',
+): Promise<Record<string, string[]>> => {
+  const meanings = await ds.getRepository(EnMeaning).find({ relations: { [kind]: true } });
+  return Object.fromEntries(meanings.map((m) => [m.title, m[kind].map((e) => e.word).sort()]));
 };
 
-describe('synonyms survive an export → import round trip (issue #259)', () => {
+const countLinks = async (ds: DataSource, kind: 'synonyms' | 'antonyms'): Promise<number> =>
+  (await ds.getRepository(EnMeaning).find({ relations: { [kind]: true } })).reduce(
+    (n, m) => n + m[kind].length,
+    0,
+  );
+
+describe('synonyms and antonyms survive an export → import round trip (issues #259, #266)', () => {
   let sourceDs: DataSource;
   let targetDs: DataSource;
   let runDir: string;
@@ -110,15 +120,20 @@ describe('synonyms survive an export → import round trip (issue #259)', () => 
     await enService.addWord(makeWord('sprint', EnPartOfSpeechE.verb, [{}]));
     await enService.addWord(makeWord('dash', EnPartOfSpeechE.noun, [{}]));
     await enService.addWord(makeWord('give', EnPartOfSpeechE.verb, [{}]));
-    await enService.addWord(makeWord('give up', EnPartOfSpeechE.verb, [{ synonyms: ['sprint'] }]));
+    await enService.addWord(makeWord('walk', EnPartOfSpeechE.verb, [{}]));
+    await enService.addWord(
+      makeWord('give up', EnPartOfSpeechE.verb, [{ synonyms: ['sprint'], antonyms: ['walk'] }]),
+    );
     const run = makeWord('run', EnPartOfSpeechE.verb, [
-      { synonyms: ['sprint', 'dash'] },
+      { synonyms: ['sprint', 'dash'], antonyms: ['walk'] },
       { synonyms: ['give up'] },
     ]);
     run.forms = [{ word: 'ran', form_of_word: EnWordFormsE.past_simple }] as unknown as EnWordT['forms'];
     await enService.addWord(run);
     await enService.addWord(
-      makeWord('in the long run', EnPartOfSpeechE.phrase, [{ synonyms: ['run', 'give up'] }]),
+      makeWord('in the long run', EnPartOfSpeechE.phrase, [
+        { synonyms: ['run', 'give up'], antonyms: ['walk'] },
+      ]),
     );
     // the phrase did not exist yet when "run" was added: link it afterwards, so
     // the words file references a word that only the phrases file provides
@@ -128,6 +143,12 @@ describe('synonyms survive an export → import round trip (issue #259)', () => 
     const longRun = await sourceDs.getRepository(EnEntry).findOneByOrFail({ word: 'in the long run' });
     runMeaning.synonyms.push(longRun);
     await sourceDs.getRepository(EnMeaning).save(runMeaning);
+    // the same cross-file link as an antonym: "walk 1" ↔ the phrase
+    const walkMeaning = await sourceDs
+      .getRepository(EnMeaning)
+      .findOneOrFail({ where: { title: 'walk 1' }, relations: { antonyms: true } });
+    walkMeaning.antonyms.push(longRun);
+    await sourceDs.getRepository(EnMeaning).save(walkMeaning);
 
     const progress = new FakeProgressRes();
     await importService.exportDictionary(progress as unknown as Response);
@@ -182,26 +203,47 @@ describe('synonyms survive an export → import round trip (issue #259)', () => 
     ]);
   });
 
-  it('records the link count in the manifest for the import progress total', () => {
-    const manifest = JSON.parse(readFileSync(path.join(runDir, MANIFEST_FILE_NAME), 'utf-8')) as {
-      synonym_links: number;
-    };
-    expect(manifest.synonym_links).toBe(7);
+  it('exports every antonym with its part of speech (issue #266)', () => {
+    const words = readFileSync(path.join(runDir, DATASET_FILE_NAMES.words), 'utf-8')
+      .trim()
+      .split('\n')
+      .map((l) => JSON.parse(l) as { word: string; meanings: Array<{ title: string; antonyms: unknown[] }> });
+    expect(words.find((w) => w.word === 'walk')?.meanings[0]?.antonyms).toEqual([
+      { word: 'in the long run', part_of_speech: EnPartOfSpeechE.phrase },
+    ]);
+    expect(words.find((w) => w.word === 'run')?.meanings.map((m) => m.antonyms)).toEqual([
+      [{ word: 'walk', part_of_speech: EnPartOfSpeechE.verb }],
+      [],
+    ]);
   });
 
-  it('restores the same links in the imported database, across dataset files', async () => {
-    const expected = await synonymsByTitle(sourceDs);
+  it('records both link counts in the manifest for the import progress total', () => {
+    const manifest = JSON.parse(readFileSync(path.join(runDir, MANIFEST_FILE_NAME), 'utf-8')) as {
+      synonym_links: number;
+      antonym_links: number;
+    };
+    expect(manifest.synonym_links).toBe(7);
+    expect(manifest.antonym_links).toBe(4);
+  });
+
+  it('restores the same synonym links in the imported database, across dataset files', async () => {
+    const expected = await linksByTitle(sourceDs, 'synonyms');
     expect(expected['run 1']).toEqual(['dash', 'in the long run', 'sprint']);
     expect(expected['in the long run 1']).toEqual(['give up', 'run']);
 
-    expect(await synonymsByTitle(targetDs)).toEqual(expected);
+    expect(await linksByTitle(targetDs, 'synonyms')).toEqual(expected);
     // every link resolved: nothing was silently dropped
-    expect(await targetDs.getRepository(EnMeaning).count()).toBe(7);
-    expect(
-      (await targetDs.getRepository(EnMeaning).find({ relations: { synonyms: true } })).reduce(
-        (n, m) => n + m.synonyms.length,
-        0,
-      ),
-    ).toBe(7);
+    expect(await targetDs.getRepository(EnMeaning).count()).toBe(8);
+    expect(await countLinks(targetDs, 'synonyms')).toBe(7);
+  });
+
+  it('restores the same antonym links in the imported database, across dataset files (issue #266)', async () => {
+    const expected = await linksByTitle(sourceDs, 'antonyms');
+    expect(expected['run 1']).toEqual(['walk']);
+    expect(expected['walk 1']).toEqual(['in the long run']);
+    expect(expected['in the long run 1']).toEqual(['walk']);
+
+    expect(await linksByTitle(targetDs, 'antonyms')).toEqual(expected);
+    expect(await countLinks(targetDs, 'antonyms')).toBe(4);
   });
 });

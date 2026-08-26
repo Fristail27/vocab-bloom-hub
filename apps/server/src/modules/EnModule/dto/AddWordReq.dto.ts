@@ -28,7 +28,7 @@ import {
   WordLevelE,
 } from '../../../../types';
 import { MeaningTranslationDto } from '../modules/EnMeaningTranslation/dto/MeaningTranslation.dto';
-import { MAX_SYNONYMS_PER_MEANING } from '../utils/normalizeSynonyms';
+import { MAX_WORD_LINKS_PER_MEANING } from '../utils/normalizeWordLinks';
 
 // The admin UI sends null for untouched fields, but these columns are NOT NULL
 // with a DB default; dropping the value lets TypeORM apply that default
@@ -114,9 +114,17 @@ export class AddWordReqMeaningDTO {
   @ApiProperty({ isArray: true, required: false })
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(MAX_SYNONYMS_PER_MEANING)
+  @ArrayMaxSize(MAX_WORD_LINKS_PER_MEANING)
   @IsString({ each: true })
   synonyms?: EnMeaningT['synonyms'] | undefined;
+
+  // Same rules as synonyms; a word cannot be both for one meaning (issue #266)
+  @ApiProperty({ isArray: true, required: false })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_WORD_LINKS_PER_MEANING)
+  @IsString({ each: true })
+  antonyms?: EnMeaningT['antonyms'] | undefined;
 
   @ApiProperty()
   @IsEnum(EnAreaVariantsE)

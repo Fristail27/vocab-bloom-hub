@@ -84,6 +84,7 @@ export type EnMeaningListItemT = {
   is_obsolete: boolean;
   examples: string[];
   synonyms: string[];
+  antonyms: string[];
   translations_count: number;
 };
 export type EnMeaningsListT = PaginatedListT<EnMeaningListItemT>;
@@ -154,9 +155,11 @@ export type DatasetManifestT = {
   version: string;
   generatedAt?: string | undefined;
   files: Record<string, { lines: number }>;
-  // meaning → synonym links across all files; counts into the import progress
-  // total for the linking stage (absent in datasets published before #259)
+  // meaning → synonym / antonym links across all files; count into the import
+  // progress total for the linking stages (absent in datasets published
+  // before #259 / #266 respectively)
   synonym_links?: number | undefined;
+  antonym_links?: number | undefined;
 };
 
 export type GetDatasetManifestResT = DatasetManifestT | ErrorResT;
@@ -211,6 +214,8 @@ export type EnStatisticsIssueKeyT =
   | 'words_without_description'
   | 'meanings_without_translations'
   | 'meanings_without_examples'
+  | 'meanings_without_synonyms'
+  | 'meanings_without_antonyms'
   | 'empty_meaning_translations'
   | 'empty_short_translations';
 export type EnIssueStatT = { key: EnStatisticsIssueKeyT; count: number; total: number };

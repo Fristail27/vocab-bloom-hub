@@ -35,6 +35,7 @@ const meaning = (extra: Partial<EnMeaningDST>): EnMeaningDST => ({
   sort_order: 0,
   examples: [],
   synonyms: [],
+  antonyms: [],
   categories: [],
   translations: [],
   ...extra,

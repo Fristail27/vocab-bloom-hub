@@ -1,13 +1,13 @@
 import { describe, expect, it } from '@jest/globals';
-import { normalizeSynonyms } from '../normalizeSynonyms';
+import { normalizeWordLinks } from '../normalizeWordLinks';
 import { prepareMeaningFromDB } from '../prepareMeaningFromDB';
 import { EnMeaning } from '../../entities/en_meaning.entity';
 import { EnEntry } from '../../entities/en_entry.entity';
 import { EnAreaVariantsE } from '../../../../../types';
 
-describe('normalizeSynonyms (issue #259)', () => {
+describe('normalizeWordLinks (issues #259, #266)', () => {
   it('trims, lowercases, drops blanks and duplicates and sorts the result', () => {
-    expect(normalizeSynonyms([' Quick ', 'fast', 'QUICK', '', '  ', 'rapid'])).toEqual([
+    expect(normalizeWordLinks([' Quick ', 'fast', 'QUICK', '', '  ', 'rapid'])).toEqual([
       'fast',
       'quick',
       'rapid',
@@ -15,22 +15,22 @@ describe('normalizeSynonyms (issue #259)', () => {
   });
 
   it('drops the headword itself regardless of case and spacing', () => {
-    expect(normalizeSynonyms(['Bright', 'clever', 'bright '], ' BRIGHT')).toEqual(['clever']);
+    expect(normalizeWordLinks(['Bright', 'clever', 'bright '], ' BRIGHT')).toEqual(['clever']);
   });
 
   it('returns an empty list for null and undefined', () => {
-    expect(normalizeSynonyms(null)).toEqual([]);
-    expect(normalizeSynonyms(undefined)).toEqual([]);
+    expect(normalizeWordLinks(null)).toEqual([]);
+    expect(normalizeWordLinks(undefined)).toEqual([]);
   });
 
   it('compares by UTF-16 code units, never by locale', () => {
-    expect(normalizeSynonyms(['b', 'B', 'a'])).toEqual(['a', 'b']);
-    expect(normalizeSynonyms(['é', 'z'])).toEqual(['z', 'é']);
+    expect(normalizeWordLinks(['b', 'B', 'a'])).toEqual(['a', 'b']);
+    expect(normalizeWordLinks(['é', 'z'])).toEqual(['z', 'é']);
   });
 });
 
 describe('prepareMeaningFromDB (issue #259)', () => {
-  const row = (synonyms?: EnEntry[]): EnMeaning =>
+  const row = (synonyms?: EnEntry[], antonyms?: EnEntry[]): EnMeaning =>
     ({
       id: 1,
       createdAt: new Date(),
@@ -44,6 +44,7 @@ describe('prepareMeaningFromDB (issue #259)', () => {
       examples: ['a bright light'],
       translations: [],
       synonyms,
+      antonyms,
     }) as unknown as EnMeaning;
 
   it('maps the entry links to sorted headwords and strips the system fields', () => {
@@ -57,5 +58,14 @@ describe('prepareMeaningFromDB (issue #259)', () => {
 
   it('yields an empty list when the relation was not loaded', () => {
     expect(prepareMeaningFromDB(row(undefined)).synonyms).toEqual([]);
+    expect(prepareMeaningFromDB(row(undefined)).antonyms).toEqual([]);
+  });
+
+  it('maps the antonym links the same way (issue #266)', () => {
+    const res = prepareMeaningFromDB(
+      row([{ word: 'vivid' }] as EnEntry[], [{ word: 'dull' }, { word: 'dim' }] as EnEntry[]),
+    );
+    expect(res.synonyms).toEqual(['vivid']);
+    expect(res.antonyms).toEqual(['dim', 'dull']);
   });
 });

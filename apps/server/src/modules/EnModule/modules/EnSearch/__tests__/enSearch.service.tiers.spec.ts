@@ -281,10 +281,11 @@ describe('EnSearchService tier categorization (issue #187)', () => {
     });
   });
 
-  it('detailed search returns meaning synonyms as headwords when with_meanings is set (issue #259)', async () => {
+  it('detailed search returns meaning synonyms and antonyms as headwords when with_meanings is set (issues #259, #266)', async () => {
     const run = await addWord(await addEntry('run'), EnPartOfSpeechE.verb);
     const sprint = await addEntry('sprint');
     const dash = await addEntry('dash');
+    const walk = await addEntry('walk');
     await ds.getRepository(EnMeaning).save({
       word: run,
       title: 'to move fast',
@@ -292,11 +293,12 @@ describe('EnSearchService tier categorization (issue #187)', () => {
       sort_order: 1,
       examples: [],
       synonyms: [sprint, dash],
+      antonyms: [walk],
     });
 
     const withMeanings = await service.searchDetailed({ search: 'run', with_meanings: true });
     expect(withMeanings.items[0].meanings).toEqual([
-      expect.objectContaining({ title: 'to move fast', synonyms: ['dash', 'sprint'] }),
+      expect.objectContaining({ title: 'to move fast', synonyms: ['dash', 'sprint'], antonyms: ['walk'] }),
     ]);
 
     const withoutMeanings = await service.searchDetailed({ search: 'run' });

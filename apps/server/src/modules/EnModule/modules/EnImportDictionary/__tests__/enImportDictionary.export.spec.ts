@@ -157,6 +157,8 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
             sort_order: 1,
             examples: [],
             synonyms: ['run', 'Give up'],
+            // antonyms are exported next to them (issue #266)
+            antonyms: ['give'],
             translations: [],
           },
         ] as unknown as EnMeaningT[],
@@ -223,6 +225,7 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
       expect.objectContaining({
         title: 'to move fast',
         synonyms: [],
+        antonyms: [],
         translations: [expect.objectContaining({ title: 'бежать' })],
       }),
     ]);
@@ -248,6 +251,7 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
           { word: 'give up', part_of_speech: EnPartOfSpeechE.verb },
           { word: 'run', part_of_speech: EnPartOfSpeechE.verb },
         ],
+        antonyms: [{ word: 'give', part_of_speech: EnPartOfSpeechE.verb }],
       }),
     ]);
 
@@ -267,11 +271,13 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
       generatedAt: string;
       files: Record<string, { lines: number }>;
       synonym_links: number;
+      antonym_links: number;
     };
     expect(typeof manifest.version).toBe('string');
     expect(manifest.version.length).toBeGreaterThan(0);
     // "in the long run" links to run and give up (issue #259)
     expect(manifest.synonym_links).toBe(2);
+    expect(manifest.antonym_links).toBe(1);
     expect(manifest.files).toEqual({
       'vocab-bloom-hub-en-words.jsonl': { lines: 3 },
       'vocab-bloom-hub-en-phrasal-verbs.jsonl': { lines: 1 },

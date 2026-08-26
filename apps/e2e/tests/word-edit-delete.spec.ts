@@ -146,6 +146,50 @@ test.describe('UI-driven word edit and delete', () => {
     expect(word.meanings[0].translations).toEqual([]);
   });
 
+  test('adds and removes synonyms / antonyms inline on the card (issue #266)', async ({ page, request }) => {
+    // the link targets must exist before the word that links to them
+    await seedWord(request, 'twinkle');
+    await seedWord(request, 'blacken');
+    const id = await seedWord(request, 'sparkle', {
+      meanings: [
+        {
+          title: 'sparkle meaning',
+          definition: 'definition of sparkle',
+          is_obsolete: false,
+          sort_order: 1,
+          examples: [],
+          area_variant: 'common',
+          synonyms: ['twinkle'],
+          translations: [],
+        },
+      ],
+    });
+
+    await page.goto(`/en/managing/edit-word/${id}`);
+    const section = wordCardSection(page, 'Word Meanings');
+    // each relation is one row: its label, the linked-word tags and the controls
+    const row = (label: string) => section.getByText(label, { exact: true }).locator('xpath=..');
+    await expect(row('Synonyms:').getByRole('link', { name: 'twinkle' })).toBeVisible();
+
+    // add an antonym through the inline picker; the dropdown shows the part of speech
+    await row('Antonyms:').getByRole('button', { name: 'plus' }).click();
+    await row('Antonyms:').getByRole('combobox').fill('bla');
+    const option = page.locator('.ant-select-item-option-content').filter({ hasText: 'blacken' });
+    await expect(option).toContainText('verb');
+    await option.click();
+    await expect(page.getByText('Meaning updated').first()).toBeVisible();
+    await row('Antonyms:').getByRole('button', { name: 'check' }).click();
+    await expect(row('Antonyms:').getByRole('link', { name: 'blacken' })).toBeVisible();
+
+    // unlink the synonym from its tag
+    await row('Synonyms:').locator('.ant-tag-close-icon').click();
+    await expect(row('Synonyms:').getByRole('link', { name: 'twinkle' })).toBeHidden();
+
+    const word = await getWord(request, id);
+    expect(word.meanings[0].synonyms).toEqual([]);
+    expect(word.meanings[0].antonyms).toEqual(['blacken']);
+  });
+
   test('edits a word form through the card modal and persists it', async ({ page, request }) => {
     const id = await seedWord(request, 'drift');
 

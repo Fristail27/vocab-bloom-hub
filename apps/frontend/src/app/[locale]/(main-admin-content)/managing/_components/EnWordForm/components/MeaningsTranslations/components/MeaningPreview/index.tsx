@@ -2,7 +2,7 @@ import React from 'react';
 import { Typography } from 'antd';
 import { useTranslations } from 'next-intl';
 import { EnMeaningT } from 'server/types';
-import { SynonymLinks } from '../../../SynonymLinks';
+import { WordLinks } from '../../../WordLinks';
 import styles from './styles.module.scss';
 
 const { Text } = Typography;
@@ -32,9 +32,15 @@ export const MeaningPreview: React.FC<MeaningPreviewP> = ({ m }) => {
         </Text>
       </div>
       {(m.synonyms ?? []).length > 0 && (
-        <div className={styles.synonymsContainer}>
+        <div className={styles.wordLinksContainer}>
           <Text strong>{t('synonyms')}:</Text>
-          <SynonymLinks synonyms={m.synonyms} />
+          <WordLinks kind="synonyms" words={m.synonyms} />
+        </div>
+      )}
+      {(m.antonyms ?? []).length > 0 && (
+        <div className={styles.wordLinksContainer}>
+          <Text strong>{t('antonyms')}:</Text>
+          <WordLinks kind="antonyms" words={m.antonyms} />
         </div>
       )}
       <div className={styles.examplesContainer}>

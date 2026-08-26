@@ -27,6 +27,7 @@ const meaning: EnMeaningT = {
   meaning_level: WordLevelE.B1,
   examples: ['I looked it up in the dictionary'],
   synonyms: ['search', 'find'],
+  antonyms: ['lose'],
   translations: [],
 };
 

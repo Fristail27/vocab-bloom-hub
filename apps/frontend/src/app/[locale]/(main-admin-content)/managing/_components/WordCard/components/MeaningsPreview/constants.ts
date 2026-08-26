@@ -6,6 +6,7 @@ export const DefaultMeaningData: EnMeaningT = {
   sort_order: 0,
   examples: [],
   synonyms: [],
+  antonyms: [],
   area_variant: EnAreaVariantsE.common,
   categories: [],
   definition: '',

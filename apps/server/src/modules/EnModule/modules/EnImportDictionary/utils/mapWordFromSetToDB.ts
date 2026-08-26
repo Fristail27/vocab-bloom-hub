@@ -1,7 +1,7 @@
 import { DataSetWordT } from '../../../../../../types/dictionaries/en/EnDataSetTypes';
 import { EnAreaVariantsE, EnWordFormsE, LanguageRegisterE } from '../../../../../../types';
 import { getVersion } from '../../../../../../configuration';
-import { synonymsFromDataSet } from './synonymsFromDataSet';
+import { wordLinksFromDataSet } from './wordLinksFromDataSet';
 
 export const mapWordFromSetToDB = (line: DataSetWordT) => {
   return {
@@ -40,7 +40,8 @@ export const mapWordFromSetToDB = (line: DataSetWordT) => {
       meaning_level: m.meaning_level || null,
       language_register: m.language_register || LanguageRegisterE.formal,
       area_variant: m.area_variant || EnAreaVariantsE.common,
-      synonyms: synonymsFromDataSet(m.synonyms),
+      synonyms: wordLinksFromDataSet(m.synonyms),
+      antonyms: wordLinksFromDataSet(m.antonyms),
       translations: m.translations.map((t) => ({ id: 0, ...t })),
     })),
   };

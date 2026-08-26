@@ -177,6 +177,35 @@ describe('EnService.addWord transactions (issue #180)', () => {
     expect(word.meanings[0]).not.toHaveProperty('createdAt');
   });
 
+  it('links meaning antonyms next to the synonyms and rolls back on a conflict (issue #266)', async () => {
+    await service.addWord(makeWordBody('sprint'));
+    await service.addWord(makeWordBody('walk'));
+    const body = makeWordBody('run');
+    const meaning = (body.meanings as unknown as Array<Record<string, unknown>>)[0];
+    meaning.synonyms = ['sprint'];
+    meaning.antonyms = ['Walk', 'run'];
+
+    await service.addWord(body);
+
+    const saved = await ds
+      .getRepository(EnWord)
+      .createQueryBuilder('w')
+      .innerJoin('w.word', 'entry')
+      .where('entry.word = :word', { word: 'run' })
+      .andWhere('w.form_of_word = :form', { form: EnWordFormsE.base_form })
+      .getOneOrFail();
+    const word = await service.getWordById(saved.id);
+    expect(word.meanings[0].synonyms).toEqual(['sprint']);
+    expect(word.meanings[0].antonyms).toEqual(['walk']);
+
+    const conflicting = makeWordBody('jog');
+    const m = (conflicting.meanings as unknown as Array<Record<string, unknown>>)[0];
+    m.synonyms = ['sprint'];
+    m.antonyms = ['sprint'];
+    await expect(service.addWord(conflicting)).rejects.toThrow(BadRequestException);
+    expect(await ds.getRepository(EnEntry).findOneBy({ word: 'jog' })).toBeNull();
+  });
+
   it('rolls back the whole word when a meaning names an unknown synonym (issue #259)', async () => {
     const body = makeWordBody('run');
     (body.meanings as unknown as Array<Record<string, unknown>>)[0].synonyms = ['teleport'];

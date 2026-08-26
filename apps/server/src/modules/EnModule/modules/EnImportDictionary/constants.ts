@@ -7,6 +7,7 @@ export enum EnDictionaryImportPhasesE {
   completed,
   packing_archive,
   linking_synonyms,
+  linking_antonyms,
 }
 
 export const SYSTEM_FIELDS = ['id', 'createdAt', 'updateAt', 'updatedAt'];

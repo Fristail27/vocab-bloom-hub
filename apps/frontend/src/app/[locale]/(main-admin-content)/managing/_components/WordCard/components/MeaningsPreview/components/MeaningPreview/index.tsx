@@ -15,7 +15,7 @@ import { DefaultTranslation } from './constants';
 import styles from './styles.module.scss';
 import { AddOrEditMeaningTranslationModal } from '@/app/[locale]/(main-admin-content)/managing/_components/WordCard/components/MeaningsPreview/components/AddOrEditMeaningTranslationModal';
 import { DeleteMeaningTranslationModal } from '@/app/[locale]/(main-admin-content)/managing/_components/WordCard/components/MeaningsPreview/components/DeleteMeaningTranslationModal';
-import { SynonymLinks } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/SynonymLinks';
+import { WordLinksEditor } from '../WordLinksEditor';
 
 const { Text } = Typography;
 type MeaningPreviewP = {
@@ -23,9 +23,16 @@ type MeaningPreviewP = {
   mode: WordCardModeE;
   setEditData: (d: EnMeaningT) => void;
   updateMeaning: (v: EnMeaningT, type: UpdateTypeE) => void;
+  headword?: string | undefined;
 };
 
-export const MeaningPreview: React.FC<MeaningPreviewP> = ({ meaning, mode, setEditData, updateMeaning }) => {
+export const MeaningPreview: React.FC<MeaningPreviewP> = ({
+  meaning,
+  mode,
+  setEditData,
+  updateMeaning,
+  headword,
+}) => {
   const [isOpenDelete, setIsOpenDelete] = useState(false);
   const [addTranslationData, setAddTranslationData] = useState<EnMeaningTranslationT | null>(null);
   const [deleteTranslationData, setDeleteTranslationData] = useState<EnMeaningTranslationT | null>(null);
@@ -194,10 +201,20 @@ export const MeaningPreview: React.FC<MeaningPreviewP> = ({ meaning, mode, setEd
             ))}
           </div>
         </div>
-        <div className={styles.synonymsContainer}>
-          <Text className={styles.title}>{t('synonyms')}:</Text>
-          <SynonymLinks synonyms={meaning.synonyms ?? []} />
-        </div>
+        <WordLinksEditor
+          kind="synonyms"
+          meaning={meaning}
+          mode={mode}
+          updateMeaning={updateMeaning}
+          headword={headword}
+        />
+        <WordLinksEditor
+          kind="antonyms"
+          meaning={meaning}
+          mode={mode}
+          updateMeaning={updateMeaning}
+          headword={headword}
+        />
         <div className={styles.examplesContainer}>
           <Text className={styles.title}>{t('examples')}:</Text>
           <div className={styles.examples}>
