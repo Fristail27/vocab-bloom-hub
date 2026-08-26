@@ -12,7 +12,7 @@ import {
 import { CategoryE, EnAreaVariantsE, EnMeaningT, LanguageRegisterE, WordLevelE } from '../../../../../../types';
 import { MeaningTranslationDto } from '../../EnMeaningTranslation/dto/MeaningTranslation.dto';
 import { Type } from 'class-transformer';
-import { MAX_SYNONYMS_PER_MEANING } from '../../../utils/normalizeSynonyms';
+import { MAX_WORD_LINKS_PER_MEANING } from '../../../utils/normalizeWordLinks';
 
 export class AddMeaningReqDTO {
   @ApiProperty()
@@ -40,9 +40,17 @@ export class AddMeaningReqDTO {
   @ApiProperty({ isArray: true, required: false })
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(MAX_SYNONYMS_PER_MEANING)
+  @ArrayMaxSize(MAX_WORD_LINKS_PER_MEANING)
   @IsString({ each: true })
   synonyms?: EnMeaningT['synonyms'] | undefined;
+
+  // Same rules as synonyms; a word cannot be both for one meaning (issue #266)
+  @ApiProperty({ isArray: true, required: false })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_WORD_LINKS_PER_MEANING)
+  @IsString({ each: true })
+  antonyms?: EnMeaningT['antonyms'] | undefined;
 
   @ApiProperty()
   @IsNumber()

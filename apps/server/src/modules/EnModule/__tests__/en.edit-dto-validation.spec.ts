@@ -191,6 +191,21 @@ describe('AddMeaningReqDTO validation (issue #87)', () => {
       validate(AddMeaningReqDTO, { ...makeBody(), synonyms: Array.from({ length: 51 }, (_, i) => `w${i}`) }),
     ).rejects.toThrow(BadRequestException);
   });
+
+  it('accepts antonyms as an optional list of strings and rejects anything else (issue #266)', async () => {
+    await expect(
+      validate(AddMeaningReqDTO, { ...makeBody(), antonyms: ['walk', 'stand'] }),
+    ).resolves.toMatchObject({ antonyms: ['walk', 'stand'] });
+    await expect(validate(AddMeaningReqDTO, { ...makeBody(), antonyms: 'walk' })).rejects.toThrow(
+      BadRequestException,
+    );
+    await expect(validate(AddMeaningReqDTO, { ...makeBody(), antonyms: [42] })).rejects.toThrow(
+      BadRequestException,
+    );
+    await expect(
+      validate(AddMeaningReqDTO, { ...makeBody(), antonyms: Array.from({ length: 51 }, (_, i) => `w${i}`) }),
+    ).rejects.toThrow(BadRequestException);
+  });
 });
 
 describe('EditMeaningReqDTO validation (issue #87)', () => {
@@ -215,6 +230,13 @@ describe('EditMeaningReqDTO validation (issue #87)', () => {
       synonyms: ['sprint'],
     });
     await expect(validate(EditMeaningReqDTO, { id: 1, synonyms: [null] })).rejects.toThrow(BadRequestException);
+  });
+
+  it('accepts an antonyms list and rejects non-string items (issue #266)', async () => {
+    await expect(validate(EditMeaningReqDTO, { id: 1, antonyms: ['walk'] })).resolves.toMatchObject({
+      antonyms: ['walk'],
+    });
+    await expect(validate(EditMeaningReqDTO, { id: 1, antonyms: [null] })).rejects.toThrow(BadRequestException);
   });
 });
 

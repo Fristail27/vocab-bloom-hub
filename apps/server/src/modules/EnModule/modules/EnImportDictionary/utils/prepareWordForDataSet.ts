@@ -3,8 +3,8 @@ import {
   EnMeaningDST,
   EnMeaningTranslationDST,
   EnShortTranslationDST,
-  EnSynonymDST,
   EnWordFormDST,
+  EnWordLinkDST,
 } from '../../../../../../types/dictionaries/en/EnDataSetTypes';
 import { EnEntry } from '../../../entities/en_entry.entity';
 import { EnWord } from '../../../entities/en_word.entity';
@@ -19,7 +19,7 @@ import {
   sortMeaningsForDS,
   sortShortTranslationsForDS,
   sortStrings,
-  sortSynonymsForDS,
+  sortWordLinksForDS,
 } from './sortForDataSet';
 
 export const mapMeaningTranslationsForDS = (t: EnMeaningTranslation): EnMeaningTranslationDST => {
@@ -33,12 +33,12 @@ export const mapMeaningTranslationsForDS = (t: EnMeaningTranslation): EnMeaningT
 
 /**
  * The link stores only the headword, so the exported part of speech is
- * derived: the meaning's own part of speech when the synonym has a base-form
- * entry with it (synonyms share it by construction), otherwise the first base
- * form of the synonym; a synonym loaded without its entries falls back to the
- * meaning's part of speech.
+ * derived: the meaning's own part of speech when the linked word has a
+ * base-form entry with it (synonyms and antonyms share it by construction),
+ * otherwise the first base form of the linked word; a word loaded without its
+ * entries falls back to the meaning's part of speech.
  */
-export const mapSynonymForDS = (entry: EnEntry, partOfSpeech: EnPartOfSpeechE): EnSynonymDST => {
+export const mapWordLinkForDS = (entry: EnEntry, partOfSpeech: EnPartOfSpeechE): EnWordLinkDST => {
   const basePos = (entry.entries ?? [])
     .filter((w) => w.form_of_word === EnWordFormsE.base_form)
     .map((w) => w.part_of_speech)
@@ -48,6 +48,9 @@ export const mapSynonymForDS = (entry: EnEntry, partOfSpeech: EnPartOfSpeechE): 
     part_of_speech: basePos.includes(partOfSpeech) ? partOfSpeech : (basePos[0] ?? partOfSpeech),
   };
 };
+
+const mapWordLinksForDS = (entries: EnEntry[] | undefined, partOfSpeech: EnPartOfSpeechE): EnWordLinkDST[] =>
+  sortWordLinksForDS((entries ?? []).map((entry) => mapWordLinkForDS(entry, partOfSpeech)));
 
 export const mapMeaningForDS = (m: EnMeaning, partOfSpeech: EnPartOfSpeechE): EnMeaningDST => {
   return {
@@ -59,7 +62,8 @@ export const mapMeaningForDS = (m: EnMeaning, partOfSpeech: EnPartOfSpeechE): En
     definition: m.definition || '',
     sort_order: m.sort_order || 0,
     examples: m.examples || [],
-    synonyms: sortSynonymsForDS((m.synonyms ?? []).map((entry) => mapSynonymForDS(entry, partOfSpeech))),
+    synonyms: mapWordLinksForDS(m.synonyms, partOfSpeech),
+    antonyms: mapWordLinksForDS(m.antonyms, partOfSpeech),
     categories: sortStrings(m.categories),
     translations: sortMeaningTranslationsForDS(m.translations.map(mapMeaningTranslationsForDS)),
   };

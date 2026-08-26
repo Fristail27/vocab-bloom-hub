@@ -20,6 +20,7 @@ const makeMeaning = (overrides: Partial<EnMeaningT> = {}): EnMeaningT => ({
   meaning_level: null,
   examples: [],
   synonyms: [],
+  antonyms: [],
   translations: [],
   ...overrides,
 });

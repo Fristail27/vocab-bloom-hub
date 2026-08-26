@@ -26,6 +26,11 @@ import { EnApi } from '@/core/api/EnApi';
 import { Title } from '@/core/ui/Title';
 import styles from './styles.module.scss';
 
+// Linked words pasted from an exported record: `{ word, part_of_speech }`
+// objects, plain strings in older exports, or nothing at all
+const headwordsOf = (links: unknown): string[] =>
+  ((links || []) as Array<string | { word: string }>).map((s) => (typeof s === 'string' ? s : s.word));
+
 export const EnWordForm: React.FC = () => {
   const t = useTranslations('en_managing_words');
   const tError = useTranslations('errors');
@@ -131,9 +136,8 @@ export const EnWordForm: React.FC = () => {
           id: i,
           // an exported word carries { word, part_of_speech } objects, older exports
           // plain strings or nothing; the form works with headwords
-          synonyms: ((m.synonyms || []) as Array<string | { word: string }>).map((s) =>
-            typeof s === 'string' ? s : s.word,
-          ),
+          synonyms: headwordsOf(m.synonyms),
+          antonyms: headwordsOf(m.antonyms),
           translations: (m.translations || []).map((tr, ind: number) => ({ ...tr, id: ind })),
         })),
       );

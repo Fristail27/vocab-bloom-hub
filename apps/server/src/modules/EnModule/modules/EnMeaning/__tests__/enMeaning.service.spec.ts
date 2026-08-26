@@ -12,6 +12,7 @@ import { EnShortTranslation } from '../../../entities/en_short_translation.entit
 import { EnMeaningService } from '../enMeaning.service';
 import { EnMeaningTranslationService } from '../../EnMeaningTranslation/enMeaningTranslation.service';
 import { AddMeaningReqDTO } from '../dto/AddMeaningReq.dto';
+import { ErrorCodes } from '../../../../../../core/constants/error_codes';
 import {
   AvailableTranslationLanguagesE,
   CategoryE,
@@ -331,6 +332,106 @@ describe('EnMeaningService (issue #87)', () => {
       await service.deleteMeaning(id);
       expect(await ds.getRepository(EnEntry).findOneBy({ word: 'dash' })).not.toBeNull();
       expect(await junctionRows()).toEqual([]);
+    });
+  });
+
+  describe('antonyms (issue #266)', () => {
+    const linkRows = async (kind: 'synonyms' | 'antonyms') =>
+      ds
+        .getRepository(EnMeaning)
+        .find({ relations: { [kind]: true } })
+        .then((rows) => rows.flatMap((m) => m[kind].map((e) => e.word).sort()));
+
+    it('links antonyms to existing entries, normalized, next to the synonyms', async () => {
+      const word = await addWordRow('run');
+      await addWordRow('sprint');
+      await addWordRow('walk');
+      await addWordRow('stand');
+
+      const res = await service.addMeaning(
+        makeAddBody(word.id, { synonyms: ['sprint'], antonyms: [' Walk ', 'stand', 'walk', 'RUN', ''] }),
+      );
+
+      const saved = await ds.getRepository(EnMeaning).findOneOrFail({
+        where: { id: addedId(res) },
+        relations: { synonyms: true, antonyms: true },
+      });
+      expect(saved.synonyms.map((e) => e.word)).toEqual(['sprint']);
+      expect(saved.antonyms.map((e) => e.word).sort()).toEqual(['stand', 'walk']);
+    });
+
+    it('rejects antonyms missing from the dictionary with the antonym error code', async () => {
+      const word = await addWordRow('run');
+
+      await expect(service.addMeaning(makeAddBody(word.id, { antonyms: ['teleport'] }))).rejects.toThrow(
+        new BadRequestException(ErrorCodes.antonym_doesnt_exist),
+      );
+      expect(await ds.getRepository(EnMeaning).count()).toBe(0);
+    });
+
+    it('rejects a word listed as both synonym and antonym, also through a spelling variant', async () => {
+      const word = await addWordRow('run');
+      await addWordRow('sprint');
+      await addWordRow('absentminded');
+
+      await expect(
+        service.addMeaning(makeAddBody(word.id, { synonyms: ['sprint'], antonyms: ['Sprint'] })),
+      ).rejects.toThrow(new BadRequestException(ErrorCodes.synonym_antonym_conflict));
+      await expect(
+        service.addMeaning(makeAddBody(word.id, { synonyms: ['absentminded'], antonyms: ['absent-minded'] })),
+      ).rejects.toThrow(new BadRequestException(ErrorCodes.synonym_antonym_conflict));
+      expect(await ds.getRepository(EnMeaning).count()).toBe(0);
+    });
+
+    it('replaces the antonym set on edit, leaves it untouched when omitted and checks the conflict against stored links', async () => {
+      const word = await addWordRow('run');
+      await addWordRow('sprint');
+      await addWordRow('walk');
+      await addWordRow('stand');
+      const id = addedId(
+        await service.addMeaning(makeAddBody(word.id, { synonyms: ['sprint'], antonyms: ['walk'] })),
+      );
+
+      await service.editMeaning({ id, title: 'to move quickly' });
+      expect(await linkRows('antonyms')).toEqual(['walk']);
+
+      await service.editMeaning({ id, antonyms: ['stand', 'walk', 'run'] });
+      expect(await linkRows('antonyms')).toEqual(['stand', 'walk']);
+      expect(await linkRows('synonyms')).toEqual(['sprint']);
+
+      // the stored synonym collides with the new antonym, and vice versa
+      await expect(service.editMeaning({ id, antonyms: ['sprint'] })).rejects.toThrow(
+        new BadRequestException(ErrorCodes.synonym_antonym_conflict),
+      );
+      await expect(service.editMeaning({ id, synonyms: ['walk'] })).rejects.toThrow(
+        new BadRequestException(ErrorCodes.synonym_antonym_conflict),
+      );
+      expect(await linkRows('antonyms')).toEqual(['stand', 'walk']);
+      expect(await linkRows('synonyms')).toEqual(['sprint']);
+
+      // swapping both sides in one request is fine
+      await service.editMeaning({ id, synonyms: ['walk'], antonyms: ['sprint'] });
+      expect(await linkRows('synonyms')).toEqual(['walk']);
+      expect(await linkRows('antonyms')).toEqual(['sprint']);
+
+      await service.editMeaning({ id, antonyms: [] });
+      expect(await linkRows('antonyms')).toEqual([]);
+    });
+
+    it('drops the antonym links when the word or the meaning is deleted', async () => {
+      const word = await addWordRow('run');
+      await addWordRow('walk');
+      const id = addedId(await service.addMeaning(makeAddBody(word.id, { antonyms: ['walk'] })));
+
+      await ds.getRepository(EnEntry).delete({ word: 'walk' });
+      expect(await linkRows('antonyms')).toEqual([]);
+
+      await addWordRow('stand');
+      await service.editMeaning({ id, antonyms: ['stand'] });
+      expect(await linkRows('antonyms')).toEqual(['stand']);
+      await service.deleteMeaning(id);
+      expect(await ds.getRepository(EnEntry).findOneBy({ word: 'stand' })).not.toBeNull();
+      expect(await linkRows('antonyms')).toEqual([]);
     });
   });
 

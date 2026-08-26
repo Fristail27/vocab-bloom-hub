@@ -57,6 +57,7 @@ const meaning: EnMeaningListItemT = {
   is_obsolete: false,
   examples: ['never give up', 'he gave up'],
   synonyms: ['quit', 'surrender'],
+  antonyms: ['persist'],
   translations_count: 1,
 };
 
@@ -94,6 +95,7 @@ describe('sources', () => {
       definition: 'to stop doing something',
       examples: ['never give up', 'he gave up'],
       synonyms: ['quit', 'surrender'],
+      antonyms: ['persist'],
       area_variant: 'british',
       meaning_level: 'B1',
       language_register: '',

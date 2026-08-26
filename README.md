@@ -79,7 +79,7 @@ The project is in **early development** (`0.x`). The English dictionary, the adm
 ## ✨ Features
 
 - **Admin UI** (English / Russian interface) with three areas:
-  - _Managing_ — create and edit English words, their meanings, translations, synonyms and short translations;
+  - _Managing_ — create and edit English words, their meanings, translations, synonyms, antonyms and short translations;
   - _Statistics_ — an overview of the dictionary contents;
   - _Documentation_ — in-app reference for the data model.
 - **REST API** documented with Swagger/OpenAPI, protected by a single admin login (httpOnly JWT cookie or Bearer token).
@@ -234,7 +234,7 @@ Details, including how to adopt migrations on a database created by the old auto
 Planned directions, in no particular order (see the [issues](https://github.com/Fristail27/vocab-bloom-hub/issues) for the current state):
 
 - Semantic search and a semantic network on top of the dictionary (next major version)
-- Word relations graph beyond synonyms: antonyms, hypernyms/hyponyms, collocations
+- Word relations graph beyond synonyms and antonyms: hypernyms/hyponyms, collocations
 - More source languages besides English, and translations into languages other than Russian
 - Public read-only API and SDKs for Node.js (`npm-sdk`) and Python (`python-sdk`)
 - Published linguistic datasets built from the dictionary

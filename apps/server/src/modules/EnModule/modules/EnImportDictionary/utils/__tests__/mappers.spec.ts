@@ -21,8 +21,8 @@ import { cleanEntity } from '../cleanEntity';
 import { mapWordFromSetToDB } from '../mapWordFromSetToDB';
 import { mapPhraseFromSetToDB } from '../mapPhraseFromSetToDB';
 import { mapGrammarPatternFromSetToDB } from '../mapGrammarPatternFromSetToDB';
-import { mapSynonymForDS } from '../prepareWordForDataSet';
-import { synonymsFromDataSet } from '../synonymsFromDataSet';
+import { mapWordLinkForDS } from '../prepareWordForDataSet';
+import { wordLinksFromDataSet } from '../wordLinksFromDataSet';
 import { EnEntry } from '../../../../entities/en_entry.entity';
 
 const makeDataSetWord = (extra: Partial<DataSetWordT> = {}): DataSetWordT =>
@@ -73,6 +73,7 @@ const makeDataSetWord = (extra: Partial<DataSetWordT> = {}): DataSetWordT =>
         sort_order: 1,
         examples: [],
         synonyms: [],
+        antonyms: [],
         categories: [],
         area_variant: EnAreaVariantsE.common,
         meaning_level: WordLevelE.A1,
@@ -232,7 +233,7 @@ describe('cleanEntity', () => {
   });
 });
 
-describe('dataset synonyms (issue #259)', () => {
+describe('dataset word links: synonyms and antonyms (issues #259, #266)', () => {
   const entry = (word: string, basePos: EnPartOfSpeechE[], formPos: EnPartOfSpeechE[] = []): EnEntry =>
     ({
       word,
@@ -244,7 +245,7 @@ describe('dataset synonyms (issue #259)', () => {
 
   it('exports the meaning part of speech when the synonym has a base form with it', () => {
     expect(
-      mapSynonymForDS(entry('run', [EnPartOfSpeechE.noun, EnPartOfSpeechE.verb]), EnPartOfSpeechE.verb),
+      mapWordLinkForDS(entry('run', [EnPartOfSpeechE.noun, EnPartOfSpeechE.verb]), EnPartOfSpeechE.verb),
     ).toEqual({
       word: 'run',
       part_of_speech: EnPartOfSpeechE.verb,
@@ -253,7 +254,7 @@ describe('dataset synonyms (issue #259)', () => {
 
   it('falls back to the first base form of the synonym, ignoring inflected rows', () => {
     expect(
-      mapSynonymForDS(
+      mapWordLinkForDS(
         entry('dash', [EnPartOfSpeechE.verb, EnPartOfSpeechE.noun], [EnPartOfSpeechE.adjective]),
         EnPartOfSpeechE.adjective,
       ),
@@ -261,18 +262,30 @@ describe('dataset synonyms (issue #259)', () => {
   });
 
   it('falls back to the meaning part of speech when the entries were not loaded', () => {
-    expect(mapSynonymForDS({ word: 'dash' } as EnEntry, EnPartOfSpeechE.adverb)).toEqual({
+    expect(mapWordLinkForDS({ word: 'dash' } as EnEntry, EnPartOfSpeechE.adverb)).toEqual({
       word: 'dash',
       part_of_speech: EnPartOfSpeechE.adverb,
     });
   });
 
-  it('reads both the object and the legacy string form of dataset synonyms', () => {
-    expect(synonymsFromDataSet([{ word: 'dash', part_of_speech: EnPartOfSpeechE.verb }, 'sprint'])).toEqual([
+  it('reads both the object and the legacy string form of dataset links', () => {
+    expect(wordLinksFromDataSet([{ word: 'dash', part_of_speech: EnPartOfSpeechE.verb }, 'sprint'])).toEqual([
       'dash',
       'sprint',
     ]);
-    expect(synonymsFromDataSet(undefined)).toEqual([]);
+    expect(wordLinksFromDataSet(undefined)).toEqual([]);
     expect(mapWordFromSetToDB(makeDataSetWord()).meanings[0].synonyms).toEqual([]);
+  });
+
+  it('maps antonyms of every dataset line kind and tolerates lines without the key (issue #266)', () => {
+    const word = makeDataSetWord();
+    word.meanings[0].antonyms = [
+      { word: 'walk', part_of_speech: EnPartOfSpeechE.verb },
+      'stand' as unknown as (typeof word.meanings)[number]['antonyms'][number],
+    ];
+    expect(mapWordFromSetToDB(word).meanings[0].antonyms).toEqual(['walk', 'stand']);
+    // a dataset exported before #266 carries no antonyms key at all
+    delete (word.meanings[0] as Partial<(typeof word.meanings)[number]>).antonyms;
+    expect(mapWordFromSetToDB(word).meanings[0].antonyms).toEqual([]);
   });
 });

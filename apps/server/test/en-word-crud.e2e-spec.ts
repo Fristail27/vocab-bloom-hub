@@ -287,6 +287,53 @@ describe('En word add/edit routes (e2e, issue #87)', () => {
       expect(found?.meanings.map((m) => m.synonyms)).toContainEqual(['sprint']);
     });
 
+    it('links antonyms like synonyms and rejects a word listed as both (issue #266)', async () => {
+      await request(server())
+        .patch('/api/en/word/meaning')
+        .set(auth)
+        .send({ id: meaningId, antonyms: ['teleport'] })
+        .expect(400)
+        .expect((res) => expect(res.body.message).toBe('antonym_doesnt_exist'));
+
+      await request(server())
+        .post('/api/en/add/word')
+        .set(auth)
+        .send({ word: 'walk', part_of_speech: EnPartOfSpeechE.verb, form_of_word: EnWordFormsE.base_form })
+        .expect(201);
+
+      // "sprint" is already a synonym of this meaning (previous test)
+      await request(server())
+        .patch('/api/en/word/meaning')
+        .set(auth)
+        .send({ id: meaningId, antonyms: ['sprint'] })
+        .expect(400)
+        .expect((res) => expect(res.body.message).toBe('synonym_antonym_conflict'));
+
+      await request(server())
+        .patch('/api/en/word/meaning')
+        .set(auth)
+        .send({ id: meaningId, antonyms: [' Walk ', 'run'] })
+        .expect(200)
+        .expect({ success: true });
+
+      const wordRes = await request(server()).get(`/api/en/${wordId}`).set(auth).expect(200);
+      const meaning = (
+        wordRes.body.meanings as Array<{ id: number; synonyms: string[]; antonyms: string[] }>
+      ).find((m) => m.id === meaningId);
+      expect(meaning?.synonyms).toEqual(['sprint']);
+      expect(meaning?.antonyms).toEqual(['walk']);
+
+      const listRes = await request(server())
+        .get('/api/en/meanings')
+        .set(auth)
+        .query({ search: 'run' })
+        .expect(200);
+      const listed = (listRes.body.items as Array<{ id: number; antonyms: string[] }>).find(
+        (m) => m.id === meaningId,
+      );
+      expect(listed?.antonyms).toEqual(['walk']);
+    });
+
     it('deletes a meaning through DELETE /api/en/word/meaning/:id', async () => {
       await request(server()).delete(`/api/en/word/meaning/${meaningId}`).set(auth).expect(200);
 

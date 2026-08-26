@@ -53,6 +53,7 @@ export const MeaningsPreview: React.FC<MeaningsPreviewP> = ({ meanings, mode, up
               mode={mode}
               setEditData={setModalData}
               updateMeaning={updateMeaning}
+              headword={headword}
             />
           ))}
         </div>

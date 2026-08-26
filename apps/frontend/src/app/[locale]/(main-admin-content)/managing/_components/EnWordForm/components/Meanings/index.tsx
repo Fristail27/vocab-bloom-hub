@@ -11,7 +11,7 @@ type MeaningsP = {
   onClickNext: () => void;
   meanings: EnMeaningT[];
   setMeanings: (values: EnMeaningT[]) => void;
-  // the word being added; it is never offered as a synonym of its own meanings
+  // the word being added; it is never offered as a synonym or antonym of its own meanings
   headword?: string | undefined;
 };
 
@@ -30,6 +30,7 @@ export const Meanings: React.FC<MeaningsP> = ({ meanings, setMeanings, onClickNe
         language_register: LanguageRegisterE.formal,
         examples: [],
         synonyms: [],
+        antonyms: [],
         meaning_level: null,
         translations: [],
       },

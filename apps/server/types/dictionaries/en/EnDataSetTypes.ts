@@ -12,15 +12,19 @@ import {
 } from '../';
 
 export type EnMeaningTranslationDST = Omit<EnMeaningTranslationT, 'id'>;
-// A synonym in the dataset names the word together with its part of speech,
-// so the file is readable on its own; the database stores the link by headword
-export type EnSynonymDST = { word: string; part_of_speech: EnPartOfSpeechE };
+// A linked word (synonym, antonym) in the dataset names the word together
+// with its part of speech, so the file is readable on its own; the database
+// stores the link by headword
+export type EnWordLinkDST = { word: string; part_of_speech: EnPartOfSpeechE };
+export type EnSynonymDST = EnWordLinkDST;
+export type EnAntonymDST = EnWordLinkDST;
 export type EnMeaningDST = Omit<
   EnMeaningT,
-  'id' | 'translations' | 'meaning_level' | 'language_register' | 'synonyms'
+  'id' | 'translations' | 'meaning_level' | 'language_register' | 'synonyms' | 'antonyms'
 > & {
   translations: EnMeaningTranslationDST[];
   synonyms: EnSynonymDST[];
+  antonyms: EnAntonymDST[];
   meaning_level: WordLevelE | '';
   language_register: LanguageRegisterE | '';
 };

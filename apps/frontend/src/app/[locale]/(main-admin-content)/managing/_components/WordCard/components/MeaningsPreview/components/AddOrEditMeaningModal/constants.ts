@@ -6,6 +6,7 @@ export const DefaultState: AddOrEditStateT = {
   definition: '',
   examples: [],
   synonyms: [],
+  antonyms: [],
   categories: [],
   is_obsolete: false,
   sort_order: 0,

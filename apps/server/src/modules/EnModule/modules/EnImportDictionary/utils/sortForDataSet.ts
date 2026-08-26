@@ -2,8 +2,8 @@ import {
   EnMeaningDST,
   EnMeaningTranslationDST,
   EnShortTranslationDST,
-  EnSynonymDST,
   EnWordFormDST,
+  EnWordLinkDST,
 } from '../../../../../../types/dictionaries/en/EnDataSetTypes';
 
 /**
@@ -21,8 +21,8 @@ import {
  * - `meanings[].translations`: `language`, then `title`, then `definition`;
  * - `short_translations`: `language`, then `description`;
  * - `forms`: `form_of_word`, then `word`, then `area_variant`, then `transcription`;
- * - `meanings[].synonyms`: `word`, then `part_of_speech` (a set of links, the
- *   stored order carries no meaning);
+ * - `meanings[].synonyms` and `meanings[].antonyms`: `word`, then
+ *   `part_of_speech` (sets of links, the stored order carries no meaning);
  * - `phrasal_variants` and `categories`: plain string order.
  *
  * Arrays whose order is authored and carries meaning (`examples`, `pattern`,
@@ -70,8 +70,8 @@ export const sortMeaningsForDS = (meanings: EnMeaningDST[]): EnMeaningDST[] =>
     ),
   );
 
-export const sortSynonymsForDS = (synonyms: EnSynonymDST[]): EnSynonymDST[] =>
-  [...synonyms].sort(
+export const sortWordLinksForDS = (links: EnWordLinkDST[]): EnWordLinkDST[] =>
+  [...links].sort(
     compareBy(
       (s) => s.word,
       (s) => s.part_of_speech,

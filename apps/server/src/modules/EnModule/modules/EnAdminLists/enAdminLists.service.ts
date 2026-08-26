@@ -20,9 +20,11 @@ import { ListMeaningsQueryDTO } from './dto/ListMeaningsQuery.dto';
 import { ListMeaningTranslationsQueryDTO } from './dto/ListMeaningTranslationsQuery.dto';
 import { LIST_DEFAULT_LIMIT, PaginationQueryDTO } from './dto/PaginationQuery.dto';
 import { escapeLike } from '../EnSearch/utils/escapeLike';
-import { normalizeSynonyms } from '../../utils/normalizeSynonyms';
+import { normalizeWordLinks } from '../../utils/normalizeWordLinks';
 
 type PageT = { page: number; limit: number };
+type WordLinksT = { synonyms: string[]; antonyms: string[] };
+const EMPTY_LINKS: WordLinksT = { synonyms: [], antonyms: [] };
 
 // COUNT comes back as a string on Postgres (bigint) and as a number on SQLite
 const toCount = (value: unknown): number => Number(value) || 0;
@@ -209,21 +211,29 @@ export class EnAdminListsService {
   }
 
   /**
-   * Synonyms are a many-to-many relation: joining them into the paginated
-   * query would multiply rows and break OFFSET/LIMIT, so the page's links are
-   * loaded with a second query
+   * Synonyms and antonyms are many-to-many relations: joining them into the
+   * paginated query would multiply rows and break OFFSET/LIMIT, so the page's
+   * links are loaded with a second query
    */
-  private async loadSynonymsByMeaningId(ids: number[]): Promise<Map<number, string[]>> {
+  private async loadWordLinksByMeaningId(ids: number[]): Promise<Map<number, WordLinksT>> {
     if (ids.length === 0) return new Map();
     const rows = await this.enMeaningsRep.find({
       where: { id: In(ids) },
-      relations: { synonyms: true },
-      select: { id: true, synonyms: { word: true } },
+      relations: { synonyms: true, antonyms: true },
+      select: { id: true, synonyms: { word: true }, antonyms: { word: true } },
     });
-    return new Map(rows.map((r) => [r.id, normalizeSynonyms(r.synonyms.map((e) => e.word))]));
+    return new Map(
+      rows.map((r) => [
+        r.id,
+        {
+          synonyms: normalizeWordLinks(r.synonyms.map((e) => e.word)),
+          antonyms: normalizeWordLinks(r.antonyms.map((e) => e.word)),
+        },
+      ]),
+    );
   }
 
-  private mapMeaning(row: EnMeaning, translationsCount: number, synonyms: string[]): EnMeaningListItemT {
+  private mapMeaning(row: EnMeaning, translationsCount: number, links: WordLinksT): EnMeaningListItemT {
     return {
       id: row.id,
       word_id: row.word.id,
@@ -238,7 +248,8 @@ export class EnAdminListsService {
       categories: row.categories ?? [],
       is_obsolete: Boolean(row.is_obsolete),
       examples: row.examples ?? [],
-      synonyms,
+      synonyms: links.synonyms,
+      antonyms: links.antonyms,
       translations_count: translationsCount,
     };
   }
@@ -274,10 +285,12 @@ export class EnAdminListsService {
       .getRawAndEntities<{ m_id: number; translations_count: unknown }>();
 
     const countsById = new Map(raw.map((r) => [Number(r.m_id), toCount(r.translations_count)]));
-    const synonymsById = await this.loadSynonymsByMeaningId(entities.map((row) => row.id));
+    const linksById = await this.loadWordLinksByMeaningId(entities.map((row) => row.id));
 
     return this.paginated(
-      entities.map((row) => this.mapMeaning(row, countsById.get(row.id) ?? 0, synonymsById.get(row.id) ?? [])),
+      entities.map((row) =>
+        this.mapMeaning(row, countsById.get(row.id) ?? 0, linksById.get(row.id) ?? EMPTY_LINKS),
+      ),
       page,
       total,
     );

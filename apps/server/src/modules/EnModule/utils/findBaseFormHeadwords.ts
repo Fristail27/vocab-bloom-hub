@@ -7,7 +7,7 @@ import { EnWordFormsE } from '../../../../types';
  * Of the given spellings, returns those that are headwords of a base-form
  * entry (a word, phrase or pattern in its dictionary form). Inflected forms
  * such as "ran" have an `en_entries` row too, but they never qualify as a
- * synonym target.
+ * link target (synonym or antonym).
  */
 export const findBaseFormHeadwords = async (
   em: EntityManager,
@@ -32,7 +32,7 @@ export const findBaseFormHeadwords = async (
  * article or "to" dropped. Particles are never dropped ("put up with" is not
  * "put up").
  */
-export const synonymSpellingVariants = (word: string): string[] => {
+export const spellingVariants = (word: string): string[] => {
   const variants: string[] = [];
   if (word.includes('-')) variants.push(word.replace(/-/g, ' '), word.replace(/-/g, ''));
   if (word.includes(' ')) variants.push(word.replace(/ /g, '-'));
@@ -50,7 +50,7 @@ export const resolveBaseFormHeadwords = async (
   em: EntityManager,
   words: readonly string[],
 ): Promise<Map<string, string>> => {
-  const candidates = new Map<string, string[]>(words.map((w) => [w, [w, ...synonymSpellingVariants(w)]]));
+  const candidates = new Map<string, string[]>(words.map((w) => [w, [w, ...spellingVariants(w)]]));
   const found = await findBaseFormHeadwords(em, [...new Set([...candidates.values()].flat())]);
   const resolved = new Map<string, string>();
   for (const [word, options] of candidates) {

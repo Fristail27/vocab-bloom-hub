@@ -140,6 +140,8 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
         generatedAt: '2026-08-16T00:00:00Z',
         // 3 for "to hand over" + 1 for "eventually" (issue #259)
         synonym_links: 4,
+        // 2 for "to hand over" (issue #266)
+        antonym_links: 2,
         files: {
           'vocab-bloom-hub-en-words.jsonl': { lines: 3 },
           'vocab-bloom-hub-en-phrasal-verbs.jsonl': { lines: 2 },
@@ -169,6 +171,12 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
                     { word: 'hand over', part_of_speech: EnPartOfSpeechE.verb },
                     // a spelling variant of the phrasal verb from the same file
                     { word: 'give-up', part_of_speech: EnPartOfSpeechE.verb },
+                  ],
+                  // an antonym is resolved the same way; a word already linked
+                  // as a synonym is skipped rather than stored twice (issue #266)
+                  antonyms: [
+                    { word: 'would rather + verb', part_of_speech: EnPartOfSpeechE.grammar_pattern },
+                    { word: 'in the long run', part_of_speech: EnPartOfSpeechE.phrase },
                   ],
                   area_variant: '',
                   language_register: '',
@@ -300,13 +308,37 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
       const stages = res.chunks.map((c) => (JSON.parse(c) as ProgressChunk).stage);
       expect(stages).toContain(EnDictionaryImportPhasesE.linking_synonyms);
       // the linking stage counts into the progress total: its chunks stay
-      // within 100% and the batch report lands at the very end of the total
+      // within 100% and its batch report lands exactly where the antonym
+      // stage (the last one, issue #266) starts
+      const chunks = res.chunks.map((c) => JSON.parse(c) as ProgressChunk);
+      const linking = chunks.filter((c) => c.stage === EnDictionaryImportPhasesE.linking_synonyms);
+      expect(linking.length).toBeGreaterThanOrEqual(2);
+      const lines = 3 + 2 + 1 + 1;
+      expect(Math.max(...linking.map((c) => c.percent))).toBeCloseTo(((lines + 4) / (lines + 4 + 2)) * 100);
+      expect(linking.every((c) => c.percent <= 100)).toBe(true);
+      expect(chunks.find((c) => c.stage === EnDictionaryImportPhasesE.linking_antonyms)?.percent).toBeCloseTo(
+        ((lines + 4) / (lines + 4 + 2)) * 100,
+      );
+    });
+
+    it('links meaning antonyms after the synonyms and never stores a word as both (issue #266)', async () => {
+      const res = await runImport();
+
+      const meanings = await ds.getRepository(EnMeaning).find({ relations: { antonyms: true } });
+      const byTitle = new Map(meanings.map((m) => [m.title, m.antonyms.map((e) => e.word).sort()]));
+      expect(byTitle.get('to hand over')).toEqual(['would rather + verb']);
+      // lines without an antonyms key (older datasets) import with none
+      expect(byTitle.get('eventually')).toEqual([]);
+      expect(byTitle.get('legacy meaning')).toEqual([]);
+
+      const stages = res.chunks.map((c) => (JSON.parse(c) as ProgressChunk).stage);
+      expect(stages.lastIndexOf(EnDictionaryImportPhasesE.linking_synonyms)).toBeLessThan(
+        stages.indexOf(EnDictionaryImportPhasesE.linking_antonyms),
+      );
       const linking = res.chunks
         .map((c) => JSON.parse(c) as ProgressChunk)
-        .filter((c) => c.stage === EnDictionaryImportPhasesE.linking_synonyms);
-      expect(linking.length).toBeGreaterThanOrEqual(2);
+        .filter((c) => c.stage === EnDictionaryImportPhasesE.linking_antonyms);
       expect(Math.max(...linking.map((c) => c.percent))).toBe(100);
-      expect(linking.every((c) => c.percent <= 100)).toBe(true);
     });
 
     it('tolerates duplicate lines instead of aborting the import', async () => {

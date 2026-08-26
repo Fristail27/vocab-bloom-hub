@@ -14,7 +14,7 @@ import { RegionalLabelSelect } from '@/app/[locale]/(main-admin-content)/managin
 import { WordLevelSelect } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/WordLevelSelect';
 import { LanguageRegisterSelect } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/LanguageRegisterSelect';
 import { CategorySelect } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/CategoriesSelect';
-import { SynonymsSelect } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/SynonymsSelect';
+import { WordLinksSelect } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/WordLinksSelect';
 import styles from './styles.module.scss';
 import { UpdateTypeE } from '@/app/[locale]/(main-admin-content)/managing/_components/WordCard/constants';
 
@@ -26,7 +26,7 @@ type AddOrEditMeaningModalP = {
   onClose: () => void;
   data: EnMeaningT | null;
   updateMeaning: (v: EnMeaningT, type: UpdateTypeE) => void;
-  // the word the meanings belong to; never offered as its own synonym
+  // the word the meanings belong to; never offered as its own synonym or antonym
   headword?: string | undefined;
 };
 
@@ -90,6 +90,7 @@ export const AddOrEditMeaningModal: React.FC<AddOrEditMeaningModalP> = ({
       setValues({
         examples: data.examples,
         synonyms: data.synonyms ?? [],
+        antonyms: data.antonyms ?? [],
         definition: data.definition,
         title: data.title,
         is_obsolete: data.is_obsolete,
@@ -161,10 +162,19 @@ export const AddOrEditMeaningModal: React.FC<AddOrEditMeaningModalP> = ({
               onChange={(e) => setValues({ ...values, definition: e.target.value })}
             />
           </div>
-          <SynonymsSelect
+          <WordLinksSelect
+            kind="synonyms"
             value={values.synonyms}
             onChange={(synonyms) => setValues({ ...values, synonyms })}
             headword={headword}
+            exclude={values.antonyms}
+          />
+          <WordLinksSelect
+            kind="antonyms"
+            value={values.antonyms}
+            onChange={(antonyms) => setValues({ ...values, antonyms })}
+            headword={headword}
+            exclude={values.synonyms}
           />
           <div className={styles.examples}>
             <div className={styles.examplesTitle}>

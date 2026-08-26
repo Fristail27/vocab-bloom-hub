@@ -80,4 +80,14 @@ export class EnMeaning {
     inverseJoinColumn: { name: 'word', referencedColumnName: 'word' },
   })
   synonyms!: EnEntry[];
+
+  // Antonyms mirror synonyms one-to-one (issue #266): a separate junction
+  // table with the same shape; a word is never both for the same meaning
+  @ManyToMany(() => EnEntry)
+  @JoinTable({
+    name: 'en_meaning_antonyms',
+    joinColumn: { name: 'meaning_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'word', referencedColumnName: 'word' },
+  })
+  antonyms!: EnEntry[];
 }

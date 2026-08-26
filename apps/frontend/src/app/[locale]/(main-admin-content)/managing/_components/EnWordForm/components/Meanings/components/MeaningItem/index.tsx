@@ -8,7 +8,7 @@ import { RegionalLabelSelect } from '../../../RegionalLabelSelect';
 import { WordLevelSelect } from '../../../WordLevelSelect';
 import { LanguageRegisterSelect } from '../../../LanguageRegisterSelect';
 import { CategorySelect } from '../../../CategoriesSelect';
-import { SynonymsSelect } from '../../../SynonymsSelect';
+import { WordLinksSelect } from '../../../WordLinksSelect';
 import styles from './styles.module.scss';
 
 const { Text } = Typography;
@@ -79,10 +79,19 @@ export const MeaningItem: React.FC<MeaningItemP> = ({ meaning, onChange, onDelet
           onChange={(e) => onChange({ ...meaning, definition: e.target.value })}
         />
       </div>
-      <SynonymsSelect
+      <WordLinksSelect
+        kind="synonyms"
         value={meaning.synonyms ?? []}
         onChange={(synonyms) => onChange({ ...meaning, synonyms })}
         headword={headword}
+        exclude={meaning.antonyms ?? []}
+      />
+      <WordLinksSelect
+        kind="antonyms"
+        value={meaning.antonyms ?? []}
+        onChange={(antonyms) => onChange({ ...meaning, antonyms })}
+        headword={headword}
+        exclude={meaning.synonyms ?? []}
       />
       <div className={styles.examples}>
         <div className={styles.examplesTitle}>
