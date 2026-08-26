@@ -27,7 +27,7 @@ import { EnMeaningTranslationService } from '../../EnMeaningTranslation/enMeanin
 import { EnImportDictionaryService } from '../enImportDictionary.service';
 import { SettingsService } from '../../../../SettingsModule/settings.service';
 import { DATASET_FILE_NAMES, MANIFEST_FILE_NAME } from '../constants';
-import { EnMeaningT, EnPartOfSpeechE, EnWordFormsE, EnWordT } from '../../../../../../types';
+import { EnMeaningT, EnPartOfSpeechE, EnWordFormsE, EnWordT, ImportSourceKindE } from '../../../../../../types';
 
 class FakeProgressRes {
   chunks: string[] = [];
@@ -107,8 +107,11 @@ const countLinks = async (ds: DataSource, kind: 'synonyms' | 'antonyms'): Promis
 describe('synonyms and antonyms survive an export → import round trip (issues #259, #266)', () => {
   let sourceDs: DataSource;
   let targetDs: DataSource;
+  // a third database fed from the exported zip through the file source (issue #269)
+  let fileDs: DataSource;
   let runDir: string;
   let zipPath: string;
+  const originalImportDir = process.env.DICTIONARY_IMPORT_DIR;
 
   beforeAll(async () => {
     sourceDs = makeDataSource();
@@ -180,14 +183,33 @@ describe('synonyms and antonyms survive an export → import round trip (issues 
       {},
       new FakeProgressRes() as unknown as Response,
     );
+
+    // the same archive imported offline: DICTIONARY_IMPORT_DIR points at the
+    // export folder and the request names the zip inside it
+    process.env.DICTIONARY_IMPORT_DIR = path.dirname(zipPath);
+    fileDs = makeDataSource();
+    await fileDs.initialize();
+    await makeServices(fileDs).importService.importDictionary(
+      { source: { kind: ImportSourceKindE.file, path: path.basename(zipPath) } },
+      new FakeProgressRes() as unknown as Response,
+    );
   });
 
   afterAll(async () => {
     jest.restoreAllMocks();
+    if (originalImportDir === undefined) delete process.env.DICTIONARY_IMPORT_DIR;
+    else process.env.DICTIONARY_IMPORT_DIR = originalImportDir;
     await rm(runDir, { recursive: true, force: true });
     await rm(zipPath, { force: true });
     await sourceDs.destroy();
     await targetDs.destroy();
+    await fileDs.destroy();
+  });
+
+  it('restores the same links when the exported zip is imported from a local file (issue #269)', async () => {
+    expect(await linksByTitle(fileDs, 'synonyms')).toEqual(await linksByTitle(sourceDs, 'synonyms'));
+    expect(await linksByTitle(fileDs, 'antonyms')).toEqual(await linksByTitle(sourceDs, 'antonyms'));
+    expect(await fileDs.getRepository(EnMeaning).count()).toBe(8);
   });
 
   it('exports every synonym with its part of speech', () => {

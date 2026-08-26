@@ -36,8 +36,10 @@ import {
   GetEnTranslationsStatisticsResT,
   GetWordByIdResT,
   GetDatasetManifestResT,
+  GetImportSourcesResT,
   ImportDictionaryChunkT,
   ImportDictionaryReqT,
+  UploadDictionaryReqT,
   ListMeaningsQueryT,
   ListMeaningsResT,
   ListMeaningTranslationsQueryT,
@@ -200,16 +202,55 @@ export class EnApi extends AbstractBaseApi {
     return this.get<GetDatasetManifestResT>(`${this.baseURL}/en/dictionary/manifest`);
   }
 
+  /** Server-side datasets the import page can offer (DICTIONARY_IMPORT_DIR) */
+  static async getImportSources(): Promise<GetImportSourcesResT> {
+    return this.get<GetImportSourcesResT>(`${this.baseURL}/en/dictionary/import/sources`);
+  }
+
+  /**
+   * Imports the published dataset (empty body) or a dataset the server can
+   * read (`source: { kind: 'file', path }`). The dataset version comes back
+   * from the server (manifest.json), the client never sends one
+   */
   static async importDictionary(
+    body: ImportDictionaryReqT,
     handleChunk: (ch: ImportDictionaryChunkT) => void,
     onError: (err: string) => void,
   ): Promise<{ success: boolean } | ErrorResT> {
-    // The dataset version comes back from the server (manifest.json), the
-    // client no longer sends one
-    const body: ImportDictionaryReqT = {};
     const reader = await AbstractBaseApi.stream(`${this.baseURL}/en/dictionary/import`, {
       method: 'POST',
       body: body as BodyInit,
+    });
+
+    if ('error' in reader) {
+      return reader;
+    }
+
+    return this.readNdjsonStream(reader, handleChunk, onError);
+  }
+
+  /**
+   * Imports a dataset from the admin's machine: one zip produced by the
+   * export (`archive`), or its files in their own slots (`words`,
+   * `phrasal_verbs`, `grammar_patterns`, `phrases`, `manifest`); `manual`
+   * carries manifest values typed by hand, which win over a manifest file
+   */
+  static async uploadDictionary(
+    files: Partial<Record<string, File>>,
+    manual: UploadDictionaryReqT,
+    handleChunk: (ch: ImportDictionaryChunkT) => void,
+    onError: (err: string) => void,
+  ): Promise<{ success: boolean } | ErrorResT> {
+    const body = new FormData();
+    for (const [field, file] of Object.entries(files)) {
+      if (file) body.append(field, file, file.name);
+    }
+    for (const [field, value] of Object.entries(manual)) {
+      if (value !== undefined && value !== '') body.append(field, String(value));
+    }
+    const reader = await AbstractBaseApi.stream(`${this.baseURL}/en/dictionary/import/upload`, {
+      method: 'POST',
+      body,
     });
 
     if ('error' in reader) {

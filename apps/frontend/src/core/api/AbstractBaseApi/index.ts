@@ -95,6 +95,9 @@ export class AbstractBaseApi {
     options: RequestOptions = {},
   ): Promise<ReadableStreamDefaultReader<Uint8Array> | ErrorResT> {
     const { query, headers = {}, body, ...fetchOptions } = options;
+    // a FormData body goes out as multipart: the browser sets the boundary
+    // header itself, an explicit content type would break it
+    const isMultipart = typeof FormData !== 'undefined' && body instanceof FormData;
 
     try {
       const url = this.buildUrl(endpoint, query);
@@ -102,11 +105,11 @@ export class AbstractBaseApi {
       const res = await fetch(url, {
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
+          ...(!isMultipart && { 'Content-Type': 'application/json' }),
           ...(await this.buildAuthHeader()),
           ...headers,
         },
-        ...(body && { body: JSON.stringify(body) }),
+        ...(body && { body: isMultipart ? body : JSON.stringify(body) }),
         ...fetchOptions,
       });
 

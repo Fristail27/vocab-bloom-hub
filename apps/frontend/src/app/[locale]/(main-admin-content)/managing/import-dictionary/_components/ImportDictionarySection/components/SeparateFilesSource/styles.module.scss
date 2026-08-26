@@ -1,0 +1,32 @@
+.separateFiles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 560px;
+
+  .manifest {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(128, 128, 128, 0.3);
+  }
+
+  .manualFields {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+.slot {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  .slotLabel {
+    width: 180px;
+    flex-shrink: 0;
+    padding-top: 2px;
+  }
+}

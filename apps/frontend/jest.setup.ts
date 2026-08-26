@@ -28,3 +28,23 @@ if (!window.ResizeObserver) {
     disconnect() {}
   };
 }
+
+// antd's Select (and, once it exists, React's scheduler) posts a macrotask
+// through a MessageChannel, which jsdom does not provide. A timer-backed
+// stand-in covers the `port1.onmessage` / `port2.postMessage` pair they use;
+// Node's real ports would keep the jest worker alive after the tests
+if (!g.MessageChannel) {
+  type PortMessageT = { data: unknown };
+  g.MessageChannel = class {
+    port1: { onmessage: ((event: PortMessageT) => void) | null; close: () => void } = {
+      onmessage: null,
+      close: () => {},
+    };
+    port2 = {
+      postMessage: (data: unknown) => {
+        setTimeout(() => this.port1.onmessage?.({ data }), 0);
+      },
+      close: () => {},
+    };
+  };
+}

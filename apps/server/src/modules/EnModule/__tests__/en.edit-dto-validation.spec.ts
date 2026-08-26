@@ -17,6 +17,7 @@ import {
   CategoryE,
   EnAreaVariantsE,
   EnWordFormsE,
+  ImportSourceKindE,
   LanguageRegisterE,
   WordLevelE,
 } from '../../../../types';
@@ -311,5 +312,26 @@ describe('ImportDictionaryReq validation (issue #87)', () => {
   it('rejects unknown fields, including the removed user_version', async () => {
     await expect(validate(ImportDictionaryReq, { user_version: '1.2.3' })).rejects.toThrow(BadRequestException);
     await expect(validate(ImportDictionaryReq, { hacker_field: 'oops' })).rejects.toThrow(BadRequestException);
+  });
+
+  it('accepts the huggingface and file sources; the file source needs a path (issue #269)', async () => {
+    await expect(validate(ImportDictionaryReq, { source: { kind: 'huggingface' } })).resolves.toMatchObject({
+      source: { kind: ImportSourceKindE.huggingface },
+    });
+    await expect(
+      validate(ImportDictionaryReq, { source: { kind: 'file', path: 'export.zip' } }),
+    ).resolves.toMatchObject({ source: { kind: ImportSourceKindE.file, path: 'export.zip' } });
+    await expect(validate(ImportDictionaryReq, { source: { kind: 'file' } })).rejects.toThrow(
+      BadRequestException,
+    );
+    await expect(validate(ImportDictionaryReq, { source: { kind: 'file', path: '' } })).rejects.toThrow(
+      BadRequestException,
+    );
+    await expect(validate(ImportDictionaryReq, { source: { kind: 'ftp', path: 'x' } })).rejects.toThrow(
+      BadRequestException,
+    );
+    await expect(
+      validate(ImportDictionaryReq, { source: { kind: 'file', path: 'x', extra: 1 } }),
+    ).rejects.toThrow(BadRequestException);
   });
 });

@@ -1,15 +1,20 @@
 'use client';
 
 import React from 'react';
-import { App, Button, Progress, Typography } from 'antd';
+import { App, Button, Progress, Tabs, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
-import { ImportDictionaryChunkT } from 'server/types';
+import { ImportDictionaryChunkT, ImportSourceFileT, ImportSourceKindE } from 'server/types';
 import { EnDictionaryImportPhasesE } from 'server/src/modules/EnModule/modules/EnImportDictionary/constants';
 import { ErrorCodes } from 'server/core/constants/error_codes';
 import { EnApi } from '@/core/api/EnApi';
 import { formatTime, getDownloadProgressStr } from './utils';
 import { ImportStatusE } from './constants';
+import { ImportSourceTabE, ManifestModeE, ManualManifestT, SlotFilesT } from './types';
+import { ArchiveSource } from './components/ArchiveSource';
+import { JSONL_SLOTS, SeparateFilesSource } from './components/SeparateFilesSource';
 import styles from './styles.module.scss';
+
+const EMPTY_MANUAL_MANIFEST: ManualManifestT = { version: '', synonym_links: '', antonym_links: '' };
 
 const { Text } = Typography;
 
@@ -31,12 +36,43 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
   const [elapsedSeconds, setElapsedSeconds] = React.useState<number>(0);
   const [installedVersion, setInstalledVersion] = React.useState<string | undefined>(yourVersion);
   const [latestVersion, setLatestVersion] = React.useState<string | undefined>(latestVersionProp);
+  // where the next import reads from (issue #269): the published dataset, an
+  // archive (uploaded or picked on the server) or the dataset files in slots
+  const [sourceTab, setSourceTab] = React.useState<ImportSourceTabE>(ImportSourceTabE.huggingface);
+  const [archive, setArchive] = React.useState<File | null>(null);
+  const [serverFiles, setServerFiles] = React.useState<ImportSourceFileT[]>([]);
+  const [importDirConfigured, setImportDirConfigured] = React.useState(false);
+  const [serverPath, setServerPath] = React.useState<string | undefined>(undefined);
+  const [slotFiles, setSlotFiles] = React.useState<SlotFilesT>({});
+  const [manifestMode, setManifestMode] = React.useState<ManifestModeE>(ManifestModeE.file);
+  const [manualManifest, setManualManifest] = React.useState<ManualManifestT>(EMPTY_MANUAL_MANIFEST);
   const t = useTranslations('import_dictionary');
   const tErr = useTranslations('errors');
   const { message } = App.useApp();
 
   const inProgress = status === ImportStatusE.in_progress;
-  const isUpToDate = !!installedVersion && !!latestVersion && installedVersion === latestVersion;
+  const fromHuggingFace = sourceTab === ImportSourceTabE.huggingface;
+  const isUpToDate =
+    fromHuggingFace && !!installedVersion && !!latestVersion && installedVersion === latestVersion;
+  // nothing chosen disables the start: an archive (uploaded or picked on the
+  // server) on the archive tab, at least one jsonl slot on the files tab
+  const canStart =
+    fromHuggingFace ||
+    (sourceTab === ImportSourceTabE.archive && (!!archive || !!serverPath)) ||
+    (sourceTab === ImportSourceTabE.files && JSONL_SLOTS.some((slot) => !!slotFiles[slot]));
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await EnApi.getImportSources();
+      if (cancelled || 'error' in res) return;
+      setImportDirConfigured(res.import_dir_configured);
+      setServerFiles(res.files);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   React.useEffect(() => {
     if (!inProgress) return undefined;
@@ -88,7 +124,38 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
       }
     };
 
-    const res = await EnApi.importDictionary(handleChunk, onError);
+    const runImport = () => {
+      if (sourceTab === ImportSourceTabE.files) {
+        // a manifest typed by hand replaces the manifest slot
+        const { manifest: _manifest, ...jsonl } = slotFiles;
+        const manual = manifestMode === ManifestModeE.manual;
+        return EnApi.uploadDictionary(
+          manual ? jsonl : slotFiles,
+          manual
+            ? {
+                version: manualManifest.version.trim() || undefined,
+                synonym_links:
+                  manualManifest.synonym_links === '' ? undefined : Number(manualManifest.synonym_links),
+                antonym_links:
+                  manualManifest.antonym_links === '' ? undefined : Number(manualManifest.antonym_links),
+              }
+            : {},
+          handleChunk,
+          onError,
+        );
+      }
+      if (sourceTab === ImportSourceTabE.archive && archive) {
+        return EnApi.uploadDictionary({ archive }, {}, handleChunk, onError);
+      }
+      return EnApi.importDictionary(
+        sourceTab === ImportSourceTabE.archive && serverPath
+          ? { source: { kind: ImportSourceKindE.file, path: serverPath } }
+          : {},
+        handleChunk,
+        onError,
+      );
+    };
+    const res = await runImport();
     if ('error' in res) {
       onError(res.message);
       return;
@@ -117,11 +184,53 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
 
   return (
     <div className={styles.importDictionarySection}>
+      <Tabs
+        activeKey={sourceTab}
+        onChange={(key) => !inProgress && setSourceTab(key as ImportSourceTabE)}
+        items={[
+          {
+            key: ImportSourceTabE.huggingface,
+            label: t('source_huggingface'),
+            children: (
+              <Text strong>
+                {t('latest_version')}: {latestVersion || '—'}
+              </Text>
+            ),
+          },
+          {
+            key: ImportSourceTabE.archive,
+            label: t('source_archive'),
+            children: (
+              <ArchiveSource
+                archive={archive}
+                onArchiveChange={setArchive}
+                importDirConfigured={importDirConfigured}
+                serverFiles={serverFiles}
+                serverPath={serverPath}
+                onServerPathChange={setServerPath}
+                disabled={inProgress}
+              />
+            ),
+          },
+          {
+            key: ImportSourceTabE.files,
+            label: t('source_files'),
+            children: (
+              <SeparateFilesSource
+                files={slotFiles}
+                onFilesChange={setSlotFiles}
+                manifestMode={manifestMode}
+                onManifestModeChange={setManifestMode}
+                manual={manualManifest}
+                onManualChange={setManualManifest}
+                disabled={inProgress}
+              />
+            ),
+          },
+        ]}
+      />
       <Text strong>
         {t('your_version')}: {installedVersion || '—'}
-      </Text>
-      <Text strong>
-        {t('latest_version')}: {latestVersion || '—'}
       </Text>
       <Progress
         className={styles.progress}
@@ -135,6 +244,7 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
         <Button
           type={isUpToDate ? 'default' : 'primary'}
           onClick={importDictionary}
+          disabled={!canStart}
           className={styles.startBtn}
         >
           {status === ImportStatusE.error ? t('retry_importing') : t('start_importing')}

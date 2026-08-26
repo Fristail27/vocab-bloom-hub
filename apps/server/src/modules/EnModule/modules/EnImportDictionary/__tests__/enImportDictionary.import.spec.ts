@@ -1,9 +1,14 @@
 import '../../../__tests__/helpers/clearDatabaseUrl';
 
 import { afterAll, afterEach, beforeAll, describe, expect, it, jest } from '@jest/globals';
-import { InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { type Response as ExpressResponse } from 'express';
+import { createWriteStream, existsSync } from 'node:fs';
+import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
+import * as path from 'node:path';
+import * as os from 'node:os';
+import * as yazl from 'yazl';
 
 import { EnEntry } from '../../../entities/en_entry.entity';
 import { EnWord } from '../../../entities/en_word.entity';
@@ -13,7 +18,13 @@ import { EnShortTranslation } from '../../../entities/en_short_translation.entit
 import { EnImportDictionaryService } from '../enImportDictionary.service';
 import { SettingsService } from '../../../../SettingsModule/settings.service';
 import { DATASET_VERSION_SETTINGS_FIELD, EnDictionaryImportPhasesE } from '../constants';
-import { AvailableTranslationLanguagesE, EnEntryTypesE, EnPartOfSpeechE } from '../../../../../../types';
+import { ErrorCodes } from '../../../../../../core/constants/error_codes';
+import {
+  AvailableTranslationLanguagesE,
+  EnEntryTypesE,
+  EnPartOfSpeechE,
+  ImportSourceKindE,
+} from '../../../../../../types';
 
 type ProgressChunk = {
   percent: number;
@@ -475,6 +486,291 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
       // the failed word rolled back entirely
       expect(await ds.getRepository(EnWord).count()).toBe(0);
       expect(await ds.getRepository(EnMeaning).count()).toBe(0);
+    });
+  });
+
+  describe('local sources (issue #269)', () => {
+    let root: string;
+    const originalImportDir = process.env.DICTIONARY_IMPORT_DIR;
+
+    const datasetFiles = (): Record<string, string> => ({
+      'manifest.json': JSON.stringify({
+        version: '0.4.0',
+        files: {
+          'vocab-bloom-hub-en-words.jsonl': { lines: 2 },
+          'vocab-bloom-hub-en-phrasal-verbs.jsonl': { lines: 1 },
+          'vocab-bloom-hub-en-grammar-patterns.jsonl': { lines: 0 },
+          'vocab-bloom-hub-en-phrases.jsonl': { lines: 1 },
+        },
+        synonym_links: 1,
+      }),
+      'vocab-bloom-hub-en-words.jsonl': toNdjson([
+        makeSetWord('give', {
+          meanings: [
+            {
+              title: 'to hand over',
+              definition: 'to pass something to someone',
+              sort_order: 1,
+              is_obsolete: false,
+              examples: [],
+              synonyms: ['in the long run'],
+              area_variant: '',
+              language_register: '',
+              meaning_level: '',
+              categories: [],
+              translations: [],
+            },
+          ],
+        }),
+        makeSetWord('give up', { verb___is_phrasal: true }),
+      ]),
+      'vocab-bloom-hub-en-phrasal-verbs.jsonl': toNdjson([
+        makeSetWord('give', { phrasal_variants: ['give up'] }),
+      ]),
+      'vocab-bloom-hub-en-grammar-patterns.jsonl': '',
+      'vocab-bloom-hub-en-phrases.jsonl': toNdjson([makeSetPhrase('in the long run')]),
+    });
+
+    const writeDataset = async (dir: string): Promise<void> => {
+      await mkdir(dir, { recursive: true });
+      for (const [name, body] of Object.entries(datasetFiles())) await writeFile(path.join(dir, name), body);
+    };
+
+    const zipDataset = (zipPath: string, prefix = ''): Promise<void> =>
+      new Promise((resolve, reject) => {
+        const zip = new yazl.ZipFile();
+        for (const [name, body] of Object.entries(datasetFiles()))
+          zip.addBuffer(Buffer.from(body), prefix + name);
+        const out = createWriteStream(zipPath);
+        out.on('close', resolve);
+        out.on('error', reject);
+        zip.outputStream.pipe(out);
+        zip.end();
+      });
+
+    const expectImported = async (res: FakeProgressRes): Promise<void> => {
+      const words = await ds.getRepository(EnWord).find({ relations: { word: true } });
+      expect(words.map((w) => w.word.word).sort()).toEqual(['give', 'give up', 'in the long run']);
+      const meanings = await ds.getRepository(EnMeaning).find({ relations: { synonyms: true } });
+      expect(meanings.map((m) => m.synonyms.map((e) => e.word))).toEqual([['in the long run']]);
+      expect(mockUpsert).toHaveBeenCalledWith(DATASET_VERSION_SETTINGS_FIELD, '0.4.0');
+
+      const chunks = res.chunks.map((c) => JSON.parse(c) as ProgressChunk);
+      // nothing is downloaded: the stream opens straight on the words stage
+      expect(chunks[0]).toEqual({
+        percent: 0,
+        stage: EnDictionaryImportPhasesE.saving_words,
+        datasetVersion: '0.4.0',
+      });
+      expect(chunks.some((c) => c.stage === EnDictionaryImportPhasesE.downloading_database)).toBe(false);
+      expect(chunks[chunks.length - 1]).toEqual({
+        percent: 100,
+        stage: EnDictionaryImportPhasesE.completed,
+        datasetVersion: '0.4.0',
+      });
+      expect(res.ended).toBe(true);
+    };
+
+    beforeAll(async () => {
+      root = await mkdtemp(path.join(os.tmpdir(), 'vocab-bloom-import-spec-'));
+      process.env.DICTIONARY_IMPORT_DIR = root;
+    });
+
+    afterAll(async () => {
+      if (originalImportDir === undefined) delete process.env.DICTIONARY_IMPORT_DIR;
+      else process.env.DICTIONARY_IMPORT_DIR = originalImportDir;
+      await rm(root, { recursive: true, force: true });
+    });
+
+    it('imports a dataset directory from DICTIONARY_IMPORT_DIR without touching the network or the files', async () => {
+      await writeDataset(path.join(root, 'dataset'));
+      const fetchSpy = jest.spyOn(globalThis, 'fetch');
+
+      const res = new FakeProgressRes();
+      await service.importDictionary(
+        { source: { kind: ImportSourceKindE.file, path: 'dataset' } },
+        res as unknown as ExpressResponse,
+      );
+
+      await expectImported(res);
+      expect(fetchSpy).not.toHaveBeenCalled();
+      // the user's files are still there after the import
+      expect((await readdir(path.join(root, 'dataset'))).sort()).toEqual(Object.keys(datasetFiles()).sort());
+    });
+
+    it('imports a zip archive from DICTIONARY_IMPORT_DIR and removes the extracted copy', async () => {
+      await zipDataset(path.join(root, 'export.zip'), 'vocab-bloom-hub-en-export/');
+
+      const res = new FakeProgressRes();
+      await service.importDictionary(
+        { source: { kind: ImportSourceKindE.file, path: 'export.zip' } },
+        res as unknown as ExpressResponse,
+      );
+
+      await expectImported(res);
+      // the archive itself stays; the extracted copy is removed by the
+      // source (verified in the sources spec, whose tmp dir is private)
+      expect(existsSync(path.join(root, 'export.zip'))).toBe(true);
+    });
+
+    it('rejects a bad path before the stream opens, so the client gets a plain 4xx', async () => {
+      const res = new FakeProgressRes();
+      await expect(
+        service.importDictionary(
+          { source: { kind: ImportSourceKindE.file, path: '../etc' } },
+          res as unknown as ExpressResponse,
+        ),
+      ).rejects.toThrow(new BadRequestException(ErrorCodes.dataset_file_not_found));
+      expect(res.setHeader).not.toHaveBeenCalled();
+      expect(res.chunks).toEqual([]);
+
+      delete process.env.DICTIONARY_IMPORT_DIR;
+      await expect(
+        service.importDictionary(
+          { source: { kind: ImportSourceKindE.file, path: 'dataset' } },
+          res as unknown as ExpressResponse,
+        ),
+      ).rejects.toThrow(new BadRequestException(ErrorCodes.import_dir_not_configured));
+      process.env.DICTIONARY_IMPORT_DIR = root;
+    });
+
+    it('imports an uploaded archive and deletes the upload afterwards, also when it is rejected', async () => {
+      const upload = path.join(root, 'upload-1');
+      await zipDataset(upload);
+
+      const res = new FakeProgressRes();
+      await service.importUploadedDictionary(
+        { archive: [{ path: upload, originalname: 'export.zip' }] },
+        {},
+        res as unknown as ExpressResponse,
+      );
+
+      await expectImported(res);
+      expect(existsSync(upload)).toBe(false);
+
+      const bad = path.join(root, 'upload-2');
+      await writeFile(bad, 'not a zip');
+      const badRes = new FakeProgressRes();
+      await expect(
+        service.importUploadedDictionary(
+          { archive: [{ path: bad, originalname: 'notes.txt' }] },
+          {},
+          badRes as unknown as ExpressResponse,
+        ),
+      ).rejects.toThrow(new BadRequestException(ErrorCodes.dataset_invalid));
+      expect(badRes.setHeader).not.toHaveBeenCalled();
+      expect(existsSync(bad)).toBe(false);
+    });
+
+    it('imports the dataset files from their own slots; the manifest and the extra files are optional', async () => {
+      // only the words slot, under whatever name the admin's file had: no
+      // manifest, so no version is reported or stored, and the progress total
+      // comes from the counted lines
+      const words = path.join(root, 'upload-words');
+      await writeFile(words, datasetFiles()['vocab-bloom-hub-en-words.jsonl']);
+
+      const res = new FakeProgressRes();
+      await service.importUploadedDictionary(
+        { words: [{ path: words, originalname: 'my-words.jsonl' }] },
+        {},
+        res as unknown as ExpressResponse,
+      );
+
+      const saved = await ds.getRepository(EnWord).find({ relations: { word: true } });
+      expect(saved.map((w) => w.word.word).sort()).toEqual(['give', 'give up']);
+      expect(mockUpsert).not.toHaveBeenCalled();
+      const chunks = res.chunks.map((c) => JSON.parse(c) as ProgressChunk);
+      expect(chunks[0]).toEqual({ percent: 0, stage: EnDictionaryImportPhasesE.saving_words });
+      expect(chunks[chunks.length - 1]).toEqual({ percent: 100, stage: EnDictionaryImportPhasesE.completed });
+      expect(existsSync(words)).toBe(false);
+
+      // a second upload with the manifest and a phrases file on top links the
+      // synonym that the words-only import could not resolve
+      await ds.synchronize(true);
+      const slots: Record<string, string> = {
+        manifest: 'manifest.json',
+        words: 'vocab-bloom-hub-en-words.jsonl',
+        phrasal_verbs: 'vocab-bloom-hub-en-phrasal-verbs.jsonl',
+        phrases: 'vocab-bloom-hub-en-phrases.jsonl',
+      };
+      const files: Record<string, Array<{ path: string; originalname: string }>> = {};
+      for (const [slot, name] of Object.entries(slots)) {
+        const filePath = path.join(root, `upload-${slot}`);
+        await writeFile(filePath, datasetFiles()[name]);
+        files[slot] = [{ path: filePath, originalname: `${slot}.bin` }];
+      }
+      const fullRes = new FakeProgressRes();
+      await service.importUploadedDictionary(files, {}, fullRes as unknown as ExpressResponse);
+      await expectImported(fullRes);
+      expect(Object.values(files).some((f) => existsSync(f[0].path))).toBe(false);
+
+      // an archive next to a slot, two files in one slot, or nothing at all
+      const stray = path.join(root, 'upload-stray');
+      await writeFile(stray, '');
+      const strayZip = path.join(root, 'upload-stray.zip');
+      await zipDataset(strayZip);
+      await expect(
+        service.importUploadedDictionary(
+          {
+            archive: [{ path: strayZip, originalname: 'export.zip' }],
+            words: [{ path: stray, originalname: 'words.jsonl' }],
+          },
+          {},
+          new FakeProgressRes() as unknown as ExpressResponse,
+        ),
+      ).rejects.toThrow(new BadRequestException(ErrorCodes.dataset_invalid));
+      expect(existsSync(stray)).toBe(false);
+      expect(existsSync(strayZip)).toBe(false);
+      await expect(
+        service.importUploadedDictionary({}, {}, new FakeProgressRes() as unknown as ExpressResponse),
+      ).rejects.toThrow(new BadRequestException(ErrorCodes.dataset_upload_missing));
+    });
+
+    it('takes the manifest values typed by hand, which win over an uploaded manifest.json', async () => {
+      const words = path.join(root, 'upload-words-manual');
+      await writeFile(words, datasetFiles()['vocab-bloom-hub-en-words.jsonl']);
+
+      const res = new FakeProgressRes();
+      await service.importUploadedDictionary(
+        { words: [{ path: words, originalname: 'words.jsonl' }] },
+        { version: '9.9.9', synonym_links: 1 },
+        res as unknown as ExpressResponse,
+      );
+      const chunks = res.chunks.map((c) => JSON.parse(c) as ProgressChunk);
+      expect(chunks[0]).toEqual({
+        percent: 0,
+        stage: EnDictionaryImportPhasesE.saving_words,
+        datasetVersion: '9.9.9',
+      });
+      expect(mockUpsert).toHaveBeenCalledWith(DATASET_VERSION_SETTINGS_FIELD, '9.9.9');
+
+      await ds.synchronize(true);
+      mockUpsert.mockClear();
+      const archive = path.join(root, 'upload-manual.zip');
+      await zipDataset(archive);
+      await service.importUploadedDictionary(
+        { archive: [{ path: archive, originalname: 'export.zip' }] },
+        { version: '1.2.3' },
+        new FakeProgressRes() as unknown as ExpressResponse,
+      );
+      // the archive's manifest says 0.4.0; the explicit value wins
+      expect(mockUpsert).toHaveBeenCalledWith(DATASET_VERSION_SETTINGS_FIELD, '1.2.3');
+    });
+
+    it('reports what the import directory offers', async () => {
+      await writeDataset(path.join(root, 'dataset'));
+      await zipDataset(path.join(root, 'export.zip'));
+
+      const sources = await service.getImportSources();
+      expect(sources.import_dir_configured).toBe(true);
+      expect(sources.files.map((f) => [f.path, f.kind])).toEqual([
+        ['dataset', 'directory'],
+        ['export.zip', 'zip'],
+      ]);
+
+      delete process.env.DICTIONARY_IMPORT_DIR;
+      await expect(service.getImportSources()).resolves.toEqual({ import_dir_configured: false, files: [] });
+      process.env.DICTIONARY_IMPORT_DIR = root;
     });
   });
 });
