@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   HttpException,
   Injectable,
   InternalServerErrorException,
@@ -14,7 +15,6 @@ import { pipeline } from 'node:stream/promises';
 import { stat, unlink, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { Readable } from 'node:stream';
 import * as readline from 'node:readline';
 import { type Response } from 'express';
 import { EnWord } from '../../entities/en_word.entity';
@@ -24,7 +24,7 @@ import { EnMeaningTranslation } from '../../entities/en_meaning_translation.enti
 import { EnShortTranslation } from '../../entities/en_short_translation.entity';
 import { normalizeWordLinks, WORD_LINK_KINDS, WordLinkKindT } from '../../utils/normalizeWordLinks';
 import { resolveBaseFormHeadwords } from '../../utils/findBaseFormHeadwords';
-import { ImportDictionaryReq } from './dto/ImportDictionaryReq.dto';
+import { ImportDictionaryReq, ImportDictionarySourceDTO } from './dto/ImportDictionaryReq.dto';
 import {
   DatasetManifestT,
   EnEntryTypesE,
@@ -32,6 +32,8 @@ import {
   EnWordFormsE,
   EnWordT,
   ImportDictionaryChunkT,
+  ImportSourceKindE,
+  ImportSourcesT,
 } from '../../../../../types';
 import { SettingsService } from '../../../SettingsModule/settings.service';
 import { ErrorCodes } from '../../../../../core/constants/error_codes';
@@ -60,6 +62,17 @@ import {
 } from '../../../../../types/dictionaries/en/EnDataSetTypes';
 import { mapPhraseFromSetToDB } from './utils/mapPhraseFromSetToDB';
 import { PendingExport, PendingWordLinkT } from './types';
+import {
+  DatasetSource,
+  fetchPublishedManifest,
+  getImportDir,
+  HuggingFaceDatasetSource,
+  listImportDir,
+  ManualManifestT,
+  openImportDirSource,
+  openUploadedDatasetSource,
+  UploadedFilesByFieldT,
+} from './sources';
 
 type PendingWordLinksT = Record<WordLinkKindT, PendingWordLinkT[]>;
 const LINK_LABELS: Record<WordLinkKindT, string> = { synonyms: 'Synonym', antonyms: 'Antonym' };
@@ -69,7 +82,6 @@ const LINK_STAGES: Record<WordLinkKindT, EnDictionaryImportPhasesE> = {
 };
 const linkKey = (meaningId: number, word: string): string => `${meaningId}\u0000${word}`;
 
-const DATASET_BASE_URL = 'https://huggingface.co/datasets/Fristail27/vocab-bloom-hub-en/resolve/main/data';
 const EXPORT_TTL_MS = 15 * 60 * 1000;
 // Dataset lines are imported in transactional chunks of this size; each chunk
 // costs a handful of bulk queries instead of ~26 queries per line
@@ -96,38 +108,6 @@ export class EnImportDictionaryService {
     private readonly settingsService: SettingsService,
   ) {}
 
-  private async fetchManifest(): Promise<DatasetManifestT | null> {
-    try {
-      const response = await fetch(`${DATASET_BASE_URL}/${MANIFEST_FILE_NAME}`);
-      if (!response.ok) {
-        this.logger.warn(`Dataset manifest request failed: HTTP ${response.status}`);
-        return null;
-      }
-
-      const manifest = (await response.json()) as DatasetManifestT;
-      const lineCounts = manifest?.files ? Object.values(manifest.files) : [];
-      const isValid =
-        typeof manifest?.version === 'string' &&
-        lineCounts.length > 0 &&
-        lineCounts.every((f) => typeof f?.lines === 'number' && f.lines >= 0) &&
-        (manifest.synonym_links === undefined ||
-          (typeof manifest.synonym_links === 'number' && manifest.synonym_links >= 0)) &&
-        (manifest.antonym_links === undefined ||
-          (typeof manifest.antonym_links === 'number' && manifest.antonym_links >= 0));
-      if (!isValid) {
-        this.logger.warn('Dataset manifest has an unexpected shape, ignoring it');
-        return null;
-      }
-
-      return manifest;
-    } catch (error) {
-      this.logger.warn(
-        `Failed to fetch the dataset manifest: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      return null;
-    }
-  }
-
   /**
    * The version check the import UI runs before starting an import.
    * Serves a briefly cached copy of the published manifest.json.
@@ -137,7 +117,7 @@ export class EnImportDictionaryService {
       return this.manifestCache.manifest;
     }
 
-    const manifest = await this.fetchManifest();
+    const manifest = await fetchPublishedManifest(this.logger);
     if (!manifest) {
       throw new NotFoundException(ErrorCodes.dataset_manifest_not_found);
     }
@@ -147,6 +127,7 @@ export class EnImportDictionaryService {
   }
 
   private async streamJsonlImport<T>(
+    source: DatasetSource,
     res: Response,
     fileName: string,
     stage: EnDictionaryImportPhasesE,
@@ -154,7 +135,11 @@ export class EnImportDictionaryService {
     plusCount: () => number,
     handleChunk: (lines: T[]) => Promise<void>,
   ): Promise<void> {
-    const filePath = await this.downloadFile(fileName, res, EnDictionaryImportPhasesE.downloading_database);
+    const { path: filePath, temporary } = await source.acquireFile(fileName, res);
+    if (!filePath) {
+      this.logger.warn(`Dataset file "${fileName}" is absent from the source, stage "${stage}" skipped`);
+      return;
+    }
 
     const startedAt = Date.now();
     this.logger.log(`Import stage "${stage}" started (file "${fileName}")`);
@@ -196,65 +181,9 @@ export class EnImportDictionaryService {
       }
       throw new InternalServerErrorException(ErrorCodes.internal_server_error);
     } finally {
-      await unlink(filePath).catch(() => {});
+      // downloads are deleted once imported; a user's own files never are
+      if (temporary) await unlink(filePath).catch(() => {});
     }
-  }
-
-  private async downloadFile(
-    fileName: string,
-    res: Response,
-    stage: EnDictionaryImportPhasesE,
-  ): Promise<string> {
-    const tmpDir = path.join(os.tmpdir(), 'vocab-bloom-import');
-    if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true });
-    const filePath = path.join(tmpDir, fileName);
-
-    this.logger.log(`Downloading dataset file "${fileName}"`);
-
-    const response = await fetch(`${DATASET_BASE_URL}/${fileName}`).catch((error: Error) => {
-      this.logger.error(`Failed to download dataset file "${fileName}"`, error.stack);
-      throw new InternalServerErrorException(ErrorCodes.internal_server_error);
-    });
-    if (!response.ok || !response.body) {
-      this.logger.error(`Failed to download dataset file "${fileName}": HTTP ${response.status}`);
-      throw new InternalServerErrorException(ErrorCodes.internal_server_error);
-    }
-
-    const bytesTotal = Number(response.headers.get('content-length')) || 0;
-    let bytesDownloaded = 0;
-    let lastReportedPercent = -1;
-
-    const nodeStream = Readable.fromWeb(response.body as any);
-
-    nodeStream.on('data', (chunk: Buffer) => {
-      bytesDownloaded += chunk.length;
-
-      if (bytesTotal > 0) {
-        const percent = Math.floor((bytesDownloaded / bytesTotal) * 100);
-        if (percent === lastReportedPercent) return;
-        lastReportedPercent = percent;
-      }
-
-      const progressChunk: ImportDictionaryChunkT = {
-        percent: bytesTotal > 0 ? Math.floor((bytesDownloaded / bytesTotal) * 100) : 0,
-        stage,
-        downloaded: bytesDownloaded,
-        total: bytesTotal,
-      };
-      res.write(JSON.stringify(progressChunk) + '\n');
-    });
-
-    await pipeline(nodeStream, createWriteStream(filePath));
-
-    const finalChunk: ImportDictionaryChunkT = {
-      percent: 100,
-      stage,
-      downloaded: bytesDownloaded,
-      total: bytesTotal || bytesDownloaded,
-    };
-    res.write(JSON.stringify(finalChunk) + '\n');
-
-    return filePath;
   }
 
   // Called once per imported chunk; the tiny pause lets the progress stream flush
@@ -617,12 +546,14 @@ export class EnImportDictionaryService {
   }
 
   private async saveWords(
+    source: DatasetSource,
     res: Response,
     allLength: number,
     plusCount: () => number,
     pendingLinks: PendingWordLinksT,
   ): Promise<void> {
     await this.streamJsonlImport<DataSetWordT>(
+      source,
       res,
       DATASET_FILE_NAMES.words,
       EnDictionaryImportPhasesE.saving_words,
@@ -635,12 +566,14 @@ export class EnImportDictionaryService {
   }
 
   private async saveGrammarPatterns(
+    source: DatasetSource,
     res: Response,
     allLength: number,
     plusCount: () => number,
     pendingLinks: PendingWordLinksT,
   ): Promise<void> {
     await this.streamJsonlImport<DataSetGrammarPatternT>(
+      source,
       res,
       DATASET_FILE_NAMES.grammarPatterns,
       EnDictionaryImportPhasesE.saving_grammar_patterns,
@@ -653,12 +586,14 @@ export class EnImportDictionaryService {
   }
 
   private async savePhrases(
+    source: DatasetSource,
     res: Response,
     allLength: number,
     plusCount: () => number,
     pendingLinks: PendingWordLinksT,
   ): Promise<void> {
     await this.streamJsonlImport<DataSetPhraseT>(
+      source,
       res,
       DATASET_FILE_NAMES.phrases,
       EnDictionaryImportPhasesE.saving_phrases,
@@ -670,8 +605,14 @@ export class EnImportDictionaryService {
     );
   }
 
-  private async savePhrasalVerbs(res: Response, allLength: number, plusCount: () => number): Promise<void> {
+  private async savePhrasalVerbs(
+    source: DatasetSource,
+    res: Response,
+    allLength: number,
+    plusCount: () => number,
+  ): Promise<void> {
     await this.streamJsonlImport<DataSetWordT>(
+      source,
       res,
       DATASET_FILE_NAMES.phrasalVerbs,
       EnDictionaryImportPhasesE.saving_phrasal_verbs,
@@ -683,15 +624,62 @@ export class EnImportDictionaryService {
     );
   }
 
+  /**
+   * Opens the dataset source named by the request. Every check that can
+   * reject the request (unknown path, malformed dataset) runs here, before
+   * the progress stream starts, so the client still gets a plain 4xx.
+   */
+  private async openSource(source: ImportDictionarySourceDTO | undefined): Promise<DatasetSource> {
+    if (!source || source.kind === ImportSourceKindE.huggingface) {
+      return new HuggingFaceDatasetSource(this.logger);
+    }
+    if (source.kind === ImportSourceKindE.file) {
+      return openImportDirSource(source.path ?? '', this.logger);
+    }
+    throw new BadRequestException(ErrorCodes.dataset_file_not_found);
+  }
+
+  /** What the "from file" tab of the import page can offer: server-side datasets */
+  async getImportSources(): Promise<ImportSourcesT> {
+    return { import_dir_configured: getImportDir() !== null, files: await listImportDir() };
+  }
+
   async importDictionary(body: ImportDictionaryReq, res: Response): Promise<void> {
+    const source = await this.openSource(body.source);
+    const label = body.source?.kind === ImportSourceKindE.file ? `file "${body.source.path}"` : 'HuggingFace';
+    await this.runImport(source, label, res);
+  }
+
+  /**
+   * Imports what the multipart endpoint received: one archive, or the dataset
+   * files one by one. The uploads are deleted afterwards whether or not the
+   * import succeeded.
+   */
+  async importUploadedDictionary(
+    files: UploadedFilesByFieldT,
+    manual: ManualManifestT,
+    res: Response,
+  ): Promise<void> {
+    const source = await openUploadedDatasetSource(files, manual, this.logger);
+    const names = Object.values(files)
+      .flat()
+      .map((f) => `"${f.originalname}"`);
+    await this.runImport(source, `upload ${names.join(', ')}`, res);
+  }
+
+  /** The import pipeline shared by every source; the source is disposed at the end */
+  private async runImport(source: DatasetSource, label: string, res: Response): Promise<void> {
+    // the manifest is read before the stream opens: a local source has
+    // already validated it, HuggingFace may be unreachable
+    const manifest = await source.readManifest();
+
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Transfer-Encoding', 'chunked');
     res.setHeader('X-Accel-Buffering', 'no');
 
     const startedAt = Date.now();
-    this.logger.log('Dictionary import started');
+    this.logger.log(`Dictionary import from ${label} started`);
 
-    const manifest = await this.fetchManifest();
     if (!manifest) {
       this.logger.warn('Dataset manifest is missing — progress totals fall back to the legacy line counts');
     }
@@ -707,34 +695,48 @@ export class EnImportDictionaryService {
         (manifest.antonym_links ?? 0)
       : LEGACY_DATASET_TOTAL_LINES;
 
+    // a local dataset has nothing to download: its first stage is the words
+    // file; a dataset without a manifest has no version to report
+    const datasetVersion = manifest?.version || undefined;
     const firstChunk: ImportDictionaryChunkT = {
       percent: 0,
-      stage: EnDictionaryImportPhasesE.downloading_database,
-      ...(manifest && { datasetVersion: manifest.version }),
+      stage:
+        source instanceof HuggingFaceDatasetSource
+          ? EnDictionaryImportPhasesE.downloading_database
+          : EnDictionaryImportPhasesE.saving_words,
+      ...(datasetVersion && { datasetVersion }),
     };
     res.write(JSON.stringify(firstChunk) + '\n');
 
-    // meaning → synonym / antonym links are collected across every file and
-    // written last, once all the entries they can point at exist
-    const pendingLinks: PendingWordLinksT = { synonyms: [], antonyms: [] };
-    await this.saveWords(res, allLength, plusCount, pendingLinks);
-    await this.savePhrasalVerbs(res, allLength, plusCount);
-    await this.saveGrammarPatterns(res, allLength, plusCount, pendingLinks);
-    await this.savePhrases(res, allLength, plusCount, pendingLinks);
-    await this.linkPendingWords(
-      res,
-      pendingLinks,
-      allLength,
-      () => count,
-      (n) => {
-        count += n;
-      },
-    );
+    try {
+      // meaning → synonym / antonym links are collected across every file and
+      // written last, once all the entries they can point at exist
+      const pendingLinks: PendingWordLinksT = { synonyms: [], antonyms: [] };
+      await this.saveWords(source, res, allLength, plusCount, pendingLinks);
+      await this.savePhrasalVerbs(source, res, allLength, plusCount);
+      await this.saveGrammarPatterns(source, res, allLength, plusCount, pendingLinks);
+      await this.savePhrases(source, res, allLength, plusCount, pendingLinks);
+      await this.linkPendingWords(
+        res,
+        pendingLinks,
+        allLength,
+        () => count,
+        (n) => {
+          count += n;
+        },
+      );
+    } finally {
+      await source.dispose().catch((error) => {
+        this.logger.warn(
+          `Failed to clean up the dataset source: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      });
+    }
 
-    if (manifest) {
+    if (datasetVersion) {
       // Remember which dataset version this database now holds; a failure
       // here must not fail an already completed import
-      await this.settingsService.upsert(DATASET_VERSION_SETTINGS_FIELD, manifest.version).catch((error) => {
+      await this.settingsService.upsert(DATASET_VERSION_SETTINGS_FIELD, datasetVersion).catch((error) => {
         this.logger.warn(
           `Failed to store the imported dataset version: ${error instanceof Error ? error.message : String(error)}`,
         );
@@ -744,13 +746,15 @@ export class EnImportDictionaryService {
     const finalChunk: ImportDictionaryChunkT = {
       percent: 100,
       stage: EnDictionaryImportPhasesE.completed,
-      ...(manifest && { datasetVersion: manifest.version }),
+      ...(datasetVersion && { datasetVersion }),
     };
     res.write(JSON.stringify(finalChunk) + '\n');
 
     res.end();
 
-    this.logger.log(`Dictionary import completed: ${count} records in ${Date.now() - startedAt}ms`);
+    this.logger.log(
+      `Dictionary import from ${label} completed: ${count} records in ${Date.now() - startedAt}ms`,
+    );
   }
 
   private getExportTmpDir(): string {

@@ -11,6 +11,11 @@ export enum ErrorCodes {
   antonym_doesnt_exist = 'antonym_doesnt_exist',
   synonym_antonym_conflict = 'synonym_antonym_conflict',
   dataset_manifest_not_found = 'dataset_manifest_not_found',
+  // local dataset sources (issue #269)
+  import_dir_not_configured = 'import_dir_not_configured',
+  dataset_file_not_found = 'dataset_file_not_found',
+  dataset_invalid = 'dataset_invalid',
+  dataset_upload_missing = 'dataset_upload_missing',
   translation_doesnt_found = 'translation_doesnt_found',
   setting_field_doesnt_found = 'setting_field_doesnt_found',
   setting_field_already_exists = 'setting_field_already_exists',

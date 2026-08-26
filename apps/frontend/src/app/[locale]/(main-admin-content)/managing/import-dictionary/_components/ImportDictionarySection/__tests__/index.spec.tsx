@@ -9,7 +9,7 @@ jest.mock('next-intl', () => ({
 }));
 
 jest.mock('@/core/api/EnApi', () => ({
-  EnApi: { importDictionary: jest.fn() },
+  EnApi: { importDictionary: jest.fn(), uploadDictionary: jest.fn(), getImportSources: jest.fn() },
 }));
 
 import { EnApi } from '@/core/api/EnApi';
@@ -18,11 +18,18 @@ import { ImportDictionarySection } from '../index';
 type HandleChunkT = (c: ImportDictionaryChunkT) => void;
 
 const mockImportStreaming = (chunks: ImportDictionaryChunkT[], result: unknown = { success: true }) => {
-  (EnApi.importDictionary as jest.Mock).mockImplementation(async (handleChunk: HandleChunkT) => {
-    chunks.forEach(handleChunk);
-    return result;
-  });
+  (EnApi.importDictionary as jest.Mock).mockImplementation(
+    async (_body: unknown, handleChunk: HandleChunkT) => {
+      chunks.forEach(handleChunk);
+      return result;
+    },
+  );
 };
+
+const completedChunks = [
+  { stage: EnDictionaryImportPhasesE.saving_words, percent: 40 } as ImportDictionaryChunkT,
+  { stage: EnDictionaryImportPhasesE.completed, percent: 100 } as ImportDictionaryChunkT,
+];
 
 const renderSection = (props: React.ComponentProps<typeof ImportDictionarySection> = {}) =>
   render(
@@ -34,6 +41,7 @@ const renderSection = (props: React.ComponentProps<typeof ImportDictionarySectio
 describe('ImportDictionarySection', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (EnApi.getImportSources as jest.Mock).mockResolvedValue({ import_dir_configured: false, files: [] });
   });
 
   it('доводит прогресс до 100% и прячет кнопку после успешного импорта', async () => {
@@ -46,7 +54,8 @@ describe('ImportDictionarySection', () => {
     fireEvent.click(screen.getByText('start_importing'));
 
     await screen.findByText('100.00%');
-    expect(EnApi.importDictionary).toHaveBeenCalledWith(expect.any(Function), expect.any(Function));
+    // the default source is the published dataset: an empty body
+    expect(EnApi.importDictionary).toHaveBeenCalledWith({}, expect.any(Function), expect.any(Function));
     expect(screen.queryByText('start_importing')).not.toBeInTheDocument();
     expect(screen.queryByText('retry_importing')).not.toBeInTheDocument();
   });
@@ -108,5 +117,138 @@ describe('ImportDictionarySection', () => {
 
     await screen.findByText('retry_importing');
     await waitFor(() => expect(screen.getByText('unknown_error')).toBeInTheDocument());
+  });
+
+  describe('local sources (issue #269)', () => {
+    const openTab = async (name: string, marker: string) => {
+      fireEvent.click(screen.getByRole('tab', { name }));
+      await screen.findByText(marker);
+    };
+    const startButton = () => screen.getByText('start_importing').closest('button');
+    const uploadedCall = () =>
+      (EnApi.uploadDictionary as jest.Mock).mock.calls[0] as [
+        Record<string, File | undefined>,
+        Record<string, unknown>,
+      ];
+    const mockUploadStreaming = () =>
+      (EnApi.uploadDictionary as jest.Mock).mockImplementation(
+        async (_files: unknown, _manual: unknown, handleChunk: HandleChunkT) => {
+          completedChunks.forEach(handleChunk);
+          return { success: true };
+        },
+      );
+
+    it('archive tab: disables the start until an archive is picked, then uploads it', async () => {
+      mockUploadStreaming();
+      renderSection();
+      await openTab('source_archive', 'upload_text');
+      // without DICTIONARY_IMPORT_DIR the server-side picker is replaced by a hint
+      expect(screen.getByText('import_dir_hint')).toBeInTheDocument();
+      expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+      expect(startButton()).toBeDisabled();
+
+      const archive = new File(['zip'], 'export.zip', { type: 'application/zip' });
+      fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement, {
+        target: { files: [archive] },
+      });
+      await screen.findByText('export.zip');
+      await waitFor(() => expect(startButton()).toBeEnabled());
+
+      fireEvent.click(screen.getByText('start_importing'));
+      await screen.findByText('100.00%');
+      const [files, manual] = uploadedCall();
+      expect(Object.keys(files)).toEqual(['archive']);
+      expect(files.archive?.name).toBe('export.zip');
+      expect(manual).toEqual({});
+      expect(EnApi.importDictionary).not.toHaveBeenCalled();
+    });
+
+    it('archive tab: offers the datasets of the import directory and imports the picked one by path', async () => {
+      (EnApi.getImportSources as jest.Mock).mockResolvedValue({
+        import_dir_configured: true,
+        files: [
+          { path: 'export.zip', kind: 'zip', size: 2048 },
+          { path: 'dataset', kind: 'directory', size: 0 },
+        ],
+      });
+      mockImportStreaming(completedChunks);
+      renderSection();
+      await openTab('source_archive', 'upload_text');
+      expect(screen.queryByText('import_dir_hint')).not.toBeInTheDocument();
+
+      fireEvent.mouseDown(screen.getByRole('combobox'));
+      fireEvent.click(await screen.findByText('dataset/'));
+      await waitFor(() => expect(startButton()).toBeEnabled());
+
+      fireEvent.click(screen.getByText('start_importing'));
+      await screen.findByText('100.00%');
+      expect(EnApi.importDictionary).toHaveBeenCalledWith(
+        { source: { kind: 'file', path: 'dataset' } },
+        expect.any(Function),
+        expect.any(Function),
+      );
+      expect(EnApi.uploadDictionary).not.toHaveBeenCalled();
+    });
+
+    it('files tab: one slot per dataset file, the manifest as a file', async () => {
+      mockUploadStreaming();
+      renderSection();
+      await openTab('source_files', 'files_hint');
+      expect(startButton()).toBeDisabled();
+
+      const slotInput = (slot: string) =>
+        screen.getByTestId(`slot-${slot}`).querySelector('input[type="file"]') as HTMLInputElement;
+      // the manifest alone is not a dataset
+      fireEvent.change(slotInput('manifest'), { target: { files: [new File(['{}'], 'manifest.json')] } });
+      await screen.findByText('manifest.json');
+      expect(startButton()).toBeDisabled();
+
+      // the slot decides what the file is, whatever it is called
+      fireEvent.change(slotInput('words'), { target: { files: [new File(['{}'], 'my-words.txt')] } });
+      await screen.findByText('my-words.txt');
+      fireEvent.change(slotInput('phrases'), { target: { files: [new File(['{}'], 'phrases.jsonl')] } });
+      await screen.findByText('phrases.jsonl');
+      await waitFor(() => expect(startButton()).toBeEnabled());
+
+      fireEvent.click(screen.getByText('start_importing'));
+      await screen.findByText('100.00%');
+      const [files, manual] = uploadedCall();
+      expect(Object.entries(files).map(([slot, f]) => [slot, f?.name])).toEqual([
+        ['manifest', 'manifest.json'],
+        ['words', 'my-words.txt'],
+        ['phrases', 'phrases.jsonl'],
+      ]);
+      expect(manual).toEqual({});
+    });
+
+    it('files tab: the manifest typed by hand replaces the manifest slot', async () => {
+      mockUploadStreaming();
+      renderSection();
+      await openTab('source_files', 'files_hint');
+
+      const wordsInput = screen
+        .getByTestId('slot-words')
+        .querySelector('input[type="file"]') as HTMLInputElement;
+      fireEvent.change(wordsInput, { target: { files: [new File(['{}'], 'words.jsonl')] } });
+      await screen.findByText('words.jsonl');
+
+      fireEvent.click(screen.getByLabelText('manifest_manual'));
+      expect(screen.queryByTestId('slot-manifest')).not.toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('manifest_version'), { target: { value: ' 3.1.0 ' } });
+      fireEvent.change(screen.getByLabelText('manifest_synonym_links'), { target: { value: '12' } });
+
+      fireEvent.click(screen.getByText('start_importing'));
+      await screen.findByText('100.00%');
+      const [files, manual] = uploadedCall();
+      expect(Object.keys(files)).toEqual(['words']);
+      expect(manual).toEqual({ version: '3.1.0', synonym_links: 12, antonym_links: undefined });
+    });
+
+    it('never shows the up-to-date hint for a local source', async () => {
+      renderSection({ yourVersion: '0.2.0', latestVersion: '0.2.0' });
+      expect(screen.getByText('up_to_date')).toBeInTheDocument();
+      await openTab('source_archive', 'upload_text');
+      expect(screen.queryByText('up_to_date')).not.toBeInTheDocument();
+    });
   });
 });

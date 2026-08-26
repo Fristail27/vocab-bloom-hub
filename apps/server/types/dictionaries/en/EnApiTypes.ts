@@ -14,6 +14,7 @@ import { EditMeaningTranslationReqDTO } from '../../../src/modules/EnModule/modu
 import { EditCommonInfoOfWordReqDTO } from '../../../src/modules/EnModule/dto/EditCommonInfoOfWordReq.dto';
 import { EditPhrasalBaseReqDTO } from '../../../src/modules/EnModule/dto/EditPhrasalBase.dto';
 import { ImportDictionaryReq } from '../../../src/modules/EnModule/modules/EnImportDictionary/dto/ImportDictionaryReq.dto';
+import { UploadDictionaryReqDTO } from '../../../src/modules/EnModule/modules/EnImportDictionary/dto/UploadDictionaryReq.dto';
 import { SearchReqDTO } from '../../../src/modules/EnModule/modules/EnSearch/dto/SearchReq.dto';
 import { SearchDetailedReqDTO } from '../../../src/modules/EnModule/modules/EnSearch/dto/SearchDetailedReq.dto';
 import { ListWordsQueryDTO } from '../../../src/modules/EnModule/modules/EnAdminLists/dto/ListWordsQuery.dto';
@@ -139,6 +140,8 @@ export type EditPhrasalBaseReqT = EditPhrasalBaseReqDTO;
 export type EditPhrasalBaseResT = { success: boolean } | ErrorResT;
 
 export type ImportDictionaryReqT = ImportDictionaryReq;
+// text fields of the multipart upload (the files go in their own fields)
+export type UploadDictionaryReqT = Partial<UploadDictionaryReqDTO>;
 export type ImportDictionaryChunkT = {
   percent: number;
   stage?: EnDictionaryImportPhasesE | undefined;
@@ -163,6 +166,27 @@ export type DatasetManifestT = {
 };
 
 export type GetDatasetManifestResT = DatasetManifestT | ErrorResT;
+
+// Where an import reads the dataset from (issue #269): the published
+// HuggingFace dataset, or a directory / zip archive inside the server's
+// DICTIONARY_IMPORT_DIR. Uploads go through their own multipart endpoint.
+export enum ImportSourceKindE {
+  huggingface = 'huggingface',
+  file = 'file',
+}
+export type ImportSourceFileT = {
+  // relative to DICTIONARY_IMPORT_DIR; what the import request sends back as `source.path`
+  path: string;
+  kind: 'zip' | 'directory';
+  size: number;
+  modified_at?: string | undefined;
+};
+export type ImportSourcesT = {
+  // false when DICTIONARY_IMPORT_DIR is unset: the UI offers uploads only
+  import_dir_configured: boolean;
+  files: ImportSourceFileT[];
+};
+export type GetImportSourcesResT = ImportSourcesT | ErrorResT;
 
 export type EnPosStatT = { part_of_speech: EnPartOfSpeechE; count: number };
 export type EnWordLevelStatT = { word_level: WordLevelE | null; count: number };
