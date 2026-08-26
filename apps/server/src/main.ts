@@ -14,6 +14,12 @@ import { AllExceptionsFilter } from './core/filters/all-exceptions.filter';
 import { getLogLevels } from './core/logging/get-log-levels';
 import { getCorsOrigins, isSwaggerEnabled, shouldCompress } from './core/utils/http-hardening';
 import {
+  assertPublicApiConfig,
+  getApiSurfaces,
+  getPublicApiRateLimit,
+  PUBLIC_API_PREFIX,
+} from './core/utils/public-api';
+import {
   assertDatabaseDriverConsistent,
   assertRequiredConfig,
   checkIsPostgres,
@@ -29,6 +35,7 @@ async function bootstrap() {
   }
   try {
     assertRequiredConfig();
+    assertPublicApiConfig();
     assertDatabaseDriverConsistent();
   } catch (error) {
     if (error instanceof ConfigurationError) {
@@ -107,5 +114,11 @@ async function bootstrap() {
   );
   logger.log(`CORS origins: ${corsOrigins.join(', ')}`);
   logger.log(`Swagger UI: ${isSwaggerEnabled() ? 'enabled at /api' : 'disabled (production)'}`);
+  const surfaces = getApiSurfaces();
+  const rateLimit = getPublicApiRateLimit();
+  logger.log(
+    `Public API ${PUBLIC_API_PREFIX}: ${surfaces.publicApi ? `enabled, ${rateLimit.limit} requests per ${rateLimit.ttl / 1000} s per client` : 'disabled (PUBLIC_API_ENABLED=false)'}; ` +
+      `admin API: ${surfaces.adminApi ? 'enabled' : 'disabled (ADMIN_API_ENABLED=false)'}`,
+  );
 }
 bootstrap();

@@ -82,7 +82,7 @@ The project is in **early development** (`0.x`). The English dictionary, the adm
   - _Managing_ — create and edit English words, their meanings, translations, synonyms, antonyms and short translations;
   - _Statistics_ — an overview of the dictionary contents;
   - _Documentation_ — in-app reference for the data model.
-- **REST API** documented with Swagger/OpenAPI, protected by a single admin login (httpOnly JWT cookie or Bearer token).
+- **REST API** documented with Swagger/OpenAPI: a public read-only, versioned prefix `/api/v1` for consuming applications (no login, rate-limited) and an admin API protected by a single admin login (httpOnly JWT cookie or Bearer token) — see [`docs/api.md`](docs/api.md).
 - **Dictionary import / export** as NDJSON datasets (`POST /api/en/dictionary/import`, `GET /api/en/dictionary/export`), so the whole dictionary can be versioned, shared or moved between environments — including offline, from an uploaded archive or a folder on the server (see [`docs/offline-import.md`](docs/offline-import.md)).
 - **Search** across words, meanings and translations.
 - **PostgreSQL** in production with TypeORM migrations applied on startup, and a zero-config **SQLite** fallback for local development and tests.
@@ -225,6 +225,7 @@ Details, including how to adopt migrations on a database created by the old auto
 - [`docs/authentication.md`](docs/authentication.md) — how the single-admin login, login proof and JWT cookie work
 - [`docs/migrations.md`](docs/migrations.md) — TypeORM migrations workflow for Postgres, deployment and troubleshooting
 - [`docs/offline-import.md`](docs/offline-import.md) — moving a dictionary between instances without internet access (export → copy → import from file)
+- [`docs/api.md`](docs/api.md) — the public `/api/v1` contract (envelope, errors, rate limit, deprecated aliases) and the public-only / admin-only switches
 - [`docs/README.ru.md`](docs/README.ru.md) — this README in Russian
 - Swagger UI at `/api` on a running server — the live API reference
 

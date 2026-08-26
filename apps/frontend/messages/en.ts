@@ -374,7 +374,7 @@ export default {
   },
   documentation: {
     intro:
-      'Endpoints available without authorization. Every page describes the request filters and lets you run a real request against the current database.',
+      'The public read-only API under /api/v1: no authorization, list responses in a { data, meta } envelope, errors as { statusCode, message, error: true }, every response carries X-API-Version. Every page describes the request filters and lets you run a real request against the current database.',
     public_endpoints: 'Public endpoints',
     endpoint_search: 'Basic search',
     endpoint_search_detailed: 'Detailed search',
@@ -410,6 +410,8 @@ export default {
     col_short_translations: 'Short translations',
     response_type: 'Response type',
     auth_public: 'No authorization',
+    rate_limit_shared:
+      'Shares the public API budget (100 requests per 60 s by default, PUBLIC_API_RATE_LIMIT on the server)',
     rate_limit: 'Up to {limit} requests per {seconds} s',
     try_it: 'Try it out',
     send_request: 'Send request',

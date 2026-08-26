@@ -46,7 +46,7 @@ describe('buildCurlSnippet', () => {
       limit: 10,
     });
 
-    expect(snippet).toContain(`curl -X POST 'http://localhost:3010/api/en/search/detailed'`);
+    expect(snippet).toContain(`curl -X POST 'http://localhost:3010/api/v1/search/detailed'`);
     expect(snippet).toContain(`-H 'Content-Type: application/json'`);
     expect(snippet).toContain(`-d '{"search":"run","limit":10}'`);
   });
@@ -64,8 +64,11 @@ describe('extractWords', () => {
     expect(extractWords([{ id: 1, word: 'run' }])).toHaveLength(1);
   });
 
-  it('читает items из постраничного ответа', () => {
-    const words = extractWords({ items: [{ id: 1, word: 'run' }], page: 1, limit: 10, has_more: false });
+  it('читает data из конверта v1', () => {
+    const words = extractWords({
+      data: [{ id: 1, word: 'run' }],
+      meta: { page: 1, limit: 10, has_more: false },
+    });
 
     expect(words).toHaveLength(1);
   });

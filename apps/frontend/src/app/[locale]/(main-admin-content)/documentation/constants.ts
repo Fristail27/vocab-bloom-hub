@@ -37,6 +37,8 @@ export type ApiEndpointDocT = {
   path: string;
   // Path relative to the API base url, used to run the live example
   clientPath: string;
+  // Per-endpoint limit; endpoints without one share the public prefix budget
+  // (PUBLIC_API_RATE_LIMIT on the server, 100 requests per 60 s by default)
   throttle?: { limit: number; seconds: number };
   params: ApiParamDocT[];
   responseType: string;
@@ -62,10 +64,9 @@ export const DOCUMENTED_ENDPOINTS: ApiEndpointDocT[] = [
     key: ApiEndpointKeyE.search,
     slug: 'search',
     method: 'POST',
-    path: '/api/en/search/',
-    clientPath: '/en/search',
-    throttle: { limit: 30, seconds: 10 },
-    responseType: 'EnSearchWordT[]',
+    path: '/api/v1/search',
+    clientPath: '/v1/search',
+    responseType: 'PublicSearchV1ResT',
     params: [
       SEARCH_TERM_PARAM,
       ENTRY_TYPE_PARAM,
@@ -84,10 +85,9 @@ export const DOCUMENTED_ENDPOINTS: ApiEndpointDocT[] = [
     key: ApiEndpointKeyE.search_detailed,
     slug: 'search-detailed',
     method: 'POST',
-    path: '/api/en/search/detailed',
-    clientPath: '/en/search/detailed',
-    throttle: { limit: 30, seconds: 10 },
-    responseType: 'SearchDetailedItemsT',
+    path: '/api/v1/search/detailed',
+    clientPath: '/v1/search/detailed',
+    responseType: 'PublicSearchDetailedV1ResT',
     params: [
       SEARCH_TERM_PARAM,
       ENTRY_TYPE_PARAM,
