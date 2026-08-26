@@ -52,6 +52,7 @@ import { EnAdminListsService } from './modules/EnAdminLists/enAdminLists.service
     EnStatisticsService,
     EnAdminListsService,
   ],
-  exports: [EnService],
+  // the public API reuses the search service
+  exports: [EnService, EnSearchService],
 })
 export class EnModule {}

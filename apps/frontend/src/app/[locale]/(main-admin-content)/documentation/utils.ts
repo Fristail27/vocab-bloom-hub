@@ -1,4 +1,4 @@
-import { EnWordT, SearchDetailedItemsT } from 'server/types';
+import { EnWordT, PublicListResT } from 'server/types';
 import { ApiEndpointDocT, ApiParamDocT, ParamControlE } from './constants';
 
 export type ParamValuesT = Record<string, unknown>;
@@ -35,20 +35,26 @@ export const buildCurlSnippet = (endpoint: ApiEndpointDocT, baseUrl: string, bod
   return lines.join(' \\\n');
 };
 
-// Both search endpoints answer with a word list, either bare or wrapped in a
-// paginated envelope; anything else has no table representation
+// Public list endpoints answer with the v1 envelope `{ data, meta }`; a bare
+// list (the deprecated aliases) is accepted too. Anything else has no table
+// representation
 export const extractWords = (response: unknown): ResponseWordT[] | null => {
   if (Array.isArray(response)) return response as ResponseWordT[];
 
-  const items = (response as SearchDetailedItemsT | null)?.items;
+  const data = (response as Partial<PublicListResT<ResponseWordT, unknown>> | null)?.data;
 
-  return Array.isArray(items) ? items : null;
+  return Array.isArray(data) ? data : null;
 };
 
+// The scalar fields of `meta` (paging, counts); scalars at the top level are
+// kept for responses without an envelope
 export const extractMeta = (response: unknown): ResponseMetaT[] => {
   if (!response || typeof response !== 'object' || Array.isArray(response)) return [];
 
-  return Object.entries(response)
+  const source = (response as { meta?: unknown }).meta;
+  const scalars = source && typeof source === 'object' && !Array.isArray(source) ? source : response;
+
+  return Object.entries(scalars)
     .filter(([, value]) => ['string', 'number', 'boolean'].includes(typeof value))
     .map(([key, value]) => ({ key, value: String(value) }));
 };

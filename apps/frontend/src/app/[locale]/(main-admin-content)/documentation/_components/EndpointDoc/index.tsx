@@ -31,8 +31,10 @@ export const EndpointDoc: React.FC<EndpointDocP> = ({ endpoint }) => {
             {endpoint.path}
           </Text>
           <Tag color="success">{t('auth_public')}</Tag>
-          {endpoint.throttle && (
+          {endpoint.throttle ? (
             <Tag>{t('rate_limit', { limit: endpoint.throttle.limit, seconds: endpoint.throttle.seconds })}</Tag>
+          ) : (
+            <Tag>{t('rate_limit_shared')}</Tag>
           )}
         </div>
 

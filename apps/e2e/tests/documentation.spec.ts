@@ -16,8 +16,8 @@ test.describe('documentation', () => {
     await page.goto('/en/documentation/search-detailed');
 
     // the same path also shows up inside the curl example below
-    await expect(page.getByText('/api/en/search/detailed', { exact: true })).toBeVisible();
-    await expect(page.getByText('Up to 30 requests per 10 s')).toBeVisible();
+    await expect(page.getByText('/api/v1/search/detailed', { exact: true })).toBeVisible();
+    await expect(page.getByText(/Shares the public API budget/)).toBeVisible();
 
     const params = page.getByRole('table').first();
     await expect(params.getByText('with_meanings')).toBeVisible();

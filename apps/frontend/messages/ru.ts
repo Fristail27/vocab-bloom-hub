@@ -376,7 +376,7 @@ export default {
   },
   documentation: {
     intro:
-      'Методы, доступные без авторизации. На каждой странице описаны фильтры запроса и можно выполнить реальный запрос к текущей базе данных.',
+      'Публичный read-only API под префиксом /api/v1: без авторизации, списки в конверте { data, meta }, ошибки в виде { statusCode, message, error: true }, в каждом ответе заголовок X-API-Version. На каждой странице описаны фильтры запроса и можно выполнить реальный запрос к текущей базе данных.',
     public_endpoints: 'Публичные методы',
     endpoint_search: 'Базовый поиск',
     endpoint_search_detailed: 'Детальный поиск',
@@ -412,6 +412,8 @@ export default {
     col_short_translations: 'Короткие переводы',
     response_type: 'Тип ответа',
     auth_public: 'Без авторизации',
+    rate_limit_shared:
+      'Общий лимит публичного API (по умолчанию 100 запросов в 60 с, PUBLIC_API_RATE_LIMIT на сервере)',
     rate_limit: 'До {limit} запросов за {seconds} с',
     try_it: 'Попробовать',
     send_request: 'Отправить запрос',

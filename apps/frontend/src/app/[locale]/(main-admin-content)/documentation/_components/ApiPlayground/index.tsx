@@ -15,11 +15,12 @@ import styles from './styles.module.scss';
 
 const { Text } = Typography;
 
-// Requests go through the regular api clients, so the docs hit exactly the same
-// endpoints the admin itself uses
+// Requests go through the regular api client against the public prefix, so
+// the docs show exactly what a consumer gets — envelope included
 const RUNNERS: Record<ApiEndpointKeyE, (body: ParamValuesT) => Promise<unknown>> = {
-  [ApiEndpointKeyE.search]: (body) => EnApi.searchByFilters(body as unknown as SearchReqT),
-  [ApiEndpointKeyE.search_detailed]: (body) => EnApi.searchDetailed(body as unknown as SearchDetailedReqT),
+  [ApiEndpointKeyE.search]: (body) => EnApi.publicSearch(body as unknown as SearchReqT),
+  [ApiEndpointKeyE.search_detailed]: (body) =>
+    EnApi.publicSearchDetailed(body as unknown as SearchDetailedReqT),
 };
 
 const getInitialValues = (params: ApiParamDocT[]): ParamValuesT =>
