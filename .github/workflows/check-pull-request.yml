@@ -63,6 +63,46 @@ jobs:
       - name: Server e2e tests
         run: yarn workspace server test:e2e
 
+  query-plans:
+    name: query plans (Postgres)
+    runs-on: ubuntu-latest
+
+    # The query-plan guard of the public reads (issue #279): with sequential
+    # scans disabled, every statement of a hot endpoint must find an index
+    # even on an empty database, so a query that cannot use one fails here
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: vocab
+          POSTGRES_PASSWORD: vocab
+          POSTGRES_DB: vocab_bloom
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vocab"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://vocab:vocab@localhost:5432/vocab_bloom
+      ADMIN_USERNAME: plans-admin
+      ADMIN_PASSWORD: plans-password
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup
+
+      - name: Apply migrations
+        run: yarn workspace server migration:run
+
+      - name: Query-plan guard
+        run: yarn workspace server test:plans
+
   e2e:
     name: browser e2e
     runs-on: ubuntu-latest

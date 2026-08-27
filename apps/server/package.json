@@ -43,6 +43,7 @@
     "migration:show": "typeorm-ts-node-commonjs migration:show -d src/db/data-source.ts",
     "openapi:generate": "ts-node -r tsconfig-paths/register src/openapi/generate.ts",
     "openapi:check": "ts-node -r tsconfig-paths/register src/openapi/generate.ts --check",
+    "bench": "ts-node -r tsconfig-paths/register src/bench/run.ts",
     "db:reset": "typeorm-ts-node-commonjs schema:drop -d src/db/data-source.ts && typeorm-ts-node-commonjs migration:run -d src/db/data-source.ts",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -52,7 +53,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:plans": "jest --config ./test/jest-plans.json --runInBand"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.28",

@@ -29,10 +29,15 @@ yarn workspace e2e test                   # rerun without rebuilding the fronten
 yarn workspace server openapi:generate    # rewrite apps/server/openapi/public-v1.json (committed) + admin.json (ignored)
 yarn workspace server openapi:check       # fail if the committed public spec is stale (CI runs it)
 
+yarn workspace server bench [--explain]   # latency of the hot reads on DATABASE_URL (full dictionary), see docs/performance.md
+yarn workspace server test:plans          # Postgres-only query-plan guard: no Seq Scan on the large tables (CI runs it)
+
 yarn lint / yarn lint:fix                 # ESLint 10 flat config (eslint.config.ts)
 yarn format / yarn format:check           # Prettier
 yarn check          # lint + format:check (run before finishing work)
 ```
+
+Indexes a decorator cannot express (`COLLATE "C"`, GIN) are declared with `MANUALLY_MANAGED_INDEX` (`synchronize: false`) and created by their migration; `test:plans` fails when a hot query stops using an index.
 
 After changing anything under `/api/v1` (routes, DTOs, Swagger decorators) run `openapi:generate` and commit `apps/server/openapi/public-v1.json` — CI and `test/public-openapi.e2e-spec.ts` compare it with the code.
 
@@ -44,8 +49,8 @@ A single `.env` at the repo root is used by both apps (frontend scripts wrap wit
 
 Database: the `DATABASE_URL` scheme selects the driver — `postgres://` connects to Postgres, `sqlite:<path>` (e.g. `sqlite:./e2e.sqlite`, `sqlite::memory:`) runs better-sqlite3 on that file, any other scheme fails startup. When unset, it falls back to `dev.sqlite` at the repo root. The two modes manage the schema differently (config in `apps/server/src/db/typeorm-options.ts`):
 
-- **SQLite (dev fallback)** — `synchronize: true`, entity changes reshape the schema automatically. No migrations.
-- **Postgres** — `synchronize` is off; the schema is managed by TypeORM migrations in `apps/server/src/db/migrations/`, which run automatically on server start (`migrationsRun`). After changing an entity, generate a migration against a Postgres instance with the current schema and register the new class in `src/db/migrations/index.ts` (the CLI and the runtime read that explicit list, not a glob):
+- **SQLite (dev fallback)** — `synchronize: true`, entity changes reshape the schema automatically. No migrations. Development and tests only: on the full dictionary its search tiers take ~1 s per request (`docs/performance.md`).
+- **Postgres** — the only supported production database (the full dictionary needs its indexes, see `docs/performance.md`); `synchronize` is off; the schema is managed by TypeORM migrations in `apps/server/src/db/migrations/`, which run automatically on server start (`migrationsRun`). After changing an entity, generate a migration against a Postgres instance with the current schema and register the new class in `src/db/migrations/index.ts` (the CLI and the runtime read that explicit list, not a glob):
 
 ```bash
 DATABASE_URL=postgres://... yarn workspace server migration:generate src/db/migrations/MyChange

@@ -8,6 +8,8 @@ import { EnEntryTypesE, EnSearchWordT, SearchDetailedItemsT } from '../../../../
 import { mapSearchResults } from './utils/mapSearchResults';
 import { mapDetailedSearchResults } from './utils/mapDetailedSearchResults';
 import { escapeLike } from './utils/escapeLike';
+import { bytewise } from '../../utils/bytewise';
+import { RELATION_LOAD_STRATEGY } from '../../utils/wordRelations';
 
 @Injectable()
 export class EnSearchService {
@@ -57,7 +59,7 @@ export class EnSearchService {
       .createQueryBuilder('w')
       .innerJoinAndSelect('w.word', 'entry')
       .leftJoinAndSelect('w.base_form', 'baseForm')
-      .where("entry.word LIKE :word ESCAPE '\\'", { word: `${escapeLike(search)}%` })
+      .where(`${bytewise('entry.word')} LIKE :word ESCAPE '\\'`, { word: `${escapeLike(search)}%` })
       .andWhere('entry.type NOT IN (:...excludedTypes)', {
         excludedTypes: [EnEntryTypesE.phrase, EnEntryTypesE.grammar_pattern],
       });
@@ -69,7 +71,7 @@ export class EnSearchService {
       );
     }
 
-    const wordsStartFrom = await qb.take(limit).getMany();
+    const wordsStartFrom = await qb.limit(limit).getMany();
 
     wordsStartFrom.forEach((w) => {
       if (w.base_form) {
@@ -106,7 +108,7 @@ export class EnSearchService {
           { excludedIds },
         );
       }
-      const wordsEndsFrom = await qb.take(limit).getMany();
+      const wordsEndsFrom = await qb.limit(limit).getMany();
 
       wordsEndsFrom.forEach((w) => wordsEndsFromSet.add(w.id));
     }
@@ -140,7 +142,7 @@ export class EnSearchService {
         );
       }
 
-      const anyMatchesWords = await qb.take(limit).getMany();
+      const anyMatchesWords = await qb.limit(limit).getMany();
 
       anyMatchesWords.forEach((w) => anyMatchesWordsSet.add(w.id));
     }
@@ -169,7 +171,7 @@ export class EnSearchService {
         .createQueryBuilder('w')
         .innerJoinAndSelect('w.word', 'entry')
         .where(
-          `(entry.word LIKE :start ESCAPE '\\' OR entry.word LIKE :middle ESCAPE '\\' OR entry.word LIKE :end ESCAPE '\\')`,
+          `(${bytewise('entry.word')} LIKE :start ESCAPE '\\' OR entry.word LIKE :middle ESCAPE '\\' OR entry.word LIKE :end ESCAPE '\\')`,
           {
             start: `${escapeLike(search)} %`,
             middle: `% ${escapeLike(search)} %`,
@@ -181,7 +183,7 @@ export class EnSearchService {
       if (excludedIds.length > 0) {
         qb.andWhere('w.id NOT IN (:...excludedIds)', { excludedIds });
       }
-      const phrasesExact = await qb.take(limit).getMany();
+      const phrasesExact = await qb.limit(limit).getMany();
 
       phrasesExact.forEach((w) => phrasesExactSet.add(w.id));
     }
@@ -249,7 +251,11 @@ export class EnSearchService {
     if (ids.length === 0) {
       return [];
     }
-    const rows = await this.enWordsRep.find({ where: { id: In(ids) }, relations });
+    const rows = await this.enWordsRep.find({
+      where: { id: In(ids) },
+      relations,
+      relationLoadStrategy: RELATION_LOAD_STRATEGY,
+    });
     const byId = new Map(rows.map((row) => [row.id, row]));
     return ids.map((id) => byId.get(id)).filter((row): row is EnWord => row !== undefined);
   }

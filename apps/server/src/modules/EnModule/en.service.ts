@@ -18,7 +18,7 @@ import {
 } from '../../../types';
 import { ErrorCodes } from '../../../core/constants/error_codes';
 import { prepareWordFromDB } from './utils/prepareWordFromDB';
-import { FULL_WORD_RELATIONS } from './utils/wordRelations';
+import { FULL_WORD_RELATIONS, RELATION_LOAD_STRATEGY } from './utils/wordRelations';
 import { AddWordReqDTO, AddWordReqFormDTO } from './dto/AddWordReq.dto';
 import { AddWordFormReqDTO } from './dto/AddWordFormReq.dto';
 import { EditWordFormReqDTO } from './dto/EditWordFormReq.dto';
@@ -309,7 +309,11 @@ export class EnService {
   }
 
   async getWordById(id: number): Promise<EnWordT> {
-    const res = await this.enWordsRep.findOne({ where: { id }, relations: FULL_WORD_RELATIONS });
+    const res = await this.enWordsRep.findOne({
+      where: { id },
+      relations: FULL_WORD_RELATIONS,
+      relationLoadStrategy: RELATION_LOAD_STRATEGY,
+    });
 
     if (!res) {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);
