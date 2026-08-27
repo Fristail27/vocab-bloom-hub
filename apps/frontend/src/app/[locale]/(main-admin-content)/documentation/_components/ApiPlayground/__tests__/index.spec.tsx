@@ -12,7 +12,7 @@ jest.mock('next-intl', () => ({
 
 jest.mock('@/core/api/EnApi', () => ({
   // the playground runs against the public prefix and shows the v1 envelope
-  EnApi: { publicSearch: jest.fn(), publicSearchDetailed: jest.fn() },
+  EnApi: { publicSearch: jest.fn(), publicSearchDetailed: jest.fn(), publicGet: jest.fn() },
 }));
 
 import { EnApi } from '@/core/api/EnApi';
@@ -20,6 +20,8 @@ import { ApiEndpointKeyE, DOCUMENTED_ENDPOINTS } from '../../../constants';
 import { ApiPlayground } from '../index';
 
 const searchEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.search)!;
+const wordEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.word)!;
+const wordsEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.words)!;
 
 const makeWord = (id: number, word: string): EnSearchWordT =>
   ({
@@ -99,5 +101,35 @@ describe('ApiPlayground (issue #245)', () => {
     typeSearch('run');
 
     expect(screen.getByText(/-d '{"search":"run","limit":10}'/)).toBeInTheDocument();
+  });
+
+  it('выполняет GET-метод с path-параметром через публичный префикс (issue #272)', async () => {
+    (EnApi.publicGet as jest.Mock).mockResolvedValue({
+      data: [makeWord(1, 'run')],
+      meta: { word: 'run', count: 1 },
+    });
+
+    render(<ApiPlayground endpoint={wordEndpoint} />);
+    expect(screen.getByRole('button', { name: 'send_request' })).toBeDisabled();
+
+    typeSearch('run');
+    expect(screen.getByText(/curl -X GET '.*\/v1\/words\/run'/)).toBeInTheDocument();
+    await send();
+
+    expect(EnApi.publicGet).toHaveBeenCalledWith('/v1/words/run', {});
+    expect(screen.getByText(/"count": 1/)).toBeInTheDocument();
+  });
+
+  it('отправляет фильтры списка как query-параметры', async () => {
+    (EnApi.publicGet as jest.Mock).mockResolvedValue({
+      data: [],
+      meta: { limit: 20, has_more: false, next_cursor: null },
+    });
+
+    render(<ApiPlayground endpoint={wordsEndpoint} />);
+    await send();
+
+    expect(EnApi.publicGet).toHaveBeenCalledWith('/v1/words', { form_of_word: ['base_form'], limit: 20 });
+    expect(screen.getByText(/\/v1\/words\?form_of_word=base_form&limit=20'/)).toBeInTheDocument();
   });
 });

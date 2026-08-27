@@ -1,4 +1,4 @@
-import { AbstractBaseApi, type DownloadedFileT } from '../AbstractBaseApi';
+import { AbstractBaseApi, type ApiQueryT, type DownloadedFileT } from '../AbstractBaseApi';
 import {
   AddMeaningReqT,
   AddMeaningResT,
@@ -79,6 +79,11 @@ export class EnApi extends AbstractBaseApi {
 
   static async publicSearchDetailed(body: SearchDetailedReqT): Promise<PublicSearchDetailedV1ResT | ErrorResT> {
     return this.post<PublicSearchDetailedV1ResT>(`${this.baseURL}/v1/search/detailed`, body);
+  }
+
+  /** Any GET read of the public prefix, e.g. `/v1/words/run` (the documentation playground) */
+  static async publicGet<T>(path: string, query?: ApiQueryT): Promise<T | ErrorResT> {
+    return this.get<T>(`${this.baseURL}${path}`, { query });
   }
 
   // The admin UI reads through the public prefix too (the /api/en/search

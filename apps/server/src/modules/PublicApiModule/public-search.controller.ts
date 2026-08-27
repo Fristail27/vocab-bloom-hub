@@ -5,13 +5,7 @@ import { EnSearchService } from '../EnModule/modules/EnSearch/enSearch.service';
 import { SearchDetailedV1ReqDTO, SearchV1ReqDTO } from './dto/SearchV1Req.dto';
 import { PublicSearchDetailedV1ResT, PublicSearchV1ResT } from '../../../types';
 import { PublicApiThrottlerGuard } from '../../core/guards/public-api-throttler.guard';
-import { getPublicApiRateLimit, PUBLIC_API_PREFIX } from '../../core/utils/public-api';
-
-// One budget for the whole public prefix, sized by PUBLIC_API_RATE_LIMIT
-// and read per request so the environment decides, not the import order
-export const PUBLIC_API_THROTTLE = {
-  default: { limit: () => getPublicApiRateLimit().limit, ttl: () => getPublicApiRateLimit().ttl },
-};
+import { PUBLIC_API_PREFIX, PUBLIC_API_THROTTLE } from '../../core/utils/public-api';
 
 @ApiTags('Public API v1')
 @Controller(`${PUBLIC_API_PREFIX}/search`)

@@ -21,4 +21,6 @@ export enum ErrorCodes {
   setting_field_already_exists = 'setting_field_already_exists',
   unknown_error = 'unknown_error',
   too_many_requests = 'too_many_requests',
+  // public list paging (issue #272)
+  invalid_cursor = 'invalid_cursor',
 }

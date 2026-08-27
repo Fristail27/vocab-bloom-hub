@@ -374,7 +374,7 @@ export default {
   },
   documentation: {
     intro:
-      'The public read-only API under /api/v1: no authorization, list responses in a { data, meta } envelope, errors as { statusCode, message, error: true }, every response carries X-API-Version. Every page describes the request filters and lets you run a real request against the current database.',
+      'The public read-only API under /api/v1: no authorization, every response in a { data, meta } envelope, errors as { statusCode, message, error: true }, every response carries X-API-Version. Every page describes the request filters and lets you run a real request against the current database.',
     public_endpoints: 'Public endpoints',
     endpoint_search: 'Basic search',
     endpoint_search_detailed: 'Detailed search',
@@ -382,6 +382,40 @@ export default {
       'Searches dictionary entries and answers with a flat list of words without meanings and translations. Results are ordered by match quality: exact match first, then phrasal verbs, entries starting with the query, phrases, entries ending with it and any other occurrence.',
     desc_search_detailed:
       'The same search with pagination, which can additionally join meanings and their translations. Because every item may carry joined data, both the page size and the pagination depth are capped tighter than in the basic search.',
+    endpoint_word: 'Headword lookup',
+    endpoint_word_meanings: 'Meanings of a headword',
+    endpoint_word_translations: 'Translations of a headword',
+    endpoint_word_forms: 'Forms of a headword',
+    endpoint_word_by_id: 'Entry by id',
+    endpoint_words: 'Filtered list',
+    endpoint_random: 'Random entry',
+    endpoint_meta: 'Dictionary metadata',
+    desc_word:
+      'Every entry of a headword — one item per part of speech — with its forms, meanings (definitions, examples, translations, synonyms, antonyms) and short translations. The spelling is matched case-insensitively; an inflected form ("ran") resolves to its base entry ("run"). An unknown spelling answers 404.',
+    desc_word_meanings:
+      'The meanings of every entry of the headword in one flat list; each item carries word_id and part_of_speech of the entry it belongs to.',
+    desc_word_translations:
+      'The short translations (per entry) and the translations of every meaning (with meaning_id) of the headword, optionally limited to one language.',
+    desc_word_forms:
+      'The inflected forms of every entry of the headword (past simple, plural, comparative, …); each item names its entry.',
+    desc_word_by_id:
+      'One dictionary entry by its numeric id — the id of any item the other endpoints answer with.',
+    desc_words:
+      'Entries by filters, ordered by (word, id) and read page by page with a cursor: pass meta.next_cursor of a page back as cursor (with the same filters) to get the next one; next_cursor is null on the last page. Values of one filter are OR-ed, different filters are AND-ed. Without form_of_word only base forms are listed; meanings and short translations are joined on request.',
+    desc_random:
+      'One random entry matching the same filters as the list (base forms unless form_of_word is given); 404 when nothing matches. The draw is an index lookup, cheap even on a 300k-row dictionary.',
+    desc_meta:
+      'What the instance serves: the API and application versions, the version of the dataset the dictionary was imported from, the data license and the counts of entries, words, phrases, forms, meanings and translations.',
+    param_desc_word: 'Headword spelling, case-insensitive; spaces are allowed for phrases',
+    param_desc_id: 'Numeric id of the entry',
+    param_desc_cursor: 'meta.next_cursor of the previous page; omit for the first page',
+    param_desc_part_of_speech: 'Parts of speech to keep',
+    param_desc_word_level: 'CEFR levels to keep',
+    param_desc_language_register: 'Language registers to keep',
+    param_desc_category: 'Words tagged with any of the categories',
+    param_desc_area_variant: 'Regional labels to keep',
+    param_desc_form_of_word: 'Word forms to list; base forms only by default',
+    param_desc_language: 'Translation languages; no value means all of them',
     param_desc_search: 'Search query',
     param_desc_type: 'Restricts the search to one entry type',
     param_desc_limit: 'Number of items per page',

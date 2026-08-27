@@ -16,8 +16,9 @@ endpoints under the _Public API v1_ tag.
 - **Versioned prefix.** Response shapes under `/api/v1` change only with a new prefix
   (`/api/v2`). The types consumers rely on live in `apps/server/types/public/v1/`.
 - **`X-API-Version: 1`** on every response of the prefix, errors included.
-- **Envelope for lists:** `{ "data": [...], "meta": { ... } }` — paging and counts go under
-  `meta`, never mixed into the items.
+- **Envelope:** every successful answer is `{ "data": ..., "meta": { ... } }` — the payload
+  under `data` (a list or one object), paging and counts under `meta`, never mixed into
+  the items.
 - **Errors** reuse the `ErrorResT` shape everywhere under the prefix, whatever raised them
   (validation, an unknown route, the rate limit):
 
@@ -32,20 +33,86 @@ endpoints under the _Public API v1_ tag.
 
 ### Endpoints
 
-| Method | Path                      | Body                                                                                           | Response                                               |
-| ------ | ------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `POST` | `/api/v1/search`          | `{ search, type?, limit? }`                                                                    | `{ data: EnSearchWordT[], meta: { count } }`           |
-| `POST` | `/api/v1/search/detailed` | `{ search, type?, limit?, page?, with_meanings?, with_translations?, translation_languages? }` | `{ data: EnWordT[], meta: { page, limit, has_more } }` |
+Every successful answer is an envelope: the payload under `data`, paging and counts under
+`meta`. The response types are in `apps/server/types/public/v1/index.ts`.
 
-The request filters are described on the in-app _Documentation_ pages, which also run live
-requests against the current database. Word, meaning and list endpoints are tracked in #272,
-the `openapi.json` export in #273, caching headers in #274.
+| Method | Path                                | Query / body                                                                                   | Response                                                                   |
+| ------ | ----------------------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `POST` | `/api/v1/search`                    | `{ search, type?, limit? }`                                                                    | `{ data: EnSearchWordT[], meta: { count } }`                               |
+| `POST` | `/api/v1/search/detailed`           | `{ search, type?, limit?, page?, with_meanings?, with_translations?, translation_languages? }` | `{ data: EnWordT[], meta: { page, limit, has_more } }`                     |
+| `GET`  | `/api/v1/words/{word}`              | —                                                                                              | `{ data: EnWordT[], meta: { word, count } }`                               |
+| `GET`  | `/api/v1/words/{word}/meanings`     | —                                                                                              | `{ data: PublicMeaningV1T[], meta: { word, count } }`                      |
+| `GET`  | `/api/v1/words/{word}/translations` | `language?`                                                                                    | `{ data: { short_translations, meaning_translations }, meta }`             |
+| `GET`  | `/api/v1/words/{word}/forms`        | —                                                                                              | `{ data: PublicWordFormV1T[], meta: { word, count } }`                     |
+| `GET`  | `/api/v1/words/id/{id}`             | —                                                                                              | `{ data: EnWordT }`                                                        |
+| `GET`  | `/api/v1/words`                     | filters, `cursor?`, `limit?`, `with_meanings?`, `with_translations?`                           | `{ data: EnWordT[], meta: { limit, has_more, next_cursor } }`              |
+| `GET`  | `/api/v1/random`                    | filters                                                                                        | `{ data: EnWordT }`                                                        |
+| `GET`  | `/api/v1/meta`                      | —                                                                                              | `{ data: { api_version, app_version, dataset_version, license, counts } }` |
+
+Every endpoint and its parameters are also described on the in-app _Documentation_ pages,
+which run live requests against the current database. The `openapi.json` export is tracked in #273, caching
+headers in #274.
 
 ```bash
 curl -X POST 'http://localhost:3010/api/v1/search/detailed' \
   -H 'Content-Type: application/json' \
   -d '{"search":"run","with_meanings":true}'
+
+curl 'http://localhost:3010/api/v1/words/run'
+curl 'http://localhost:3010/api/v1/words?part_of_speech=noun&word_level=B1&word_level=B2&limit=50'
+curl 'http://localhost:3010/api/v1/random?part_of_speech=verb&word_level=A2'
 ```
+
+#### Headword reads
+
+`GET /api/v1/words/{word}` answers **every entry** of a headword — one item per part of
+speech, each with its forms, meanings (definitions, examples, translations, synonyms,
+antonyms) and short translations. The spelling is matched case-insensitively; URL-encode
+spaces for phrases (`/api/v1/words/put%20up%20with`). An inflected form resolves to its base
+entry: `/api/v1/words/ran` answers the verb _run_ (with `ran` among its `forms`). An unknown
+spelling answers `404` with `word_doesnt_found`.
+
+The partial reads (`/meanings`, `/translations`, `/forms`) flatten the same entries into one
+list; every item carries `word_id` and `part_of_speech` so it can be tied back to its entry.
+`/translations` splits into `short_translations` (per entry) and `meaning_translations` (per
+meaning, with `meaning_id`); `?language=ru` keeps one language only.
+
+`GET /api/v1/words/id/{id}` is the same entry by its numeric id (the `id` of any item above).
+
+#### Filtered list and cursor pagination
+
+`GET /api/v1/words` lists entries ordered by `(word, id)` — the headword by its bytes
+(`COLLATE "C"` on Postgres, the default on SQLite: `a bag of wind` before `aaron burr`,
+whatever the database locale), then the id. Filters: `part_of_speech`,
+`word_level`, `language_register`, `category`, `area_variant`, `form_of_word`. Every filter
+accepts one value or a repeated key; values of one filter are OR-ed, different filters are
+AND-ed (`?word_level=B1&word_level=B2&part_of_speech=noun` — B1 or B2 nouns). Without
+`form_of_word` only base forms are listed; inflected forms are reachable through their base
+entry's `forms` or explicitly (`?form_of_word=past_simple`). Items carry no meanings or
+short translations unless `with_meanings=true` / `with_translations=true` is passed.
+
+Pages are read with a cursor: take `meta.next_cursor` of a page and pass it back as
+`?cursor=` (with the same filters) to get the next one; `next_cursor` is `null` on the last
+page and `has_more` says whether there is one. The cursor is opaque — do not build it by
+hand; an unrecognised value answers `400` with `invalid_cursor`. Unlike page numbers, a
+cursor never repeats or skips an item while the dictionary is being edited. `limit` is
+1–100, default 20.
+
+#### Random entry
+
+`GET /api/v1/random` answers one random entry matching the same filters as the list (base
+forms unless `form_of_word` is given); `404` when nothing matches. The draw is an index
+lookup, not `ORDER BY random()` — cheap on a 300k-row dictionary; entries right after a gap
+in the ids come up slightly more often, which does not matter for a "word of the day".
+
+#### Meta
+
+`GET /api/v1/meta` describes what the instance serves: `api_version` (`"1"`), `app_version`
+(the server's `package.json`), `dataset_version` (the version of the dataset the dictionary
+was last imported from, `null` for data authored in place or imported without a manifest),
+`license` (the data license — `null` until it is decided, see #270) and `counts` (entries,
+words, phrases, grammar patterns, word forms, meanings, meaning and short translations; the
+counts are refreshed at most once a minute).
 
 ### Deprecated aliases
 

@@ -1,6 +1,7 @@
 import { AvailableTranslationLanguagesE, EnWordT } from '../../../../../../types';
 import { prepareWordForm } from '../../../utils/prepareWordForm';
 import { prepareMeaningFromDB } from '../../../utils/prepareMeaningFromDB';
+import { prepareShortTranslationFromDB } from '../../../utils/prepareTranslationsFromDB';
 import { EnWord } from '../../../entities/en_word.entity';
 
 type DetailedSearchOptionsT = {
@@ -28,7 +29,9 @@ export const mapDetailedSearchResults = (
         })
       : [],
     short_translations: with_translations
-      ? (w.short_translations || []).filter((t) => matchesLanguage(t.language))
+      ? (w.short_translations || [])
+          .filter((t) => matchesLanguage(t.language))
+          .map(prepareShortTranslationFromDB)
       : [],
     base_phrasal: w.base_phrasal?.word?.word,
     base_form: undefined,

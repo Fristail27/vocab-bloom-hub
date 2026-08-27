@@ -1,10 +1,27 @@
-import { AvailableTranslationLanguagesE, EnEntryTypesE } from 'server/types';
+import {
+  AvailableTranslationLanguagesE,
+  CategoryE,
+  EnAreaVariantsE,
+  EnEntryTypesE,
+  EnPartOfSpeechE,
+  EnWordFormsE,
+  LanguageRegisterE,
+  WordLevelE,
+} from 'server/types';
 
 // Endpoints open to any consumer of the dictionary; the auth routes are admin
 // panel plumbing and stay out of the public documentation
 export enum ApiEndpointKeyE {
   search = 'search',
   search_detailed = 'search_detailed',
+  word = 'word',
+  word_meanings = 'word_meanings',
+  word_translations = 'word_translations',
+  word_forms = 'word_forms',
+  word_by_id = 'word_by_id',
+  words = 'words',
+  random = 'random',
+  meta = 'meta',
 }
 
 export enum ParamControlE {
@@ -20,7 +37,9 @@ export type ApiParamDocT = {
   type: string;
   control: ParamControlE;
   required: boolean;
-  defaultValue?: string | number | boolean;
+  // A path segment (`/words/{word}`) rather than a body field or query key
+  inPath?: boolean;
+  defaultValue?: string | number | boolean | string[];
   min?: number;
   max?: number;
   // Free-form limitation shown when there is no range or option list, e.g. a regexp
@@ -33,13 +52,14 @@ export type ApiEndpointDocT = {
   // Segment under /documentation
   slug: string;
   method: 'GET' | 'POST';
-  // Route as mounted on the server, shown in the docs header
+  // Route as mounted on the server, shown in the docs header; `{name}` marks a path param
   path: string;
   // Path relative to the API base url, used to run the live example
   clientPath: string;
   // Per-endpoint limit; endpoints without one share the public prefix budget
   // (PUBLIC_API_RATE_LIMIT on the server, 100 requests per 60 s by default)
   throttle?: { limit: number; seconds: number };
+  // Body fields of a POST, query keys of a GET, path params where `inPath` is set
   params: ApiParamDocT[];
   responseType: string;
 };
@@ -57,6 +77,51 @@ const ENTRY_TYPE_PARAM: ApiParamDocT = {
   control: ParamControlE.enum,
   required: false,
   options: Object.values(EnEntryTypesE),
+};
+
+const HEADWORD_PARAM: ApiParamDocT = {
+  name: 'word',
+  type: 'string',
+  control: ParamControlE.text,
+  required: true,
+  inPath: true,
+};
+
+const multiEnum = (name: string, type: string, values: Record<string, string>): ApiParamDocT => ({
+  name,
+  type: `${type}[]`,
+  control: ParamControlE.multi_enum,
+  required: false,
+  options: Object.values(values),
+});
+
+// Filters shared by the list and the random entry (WordFiltersV1QueryDTO on the server)
+const WORD_FILTER_PARAMS: ApiParamDocT[] = [
+  multiEnum('part_of_speech', 'EnPartOfSpeechE', EnPartOfSpeechE),
+  multiEnum('word_level', 'WordLevelE', WordLevelE),
+  multiEnum('language_register', 'LanguageRegisterE', LanguageRegisterE),
+  multiEnum('category', 'CategoryE', CategoryE),
+  multiEnum('area_variant', 'EnAreaVariantsE', EnAreaVariantsE),
+  {
+    ...multiEnum('form_of_word', 'EnWordFormsE', EnWordFormsE),
+    defaultValue: [EnWordFormsE.base_form],
+  },
+];
+
+const WITH_MEANINGS_PARAM: ApiParamDocT = {
+  name: 'with_meanings',
+  type: 'boolean',
+  control: ParamControlE.boolean,
+  required: false,
+  defaultValue: false,
+};
+
+const WITH_TRANSLATIONS_PARAM: ApiParamDocT = {
+  name: 'with_translations',
+  type: 'boolean',
+  control: ParamControlE.boolean,
+  required: false,
+  defaultValue: false,
 };
 
 export const DOCUMENTED_ENDPOINTS: ApiEndpointDocT[] = [
@@ -109,20 +174,8 @@ export const DOCUMENTED_ENDPOINTS: ApiEndpointDocT[] = [
         min: 1,
         max: 20,
       },
-      {
-        name: 'with_meanings',
-        type: 'boolean',
-        control: ParamControlE.boolean,
-        required: false,
-        defaultValue: false,
-      },
-      {
-        name: 'with_translations',
-        type: 'boolean',
-        control: ParamControlE.boolean,
-        required: false,
-        defaultValue: false,
-      },
+      WITH_MEANINGS_PARAM,
+      WITH_TRANSLATIONS_PARAM,
       {
         name: 'translation_languages',
         type: 'AvailableTranslationLanguagesE[]',
@@ -131,6 +184,103 @@ export const DOCUMENTED_ENDPOINTS: ApiEndpointDocT[] = [
         options: Object.values(AvailableTranslationLanguagesE),
       },
     ],
+  },
+  {
+    key: ApiEndpointKeyE.word,
+    slug: 'word',
+    method: 'GET',
+    path: '/api/v1/words/{word}',
+    clientPath: '/v1/words/{word}',
+    responseType: 'PublicHeadwordV1ResT',
+    params: [HEADWORD_PARAM],
+  },
+  {
+    key: ApiEndpointKeyE.word_meanings,
+    slug: 'word-meanings',
+    method: 'GET',
+    path: '/api/v1/words/{word}/meanings',
+    clientPath: '/v1/words/{word}/meanings',
+    responseType: 'PublicHeadwordMeaningsV1ResT',
+    params: [HEADWORD_PARAM],
+  },
+  {
+    key: ApiEndpointKeyE.word_translations,
+    slug: 'word-translations',
+    method: 'GET',
+    path: '/api/v1/words/{word}/translations',
+    clientPath: '/v1/words/{word}/translations',
+    responseType: 'PublicHeadwordTranslationsV1ResT',
+    params: [
+      HEADWORD_PARAM,
+      multiEnum('language', 'AvailableTranslationLanguagesE', AvailableTranslationLanguagesE),
+    ],
+  },
+  {
+    key: ApiEndpointKeyE.word_forms,
+    slug: 'word-forms',
+    method: 'GET',
+    path: '/api/v1/words/{word}/forms',
+    clientPath: '/v1/words/{word}/forms',
+    responseType: 'PublicHeadwordFormsV1ResT',
+    params: [HEADWORD_PARAM],
+  },
+  {
+    key: ApiEndpointKeyE.word_by_id,
+    slug: 'word-by-id',
+    method: 'GET',
+    path: '/api/v1/words/id/{id}',
+    clientPath: '/v1/words/id/{id}',
+    responseType: 'PublicWordV1ResT',
+    params: [
+      { name: 'id', type: 'number', control: ParamControlE.number, required: true, inPath: true, min: 1 },
+    ],
+  },
+  {
+    key: ApiEndpointKeyE.words,
+    slug: 'words',
+    method: 'GET',
+    path: '/api/v1/words',
+    clientPath: '/v1/words',
+    responseType: 'PublicWordsV1ResT',
+    params: [
+      ...WORD_FILTER_PARAMS,
+      {
+        name: 'cursor',
+        type: 'string',
+        control: ParamControlE.text,
+        required: false,
+        constraints: 'meta.next_cursor',
+      },
+      {
+        name: 'limit',
+        type: 'number',
+        control: ParamControlE.number,
+        required: false,
+        defaultValue: 20,
+        min: 1,
+        max: 100,
+      },
+      WITH_MEANINGS_PARAM,
+      WITH_TRANSLATIONS_PARAM,
+    ],
+  },
+  {
+    key: ApiEndpointKeyE.random,
+    slug: 'random',
+    method: 'GET',
+    path: '/api/v1/random',
+    clientPath: '/v1/random',
+    responseType: 'PublicWordV1ResT',
+    params: WORD_FILTER_PARAMS,
+  },
+  {
+    key: ApiEndpointKeyE.meta,
+    slug: 'meta',
+    method: 'GET',
+    path: '/api/v1/meta',
+    clientPath: '/v1/meta',
+    responseType: 'PublicMetaV1ResT',
+    params: [],
   },
 ];
 

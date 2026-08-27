@@ -24,26 +24,69 @@ export const buildRequestBody = (params: ApiParamDocT[], values: ParamValuesT): 
   return body;
 };
 
-export const buildCurlSnippet = (endpoint: ApiEndpointDocT, baseUrl: string, body: ParamValuesT): string => {
-  const lines = [`curl -X ${endpoint.method} '${baseUrl}${endpoint.clientPath}'`];
+// Splits the filled values into the path segments (`/words/{word}`) and what
+// travels as the body (POST) or the query string (GET)
+export const resolveClientPath = (
+  endpoint: ApiEndpointDocT,
+  values: ParamValuesT,
+): { path: string; rest: ParamValuesT } => {
+  const rest = { ...values };
+  let path = endpoint.clientPath;
 
-  if (endpoint.method !== 'GET') {
-    lines.push(`  -H 'Content-Type: application/json'`);
-    lines.push(`  -d '${JSON.stringify(body)}'`);
-  }
+  endpoint.params
+    .filter((param) => param.inPath)
+    .forEach(({ name }) => {
+      path = path.replace(`{${name}}`, encodeURIComponent(String(values[name] ?? '')));
+      delete rest[name];
+    });
 
-  return lines.join(' \\\n');
+  return { path, rest };
 };
 
-// Public list endpoints answer with the v1 envelope `{ data, meta }`; a bare
-// list (the deprecated aliases) is accepted too. Anything else has no table
-// representation
+// A list value becomes a repeated key (?a=1&a=2), which is how the server DTOs read filters
+export const buildQueryString = (values: ParamValuesT): string => {
+  const search = new URLSearchParams();
+
+  Object.entries(values).forEach(([key, value]) => {
+    (Array.isArray(value) ? value : [value]).forEach((v) => search.append(key, String(v)));
+  });
+
+  const query = search.toString();
+
+  return query ? `?${query}` : '';
+};
+
+export const buildCurlSnippet = (endpoint: ApiEndpointDocT, baseUrl: string, body: ParamValuesT): string => {
+  const { path, rest } = resolveClientPath(endpoint, body);
+
+  if (endpoint.method === 'GET') {
+    return `curl -X GET '${baseUrl}${path}${buildQueryString(rest)}'`;
+  }
+
+  return [
+    `curl -X ${endpoint.method} '${baseUrl}${path}'`,
+    `  -H 'Content-Type: application/json'`,
+    `  -d '${JSON.stringify(rest)}'`,
+  ].join(' \\\n');
+};
+
+const isWordLike = (value: unknown): value is ResponseWordT =>
+  !!value &&
+  typeof value === 'object' &&
+  'id' in value &&
+  typeof (value as { word?: unknown }).word === 'string';
+
+// Word lists (the search and list endpoints, a headword's entries or forms)
+// and single entries (`{ data: EnWordT }`) have a table representation; a
+// bare list (the deprecated aliases) is accepted too. Anything else has none
 export const extractWords = (response: unknown): ResponseWordT[] | null => {
   if (Array.isArray(response)) return response as ResponseWordT[];
 
-  const data = (response as Partial<PublicListResT<ResponseWordT, unknown>> | null)?.data;
+  const data = (response as Partial<PublicListResT<unknown, unknown>> | null)?.data;
 
-  return Array.isArray(data) ? data : null;
+  if (Array.isArray(data)) return data.every(isWordLike) ? data : null;
+
+  return isWordLike(data) ? [data] : null;
 };
 
 // The scalar fields of `meta` (paging, counts); scalars at the top level are

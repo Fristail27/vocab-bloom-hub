@@ -43,6 +43,15 @@ export const getPublicApiRateLimit = (env: NodeJS.ProcessEnv = process.env): Rat
   }
 };
 
+/**
+ * The @Throttle() setting of every public controller: one budget for the
+ * whole prefix, sized by PUBLIC_API_RATE_LIMIT and read per request so the
+ * environment decides, not the import order
+ */
+export const PUBLIC_API_THROTTLE = {
+  default: { limit: () => getPublicApiRateLimit().limit, ttl: () => getPublicApiRateLimit().ttl },
+};
+
 const parseFlag = (name: string, raw: string | undefined): boolean => {
   const value = raw?.trim().toLowerCase();
   if (value === undefined || value === '') return true;

@@ -3,24 +3,38 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, InputNumber, Switch, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
-import { SearchDetailedReqT, SearchReqT } from 'server/types';
-import { AbstractBaseApi } from '@/core/api/AbstractBaseApi';
+import { ErrorResT, SearchDetailedReqT, SearchReqT } from 'server/types';
+import { ErrorCodes } from 'server/core/constants/error_codes';
+import { AbstractBaseApi, ApiQueryT } from '@/core/api/AbstractBaseApi';
 import { EnApi } from '@/core/api/EnApi';
 import { Input } from '@/core/ui/Input';
 import { Select } from '@/core/ui/Select';
 import { ApiEndpointDocT, ApiEndpointKeyE, ApiParamDocT, ParamControlE } from '../../constants';
-import { buildCurlSnippet, buildRequestBody, ParamValuesT } from '../../utils';
+import { buildCurlSnippet, buildRequestBody, ParamValuesT, resolveClientPath } from '../../utils';
 import { ResponseView } from '../ResponseView';
 import styles from './styles.module.scss';
 
 const { Text } = Typography;
 
 // Requests go through the regular api client against the public prefix, so
-// the docs show exactly what a consumer gets — envelope included
-const RUNNERS: Record<ApiEndpointKeyE, (body: ParamValuesT) => Promise<unknown>> = {
+// the docs show exactly what a consumer gets — envelope included. The POST
+// endpoints have typed clients; every GET read goes through one generic call
+const POST_RUNNERS: Partial<Record<ApiEndpointKeyE, (body: ParamValuesT) => Promise<unknown>>> = {
   [ApiEndpointKeyE.search]: (body) => EnApi.publicSearch(body as unknown as SearchReqT),
   [ApiEndpointKeyE.search_detailed]: (body) =>
     EnApi.publicSearchDetailed(body as unknown as SearchDetailedReqT),
+};
+
+const runRequest = (endpoint: ApiEndpointDocT, body: ParamValuesT): Promise<unknown> => {
+  if (endpoint.method === 'GET') {
+    const { path, rest } = resolveClientPath(endpoint, body);
+
+    return EnApi.publicGet(path, rest as ApiQueryT);
+  }
+
+  const runner = POST_RUNNERS[endpoint.key];
+
+  return runner ? runner(body) : Promise.resolve<ErrorResT>({ error: true, message: ErrorCodes.unknown_error });
 };
 
 const getInitialValues = (params: ApiParamDocT[]): ParamValuesT =>
@@ -67,7 +81,7 @@ export const ApiPlayground: React.FC<ApiPlaygroundP> = ({ endpoint }) => {
   const onSend = async () => {
     setIsLoading(true);
     const startedAt = performance.now();
-    const res = await RUNNERS[endpoint.key](body);
+    const res = await runRequest(endpoint, body);
     setElapsedMs(Math.round(performance.now() - startedAt));
     setResponse(res);
     setIsLoading(false);
