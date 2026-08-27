@@ -225,9 +225,9 @@ Docker-образа и готовой хостинг-сборки пока не�
 - [`authentication.md`](authentication.md) — как устроены вход единственного администратора, login proof и JWT-cookie
 - [`migrations.md`](migrations.md) — процесс работы с миграциями TypeORM для Postgres, деплой и решение проблем
 - [`offline-import.md`](offline-import.md) — перенос словаря между инстансами без интернета (экспорт → копирование → импорт из файла)
-- [`api.md`](api.md) — контракт публичного `/api/v1` (конверт, ошибки, лимит запросов, устаревшие алиасы) и переключатели public-only / admin-only
+- [`api.md`](api.md) — контракт публичного `/api/v1` (конверт, ошибки, лимит запросов, кэширование, экспорт OpenAPI, устаревшие алиасы) и переключатели public-only / admin-only
 - [`../README.md`](../README.md) — этот README на английском
-- Swagger UI по адресу `/api` на запущенном сервере — актуальный справочник API
+- Swagger UI по адресу `/api` на запущенном сервере — актуальный справочник API; публичный контракт в формате OpenAPI: [`apps/server/openapi/public-v1.json`](../apps/server/openapi/public-v1.json) или `GET /api/v1/openapi.json`
 
 Документация в `docs/` (кроме этого файла) ведётся на английском языке.
 

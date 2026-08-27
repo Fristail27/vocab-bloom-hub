@@ -1,0 +1,611 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/search": {
+      "post": {
+        "operationId": "PublicSearchController_search",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchV1ReqDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Search dictionary entries (flat list, no meanings)",
+        "tags": [
+          "Public API v1"
+        ]
+      }
+    },
+    "/api/v1/search/detailed": {
+      "post": {
+        "operationId": "PublicSearchController_searchDetailed",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchDetailedV1ReqDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Search dictionary entries with pagination, meanings and translations",
+        "tags": [
+          "Public API v1"
+        ]
+      }
+    },
+    "/api/v1/words": {
+      "get": {
+        "description": "Every filter accepts a repeated key; values of one filter are OR-ed, filters are AND-ed. Pass `meta.next_cursor` back as `cursor` to read the next page.",
+        "operationId": "PublicWordsController_list",
+        "parameters": [
+          {
+            "name": "part_of_speech",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "noun",
+                  "verb",
+                  "modal_verb",
+                  "adjective",
+                  "adverb",
+                  "pronoun",
+                  "numeral",
+                  "numeral_fractional",
+                  "determiner",
+                  "interjection",
+                  "article",
+                  "preposition",
+                  "conjunction",
+                  "letter",
+                  "phrase",
+                  "grammar_pattern"
+                ]
+              }
+            }
+          },
+          {
+            "name": "word_level",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "A1",
+                  "A2",
+                  "B1",
+                  "B2",
+                  "C1",
+                  "C2"
+                ]
+              }
+            }
+          },
+          {
+            "name": "language_register",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "formal",
+                  "informal",
+                  "slang"
+                ]
+              }
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "description": "Words tagged with any of the categories",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "scientific",
+                  "technical",
+                  "medical",
+                  "legal",
+                  "business",
+                  "IT",
+                  "art",
+                  "political",
+                  "sport",
+                  "culinary"
+                ]
+              }
+            }
+          },
+          {
+            "name": "area_variant",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "common",
+                  "british",
+                  "american",
+                  "australian"
+                ]
+              }
+            }
+          },
+          {
+            "name": "form_of_word",
+            "required": false,
+            "in": "query",
+            "description": "Defaults to base forms only",
+            "schema": {
+              "default": [
+                "base_form"
+              ],
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "base_form",
+                  "plural_form",
+                  "possessive_singular_form",
+                  "possessive_plural_form",
+                  "past_simple",
+                  "past_participle",
+                  "present_participle",
+                  "third_person_singular",
+                  "comparative_form",
+                  "superlative_form",
+                  "object",
+                  "possessive_adjective",
+                  "possessive_pronoun",
+                  "reflexive",
+                  "ordinal",
+                  "multiplicative"
+                ]
+              }
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "The `meta.next_cursor` of the previous page; omit for the first page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "with_meanings",
+            "required": false,
+            "in": "query",
+            "description": "Join the meanings of every word",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "with_translations",
+            "required": false,
+            "in": "query",
+            "description": "Join the short translations of every word",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List dictionary entries by filters, cursor-paged and ordered by (word, id)",
+        "tags": [
+          "Public API v1"
+        ]
+      }
+    },
+    "/api/v1/words/id/{id}": {
+      "get": {
+        "operationId": "PublicWordsController_byId",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "One dictionary entry by its numeric id",
+        "tags": [
+          "Public API v1"
+        ]
+      }
+    },
+    "/api/v1/words/{word}": {
+      "get": {
+        "operationId": "PublicWordsController_byHeadword",
+        "parameters": [
+          {
+            "name": "word",
+            "required": true,
+            "in": "path",
+            "description": "Headword spelling, case-insensitive (spaces URL-encoded for phrases). An inflected form resolves to its base entry",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "All entries of a headword: parts of speech, forms, meanings, translations, links",
+        "tags": [
+          "Public API v1"
+        ]
+      }
+    },
+    "/api/v1/words/{word}/meanings": {
+      "get": {
+        "operationId": "PublicWordsController_meanings",
+        "parameters": [
+          {
+            "name": "word",
+            "required": true,
+            "in": "path",
+            "description": "Headword spelling, case-insensitive (spaces URL-encoded for phrases). An inflected form resolves to its base entry",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "The meanings of a headword across its entries",
+        "tags": [
+          "Public API v1"
+        ]
+      }
+    },
+    "/api/v1/words/{word}/translations": {
+      "get": {
+        "operationId": "PublicWordsController_translations",
+        "parameters": [
+          {
+            "name": "word",
+            "required": true,
+            "in": "path",
+            "description": "Headword spelling, case-insensitive (spaces URL-encoded for phrases). An inflected form resolves to its base entry",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "language",
+            "required": false,
+            "in": "query",
+            "description": "Translation languages; no value means all of them",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "ru"
+                ]
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "The short and per-meaning translations of a headword",
+        "tags": [
+          "Public API v1"
+        ]
+      }
+    },
+    "/api/v1/words/{word}/forms": {
+      "get": {
+        "operationId": "PublicWordsController_forms",
+        "parameters": [
+          {
+            "name": "word",
+            "required": true,
+            "in": "path",
+            "description": "Headword spelling, case-insensitive (spaces URL-encoded for phrases). An inflected form resolves to its base entry",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "The inflected forms of a headword across its entries",
+        "tags": [
+          "Public API v1"
+        ]
+      }
+    },
+    "/api/v1/random": {
+      "get": {
+        "operationId": "PublicDictionaryController_random",
+        "parameters": [
+          {
+            "name": "part_of_speech",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "noun",
+                  "verb",
+                  "modal_verb",
+                  "adjective",
+                  "adverb",
+                  "pronoun",
+                  "numeral",
+                  "numeral_fractional",
+                  "determiner",
+                  "interjection",
+                  "article",
+                  "preposition",
+                  "conjunction",
+                  "letter",
+                  "phrase",
+                  "grammar_pattern"
+                ]
+              }
+            }
+          },
+          {
+            "name": "word_level",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "A1",
+                  "A2",
+                  "B1",
+                  "B2",
+                  "C1",
+                  "C2"
+                ]
+              }
+            }
+          },
+          {
+            "name": "language_register",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "formal",
+                  "informal",
+                  "slang"
+                ]
+              }
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "description": "Words tagged with any of the categories",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "scientific",
+                  "technical",
+                  "medical",
+                  "legal",
+                  "business",
+                  "IT",
+                  "art",
+                  "political",
+                  "sport",
+                  "culinary"
+                ]
+              }
+            }
+          },
+          {
+            "name": "area_variant",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "common",
+                  "british",
+                  "american",
+                  "australian"
+                ]
+              }
+            }
+          },
+          {
+            "name": "form_of_word",
+            "required": false,
+            "in": "query",
+            "description": "Defaults to base forms only",
+            "schema": {
+              "default": [
+                "base_form"
+              ],
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "base_form",
+                  "plural_form",
+                  "possessive_singular_form",
+                  "possessive_plural_form",
+                  "past_simple",
+                  "past_participle",
+                  "present_participle",
+                  "third_person_singular",
+                  "comparative_form",
+                  "superlative_form",
+                  "object",
+                  "possessive_adjective",
+                  "possessive_pronoun",
+                  "reflexive",
+                  "ordinal",
+                  "multiplicative"
+                ]
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "A random dictionary entry matching the filters (base forms unless form_of_word is given)",
+        "tags": [
+          "Public API v1"
+        ]
+      }
+    },
+    "/api/v1/meta": {
+      "get": {
+        "operationId": "PublicDictionaryController_meta",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "API and dataset versions, data license and counts of the served dictionary",
+        "tags": [
+          "Public API v1"
+        ]
+      }
+    },
+    "/api/v1/openapi.json": {
+      "get": {
+        "operationId": "PublicOpenApiController_openapi",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "The OpenAPI 3 document of the public API (this contract)",
+        "tags": [
+          "Public API v1"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "VocabBloom Public API",
+    "description": "Read-only dictionary API under /api/v1 (contract version 1): no authentication, every answer in a { data, meta } envelope, errors as { statusCode, message, error: true }, X-API-Version on every response. Successful GET answers carry ETag, Last-Modified and Cache-Control. See docs/api.md in the repository.",
+    "version": "0.0.1",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "Public API v1",
+      "description": "Read-only dictionary endpoints for consuming applications"
+    }
+  ],
+  "servers": [],
+  "components": {
+    "schemas": {
+      "SearchV1ReqDTO": {
+        "type": "object",
+        "properties": {
+          "search": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "search"
+        ]
+      },
+      "SearchDetailedV1ReqDTO": {
+        "type": "object",
+        "properties": {
+          "search": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "search"
+        ]
+      }
+    }
+  }
+}

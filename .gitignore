@@ -71,3 +71,6 @@
 /apps/server/report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 dev.sqlite
+
+# generated on demand by `yarn workspace server openapi:generate`; only the public spec is committed
+apps/server/openapi/admin.json

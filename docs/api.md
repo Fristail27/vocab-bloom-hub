@@ -9,7 +9,8 @@ The server exposes two surfaces on one host (issue #271):
 
 Nothing under `/api/v1` mutates data or requires a login; nothing outside it is part of the
 public contract. The Swagger UI at `/api` (development only) documents both, with the public
-endpoints under the _Public API v1_ tag.
+endpoints under the _Public API v1_ tag; the public contract alone is exported as an
+[OpenAPI document](#openapi-document).
 
 ## The public contract
 
@@ -53,7 +54,8 @@ Every successful answer is an envelope: the payload under `data`, paging and cou
 | `GET`  | `/api/v1/meta`                      | —                                                                                              | `{ data: { api_version, app_version, dataset_version, license, counts } }` |
 
 Every endpoint and its parameters are also described on the in-app _Documentation_ pages,
-which run live requests against the current database. The `openapi.json` export is tracked in #273.
+which run live requests against the current database. The machine-readable contract is the
+[OpenAPI document](#openapi-document).
 
 ```bash
 curl -X POST 'http://localhost:3010/api/v1/search/detailed' \
@@ -115,6 +117,29 @@ was last imported from, `null` for data authored in place or imported without a 
 `license` (the data license — `null` until it is decided, see #270) and `counts` (entries,
 words, phrases, grammar patterns, word forms, meanings, meaning and short translations; the
 counts are refreshed at most once a minute).
+
+### OpenAPI document
+
+The contract above is also an OpenAPI 3 document (issue #273), built from the controllers and
+DTOs of the running code — nothing is hand-written, so it cannot drift:
+
+- **`GET /api/v1/openapi.json`** serves it from any running instance, production included
+  (the Swagger UI at `/api` stays development-only). It carries the caching headers of the
+  prefix like every other public `GET`.
+- **`apps/server/openapi/public-v1.json`** is the same document committed to the repository:
+  the source for SDK generators (#275, #276) and the docs site (#277), and the place where a
+  contract change shows up in a pull request diff.
+
+```bash
+yarn workspace server openapi:generate   # rewrites openapi/public-v1.json (+ admin.json, not committed)
+yarn workspace server openapi:check      # fails when the committed file is stale — CI runs this
+```
+
+The generator bootstraps the application without listening, on an in-memory SQLite database,
+so it needs no `.env` and its output depends on the source code only. After changing anything
+under `/api/v1` (a route, a DTO, a Swagger decorator) run `openapi:generate` and commit the
+result; the `check-pull-request` workflow rejects a stale spec. `admin.json` — the whole API
+including the admin surface — is written next to it for local use and ignored by git.
 
 ### Caching
 

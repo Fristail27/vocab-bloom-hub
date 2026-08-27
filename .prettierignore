@@ -6,3 +6,6 @@ build
 apps/e2e/playwright-report
 apps/e2e/test-results
 apps/e2e/.tmp
+
+# generated OpenAPI documents: the generator's own formatting is the committed one
+apps/server/openapi/

@@ -26,10 +26,15 @@ yarn e2e            # browser e2e: prod frontend build + Playwright (boots API :
 yarn e2e:ui         # the same with the Playwright UI
 yarn workspace e2e test                   # rerun without rebuilding the frontend
 
+yarn workspace server openapi:generate    # rewrite apps/server/openapi/public-v1.json (committed) + admin.json (ignored)
+yarn workspace server openapi:check       # fail if the committed public spec is stale (CI runs it)
+
 yarn lint / yarn lint:fix                 # ESLint 10 flat config (eslint.config.ts)
 yarn format / yarn format:check           # Prettier
 yarn check          # lint + format:check (run before finishing work)
 ```
+
+After changing anything under `/api/v1` (routes, DTOs, Swagger decorators) run `openapi:generate` and commit `apps/server/openapi/public-v1.json` — CI and `test/public-openapi.e2e-spec.ts` compare it with the code.
 
 Test files are `*.spec.ts(x)`, colocated with code (e.g. in `__tests__/` dirs). Server tests run in node env; frontend tests run in jsdom with styles mocked and the `@/` alias mapped.
 

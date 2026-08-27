@@ -6,11 +6,13 @@ const envPath = path.resolve(__dirname, '../../../../.env');
 const dotenvResult = config({ path: envPath });
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import compression from 'compression';
 import { AppModule } from './modules/AppModule/app.module';
 import { AllExceptionsFilter } from './core/filters/all-exceptions.filter';
+import { buildAdminDocument } from './openapi/build-openapi';
+import { PublicOpenApiService } from './modules/PublicApiModule/public-openapi.service';
 import { getLogLevels } from './core/logging/get-log-levels';
 import { getCorsOrigins, isSwaggerEnabled, shouldCompress } from './core/utils/http-hardening';
 import {
@@ -73,17 +75,10 @@ async function bootstrap() {
   app.use(compression({ filter: shouldCompress }));
 
   if (isSwaggerEnabled()) {
-    const config = new DocumentBuilder()
-      .setTitle('VocabBloom API')
-      .setDescription('API documentation for VocabBloom backend')
-      .setVersion('1.0')
-      .addBearerAuth()
-      .build();
-
-    const document = SwaggerModule.createDocument(app, config);
-
-    SwaggerModule.setup('api', app, document);
+    SwaggerModule.setup('api', app, buildAdminDocument(app));
   }
+  // GET /api/v1/openapi.json answers in every environment, Swagger UI or not
+  app.get(PublicOpenApiService).attach(app);
 
   const corsOrigins = getCorsOrigins();
   app.enableCors({
@@ -114,7 +109,9 @@ async function bootstrap() {
     }`,
   );
   logger.log(`CORS origins: ${corsOrigins.join(', ')}`);
-  logger.log(`Swagger UI: ${isSwaggerEnabled() ? 'enabled at /api' : 'disabled (production)'}`);
+  logger.log(
+    `Swagger UI: ${isSwaggerEnabled() ? 'enabled at /api' : 'disabled (production)'}; public OpenAPI document at ${PUBLIC_API_PREFIX}/openapi.json`,
+  );
   const surfaces = getApiSurfaces();
   const rateLimit = getPublicApiRateLimit();
   logger.log(
