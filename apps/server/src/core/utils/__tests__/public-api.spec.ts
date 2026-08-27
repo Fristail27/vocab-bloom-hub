@@ -1,9 +1,12 @@
 import { describe, expect, it } from '@jest/globals';
 import {
   assertPublicApiConfig,
+  DEFAULT_PUBLIC_API_CACHE_MAX_AGE,
   DEFAULT_PUBLIC_API_RATE_LIMIT,
   getApiSurfaces,
+  getPublicApiCacheMaxAge,
   getPublicApiRateLimit,
+  parsePublicApiCacheMaxAge,
   isAdminApiPath,
   isPublicApiPath,
   parsePublicApiRateLimit,
@@ -23,6 +26,19 @@ describe('public API configuration (issue #271)', () => {
     // the runtime reader never throws: startup validation already did
     expect(getPublicApiRateLimit({ PUBLIC_API_RATE_LIMIT: 'abc' })).toEqual(DEFAULT_PUBLIC_API_RATE_LIMIT);
     expect(getPublicApiRateLimit({ PUBLIC_API_RATE_LIMIT: '7/2' })).toEqual({ limit: 7, ttl: 2000 });
+  });
+
+  it('parses PUBLIC_API_CACHE_MAX_AGE as seconds and defaults to an hour (issue #274)', () => {
+    expect(parsePublicApiCacheMaxAge(undefined)).toBe(DEFAULT_PUBLIC_API_CACHE_MAX_AGE);
+    expect(parsePublicApiCacheMaxAge(' ')).toBe(3600);
+    expect(parsePublicApiCacheMaxAge('0')).toBe(0);
+    expect(parsePublicApiCacheMaxAge('86400')).toBe(86400);
+    for (const bad of ['-1', '1h', '3600s', '1.5', 'abc']) {
+      expect(() => parsePublicApiCacheMaxAge(bad)).toThrow(ConfigurationError);
+    }
+    expect(getPublicApiCacheMaxAge({ PUBLIC_API_CACHE_MAX_AGE: 'abc' })).toBe(DEFAULT_PUBLIC_API_CACHE_MAX_AGE);
+    expect(getPublicApiCacheMaxAge({ PUBLIC_API_CACHE_MAX_AGE: '60' })).toBe(60);
+    expect(() => assertPublicApiConfig({ PUBLIC_API_CACHE_MAX_AGE: '1h' })).toThrow(ConfigurationError);
   });
 
   it('reads the surface flags, both on by default, and rejects garbage', () => {

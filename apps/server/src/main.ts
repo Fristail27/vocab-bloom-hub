@@ -16,6 +16,7 @@ import { getCorsOrigins, isSwaggerEnabled, shouldCompress } from './core/utils/h
 import {
   assertPublicApiConfig,
   getApiSurfaces,
+  getPublicApiCacheMaxAge,
   getPublicApiRateLimit,
   PUBLIC_API_PREFIX,
 } from './core/utils/public-api';
@@ -117,7 +118,7 @@ async function bootstrap() {
   const surfaces = getApiSurfaces();
   const rateLimit = getPublicApiRateLimit();
   logger.log(
-    `Public API ${PUBLIC_API_PREFIX}: ${surfaces.publicApi ? `enabled, ${rateLimit.limit} requests per ${rateLimit.ttl / 1000} s per client` : 'disabled (PUBLIC_API_ENABLED=false)'}; ` +
+    `Public API ${PUBLIC_API_PREFIX}: ${surfaces.publicApi ? `enabled, ${rateLimit.limit} requests per ${rateLimit.ttl / 1000} s per client, Cache-Control max-age=${getPublicApiCacheMaxAge()} s` : 'disabled (PUBLIC_API_ENABLED=false)'}; ` +
       `admin API: ${surfaces.adminApi ? 'enabled' : 'disabled (ADMIN_API_ENABLED=false)'}`,
   );
 }

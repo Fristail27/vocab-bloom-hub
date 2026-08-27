@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseIntPipe, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { PublicWordsService } from './public-words.service';
@@ -13,6 +13,7 @@ import {
   PublicWordV1ResT,
 } from '../../../types';
 import { PublicApiThrottlerGuard } from '../../core/guards/public-api-throttler.guard';
+import { PublicCacheInterceptor } from './public-cache.interceptor';
 import { PUBLIC_API_PREFIX, PUBLIC_API_THROTTLE } from '../../core/utils/public-api';
 
 const HEADWORD_PARAM = {
@@ -26,6 +27,7 @@ const HEADWORD_PARAM = {
 @Controller(`${PUBLIC_API_PREFIX}/words`)
 @UseGuards(PublicApiThrottlerGuard)
 @Throttle(PUBLIC_API_THROTTLE)
+@UseInterceptors(PublicCacheInterceptor)
 export class PublicWordsController {
   constructor(private readonly publicWordsService: PublicWordsService) {}
 

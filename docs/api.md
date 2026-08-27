@@ -30,6 +30,9 @@ endpoints under the _Public API v1_ tag.
   (`<requests>/<seconds>`, default `100/60`). Exceeding it answers `429` with the error above.
   There are no API keys yet; put the instance behind a reverse proxy if you need per-client
   quotas.
+- **Cacheable.** Every successful `GET` carries `ETag`, `Last-Modified` and `Cache-Control:
+public, max-age=<PUBLIC_API_CACHE_MAX_AGE>`; conditional requests answer `304` — see
+  [Caching](#caching).
 
 ### Endpoints
 
@@ -50,8 +53,7 @@ Every successful answer is an envelope: the payload under `data`, paging and cou
 | `GET`  | `/api/v1/meta`                      | —                                                                                              | `{ data: { api_version, app_version, dataset_version, license, counts } }` |
 
 Every endpoint and its parameters are also described on the in-app _Documentation_ pages,
-which run live requests against the current database. The `openapi.json` export is tracked in #273, caching
-headers in #274.
+which run live requests against the current database. The `openapi.json` export is tracked in #273.
 
 ```bash
 curl -X POST 'http://localhost:3010/api/v1/search/detailed' \
@@ -113,6 +115,36 @@ was last imported from, `null` for data authored in place or imported without a 
 `license` (the data license — `null` until it is decided, see #270) and `counts` (entries,
 words, phrases, grammar patterns, word forms, meanings, meaning and short translations; the
 counts are refreshed at most once a minute).
+
+### Caching
+
+Dictionary data changes rarely, so the public `GET` reads are built to be cached by browsers,
+CDNs and reverse proxies (issue #274). Every successful `GET` answer carries:
+
+| Header          | Value                                                                                                          |
+| --------------- | -------------------------------------------------------------------------------------------------------------- |
+| `ETag`          | weak, a hash of the JSON body: `W/"…"`. Changes exactly when the answer changes                                |
+| `Last-Modified` | the newest change anywhere in the dictionary (entries, words, meanings, translations), refreshed once a minute |
+| `Cache-Control` | `public, max-age=<PUBLIC_API_CACHE_MAX_AGE>` (default `3600`); `public, no-cache` when the variable is `0`     |
+
+A client that sends the tag back revalidates in one bodiless round trip:
+
+```bash
+curl -i 'http://localhost:3010/api/v1/words/run'                                   # 200, ETag: W/"…"
+curl -i -H 'If-None-Match: W/"…"' 'http://localhost:3010/api/v1/words/run'         # 304, no body
+curl -i -H 'If-Modified-Since: <Last-Modified>' 'http://localhost:3010/api/v1/words/run'
+```
+
+Invalidation is implicit: the `ETag` is a content hash, so the first answer after an edit or
+an import carries a new tag and a `304` is never served for changed data. `Last-Modified` is
+informational (a minute behind at most) — when both validators are sent the `ETag` decides. A
+CDN or proxy in front keeps an answer for `max-age` and then revalidates; lower
+`PUBLIC_API_CACHE_MAX_AGE` (or set it to `0`) on an instance whose dictionary is edited live.
+
+Not cached: the `POST` search reads (HTTP caches do not store `POST`), every error under the
+prefix (`Cache-Control: no-store`, so a miss or a `429` is never served from a cache), and
+everything under the admin prefixes (`no-store` on every answer, including `401`s and the
+`404`s of a disabled surface).
 
 ### Deprecated aliases
 
