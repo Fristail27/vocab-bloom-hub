@@ -12,6 +12,17 @@ import { escapeLike } from './utils/escapeLike';
 import { bytewise } from '../../utils/bytewise';
 import { RELATION_LOAD_STRATEGY } from '../../utils/wordRelations';
 
+/**
+ * Terms shorter than this get the short-term flow (issue #292): the exact
+ * and prefix tiers only. A one- or two-character term matches half the
+ * dictionary in the substring tiers (`%a%` ≈ 175k of 298k headwords), has
+ * no full trigram for the GIN index and no meaningful similarity — the
+ * user means a letter, an article or an abbreviation, all exact headwords.
+ */
+export const SEARCH_MIN_SUBSTRING_LENGTH = 3;
+
+type OrderedIdsT = { ids: number[]; similarity: Map<number, number>; fuzzy: boolean; short_term: boolean };
+
 @Injectable()
 export class EnSearchService {
   constructor(
@@ -234,14 +245,19 @@ export class EnSearchService {
    * Runs every tier in relevance order (exact, phrasal, starts-with, phrases,
    * ends-with, any) and returns up to `target` word ids in that order. When
    * none of them matches, the fuzzy tier answers instead (`similarity` per
-   * id, `fuzzy: true`).
+   * id, `fuzzy: true`). A term shorter than SEARCH_MIN_SUBSTRING_LENGTH
+   * stops after the starts-with tier (`short_term: true`, issue #292).
    */
   private async collectOrderedIds(
     search: string,
     type: EnEntryTypesE | undefined,
     target: number,
-  ): Promise<{ ids: number[]; similarity: Map<number, number>; fuzzy: boolean }> {
+  ): Promise<OrderedIdsT> {
     const ordered: number[] = [];
+    // a blank term names nothing; the prefix tier would otherwise match every headword
+    if (search.length === 0) {
+      return { ids: ordered, similarity: new Map(), fuzzy: false, short_term: true };
+    }
     const pushUpToTarget = (set: Set<number>) => {
       for (const id of set) {
         if (ordered.length >= target) return;
@@ -261,6 +277,12 @@ export class EnSearchService {
         : new Set<number>();
     pushUpToTarget(wordsStartFromSet);
     excludedIds = [...excludedIds, ...wordsStartFromSet];
+
+    // the short-term flow stops here: no phrase, suffix, substring or fuzzy
+    // tier for a one- or two-character term (both index lookups so far)
+    if (search.length < SEARCH_MIN_SUBSTRING_LENGTH) {
+      return { ids: ordered, similarity: new Map(), fuzzy: false, short_term: true };
+    }
 
     const phrasesExactSet = await this.getPhrases(search, type, excludedIds, target - ordered.length);
     pushUpToTarget(phrasesExactSet);
@@ -285,9 +307,9 @@ export class EnSearchService {
 
     if (ordered.length === 0) {
       const similarity = await this.getFuzzyMatches(search, type, target);
-      return { ids: [...similarity.keys()], similarity, fuzzy: similarity.size > 0 };
+      return { ids: [...similarity.keys()], similarity, fuzzy: similarity.size > 0, short_term: false };
     }
-    return { ids: ordered, similarity: new Map(), fuzzy: false };
+    return { ids: ordered, similarity: new Map(), fuzzy: false, short_term: false };
   }
 
   private async findWordsByIdsOrdered(
@@ -308,9 +330,9 @@ export class EnSearchService {
 
   async searchFlat({ search: s, type, limit }: SearchReqDTO): Promise<SearchItemsT> {
     const search = s.trim().toLowerCase();
-    const { ids, similarity, fuzzy } = await this.collectOrderedIds(search, type, limit);
+    const { ids, similarity, fuzzy, short_term } = await this.collectOrderedIds(search, type, limit);
     const words = await this.findWordsByIdsOrdered(ids, { word: true, forms: { word: true } });
-    return { items: mapSearchResults(words, similarity), fuzzy };
+    return { items: mapSearchResults(words, similarity), fuzzy, short_term };
   }
 
   async search(body: SearchReqDTO): Promise<EnSearchWordT[]> {
@@ -328,7 +350,7 @@ export class EnSearchService {
   }: SearchDetailedReqDTO): Promise<SearchDetailedItemsT> {
     const search = s.trim().toLowerCase();
     // one id past the requested page tells whether the next page exists
-    const { ids, similarity, fuzzy } = await this.collectOrderedIds(search, type, page * limit + 1);
+    const { ids, similarity, fuzzy, short_term } = await this.collectOrderedIds(search, type, page * limit + 1);
     const pageIds = ids.slice((page - 1) * limit, page * limit);
 
     const relations: FindOptionsRelations<EnWord> = { word: true, forms: { word: true } };
@@ -351,6 +373,7 @@ export class EnSearchService {
       limit,
       has_more: ids.length > page * limit,
       fuzzy,
+      short_term,
     };
   }
 }

@@ -379,7 +379,7 @@ export default {
     endpoint_search: 'Basic search',
     endpoint_search_detailed: 'Detailed search',
     desc_search:
-      'Searches dictionary entries and answers with a flat list of words without meanings and translations. Results are ordered by match quality: exact match first, then phrasal verbs, entries starting with the query, phrases, entries ending with it and any other occurrence. When nothing matches, a trigram similarity tier answers typos: meta.fuzzy is true and every item carries similarity (0–1) — Postgres instances only.',
+      'Searches dictionary entries and answers with a flat list of words without meanings and translations. Results are ordered by match quality: exact match first, then phrasal verbs, entries starting with the query, phrases, entries ending with it and any other occurrence. When nothing matches, a trigram similarity tier answers typos: meta.fuzzy is true and every item carries similarity (0–1) — Postgres instances only. A term of one or two characters searches the exact and prefix tiers only (meta.short_term is true).',
     desc_search_detailed:
       'The same search with pagination, which can additionally join meanings and their translations. Because every item may carry joined data, both the page size and the pagination depth are capped tighter than in the basic search.',
     endpoint_word: 'Headword lookup',

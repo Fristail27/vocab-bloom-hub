@@ -20,13 +20,14 @@ export class PublicSearchController {
     summary: 'Search dictionary entries (flat list, no meanings)',
     description:
       'Tiers in relevance order: exact, phrasal, starts-with, phrases, ends-with, contains. When none matches, ' +
-      'a trigram similarity tier answers typos (`meta.fuzzy: true`, `similarity` on every item; Postgres instances only).',
+      'a trigram similarity tier answers typos (`meta.fuzzy: true`, `similarity` on every item; Postgres instances only). ' +
+      'A term shorter than 3 characters searches the exact and prefix tiers only (`meta.short_term: true`).',
   })
   @HttpCode(200)
   @Post('/')
   async search(@Body() body: SearchV1ReqDTO): Promise<PublicSearchV1ResT> {
-    const { items, fuzzy } = await this.enSearchService.searchFlat(body);
-    return { data: items, meta: { count: items.length, fuzzy } };
+    const { items, fuzzy, short_term } = await this.enSearchService.searchFlat(body);
+    return { data: items, meta: { count: items.length, fuzzy, short_term } };
   }
 
   @ApiOperation({ summary: 'Search dictionary entries with pagination, meanings and translations' })

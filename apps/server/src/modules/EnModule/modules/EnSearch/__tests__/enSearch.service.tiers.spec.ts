@@ -177,6 +177,72 @@ describe('EnSearchService tier categorization (issue #187)', () => {
     expect(await service.search({ search: 'a%c', type: undefined, limit: 10 })).toEqual([]);
   });
 
+  describe('short terms (issue #292)', () => {
+    // a letter, an article, a two-letter word and headwords that only the
+    // substring tiers would reach from "a" / "ab"
+    const seedShortDataset = async () => {
+      await addWord(await addEntry('a'), EnPartOfSpeechE.article);
+      await addWord(await addEntry('ab'), EnPartOfSpeechE.noun);
+      const abandon = await addWord(await addEntry('abandon'), EnPartOfSpeechE.verb);
+      await addWord(await addEntry('abandoned'), EnPartOfSpeechE.verb, EnWordFormsE.past_simple, {
+        base_form: abandon,
+      });
+      await addWord(await addEntry('cab'), EnPartOfSpeechE.noun);
+      await addWord(await addEntry('tabby'), EnPartOfSpeechE.noun);
+      await addWord(await addEntry('a cab ride', EnEntryTypesE.phrase), EnPartOfSpeechE.phrase);
+    };
+
+    it('searches a one- or two-character term in the exact and prefix tiers only', async () => {
+      await seedShortDataset();
+
+      const ab = await service.searchFlat({ search: 'ab', type: undefined, limit: 10 });
+      expect(ab.short_term).toBe(true);
+      expect(ab.fuzzy).toBe(false);
+      // exact first, then the prefix tier; nothing from the suffix, substring or phrase tiers
+      expect(words(ab.items)).toEqual(['ab', 'abandon']);
+
+      const a = await service.searchFlat({ search: 'a', type: undefined, limit: 10 });
+      expect(a.short_term).toBe(true);
+      expect(words(a.items)).toEqual(['a', 'ab', 'abandon']);
+    });
+
+    it('resolves a short inflected form to its base entry and honours the type filter', async () => {
+      await seedShortDataset();
+      const it = await addWord(await addEntry('it'), EnPartOfSpeechE.pronoun);
+      await addWord(await addEntry('its'), EnPartOfSpeechE.pronoun, EnWordFormsE.possessive_adjective, {
+        base_form: it,
+      });
+
+      expect(words(await service.search({ search: 'it', type: undefined, limit: 10 }))).toEqual(['it']);
+      expect(words(await service.search({ search: 'its', type: undefined, limit: 10 }))[0]).toBe('it');
+      // the exact tier answers whatever the type (as in the full flow); the
+      // prefix tier only runs for words, so "abandon" stays out
+      const phrases = await service.searchFlat({ search: 'a', type: EnEntryTypesE.phrase, limit: 10 });
+      expect(phrases.short_term).toBe(true);
+      expect(words(phrases.items)).toEqual(['a']);
+    });
+
+    it('runs the full tiers from three characters on', async () => {
+      await seedShortDataset();
+
+      const abb = await service.searchFlat({ search: 'abb', type: undefined, limit: 10 });
+      expect(abb.short_term).toBe(false);
+      expect(words(abb.items)).toEqual(['tabby']);
+      const cab = await service.searchDetailed({ search: 'cab' });
+      expect(cab.short_term).toBe(false);
+      expect(cab.items.map((w) => w.word)).toEqual(['cab', 'a cab ride']);
+    });
+
+    it('treats a blank term as a short term and answers nothing', async () => {
+      await seedShortDataset();
+
+      const blank = await service.searchFlat({ search: '   ', type: undefined, limit: 10 });
+      expect(blank).toEqual({ items: [], fuzzy: false, short_term: true });
+      const detailed = await service.searchDetailed({ search: ' ' });
+      expect(detailed).toMatchObject({ items: [], has_more: false, short_term: true });
+    });
+  });
+
   it('returns an empty list when nothing matches', async () => {
     await seedRunDataset();
 

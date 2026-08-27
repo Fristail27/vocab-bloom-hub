@@ -32,7 +32,14 @@ export const buildScenarios = ({ runVerbId }: ScenarioContextT): ScenarioT[] => 
     body: { search: 'run' },
   },
   {
-    name: 'search broad prefix "ab"',
+    name: 'search one letter "a" (short-term flow)',
+    group: 'search',
+    method: 'POST',
+    path: '/api/v1/search',
+    body: { search: 'a' },
+  },
+  {
+    name: 'search broad prefix "ab" (short-term flow)',
     group: 'search',
     method: 'POST',
     path: '/api/v1/search',

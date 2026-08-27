@@ -24,11 +24,19 @@ export type PublicListResT<TItem, TMeta> = { data: TItem[]; meta: TMeta };
 
 // `fuzzy`: the exact tiers found nothing and the items come from the trigram
 // similarity tier (Postgres instances only, issue #278); every item then
-// carries `similarity` (0–1) — the "did you mean" signal
-export type PublicSearchV1MetaT = { count: number; fuzzy: boolean };
+// carries `similarity` (0–1) — the "did you mean" signal.
+// `short_term`: the term has fewer than 3 characters, so only the exact and
+// prefix tiers were searched (issue #292)
+export type PublicSearchV1MetaT = { count: number; fuzzy: boolean; short_term: boolean };
 export type PublicSearchV1ResT = PublicListResT<EnSearchWordT, PublicSearchV1MetaT>;
 
-export type PublicSearchDetailedV1MetaT = { page: number; limit: number; has_more: boolean; fuzzy: boolean };
+export type PublicSearchDetailedV1MetaT = {
+  page: number;
+  limit: number;
+  has_more: boolean;
+  fuzzy: boolean;
+  short_term: boolean;
+};
 export type PublicSearchDetailedV1ResT = PublicListResT<EnWordT, PublicSearchDetailedV1MetaT>;
 
 // ------------------------------------------------------------ words (#272)
