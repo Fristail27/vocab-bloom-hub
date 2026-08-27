@@ -14,12 +14,15 @@ import { PublicWordsService } from './public-words.service';
 import { PublicMetaService } from './public-meta.service';
 import { DictionaryLastModifiedService } from './dictionary-last-modified.service';
 import { PublicCacheInterceptor } from './public-cache.interceptor';
+import { PublicOpenApiController } from './public-openapi.controller';
+import { PublicOpenApiService } from './public-openapi.service';
 
 /**
  * The public, read-only, versioned surface of the dictionary (`/api/v1`,
  * issues #271, #272): no authentication, nothing that mutates data, one rate
- * limit for the whole prefix, caching headers on every GET (#274). Backed
- * by the same services and mappers as the admin API.
+ * limit for the whole prefix, caching headers on every GET (#274), the
+ * OpenAPI contract at /openapi.json (#273). Backed by the same services and
+ * mappers as the admin API.
  */
 @Module({
   imports: [
@@ -28,7 +31,18 @@ import { PublicCacheInterceptor } from './public-cache.interceptor';
     // the dataset version of the last import lives in the settings store
     SettingsModule,
   ],
-  controllers: [PublicSearchController, PublicWordsController, PublicDictionaryController],
-  providers: [PublicWordsService, PublicMetaService, DictionaryLastModifiedService, PublicCacheInterceptor],
+  controllers: [
+    PublicSearchController,
+    PublicWordsController,
+    PublicDictionaryController,
+    PublicOpenApiController,
+  ],
+  providers: [
+    PublicWordsService,
+    PublicMetaService,
+    DictionaryLastModifiedService,
+    PublicCacheInterceptor,
+    PublicOpenApiService,
+  ],
 })
 export class PublicApiModule {}

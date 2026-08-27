@@ -23,4 +23,6 @@ export enum ErrorCodes {
   too_many_requests = 'too_many_requests',
   // public list paging (issue #272)
   invalid_cursor = 'invalid_cursor',
+  // the public OpenAPI document was not attached to the application (issue #273)
+  openapi_not_available = 'openapi_not_available',
 }

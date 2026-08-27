@@ -25,6 +25,10 @@ jobs:
       - name: Prettier check
         run: yarn format:check
 
+      # The committed public OpenAPI spec must match the code (issue #273)
+      - name: OpenAPI spec is up to date
+        run: yarn workspace server openapi:check
+
   typecheck:
     name: typecheck
     runs-on: ubuntu-latest
