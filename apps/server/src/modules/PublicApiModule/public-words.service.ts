@@ -3,7 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsRelations, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { EnWord } from '../EnModule/entities/en_word.entity';
 import { EnService } from '../EnModule/en.service';
-import { FULL_WORD_RELATIONS } from '../EnModule/utils/wordRelations';
+import { FULL_WORD_RELATIONS, RELATION_LOAD_STRATEGY } from '../EnModule/utils/wordRelations';
+import { bytewise } from '../EnModule/utils/bytewise';
 import { prepareWordFromDB } from '../EnModule/utils/prepareWordFromDB';
 import { mapDetailedSearchResults } from '../EnModule/modules/EnSearch/utils/mapDetailedSearchResults';
 import { ErrorCodes } from '../../../core/constants/error_codes';
@@ -71,7 +72,11 @@ export class PublicWordsService {
 
   private async loadFull(ids: number[]): Promise<EnWordT[]> {
     if (ids.length === 0) return [];
-    const rows = await this.enWordsRep.find({ where: { id: In(ids) }, relations: FULL_WORD_RELATIONS });
+    const rows = await this.enWordsRep.find({
+      where: { id: In(ids) },
+      relations: FULL_WORD_RELATIONS,
+      relationLoadStrategy: RELATION_LOAD_STRATEGY,
+    });
     const byId = new Map(rows.map((row) => [row.id, this.sortRelations(row)]));
     return ids
       .map((id) => byId.get(id))
@@ -165,21 +170,27 @@ export class PublicWordsService {
       qb.andWhere('w.area_variant IN (:...areaVariants)', { areaVariants: filters.area_variant });
     }
     if (filters.category?.length) {
-      // categories is an enum[] on Postgres and a comma-joined text on SQLite
-      const clauses = filters.category.map((_, i) =>
-        checkIsPostgres()
-          ? `:category${i} = ANY(w.categories)`
-          : `(',' || w.categories || ',') LIKE ('%,' || :category${i} || ',%')`,
-      );
-      qb.andWhere(
-        `(${clauses.join(' OR ')})`,
-        Object.fromEntries(filters.category.map((c, i) => [`category${i}`, c])),
-      );
+      if (checkIsPostgres()) {
+        // an enum[] column: the overlap operator is what the GIN index
+        // IDX_EN_CATEGORIES serves (`= ANY(...)` is not indexable)
+        qb.andWhere('w.categories && ARRAY[:...categories]::"en_words_categories_enum"[]', {
+          categories: filters.category,
+        });
+      } else {
+        // a comma-joined text on SQLite: match one whole token
+        const clauses = filters.category.map(
+          (_, i) => `(',' || w.categories || ',') LIKE ('%,' || :category${i} || ',%')`,
+        );
+        qb.andWhere(
+          `(${clauses.join(' OR ')})`,
+          Object.fromEntries(filters.category.map((c, i) => [`category${i}`, c])),
+        );
+      }
     }
   }
 
   private filtered(filters: WordFiltersV1QueryDTO): SelectQueryBuilder<EnWord> {
-    const qb = this.enWordsRep.createQueryBuilder('w').innerJoin('w.word', 'entry');
+    const qb = this.enWordsRep.createQueryBuilder('w');
     this.applyFilters(qb, filters);
     return qb;
   }
@@ -191,17 +202,20 @@ export class PublicWordsService {
     const relations: FindOptionsRelations<EnWord> = { word: true, forms: { word: true } };
     if (with_meanings) relations.meanings = { translations: true, synonyms: true, antonyms: true };
     if (with_translations) relations.short_translations = true;
-    const rows = await this.enWordsRep.find({ where: { id: In(ids) }, relations });
+    const rows = await this.enWordsRep.find({
+      where: { id: In(ids) },
+      relations,
+      relationLoadStrategy: RELATION_LOAD_STRATEGY,
+    });
     const byId = new Map(rows.map((row) => [row.id, this.sortRelations(row)]));
     const ordered = ids.map((id) => byId.get(id)).filter((row): row is EnWord => row !== undefined);
     return mapDetailedSearchResults(ordered, { with_meanings, with_translations });
   }
 
-  // The headword compared and ordered by its bytes on every driver: SQLite
-  // does that by default, Postgres would otherwise apply the database locale
-  // (backed by the IDX_EN_ENTRY_WORD_C index, see the migration of that name)
+  // The headword column of en_words ordered by its bytes (backed by
+  // IDX_EN_WORD_C on Postgres); no join, en_entries.word holds the same value
   private get orderedWord(): string {
-    return checkIsPostgres() ? 'entry.word COLLATE "C"' : 'entry.word';
+    return bytewise('w.word');
   }
 
   /**
@@ -212,28 +226,30 @@ export class PublicWordsService {
    */
   async listWords(query: ListWordsV1QueryDTO): Promise<PublicWordsV1ResT> {
     const limit = query.limit ?? PUBLIC_LIST_DEFAULT_LIMIT;
-    const qb = this.filtered(query).select(['w.id']).addSelect(['entry.word']);
+    const qb = this.filtered(query).select('w.id', 'id').addSelect('w.word', 'word');
     if (query.cursor !== undefined) {
       const cursor = decodeWordCursor(query.cursor);
       if (!cursor) {
         throw new BadRequestException(ErrorCodes.invalid_cursor);
       }
-      qb.andWhere(`(${this.orderedWord} > :cursorWord OR (entry.word = :cursorWord AND w.id > :cursorId))`, {
+      // a row comparison, not `word > :w OR (word = :w AND id > :id)`: the
+      // planner turns it into one index range start (0.1 ms instead of a
+      // 30 ms walk of the index from its beginning on the full dictionary)
+      qb.andWhere(`(${this.orderedWord}, w.id) > (:cursorWord, :cursorId)`, {
         cursorWord: cursor.word,
         cursorId: cursor.id,
       });
     }
-    // the only join is a many-to-one, so a raw LIMIT is safe (no row multiplication)
     const rows = await qb
       .orderBy(this.orderedWord, 'ASC')
       .addOrderBy('w.id', 'ASC')
       .limit(limit + 1)
-      .getMany();
+      .getRawMany<{ id: number; word: string }>();
     const has_more = rows.length > limit;
     const page = rows.slice(0, limit);
     const last = page.at(-1);
     const data = await this.loadPage(
-      page.map((row) => row.id),
+      page.map((row) => Number(row.id)),
       query,
     );
     return {
@@ -241,22 +257,39 @@ export class PublicWordsService {
       meta: {
         limit,
         has_more,
-        next_cursor: has_more && last ? encodeWordCursor({ word: last.word.word, id: last.id }) : null,
+        next_cursor: has_more && last ? encodeWordCursor({ word: last.word, id: Number(last.id) }) : null,
       },
     };
   }
 
   // -------------------------------------------------------------- random
 
+  private async firstMatchFrom(
+    filters: WordFiltersV1QueryDTO,
+    pivot: number,
+    direction: 'ASC' | 'DESC',
+  ): Promise<number | null> {
+    const hit = await this.filtered(filters)
+      .select('w.id', 'id')
+      .andWhere(direction === 'ASC' ? 'w.id >= :pivot' : 'w.id < :pivot', { pivot })
+      .orderBy('w.id', direction)
+      .limit(1)
+      .getRawOne<{ id: unknown }>();
+    return hit?.id === null || hit?.id === undefined ? null : Number(hit.id);
+  }
+
   /**
-   * A random entry without `ORDER BY random()`: the id range of the rows
-   * matching the filters is read from the primary key, a pivot is drawn in
-   * it and the first matching row at or after the pivot is taken — index
-   * lookups only. Rows right after a gap in the ids are drawn slightly more
-   * often; for a "word of the day" that bias does not matter.
+   * A random entry without `ORDER BY random()`: a pivot is drawn in the id
+   * range of the whole table (two primary-key lookups, whatever the
+   * filters), then the first matching row at or after it is taken, wrapping
+   * around to the last matching row before it — index lookups only, the
+   * filter indexes bound the walk for selective filters. Rows right after a
+   * gap in the ids are drawn slightly more often; for a "word of the day"
+   * that bias does not matter.
    */
   async getRandom(filters: WordFiltersV1QueryDTO): Promise<EnWordT> {
-    const bounds = await this.filtered(filters)
+    const bounds = await this.enWordsRep
+      .createQueryBuilder('w')
       .select('MIN(w.id)', 'min')
       .addSelect('MAX(w.id)', 'max')
       .getRawOne<{ min: unknown; max: unknown }>();
@@ -266,15 +299,11 @@ export class PublicWordsService {
     const min = Number(bounds.min);
     const max = Number(bounds.max);
     const pivot = min + Math.floor(Math.random() * (max - min + 1));
-    const hit = await this.filtered(filters)
-      .select('w.id', 'id')
-      .andWhere('w.id >= :pivot', { pivot })
-      .orderBy('w.id', 'ASC')
-      .limit(1)
-      .getRawOne<{ id: unknown }>();
-    if (hit?.id === null || hit?.id === undefined) {
+    const id =
+      (await this.firstMatchFrom(filters, pivot, 'ASC')) ?? (await this.firstMatchFrom(filters, pivot, 'DESC'));
+    if (id === null) {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);
     }
-    return this.getById(Number(hit.id));
+    return this.getById(id);
   }
 }

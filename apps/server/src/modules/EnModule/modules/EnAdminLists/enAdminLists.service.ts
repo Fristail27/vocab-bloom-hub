@@ -20,6 +20,7 @@ import { ListMeaningsQueryDTO } from './dto/ListMeaningsQuery.dto';
 import { ListMeaningTranslationsQueryDTO } from './dto/ListMeaningTranslationsQuery.dto';
 import { LIST_DEFAULT_LIMIT, PaginationQueryDTO } from './dto/PaginationQuery.dto';
 import { escapeLike } from '../EnSearch/utils/escapeLike';
+import { bytewise } from '../../utils/bytewise';
 import { normalizeWordLinks } from '../../utils/normalizeWordLinks';
 
 type PageT = { page: number; limit: number };
@@ -61,7 +62,7 @@ export class EnAdminListsService {
   ): void {
     const search = query.search?.trim().toLowerCase();
     if (search) {
-      qb.andWhere("entry.word LIKE :prefix ESCAPE '\\'", { prefix: `${escapeLike(search)}%` });
+      qb.andWhere(`${bytewise('entry.word')} LIKE :prefix ESCAPE '\\'`, { prefix: `${escapeLike(search)}%` });
     }
     if (query.part_of_speech?.length) {
       qb.andWhere('w.part_of_speech IN (:...partsOfSpeech)', { partsOfSpeech: query.part_of_speech });

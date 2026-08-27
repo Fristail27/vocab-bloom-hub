@@ -12,6 +12,7 @@ type QbMock = {
   where: jest.Mock;
   andWhere: jest.Mock;
   take: jest.Mock;
+  limit: jest.Mock;
   getMany: jest.Mock;
 };
 
@@ -23,6 +24,7 @@ const createQbMock = (): QbMock => {
   qb.where = jest.fn(() => qb);
   qb.andWhere = jest.fn(() => qb);
   qb.take = jest.fn(() => qb);
+  qb.limit = jest.fn(() => qb);
   qb.getMany = jest.fn(async () => []);
   return qb;
 };

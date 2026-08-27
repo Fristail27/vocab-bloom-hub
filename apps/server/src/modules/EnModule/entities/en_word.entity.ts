@@ -24,6 +24,7 @@ import {
   WordLevelE,
 } from '../../../../types';
 import { checkIsPostgres, getVersion } from '../../../../configuration';
+import { MANUALLY_MANAGED_INDEX } from './manually-managed-index';
 
 @Entity('en_words')
 @Index('IDX_EN_WORD', ['word'])
@@ -32,6 +33,18 @@ import { checkIsPostgres, getVersion } from '../../../../configuration';
 @Index('IDX_EN_BASE_PHRASAL', ['base_phrasal'])
 @Index('IDX_EN_PHRASAL_SEARCH', ['base_phrasal', 'part_of_speech', 'form_of_word'])
 @Index('IDX_EN_PART_OF_SPEECH', ['part_of_speech'])
+// The public list and random filters (issue #279): one btree per column so
+// the planner can bitmap-AND selective filters and top-N sort the rest
+@Index('IDX_EN_WORD_LEVEL', ['word_level'])
+@Index('IDX_EN_LANGUAGE_REGISTER', ['language_register'])
+@Index('IDX_EN_AREA_VARIANT', ['area_variant'])
+@Index('IDX_EN_FORM_OF_WORD', ['form_of_word'])
+// GIN over the categories array (`&&`), created by the AddWordFilterIndexes
+// migration on Postgres; SQLite has no array index and needs nothing
+@Index('IDX_EN_CATEGORIES', ['categories'], MANUALLY_MANAGED_INDEX)
+// (word COLLATE "C", id): the byte order the public list pages in, walked
+// straight from en_words without joining en_entries; same migration
+@Index('IDX_EN_WORD_C', ['word'], MANUALLY_MANAGED_INDEX)
 export class EnWord {
   @PrimaryGeneratedColumn()
   @IsNumber()

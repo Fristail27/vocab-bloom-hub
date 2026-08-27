@@ -1,14 +1,9 @@
 import { Column, CreateDateColumn, Entity, Index, OneToMany, PrimaryColumn, UpdateDateColumn } from 'typeorm';
-import type { IndexOptions } from 'typeorm';
+import { MANUALLY_MANAGED_INDEX } from './manually-managed-index';
 import { IsDate } from 'class-validator';
 import { EnWord } from './en_word.entity';
 import { EnEntryTypesE } from '../../../../types';
 import { checkIsPostgres } from '../../../../configuration';
-
-// `synchronize: false` keeps schema sync and migration:generate away from an
-// index (they neither create nor drop it); TypeORM reads it at runtime
-// (IndexMetadataArgs.synchronize) but leaves it out of the decorator's typing
-const MANUALLY_MANAGED_INDEX = { synchronize: false } as IndexOptions;
 
 @Entity('en_entries')
 @Index('IDX_EN_ENTRY_TYPE', ['type'])

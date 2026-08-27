@@ -225,6 +225,7 @@ Details, including how to adopt migrations on a database created by the old auto
 - [`docs/authentication.md`](docs/authentication.md) — how the single-admin login, login proof and JWT cookie work
 - [`docs/migrations.md`](docs/migrations.md) — TypeORM migrations workflow for Postgres, deployment and troubleshooting
 - [`docs/offline-import.md`](docs/offline-import.md) — moving a dictionary between instances without internet access (export → copy → import from file)
+- [`docs/performance.md`](docs/performance.md) — latency of the hot reads on the full dictionary (Postgres vs SQLite), the indexes behind them, the benchmark and the query-plan guard
 - [`docs/api.md`](docs/api.md) — the public `/api/v1` contract (envelope, errors, rate limit, caching, OpenAPI export, deprecated aliases) and the public-only / admin-only switches
 - [`docs/README.ru.md`](docs/README.ru.md) — this README in Russian
 - Swagger UI at `/api` on a running server — the live API reference; the public contract as OpenAPI: [`apps/server/openapi/public-v1.json`](apps/server/openapi/public-v1.json) or `GET /api/v1/openapi.json`
