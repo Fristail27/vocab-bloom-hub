@@ -2,10 +2,11 @@ import { ErrorResT } from 'server/types';
 import { ErrorCodes } from 'server/core/constants/error_codes';
 
 type QueryScalarT = string | number | boolean;
+// an array value is sent as a repeated key (?a=1&a=2), which is how the
+// server DTOs receive list filters
+export type ApiQueryT = Record<string, QueryScalarT | QueryScalarT[] | undefined | null>;
 type RequestOptions = RequestInit & {
-  // an array value is sent as a repeated key (?a=1&a=2), which is how the
-  // server DTOs receive list filters
-  query?: Record<string, QueryScalarT | QueryScalarT[] | undefined | null>;
+  query?: ApiQueryT;
 };
 
 export type DownloadedFileT = { blob: Blob; filename?: string };

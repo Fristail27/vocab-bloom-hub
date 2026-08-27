@@ -1,6 +1,7 @@
 import { EnMeaning } from '../entities/en_meaning.entity';
 import { EnMeaningT } from '../../../../types';
 import { normalizeWordLinks } from './normalizeWordLinks';
+import { prepareMeaningTranslationFromDB } from './prepareTranslationsFromDB';
 
 /**
  * Maps a meaning row to its API shape: the `synonyms` and `antonyms`
@@ -19,7 +20,7 @@ export const prepareMeaningFromDB = (m: EnMeaning): EnMeaningT => {
   } = m;
   return {
     ...rest,
-    translations: translations ?? [],
+    translations: (translations ?? []).map(prepareMeaningTranslationFromDB),
     synonyms: normalizeWordLinks(synonyms?.map((entry) => entry.word)),
     antonyms: normalizeWordLinks(antonyms?.map((entry) => entry.word)),
   };

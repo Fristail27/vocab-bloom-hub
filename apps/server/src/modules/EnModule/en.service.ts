@@ -18,6 +18,7 @@ import {
 } from '../../../types';
 import { ErrorCodes } from '../../../core/constants/error_codes';
 import { prepareWordFromDB } from './utils/prepareWordFromDB';
+import { FULL_WORD_RELATIONS } from './utils/wordRelations';
 import { AddWordReqDTO, AddWordReqFormDTO } from './dto/AddWordReq.dto';
 import { AddWordFormReqDTO } from './dto/AddWordFormReq.dto';
 import { EditWordFormReqDTO } from './dto/EditWordFormReq.dto';
@@ -141,7 +142,7 @@ export class EnService {
     if (body.part_of_speech === EnPartOfSpeechE.grammar_pattern) {
       type = EnEntryTypesE.grammar_pattern;
     }
-    await this.dataSource.transaction(async (em) => {
+    const baseWord = await this.dataSource.transaction(async (em) => {
       const baseEntry = await this.getOrAddEntry(em, body.word, type);
       const baseWord = await this.addWordRow(em, baseEntry, body);
 
@@ -179,9 +180,11 @@ export class EnService {
       }
 
       this.logger.log(`Word "${body.word}" (${body.part_of_speech}) created, id=${baseWord.id}`);
+      return baseWord;
     });
 
-    return body;
+    // the request echoed back plus the id of the created base entry
+    return { ...body, id: baseWord.id };
   }
 
   async deleteWord(id: number): Promise<DeleteResT> {
@@ -306,17 +309,7 @@ export class EnService {
   }
 
   async getWordById(id: number): Promise<EnWordT> {
-    const res = await this.enWordsRep.findOne({
-      where: { id },
-      relations: {
-        forms: { word: true },
-        meanings: { translations: true, synonyms: true, antonyms: true },
-        phrasal_variants: { word: true },
-        base_phrasal: { word: true },
-        short_translations: true,
-        word: true,
-      },
-    });
+    const res = await this.enWordsRep.findOne({ where: { id }, relations: FULL_WORD_RELATIONS });
 
     if (!res) {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);

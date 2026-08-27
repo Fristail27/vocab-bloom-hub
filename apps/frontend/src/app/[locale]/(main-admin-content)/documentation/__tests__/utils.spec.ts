@@ -5,10 +5,19 @@ import {
   getEndpointBySlug,
   ParamControlE,
 } from '../constants';
-import { buildCurlSnippet, buildRequestBody, extractMeta, extractWords } from '../utils';
+import {
+  buildCurlSnippet,
+  buildQueryString,
+  buildRequestBody,
+  extractMeta,
+  extractWords,
+  resolveClientPath,
+} from '../utils';
 
 const searchEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.search)!;
 const detailedEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.search_detailed)!;
+const wordEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.word)!;
+const wordsEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.words)!;
 
 const getEndpoint: ApiEndpointDocT = {
   ...searchEndpoint,
@@ -51,11 +60,35 @@ describe('buildCurlSnippet', () => {
     expect(snippet).toContain(`-d '{"search":"run","limit":10}'`);
   });
 
-  it('не добавляет тело в GET-пример', () => {
+  it('переносит параметры GET-примера в строку запроса, а не в тело', () => {
     const snippet = buildCurlSnippet(getEndpoint, 'http://localhost:3010/api', { search: 'run' });
 
-    expect(snippet).toContain(`curl -X GET 'http://localhost:3010/api/en/example'`);
-    expect(snippet).not.toContain('-d ');
+    expect(snippet).toBe(`curl -X GET 'http://localhost:3010/api/en/example?search=run'`);
+  });
+
+  it('подставляет path-параметры и повторяет ключ для списков (issue #272)', () => {
+    expect(buildCurlSnippet(wordEndpoint, 'http://localhost:3010/api', { word: 'put up with' })).toBe(
+      `curl -X GET 'http://localhost:3010/api/v1/words/put%20up%20with'`,
+    );
+    expect(
+      buildCurlSnippet(wordsEndpoint, 'http://localhost:3010/api', {
+        word_level: ['B1', 'B2'],
+        form_of_word: ['base_form'],
+        limit: 20,
+      }),
+    ).toBe(
+      `curl -X GET 'http://localhost:3010/api/v1/words?word_level=B1&word_level=B2&form_of_word=base_form&limit=20'`,
+    );
+  });
+});
+
+describe('resolveClientPath', () => {
+  it('вырезает path-параметры из остальных значений', () => {
+    expect(resolveClientPath(wordEndpoint, { word: 'Run', language: ['ru'] })).toEqual({
+      path: '/v1/words/Run',
+      rest: { language: ['ru'] },
+    });
+    expect(buildQueryString({})).toBe('');
   });
 });
 
@@ -73,8 +106,18 @@ describe('extractWords', () => {
     expect(words).toHaveLength(1);
   });
 
+  it('читает одну запись из конверта { data } (issue #272)', () => {
+    expect(extractWords({ data: { id: 1, word: 'run', part_of_speech: 'verb' } })).toEqual([
+      { id: 1, word: 'run', part_of_speech: 'verb' },
+    ]);
+  });
+
   it('возвращает null для ответа без списка слов', () => {
     expect(extractWords({ isValid: true })).toBeNull();
+    // meanings, translations and meta have no words table
+    expect(extractWords({ data: [{ id: 1, title: 'to move fast', word_id: 2 }], meta: {} })).toBeNull();
+    expect(extractWords({ data: { short_translations: [], meaning_translations: [] } })).toBeNull();
+    expect(extractWords({ data: { api_version: '1', counts: {} } })).toBeNull();
   });
 });
 
@@ -112,6 +155,47 @@ describe('DOCUMENTED_ENDPOINTS', () => {
 
   it('находит метод по сегменту маршрута', () => {
     expect(getEndpointBySlug('search-detailed')).toBe(detailedEndpoint);
+    expect(getEndpointBySlug('word-by-id')?.key).toBe(ApiEndpointKeyE.word_by_id);
     expect(getEndpointBySlug('unknown')).toBeUndefined();
+  });
+
+  it('описывает все публичные методы v1 с уникальными сегментами (issue #272)', () => {
+    expect(DOCUMENTED_ENDPOINTS.map(({ path }) => path)).toEqual([
+      '/api/v1/search',
+      '/api/v1/search/detailed',
+      '/api/v1/words/{word}',
+      '/api/v1/words/{word}/meanings',
+      '/api/v1/words/{word}/translations',
+      '/api/v1/words/{word}/forms',
+      '/api/v1/words/id/{id}',
+      '/api/v1/words',
+      '/api/v1/random',
+      '/api/v1/meta',
+    ]);
+    const slugs = DOCUMENTED_ENDPOINTS.map(({ slug }) => slug);
+    expect(new Set(slugs).size).toBe(slugs.length);
+    // every {placeholder} of a path is a documented path param
+    DOCUMENTED_ENDPOINTS.forEach((endpoint) => {
+      const placeholders = [...endpoint.clientPath.matchAll(/\{(\w+)\}/g)].map(([, name]) => name);
+      expect(endpoint.params.filter((p) => p.inPath).map((p) => p.name)).toEqual(placeholders);
+    });
+  });
+
+  it('описывает фильтры списка и курсорную пагинацию', () => {
+    expect(wordsEndpoint.params.map(({ name }) => name)).toEqual([
+      'part_of_speech',
+      'word_level',
+      'language_register',
+      'category',
+      'area_variant',
+      'form_of_word',
+      'cursor',
+      'limit',
+      'with_meanings',
+      'with_translations',
+    ]);
+    expect(wordsEndpoint.params.find(({ name }) => name === 'form_of_word')?.defaultValue).toEqual([
+      'base_form',
+    ]);
   });
 });
