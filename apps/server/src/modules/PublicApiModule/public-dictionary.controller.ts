@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { PublicWordsService } from './public-words.service';
@@ -6,6 +6,7 @@ import { PublicMetaService } from './public-meta.service';
 import { WordFiltersV1QueryDTO } from './dto/WordFiltersV1Query.dto';
 import { PublicMetaV1ResT, PublicWordV1ResT } from '../../../types';
 import { PublicApiThrottlerGuard } from '../../core/guards/public-api-throttler.guard';
+import { PublicCacheInterceptor } from './public-cache.interceptor';
 import { PUBLIC_API_PREFIX, PUBLIC_API_THROTTLE } from '../../core/utils/public-api';
 
 /** Dictionary-wide public reads (issue #272): a random entry and the instance metadata */
@@ -13,6 +14,7 @@ import { PUBLIC_API_PREFIX, PUBLIC_API_THROTTLE } from '../../core/utils/public-
 @Controller(PUBLIC_API_PREFIX)
 @UseGuards(PublicApiThrottlerGuard)
 @Throttle(PUBLIC_API_THROTTLE)
+@UseInterceptors(PublicCacheInterceptor)
 export class PublicDictionaryController {
   constructor(
     private readonly publicWordsService: PublicWordsService,

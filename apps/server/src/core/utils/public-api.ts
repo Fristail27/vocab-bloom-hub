@@ -52,6 +52,34 @@ export const PUBLIC_API_THROTTLE = {
   default: { limit: () => getPublicApiRateLimit().limit, ttl: () => getPublicApiRateLimit().ttl },
 };
 
+// Seconds a shared cache may keep a public GET answer (Cache-Control
+// max-age); the content ETag still revalidates it in one round trip
+export const DEFAULT_PUBLIC_API_CACHE_MAX_AGE = 3600;
+
+/**
+ * `PUBLIC_API_CACHE_MAX_AGE=<seconds>`, a non-negative integer; `0` makes
+ * every cache revalidate on each use. Throws on anything else.
+ */
+export const parsePublicApiCacheMaxAge = (raw: string | undefined): number => {
+  const value = raw?.trim();
+  if (!value) return DEFAULT_PUBLIC_API_CACHE_MAX_AGE;
+  if (!/^\d+$/.test(value)) {
+    throw new ConfigurationError(
+      `PUBLIC_API_CACHE_MAX_AGE must be a number of seconds, e.g. 3600 (the default) or 0; got "${value}".`,
+    );
+  }
+  return Number(value);
+};
+
+// Read per request, like the rate limit; an invalid value failed startup already
+export const getPublicApiCacheMaxAge = (env: NodeJS.ProcessEnv = process.env): number => {
+  try {
+    return parsePublicApiCacheMaxAge(env.PUBLIC_API_CACHE_MAX_AGE);
+  } catch {
+    return DEFAULT_PUBLIC_API_CACHE_MAX_AGE;
+  }
+};
+
 const parseFlag = (name: string, raw: string | undefined): boolean => {
   const value = raw?.trim().toLowerCase();
   if (value === undefined || value === '') return true;
@@ -90,6 +118,7 @@ export const isAdminApiPath = (path: string): boolean =>
 /** Validates the public-API settings at startup; throws ConfigurationError */
 export const assertPublicApiConfig = (env: NodeJS.ProcessEnv = process.env): void => {
   parsePublicApiRateLimit(env.PUBLIC_API_RATE_LIMIT);
+  parsePublicApiCacheMaxAge(env.PUBLIC_API_CACHE_MAX_AGE);
   const surfaces = getApiSurfaces(env);
   if (!surfaces.publicApi && !surfaces.adminApi) {
     throw new ConfigurationError(
