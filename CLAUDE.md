@@ -30,14 +30,14 @@ yarn workspace server openapi:generate    # rewrite apps/server/openapi/public-v
 yarn workspace server openapi:check       # fail if the committed public spec is stale (CI runs it)
 
 yarn workspace server bench [--explain]   # latency of the hot reads on DATABASE_URL (full dictionary), see docs/performance.md
-yarn workspace server test:plans          # Postgres-only query-plan guard: no Seq Scan on the large tables (CI runs it)
+yarn workspace server test:postgres       # Postgres-only suites: query-plan guard, trigram search (CI runs them)
 
 yarn lint / yarn lint:fix                 # ESLint 10 flat config (eslint.config.ts)
 yarn format / yarn format:check           # Prettier
 yarn check          # lint + format:check (run before finishing work)
 ```
 
-Indexes a decorator cannot express (`COLLATE "C"`, GIN) are declared with `MANUALLY_MANAGED_INDEX` (`synchronize: false`) and created by their migration; `test:plans` fails when a hot query stops using an index.
+Indexes a decorator cannot express (`COLLATE "C"`, GIN) are declared with `MANUALLY_MANAGED_INDEX` (`synchronize: false`) and created by their migration; `test:postgres` fails when a hot query stops using an index.
 
 After changing anything under `/api/v1` (routes, DTOs, Swagger decorators) run `openapi:generate` and commit `apps/server/openapi/public-v1.json` — CI and `test/public-openapi.e2e-spec.ts` compare it with the code.
 

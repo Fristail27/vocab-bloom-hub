@@ -82,7 +82,7 @@ describe('public API /api/v1 (e2e, issue #271)', () => {
   it('answers the search without auth, in the { data, meta } envelope, with the version header', async () => {
     const res = await request(server()).post('/api/v1/search').send({ search: 'flick' }).expect(200);
     expect(res.headers['x-api-version']).toBe('1');
-    expect(res.body.meta).toEqual({ count: 1 });
+    expect(res.body.meta).toEqual({ count: 1, fuzzy: false });
     expect(res.body.data).toEqual([expect.objectContaining({ word: 'flicker' })]);
 
     const detailed = await request(server())
@@ -90,7 +90,7 @@ describe('public API /api/v1 (e2e, issue #271)', () => {
       .send({ search: 'flicker', with_meanings: true })
       .expect(200);
     expect(detailed.headers['x-api-version']).toBe('1');
-    expect(detailed.body.meta).toEqual({ page: 1, limit: 10, has_more: false });
+    expect(detailed.body.meta).toEqual({ page: 1, limit: 10, has_more: false, fuzzy: false });
     expect(detailed.body.data[0].meanings).toEqual([expect.objectContaining({ title: 'to shine unsteadily' })]);
   });
 
@@ -131,7 +131,13 @@ describe('public API /api/v1 (e2e, issue #271)', () => {
       .send({ search: 'flick' })
       .expect(201);
     expect(detailed.headers.deprecation).toBe('true');
-    expect(detailed.body).toEqual({ items: expect.any(Array), page: 1, limit: 10, has_more: false });
+    expect(detailed.body).toEqual({
+      items: expect.any(Array),
+      page: 1,
+      limit: 10,
+      has_more: false,
+      fuzzy: false,
+    });
   });
 
   it('hides the public prefix when PUBLIC_API_ENABLED=false', async () => {

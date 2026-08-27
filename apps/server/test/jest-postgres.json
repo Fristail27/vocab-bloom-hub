@@ -2,8 +2,8 @@
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": ".",
   "testEnvironment": "node",
-  "testRegex": ".plans-spec.ts$",
-  "setupFiles": ["<rootDir>/setup-plans.ts"],
+  "testRegex": ".pg-spec.ts$",
+  "setupFiles": ["<rootDir>/setup-postgres.ts"],
   "testTimeout": 120000,
   "transform": {
     "^.+\\.(t|j)s$": [

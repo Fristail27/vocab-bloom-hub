@@ -104,6 +104,9 @@ export type EnWordT = Omit<
   phrasal_variants?: string[] | undefined;
   base_phrasal: string | undefined;
   base_form?: Omit<EnWordT, 'base_form'> | undefined;
+  // Trigram similarity (0–1) to the search term, present only on the items
+  // of a fuzzy search answer (issue #278): the "did you mean" signal
+  similarity?: number | undefined;
 };
 
 // Base search results carry no meanings/translations — use the detailed search

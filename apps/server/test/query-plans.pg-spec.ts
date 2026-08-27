@@ -19,16 +19,13 @@ import { EnAreaVariantsE, EnPartOfSpeechE, EnWordFormsE } from '../types';
  * whenever one exists — on the full dictionary and on the empty database of
  * CI alike — and a `Seq Scan` in a plan means no index can serve the query.
  *
- * Statements that cannot be indexed yet are skipped on purpose:
- * - substring and suffix LIKEs of the search tiers (`%term`, `%term%`) —
- *   trigram indexes are issue #278;
- * - the Last-Modified lookups (`ORDER BY updateAt DESC LIMIT 1`), run at
- *   most once a minute behind a cache.
+ * The substring search tiers and the fuzzy tier are covered too: since
+ * #278 the trigram GIN index serves their LIKEs and the `%` operator. The
+ * only statements skipped on purpose are the Last-Modified lookups
+ * (`ORDER BY updateAt DESC LIMIT 1`), run at most once a minute behind a cache.
  */
 const GUARDED_GROUPS: ScenarioT['group'][] = ['search', 'word', 'list', 'random'];
 
-const isSubstringLike = (query: RecordedQueryT): boolean =>
-  /\bLIKE\b/i.test(query.sql) && query.parameters.some((p) => typeof p === 'string' && p.startsWith('%'));
 // `ORDER BY "updateAt" DESC` or the aliased `"EnWord_updateAt" DESC` of a find()
 const isLastModifiedLookup = (query: RecordedQueryT): boolean => /updateAt" DESC/.test(query.sql);
 
@@ -113,7 +110,7 @@ describe('query plans of the public reads (Postgres, issue #279)', () => {
       expect(res.status).toBeLessThan(500);
 
       for (const query of queries) {
-        if (!isExplainable(query.sql) || isSubstringLike(query) || isLastModifiedLookup(query)) continue;
+        if (!isExplainable(query.sql) || isLastModifiedLookup(query)) continue;
         const plan = await explainOn(runner, query);
         const scans = findSeqScans(plan, query.sql);
         if (scans.length > 0) {

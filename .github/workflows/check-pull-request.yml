@@ -63,13 +63,14 @@ jobs:
       - name: Server e2e tests
         run: yarn workspace server test:e2e
 
-  query-plans:
-    name: query plans (Postgres)
+  postgres:
+    name: postgres-only tests
     runs-on: ubuntu-latest
 
-    # The query-plan guard of the public reads (issue #279): with sequential
-    # scans disabled, every statement of a hot endpoint must find an index
-    # even on an empty database, so a query that cannot use one fails here
+    # The suites that need Postgres: the query-plan guard of the public reads
+    # (issue #279: with sequential scans disabled, every statement of a hot
+    # endpoint must find an index even on an empty database) and the trigram
+    # search (#278: pg_trgm, created by its migration)
     services:
       postgres:
         image: postgres:16
@@ -100,8 +101,8 @@ jobs:
       - name: Apply migrations
         run: yarn workspace server migration:run
 
-      - name: Query-plan guard
-        run: yarn workspace server test:plans
+      - name: Postgres-only tests (query plans, trigram search)
+        run: yarn workspace server test:postgres
 
   e2e:
     name: browser e2e

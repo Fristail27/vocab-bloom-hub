@@ -68,6 +68,14 @@ yarn workspace server migration:generate src/db/migrations/MyChange
 docker stop vbh-pg
 ```
 
+### Extensions
+
+`AddEntryWordTrigramIndex` runs `CREATE EXTENSION IF NOT EXISTS pg_trgm` (trigram search,
+issue #278). `pg_trgm` ships with every Postgres distribution and is a _trusted_ extension
+since Postgres 13, so the database owner can create it without superuser rights; managed
+services (RDS, Cloud SQL, Supabase, Neon, …) allow it too. If the migration fails with a
+permission error, create the extension once as a superuser and rerun `migration:run`.
+
 ### Hand-written migrations
 
 `migration:generate` only diffs the schema. Write the migration yourself (start from
