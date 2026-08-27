@@ -22,10 +22,13 @@ export const PUBLIC_API_V1_VERSION = '1';
 export type PublicItemResT<TItem> = { data: TItem };
 export type PublicListResT<TItem, TMeta> = { data: TItem[]; meta: TMeta };
 
-export type PublicSearchV1MetaT = { count: number };
+// `fuzzy`: the exact tiers found nothing and the items come from the trigram
+// similarity tier (Postgres instances only, issue #278); every item then
+// carries `similarity` (0–1) — the "did you mean" signal
+export type PublicSearchV1MetaT = { count: number; fuzzy: boolean };
 export type PublicSearchV1ResT = PublicListResT<EnSearchWordT, PublicSearchV1MetaT>;
 
-export type PublicSearchDetailedV1MetaT = { page: number; limit: number; has_more: boolean };
+export type PublicSearchDetailedV1MetaT = { page: number; limit: number; has_more: boolean; fuzzy: boolean };
 export type PublicSearchDetailedV1ResT = PublicListResT<EnWordT, PublicSearchDetailedV1MetaT>;
 
 // ------------------------------------------------------------ words (#272)

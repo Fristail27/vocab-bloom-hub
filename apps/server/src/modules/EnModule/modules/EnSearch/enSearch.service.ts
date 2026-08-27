@@ -4,7 +4,8 @@ import { FindOptionsRelations, In, Repository } from 'typeorm';
 import { EnWord } from '../../entities/en_word.entity';
 import { SearchReqDTO } from './dto/SearchReq.dto';
 import { SearchDetailedReqDTO } from './dto/SearchDetailedReq.dto';
-import { EnEntryTypesE, EnSearchWordT, SearchDetailedItemsT } from '../../../../../types';
+import { EnEntryTypesE, EnSearchWordT, SearchDetailedItemsT, SearchItemsT } from '../../../../../types';
+import { checkIsPostgres } from '../../../../../configuration';
 import { mapSearchResults } from './utils/mapSearchResults';
 import { mapDetailedSearchResults } from './utils/mapDetailedSearchResults';
 import { escapeLike } from './utils/escapeLike';
@@ -191,14 +192,55 @@ export class EnSearchService {
   }
 
   /**
+   * The fuzzy tier (issue #278, Postgres only): headwords whose trigrams are
+   * similar enough to the term (`%`, pg_trgm.similarity_threshold, 0.3 by
+   * default), best match first, served by the GIN index IDX_EN_ENTRY_WORD_TRGM.
+   * Inflected forms resolve to their base entry like in the other tiers.
+   * Returns the similarity per word id.
+   */
+  private async getFuzzyMatches(
+    search: string,
+    type: EnEntryTypesE | undefined,
+    limit: number,
+  ): Promise<Map<number, number>> {
+    const matches = new Map<number, number>();
+    if (!checkIsPostgres() || limit <= 0) return matches;
+
+    const includedTypes = type
+      ? [type]
+      : [EnEntryTypesE.grammar_pattern, EnEntryTypesE.phrase, EnEntryTypesE.word];
+    const rows = await this.enWordsRep
+      .createQueryBuilder('w')
+      .innerJoin('w.word', 'entry')
+      .leftJoin('w.base_form', 'baseForm')
+      .select('COALESCE(baseForm.id, w.id)', 'id')
+      .addSelect('similarity(entry.word, :search)', 'similarity')
+      .where('entry.word % :search', { search })
+      .andWhere('entry.type IN (:...includedTypes)', { includedTypes })
+      .orderBy('similarity', 'DESC')
+      .addOrderBy('entry.word', 'ASC')
+      // several forms may resolve to one base entry; over-fetch, then dedupe
+      .limit(limit * 3)
+      .getRawMany<{ id: unknown; similarity: unknown }>();
+    for (const row of rows) {
+      const id = Number(row.id);
+      if (!matches.has(id)) matches.set(id, Number(Number(row.similarity).toFixed(3)));
+      if (matches.size >= limit) break;
+    }
+    return matches;
+  }
+
+  /**
    * Runs every tier in relevance order (exact, phrasal, starts-with, phrases,
-   * ends-with, any) and returns up to `target` word ids in that order.
+   * ends-with, any) and returns up to `target` word ids in that order. When
+   * none of them matches, the fuzzy tier answers instead (`similarity` per
+   * id, `fuzzy: true`).
    */
   private async collectOrderedIds(
     search: string,
     type: EnEntryTypesE | undefined,
     target: number,
-  ): Promise<number[]> {
+  ): Promise<{ ids: number[]; similarity: Map<number, number>; fuzzy: boolean }> {
     const ordered: number[] = [];
     const pushUpToTarget = (set: Set<number>) => {
       for (const id of set) {
@@ -241,7 +283,11 @@ export class EnSearchService {
     );
     pushUpToTarget(anyMatchesWordsSet);
 
-    return ordered;
+    if (ordered.length === 0) {
+      const similarity = await this.getFuzzyMatches(search, type, target);
+      return { ids: [...similarity.keys()], similarity, fuzzy: similarity.size > 0 };
+    }
+    return { ids: ordered, similarity: new Map(), fuzzy: false };
   }
 
   private async findWordsByIdsOrdered(
@@ -260,11 +306,15 @@ export class EnSearchService {
     return ids.map((id) => byId.get(id)).filter((row): row is EnWord => row !== undefined);
   }
 
-  async search({ search: s, type, limit }: SearchReqDTO): Promise<EnSearchWordT[]> {
+  async searchFlat({ search: s, type, limit }: SearchReqDTO): Promise<SearchItemsT> {
     const search = s.trim().toLowerCase();
-    const ids = await this.collectOrderedIds(search, type, limit);
+    const { ids, similarity, fuzzy } = await this.collectOrderedIds(search, type, limit);
     const words = await this.findWordsByIdsOrdered(ids, { word: true, forms: { word: true } });
-    return mapSearchResults(words);
+    return { items: mapSearchResults(words, similarity), fuzzy };
+  }
+
+  async search(body: SearchReqDTO): Promise<EnSearchWordT[]> {
+    return (await this.searchFlat(body)).items;
   }
 
   async searchDetailed({
@@ -278,7 +328,7 @@ export class EnSearchService {
   }: SearchDetailedReqDTO): Promise<SearchDetailedItemsT> {
     const search = s.trim().toLowerCase();
     // one id past the requested page tells whether the next page exists
-    const ids = await this.collectOrderedIds(search, type, page * limit + 1);
+    const { ids, similarity, fuzzy } = await this.collectOrderedIds(search, type, page * limit + 1);
     const pageIds = ids.slice((page - 1) * limit, page * limit);
 
     const relations: FindOptionsRelations<EnWord> = { word: true, forms: { word: true } };
@@ -291,10 +341,16 @@ export class EnSearchService {
 
     const words = await this.findWordsByIdsOrdered(pageIds, relations);
     return {
-      items: mapDetailedSearchResults(words, { with_meanings, with_translations, translation_languages }),
+      items: mapDetailedSearchResults(words, {
+        with_meanings,
+        with_translations,
+        translation_languages,
+        similarity,
+      }),
       page,
       limit,
       has_more: ids.length > page * limit,
+      fuzzy,
     };
   }
 }

@@ -42,8 +42,8 @@ Every successful answer is an envelope: the payload under `data`, paging and cou
 
 | Method | Path                                | Query / body                                                                                   | Response                                                                   |
 | ------ | ----------------------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `POST` | `/api/v1/search`                    | `{ search, type?, limit? }`                                                                    | `{ data: EnSearchWordT[], meta: { count } }`                               |
-| `POST` | `/api/v1/search/detailed`           | `{ search, type?, limit?, page?, with_meanings?, with_translations?, translation_languages? }` | `{ data: EnWordT[], meta: { page, limit, has_more } }`                     |
+| `POST` | `/api/v1/search`                    | `{ search, type?, limit? }`                                                                    | `{ data: EnSearchWordT[], meta: { count, fuzzy } }`                        |
+| `POST` | `/api/v1/search/detailed`           | `{ search, type?, limit?, page?, with_meanings?, with_translations?, translation_languages? }` | `{ data: EnWordT[], meta: { page, limit, has_more, fuzzy } }`              |
 | `GET`  | `/api/v1/words/{word}`              | —                                                                                              | `{ data: EnWordT[], meta: { word, count } }`                               |
 | `GET`  | `/api/v1/words/{word}/meanings`     | —                                                                                              | `{ data: PublicMeaningV1T[], meta: { word, count } }`                      |
 | `GET`  | `/api/v1/words/{word}/translations` | `language?`                                                                                    | `{ data: { short_translations, meaning_translations }, meta }`             |
@@ -66,6 +66,26 @@ curl 'http://localhost:3010/api/v1/words/run'
 curl 'http://localhost:3010/api/v1/words?part_of_speech=noun&word_level=B1&word_level=B2&limit=50'
 curl 'http://localhost:3010/api/v1/random?part_of_speech=verb&word_level=A2'
 ```
+
+#### Search tiers and typo tolerance
+
+Both search endpoints rank their answer by tiers: exact headword, phrasal variants, starts
+with the term, phrases containing it as a word, ends with it, contains it anywhere. Every tier
+is served by an index on Postgres (a byte-order btree for the prefixes, a trigram GIN for the
+rest — issue #278).
+
+When no tier matches at all, a **fuzzy tier** answers instead: headwords whose trigrams are
+similar enough to the term (`pg_trgm`, similarity ≥ 0.3), best match first. Such an answer
+carries `meta.fuzzy: true` and a `similarity` (0–1) on every item — the "did you mean"
+signal for a UI or an SDK:
+
+```json
+{ "data": [{ "word": "relieve", "similarity": 0.45, "…": "…" }], "meta": { "count": 8, "fuzzy": true } }
+```
+
+`fuzzy` is `false` whenever the exact tiers found something, and also when nothing at all is
+similar (empty `data`). The fuzzy tier exists on Postgres instances only (`pg_trgm`); a
+SQLite instance answers an empty list for a typo, with `fuzzy: false`.
 
 #### Headword reads
 

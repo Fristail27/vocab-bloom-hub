@@ -3,6 +3,7 @@
   "paths": {
     "/api/v1/search": {
       "post": {
+        "description": "Tiers in relevance order: exact, phrasal, starts-with, phrases, ends-with, contains. When none matches, a trigram similarity tier answers typos (`meta.fuzzy: true`, `similarity` on every item; Postgres instances only).",
         "operationId": "PublicSearchController_search",
         "parameters": [],
         "requestBody": {

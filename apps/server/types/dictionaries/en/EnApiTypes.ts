@@ -29,12 +29,16 @@ export type AddWordReqT = AddWordReqDTO;
 export type AddResT = AddWordReqT | ErrorResT;
 export type SearchReqT = SearchReqDTO;
 export type SearchResT = EnSearchWordT[] | ErrorResT;
+// `fuzzy`: the exact tiers found nothing and the items come from the trigram
+// similarity tier (Postgres only, issue #278); each item then carries `similarity`
+export type SearchItemsT = { items: EnSearchWordT[]; fuzzy: boolean };
 export type SearchDetailedReqT = SearchDetailedReqDTO;
 export type SearchDetailedItemsT = {
   items: EnWordT[];
   page: number;
   limit: number;
   has_more: boolean;
+  fuzzy: boolean;
 };
 export type SearchDetailedResT = SearchDetailedItemsT | ErrorResT;
 

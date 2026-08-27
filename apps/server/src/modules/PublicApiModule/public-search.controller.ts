@@ -16,12 +16,17 @@ import { PUBLIC_API_PREFIX, PUBLIC_API_THROTTLE } from '../../core/utils/public-
 export class PublicSearchController {
   constructor(private readonly enSearchService: EnSearchService) {}
 
-  @ApiOperation({ summary: 'Search dictionary entries (flat list, no meanings)' })
+  @ApiOperation({
+    summary: 'Search dictionary entries (flat list, no meanings)',
+    description:
+      'Tiers in relevance order: exact, phrasal, starts-with, phrases, ends-with, contains. When none matches, ' +
+      'a trigram similarity tier answers typos (`meta.fuzzy: true`, `similarity` on every item; Postgres instances only).',
+  })
   @HttpCode(200)
   @Post('/')
   async search(@Body() body: SearchV1ReqDTO): Promise<PublicSearchV1ResT> {
-    const data = await this.enSearchService.search(body);
-    return { data, meta: { count: data.length } };
+    const { items, fuzzy } = await this.enSearchService.searchFlat(body);
+    return { data: items, meta: { count: items.length, fuzzy } };
   }
 
   @ApiOperation({ summary: 'Search dictionary entries with pagination, meanings and translations' })

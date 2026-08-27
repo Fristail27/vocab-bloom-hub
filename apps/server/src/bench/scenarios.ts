@@ -53,6 +53,20 @@ export const buildScenarios = ({ runVerbId }: ScenarioContextT): ScenarioT[] => 
     body: { search: 'put up' },
   },
   {
+    name: 'search typo "recieve" (fuzzy tier)',
+    group: 'search',
+    method: 'POST',
+    path: '/api/v1/search',
+    body: { search: 'recieve' },
+  },
+  {
+    name: 'search no match "qzxvj" (fuzzy tier, empty)',
+    group: 'search',
+    method: 'POST',
+    path: '/api/v1/search',
+    body: { search: 'qzxvj' },
+  },
+  {
     name: 'search detailed "run" + meanings + translations',
     group: 'search',
     method: 'POST',

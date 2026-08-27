@@ -12,6 +12,10 @@ import { checkIsPostgres } from '../../../../configuration';
 // COLLATE "C", which the decorator cannot express — hence synchronize: false.
 // SQLite orders text bytewise anyway and needs nothing extra
 @Index('IDX_EN_ENTRY_WORD_C', ['word'], MANUALLY_MANAGED_INDEX)
+// GIN over the trigrams of the headword (issue #278): the substring search
+// tiers and the fuzzy tier; created by the AddEntryWordTrigramIndex
+// migration (needs pg_trgm), nothing on SQLite
+@Index('IDX_EN_ENTRY_WORD_TRGM', ['word'], MANUALLY_MANAGED_INDEX)
 export class EnEntry {
   @CreateDateColumn({ type: checkIsPostgres() ? 'timestamptz' : 'datetime' })
   @IsDate()

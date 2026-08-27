@@ -8,11 +8,13 @@ type DetailedSearchOptionsT = {
   with_meanings: boolean;
   with_translations: boolean;
   translation_languages?: AvailableTranslationLanguagesE[] | undefined;
+  // the fuzzy tier's score per word id; absent from exact answers
+  similarity?: Map<number, number> | undefined;
 };
 
 export const mapDetailedSearchResults = (
   words: EnWord[],
-  { with_meanings, with_translations, translation_languages }: DetailedSearchOptionsT,
+  { with_meanings, with_translations, translation_languages, similarity }: DetailedSearchOptionsT,
 ): EnWordT[] => {
   const matchesLanguage = (language: AvailableTranslationLanguagesE) =>
     !translation_languages || translation_languages.includes(language);
@@ -35,5 +37,6 @@ export const mapDetailedSearchResults = (
       : [],
     base_phrasal: w.base_phrasal?.word?.word,
     base_form: undefined,
+    ...(similarity?.has(w.id) && { similarity: similarity.get(w.id) }),
   }));
 };
