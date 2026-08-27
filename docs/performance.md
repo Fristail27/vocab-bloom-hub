@@ -6,15 +6,16 @@ was done about it, and how to measure it again.
 
 ## Targets and where things stand
 
-| Read (public API)                                  | Target (p95) | Postgres now | Note                                            |
-| -------------------------------------------------- | -----------: | -----------: | ----------------------------------------------- |
-| Headword / id lookup (`/words/{word}`, `/id/{id}`) |        20 ms |       ≤ 9 ms | one query per relation, no row multiplication   |
-| Filtered list page (`/words?…`)                    |        20 ms |       ≤ 5 ms | index walk in `(word, id)` order, keyset cursor |
-| Random entry (`/random?…`)                         |        20 ms |       ≤ 7 ms | primary-key pivot, no `ORDER BY random()`       |
-| Search, exact / prefix tiers (`/search`)           |        20 ms |       ≤ 8 ms | byte-order index on the headword                |
-| Search, substring / suffix tiers                   |        20 ms |       ≤ 8 ms | trigram GIN index (#278)                        |
-| Search, typo (fuzzy tier)                          |        20 ms |      ≤ 10 ms | `pg_trgm` similarity when nothing else matches  |
-| List page with meanings joined (`with_meanings`)   |        50 ms |      ≤ 25 ms | 17 small queries instead of one exploding join  |
+| Read (public API)                                  | Target (p95) | Postgres now | Note                                              |
+| -------------------------------------------------- | -----------: | -----------: | ------------------------------------------------- |
+| Headword / id lookup (`/words/{word}`, `/id/{id}`) |        20 ms |       ≤ 9 ms | one query per relation, no row multiplication     |
+| Filtered list page (`/words?…`)                    |        20 ms |       ≤ 5 ms | index walk in `(word, id)` order, keyset cursor   |
+| Random entry (`/random?…`)                         |        20 ms |       ≤ 7 ms | primary-key pivot, no `ORDER BY random()`         |
+| Search, exact / prefix tiers (`/search`)           |        20 ms |       ≤ 8 ms | byte-order index on the headword                  |
+| Search, substring / suffix tiers                   |        20 ms |       ≤ 8 ms | trigram GIN index (#278)                          |
+| Search, typo (fuzzy tier)                          |        20 ms |      ≤ 10 ms | `pg_trgm` similarity when nothing else matches    |
+| Search, 1–2 character term (short-term flow)       |        20 ms |       ≤ 6 ms | exact and prefix tiers only, index lookups (#292) |
+| List page with meanings joined (`with_meanings`)   |        50 ms |      ≤ 25 ms | 17 small queries instead of one exploding join    |
 
 Numbers are p95 of the [benchmark](#the-benchmark) on a laptop against a local Postgres 18
 with the published dataset; treat them as an order of magnitude, not a promise.
@@ -63,7 +64,15 @@ AND id > :id)` is a filter, not a range start: a page at "m" read half the index
    primary-key lookups) and the first matching row at or after it is taken, wrapping around
    to the last one before it: 4 – 7 ms whatever the filter.
 
-6. **Substring, suffix and word-boundary search tiers** (`%term`, `%term%`, `% term %`) were sequential scans of `en_entries` — a btree cannot serve them (issue #278). `AddEntryWordTrigramIndex` enables `pg_trgm` and adds `IDX_EN_ENTRY_WORD_TRGM`, a GIN over the trigrams of the headword: the same `LIKE`s now read the index (a rare term 35 → 7 ms, a phrase 38 → 5.5 ms), and a **fuzzy tier** answers typos through the similarity operator when no other tier matches (`recieve` → `relieve, retrieve, …` in 8 ms, `meta.fuzzy`, `similarity` per item — see `api.md`). Very short terms (`ab`) have no full trigram; the planner falls back to a scan that the `LIMIT` cuts short (7 ms).
+6. **Substring, suffix and word-boundary search tiers** (`%term`, `%term%`, `% term %`) were sequential scans of `en_entries` — a btree cannot serve them (issue #278). `AddEntryWordTrigramIndex` enables `pg_trgm` and adds `IDX_EN_ENTRY_WORD_TRGM`, a GIN over the trigrams of the headword: the same `LIKE`s now read the index (a rare term 35 → 7 ms, a phrase 38 → 5.5 ms), and a **fuzzy tier** answers typos through the similarity operator when no other tier matches (`recieve` → `relieve, retrieve, …` in 8 ms, `meta.fuzzy`, `similarity` per item — see `api.md`). Very short terms (`ab`) have no full trigram; #292 gives them their own flow (below).
+
+7. **One- and two-character terms ran every tier.** `%a%` matches ~175k of 298k headwords, so
+   the suffix, substring and phrase tiers answered an arbitrary slice of half the dictionary
+   (on Postgres a scan cut short by the `LIMIT`, on SQLite ~0.7 s), and a term with no full
+   trigram has nothing to look up in the GIN. Since #292 a term shorter than
+   `SEARCH_MIN_SUBSTRING_LENGTH` (3) stops after the exact and prefix tiers — both index
+   lookups — and answers `meta.short_term: true`; a blank term answers nothing without a
+   query. `a` and `ab`: 5 – 6 ms, every statement an index lookup (the guard covers them).
 
 Not changed, by design:
 
@@ -130,41 +139,42 @@ SQLite gets the plain btrees through `synchronize` and needs nothing for the res
 
 ## Numbers
 
-p50 before → after the changes above (the Postgres "after" includes the trigram index of #278; the two fuzzy scenarios did not exist before), then p95 and max after; "queries" is the number of SQL statements one request issues. Postgres 18, 30 iterations; SQLite (better-sqlite3 on the same `dev.sqlite`, no trigram index), 10 – 20 iterations. Same laptop, same dataset.
+p50 before → after the changes above (the Postgres "after" includes the trigram index of #278 and the short-term flow of #292; the fuzzy and one-letter scenarios did not exist before), then p95 and max after; "queries" is the number of SQL statements one request issues. Postgres 18, 30 iterations; SQLite (better-sqlite3 on the same `dev.sqlite`, no trigram index), 10 – 20 iterations. Same laptop, same dataset.
 
 ### Postgres
 
 | Scenario                                        | Queries before → after | p50 before → after | p95 after | max after |
 | ----------------------------------------------- | ---------------------: | -----------------: | --------: | --------: |
-| search exact "run" (+ phrasal, prefix tiers)    |                  2 → 8 |      **3.8 → 6.4** |       7.6 |       8.6 |
-| search broad prefix "ab"                        |                 4 → 11 |      **6.9 → 7.3** |       8.0 |       9.0 |
-| search rare "xylo"                              |                 8 → 12 |      **491 → 7.1** |       7.6 |       7.7 |
-| search phrase "put up"                          |                 6 → 12 |     **31.7 → 5.5** |       6.4 |       6.6 |
-| search typo "recieve" (fuzzy tier)              |                 — → 13 |        **— → 8.3** |       9.2 |       9.4 |
-| search no match "qzxvj" (fuzzy tier, empty)     |                  — → 6 |        **— → 3.3** |       3.5 |       4.4 |
-| search detailed "run" + meanings + translations |                 2 → 17 |    **16.0 → 12.2** |      13.1 |      14.1 |
-| word "run" (noun + verb, full)                  |                 2 → 22 |     **45.3 → 6.9** |       7.7 |       8.0 |
-| word "ran" (form → base entry)                  |                 2 → 22 |     **42.7 → 6.0** |       7.5 |       8.3 |
-| word by id (run, verb)                          |                 2 → 21 |     **42.0 → 5.1** |       5.8 |       6.5 |
-| word "run" translations                         |                 2 → 22 |     **45.0 → 5.6** |       6.4 |       6.8 |
-| list first page (no filter)                     |                  2 → 8 |      **2.0 → 2.8** |       3.1 |       3.8 |
-| list word_level=B1                              |                  2 → 8 |      **3.3 → 2.9** |       3.6 |       3.9 |
+| search exact "run" (+ phrasal, prefix tiers)    |                  2 → 8 |      **3.8 → 6.5** |       7.3 |       8.9 |
+| search one letter "a" (short-term flow)         |                  — → 9 |        **— → 5.6** |       6.0 |       6.0 |
+| search broad prefix "ab" (short-term flow)      |                  4 → 9 |      **6.9 → 5.3** |       6.0 |       6.8 |
+| search rare "xylo"                              |                 8 → 12 |      **491 → 6.9** |       8.2 |       8.8 |
+| search phrase "put up"                          |                 6 → 12 |     **31.7 → 5.5** |       6.9 |       8.0 |
+| search typo "recieve" (fuzzy tier)              |                 — → 13 |        **— → 8.5** |       9.6 |      11.7 |
+| search no match "qzxvj" (fuzzy tier, empty)     |                  — → 6 |        **— → 3.3** |       3.7 |       4.0 |
+| search detailed "run" + meanings + translations |                 2 → 17 |    **16.0 → 13.9** |      14.7 |      14.7 |
+| word "run" (noun + verb, full)                  |                 2 → 22 |     **45.3 → 6.8** |       8.3 |       8.4 |
+| word "ran" (form → base entry)                  |                 2 → 22 |     **42.7 → 5.5** |       6.5 |       6.9 |
+| word by id (run, verb)                          |                 2 → 21 |     **42.0 → 5.0** |       5.8 |       7.5 |
+| word "run" translations                         |                 2 → 22 |     **45.0 → 5.7** |       6.6 |       7.3 |
+| list first page (no filter)                     |                  2 → 8 |      **2.0 → 2.9** |       3.4 |       3.9 |
+| list word_level=B1                              |                  2 → 8 |      **3.3 → 2.8** |       3.1 |       4.2 |
 | list noun + C2                                  |                  2 → 8 |      **2.9 → 3.7** |       4.5 |       4.7 |
-| list category=IT (rare)                         |                  2 → 8 |      **244 → 4.4** |       4.7 |       5.2 |
-| list language_register=slang                    |                  2 → 5 |     **16.7 → 2.1** |       2.3 |       3.0 |
-| list form_of_word=past_simple                   |                  2 → 5 |      **3.1 → 2.0** |       2.1 |       3.1 |
-| list cursor at "m" (deep page)                  |                  2 → 8 |      **9.1 → 3.8** |       4.1 |       4.9 |
-| list cursor at "m" + word_level=C1              |                  2 → 8 |      **8.1 → 3.2** |       3.9 |       4.1 |
-| list 50 + meanings + translations               |                 2 → 17 |    **12.1 → 14.5** |      24.8 |      25.1 |
-| random (no filter)                              |                 4 → 20 |     **38.7 → 5.5** |       6.8 |       7.4 |
-| random A1 noun                                  |                 4 → 20 |     **20.9 → 5.4** |       7.5 |      10.4 |
-| random category=medical                         |                 4 → 20 |     **27.7 → 4.6** |       5.5 |       6.6 |
-| meta                                            |                  1 → 1 |      **0.5 → 0.4** |       0.5 |       0.5 |
-| admin words word_level=B1 (page 1 + total)      |                  2 → 2 |    **25.9 → 20.2** |      21.3 |      21.4 |
-| admin words search=un (prefix)                  |                  2 → 2 |    **36.1 → 36.4** |      37.9 |      40.5 |
-| admin meanings part_of_speech=verb              |                  3 → 3 |    **45.1 → 44.6** |      47.8 |      48.4 |
-| admin word by id                                |                 2 → 21 |     **42.7 → 6.2** |       7.1 |       7.9 |
-| admin statistics                                |                15 → 15 |    **52.3 → 51.2** |      56.0 |      59.1 |
+| list category=IT (rare)                         |                  2 → 8 |      **244 → 4.1** |       4.8 |       5.1 |
+| list language_register=slang                    |                  2 → 5 |     **16.7 → 2.1** |       3.0 |       3.3 |
+| list form_of_word=past_simple                   |                  2 → 5 |      **3.1 → 2.0** |       2.4 |       2.5 |
+| list cursor at "m" (deep page)                  |                  2 → 8 |      **9.1 → 3.6** |       4.1 |       4.5 |
+| list cursor at "m" + word_level=C1              |                  2 → 8 |      **8.1 → 3.1** |       3.4 |       4.0 |
+| list 50 + meanings + translations               |                 2 → 17 |    **12.1 → 13.7** |      20.2 |      23.9 |
+| random (no filter)                              |                 4 → 19 |     **38.7 → 5.0** |       6.5 |       7.2 |
+| random A1 noun                                  |                 4 → 19 |     **20.9 → 5.2** |       7.0 |       7.8 |
+| random category=medical                         |                 4 → 17 |     **27.7 → 4.5** |       5.2 |       6.5 |
+| meta                                            |                  1 → 1 |      **0.5 → 0.4** |       0.5 |       0.7 |
+| admin words word_level=B1 (page 1 + total)      |                  2 → 2 |    **25.9 → 19.5** |      21.9 |      27.1 |
+| admin words search=un (prefix)                  |                  2 → 2 |    **36.1 → 37.7** |      38.8 |      39.4 |
+| admin meanings part_of_speech=verb              |                  3 → 3 |    **45.1 → 44.6** |      46.9 |      49.3 |
+| admin word by id                                |                 2 → 21 |     **42.7 → 6.0** |       6.6 |       7.6 |
+| admin statistics                                |                15 → 15 |    **52.3 → 51.6** |      57.8 |      58.9 |
 
 ### SQLite
 

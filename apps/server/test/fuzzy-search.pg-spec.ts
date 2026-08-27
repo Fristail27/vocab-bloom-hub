@@ -109,7 +109,7 @@ describe('trigram search (Postgres, issue #278)', () => {
 
   it('answers nothing, not fuzzily, when no headword is similar either', async () => {
     const res = await search({ search: NONSENSE });
-    expect(res).toEqual({ data: [], meta: { count: 0, fuzzy: false } });
+    expect(res).toEqual({ data: [], meta: { count: 0, fuzzy: false, short_term: false } });
   });
 
   it('restricts the fuzzy tier to the requested entry type', async () => {

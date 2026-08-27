@@ -42,8 +42,8 @@ Every successful answer is an envelope: the payload under `data`, paging and cou
 
 | Method | Path                                | Query / body                                                                                   | Response                                                                   |
 | ------ | ----------------------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `POST` | `/api/v1/search`                    | `{ search, type?, limit? }`                                                                    | `{ data: EnSearchWordT[], meta: { count, fuzzy } }`                        |
-| `POST` | `/api/v1/search/detailed`           | `{ search, type?, limit?, page?, with_meanings?, with_translations?, translation_languages? }` | `{ data: EnWordT[], meta: { page, limit, has_more, fuzzy } }`              |
+| `POST` | `/api/v1/search`                    | `{ search, type?, limit? }`                                                                    | `{ data: EnSearchWordT[], meta: { count, fuzzy, short_term } }`            |
+| `POST` | `/api/v1/search/detailed`           | `{ search, type?, limit?, page?, with_meanings?, with_translations?, translation_languages? }` | `{ data: EnWordT[], meta: { page, limit, has_more, fuzzy, short_term } }`  |
 | `GET`  | `/api/v1/words/{word}`              | —                                                                                              | `{ data: EnWordT[], meta: { word, count } }`                               |
 | `GET`  | `/api/v1/words/{word}/meanings`     | —                                                                                              | `{ data: PublicMeaningV1T[], meta: { word, count } }`                      |
 | `GET`  | `/api/v1/words/{word}/translations` | `language?`                                                                                    | `{ data: { short_translations, meaning_translations }, meta }`             |
@@ -86,6 +86,14 @@ signal for a UI or an SDK:
 `fuzzy` is `false` whenever the exact tiers found something, and also when nothing at all is
 similar (empty `data`). The fuzzy tier exists on Postgres instances only (`pg_trgm`); a
 SQLite instance answers an empty list for a typo, with `fuzzy: false`.
+
+A term of **one or two characters** (after trimming) searches the exact and prefix tiers
+only — the headword itself, its phrasal variants, an inflected form's base entry and
+headwords starting with the term — and answers with `meta.short_term: true`. The suffix,
+substring, phrase and fuzzy tiers are skipped: half the dictionary contains any given letter,
+so those tiers would return an arbitrary slice rather than a match, and a trigram index has
+nothing to look up in fewer than three characters. `a`, `I`, `ok`, `TV` still answer, as
+exact headwords; a blank term answers an empty list.
 
 #### Headword reads
 

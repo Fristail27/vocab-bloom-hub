@@ -30,8 +30,10 @@ export type AddResT = AddWordReqT | ErrorResT;
 export type SearchReqT = SearchReqDTO;
 export type SearchResT = EnSearchWordT[] | ErrorResT;
 // `fuzzy`: the exact tiers found nothing and the items come from the trigram
-// similarity tier (Postgres only, issue #278); each item then carries `similarity`
-export type SearchItemsT = { items: EnSearchWordT[]; fuzzy: boolean };
+// similarity tier (Postgres only, issue #278); each item then carries `similarity`.
+// `short_term`: the term is shorter than 3 characters and only the exact and
+// prefix tiers ran (issue #292)
+export type SearchItemsT = { items: EnSearchWordT[]; fuzzy: boolean; short_term: boolean };
 export type SearchDetailedReqT = SearchDetailedReqDTO;
 export type SearchDetailedItemsT = {
   items: EnWordT[];
@@ -39,6 +41,7 @@ export type SearchDetailedItemsT = {
   limit: number;
   has_more: boolean;
   fuzzy: boolean;
+  short_term: boolean;
 };
 export type SearchDetailedResT = SearchDetailedItemsT | ErrorResT;
 
