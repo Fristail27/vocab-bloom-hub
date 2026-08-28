@@ -81,6 +81,8 @@ export default {
     retry_importing: 'Retry',
     retry_exporting: 'Retry',
     export_again: 'Export again',
+    data_license: 'Every export is licensed under',
+    data_attribution: 'Attribution:',
     up_to_date: 'You already have the latest dictionary version',
     source_huggingface: 'From HuggingFace',
     source_archive: 'Archive',

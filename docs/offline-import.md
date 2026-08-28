@@ -28,7 +28,9 @@ vocab-bloom-hub-en-phrases.jsonl
 Only the `.jsonl` files you actually have are needed — at least one of them; phrases, grammar
 patterns and phrasal verbs are optional, and so is `manifest.json`. When the manifest is present
 its `version` is stored as _Your version_ after the import (and its synonym / antonym link counts
-refine the progress bar); without it the version stays unknown. Line counts for the progress bar
+refine the progress bar); without it the version stays unknown. The `license` and `attribution`
+fields an export writes into the manifest ([`DATA_LICENSE.md`](../DATA_LICENSE.md)) are carried
+along and not checked. Line counts for the progress bar
 are always taken from the files themselves, so a hand-assembled dataset needs no bookkeeping.
 
 The dataset is validated **before** the import starts and is rejected (`dataset_invalid`) when

@@ -81,6 +81,8 @@ export default {
     retry_importing: 'Повторить',
     retry_exporting: 'Повторить',
     export_again: 'Сохранить снова',
+    data_license: 'Каждая выгрузка распространяется по лицензии',
+    data_attribution: 'Атрибуция:',
     up_to_date: 'У вас уже актуальная версия словаря',
     source_huggingface: 'С HuggingFace',
     source_archive: 'Архив',

@@ -170,6 +170,10 @@ export type DatasetManifestT = {
   // before #259 / #266 respectively)
   synonym_links?: number | undefined;
   antonym_links?: number | undefined;
+  // terms of the data (issue #270): the SPDX identifier of the license and
+  // a sufficient attribution line; absent in datasets published before
+  license?: string | undefined;
+  attribution?: string | undefined;
 };
 
 export type GetDatasetManifestResT = DatasetManifestT | ErrorResT;

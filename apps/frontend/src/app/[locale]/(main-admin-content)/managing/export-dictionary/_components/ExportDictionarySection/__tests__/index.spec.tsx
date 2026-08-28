@@ -98,6 +98,13 @@ describe('ExportDictionarySection', () => {
     expect(saveBlobSpy).not.toHaveBeenCalled();
   });
 
+  it('shows the data license and the attribution line of the export (issue #270)', () => {
+    renderSection();
+    const link = screen.getByRole('link', { name: /CC-BY-4\.0/ });
+    expect(link).toHaveAttribute('href', 'https://creativecommons.org/licenses/by/4.0/');
+    expect(screen.getByText(/data_attribution/)).toHaveTextContent('CC BY 4.0');
+  });
+
   it('кнопка "экспортировать ещё раз" сбрасывает секцию в исходное состояние', async () => {
     mockExportStreaming([
       { stage: EnDictionaryImportPhasesE.completed, exportId: 'exp-4' } as ImportDictionaryChunkT,

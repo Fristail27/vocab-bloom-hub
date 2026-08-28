@@ -142,9 +142,10 @@ in the ids come up slightly more often, which does not matter for a "word of the
 `GET /api/v1/meta` describes what the instance serves: `api_version` (`"1"`), `app_version`
 (the server's `package.json`), `dataset_version` (the version of the dataset the dictionary
 was last imported from, `null` for data authored in place or imported without a manifest),
-`license` (the data license — `null` until it is decided, see #270) and `counts` (entries,
-words, phrases, grammar patterns, word forms, meanings, meaning and short translations; the
-counts are refreshed at most once a minute).
+the terms of the data — `license` (the SPDX identifier, `"CC-BY-4.0"`), `license_url` and
+`attribution` (the line a consumer has to show, see [`DATA_LICENSE.md`](../DATA_LICENSE.md)) —
+and `counts` (entries, words, phrases, grammar patterns, word forms, meanings, meaning and short
+translations; the counts are refreshed at most once a minute).
 
 ### OpenAPI document
 

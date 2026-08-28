@@ -8,6 +8,7 @@ import { EnApi } from '@/core/api/EnApi';
 import { EnDictionaryImportPhasesE } from 'server/src/modules/EnModule/modules/EnImportDictionary/constants';
 import { AbstractBaseApi } from '@/core/api/AbstractBaseApi';
 import { ErrorCodes } from 'server/core/constants/error_codes';
+import { DATA_LICENSE } from 'server/core/constants/data_license';
 import { ExportStatusE } from './constants';
 import styles from './styles.module.scss';
 
@@ -124,6 +125,18 @@ export const ExportDictionarySection: React.FC = () => {
       )}
 
       {status === 'in_progress' && statusMessage && <Text italic>{statusMessage}</Text>}
+
+      <div className={styles.license}>
+        <Text type="secondary">
+          {t('data_license')}{' '}
+          <a href={DATA_LICENSE.url} target="_blank" rel="noreferrer noopener">
+            {DATA_LICENSE.name} ({DATA_LICENSE.spdx})
+          </a>
+        </Text>
+        <Text type="secondary">
+          {t('data_attribution')} {DATA_LICENSE.attribution}
+        </Text>
+      </div>
     </div>
   );
 };

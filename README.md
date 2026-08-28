@@ -16,6 +16,7 @@
   <a href="https://github.com/Fristail27/vocab-bloom-hub/actions/workflows/check-pull-request.yml"><img src="https://github.com/Fristail27/vocab-bloom-hub/actions/workflows/check-pull-request.yml/badge.svg?branch=main" alt="CI" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/actions/workflows/codeql.yml"><img src="https://github.com/Fristail27/vocab-bloom-hub/actions/workflows/codeql.yml/badge.svg?branch=main" alt="CodeQL" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/Fristail27/vocab-bloom-hub" alt="License: MIT" /></a>
+  <a href="DATA_LICENSE.md"><img src="https://img.shields.io/badge/data-CC%20BY%204.0-lightgrey" alt="Data: CC BY 4.0" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/commits/main"><img src="https://img.shields.io/github/last-commit/Fristail27/vocab-bloom-hub" alt="Last commit" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/issues"><img src="https://img.shields.io/github/issues/Fristail27/vocab-bloom-hub" alt="Open issues" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/pulls"><img src="https://img.shields.io/github/issues-pr/Fristail27/vocab-bloom-hub" alt="Open pull requests" /></a>
@@ -111,7 +112,7 @@ The project is in **early development** (`0.x`). The English dictionary, the adm
 │   ├── frontend/   → Next.js admin UI (en/ru locales)
 │   ├── server/     → NestJS API; also exports shared types (types/) and constants (core/) used by the frontend
 │   └── e2e/        → Playwright browser tests that boot both apps against an isolated SQLite database
-├── docs/           → In-depth documentation (environment, authentication, migrations) and the Russian README
+├── docs/           → In-depth documentation (environment, authentication, migrations, data) and the Russian README
 ├── eslint/         → Shared ESLint config pieces (base / next / nest)
 ├── .github/        → CI workflows, issue/PR templates, Dependabot, CODEOWNERS
 ├── .env            → Single environment file used by both apps (not committed)
@@ -227,6 +228,7 @@ Details, including how to adopt migrations on a database created by the old auto
 - [`docs/offline-import.md`](docs/offline-import.md) — moving a dictionary between instances without internet access (export → copy → import from file)
 - [`docs/performance.md`](docs/performance.md) — latency of the hot reads on the full dictionary (Postgres vs SQLite), the indexes behind them, the benchmark and the query-plan guard
 - [`docs/api.md`](docs/api.md) — the public `/api/v1` contract (envelope, errors, rate limit, caching, OpenAPI export, deprecated aliases) and the public-only / admin-only switches
+- [`docs/data.md`](docs/data.md) — where the dictionary data comes from (LLM-generated, `generated_by_model`), known limitations, how to report errors; the terms are in [`DATA_LICENSE.md`](DATA_LICENSE.md)
 - [`docs/README.ru.md`](docs/README.ru.md) — this README in Russian
 - Swagger UI at `/api` on a running server — the live API reference; the public contract as OpenAPI: [`apps/server/openapi/public-v1.json`](apps/server/openapi/public-v1.json) or `GET /api/v1/openapi.json`
 
@@ -262,4 +264,5 @@ Found a bug or have an idea? Open an [issue](https://github.com/Fristail27/vocab
 
 ## 📄 License
 
-[MIT](LICENSE) © Alexey Ryzhov (Fristail27)
+- **Code** — [MIT](LICENSE) © Alexey Ryzhov (Fristail27)
+- **Dictionary data** (exports, the public API, the HuggingFace dataset) — [CC BY 4.0](DATA_LICENSE.md): free to use and adapt, including commercially, with attribution. The data is largely LLM-generated and not human-verified — see [`docs/data.md`](docs/data.md) before relying on it.

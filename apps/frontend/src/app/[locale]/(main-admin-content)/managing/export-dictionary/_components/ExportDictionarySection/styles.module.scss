@@ -7,6 +7,15 @@
     width: max-content;
   }
 
+  // The terms every export ships with: shown so whoever downloads the
+  // archive sees them before passing it on
+  .license {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 8px;
+  }
+
   .progress {
     // Фиксированная ширина под "100.00%" + tabular-nums, чтобы полоса
     // не дёргалась от смены ширины цифр.

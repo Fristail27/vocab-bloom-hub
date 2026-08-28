@@ -37,6 +37,7 @@ import {
 } from '../../../../../types';
 import { SettingsService } from '../../../SettingsModule/settings.service';
 import { ErrorCodes } from '../../../../../core/constants/error_codes';
+import { DATA_LICENSE } from '../../../../../core/constants/data_license';
 import { getVersion } from '../../../../../configuration';
 import {
   DATASET_FILE_NAMES,
@@ -945,6 +946,8 @@ export class EnImportDictionaryService {
       const manifest: DatasetManifestT = {
         version: getVersion(),
         generatedAt: new Date().toISOString(),
+        license: DATA_LICENSE.spdx,
+        attribution: DATA_LICENSE.attribution,
         synonym_links: await this.countExportedLinks('synonyms'),
         antonym_links: await this.countExportedLinks('antonyms'),
         files: {

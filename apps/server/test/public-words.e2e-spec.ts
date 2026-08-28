@@ -407,7 +407,7 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
   // ---------------------------------------------------------------- meta
 
   describe('GET /api/v1/meta', () => {
-    it('reports the versions, the license placeholder and the counts', async () => {
+    it('reports the versions, the data license and the counts', async () => {
       const res = await request(server()).get('/api/v1/meta').expect(200);
       expect(res.headers['x-api-version']).toBe('1');
       const { data } = res.body as PublicMetaV1ResT;
@@ -415,7 +415,9 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
         api_version: '1',
         app_version: expect.stringMatching(/^\d+\.\d+\.\d+/),
         dataset_version: null,
-        license: null,
+        license: 'CC-BY-4.0',
+        license_url: 'https://creativecommons.org/licenses/by/4.0/',
+        attribution: expect.stringContaining('CC BY 4.0'),
         counts: {
           // headwords: sprint, run, ran, running, abandon, put up with
           entries: 6,
