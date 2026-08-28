@@ -1,7 +1,7 @@
 {
   "name": "server",
   "version": "0.0.1",
-  "description": "Backend API for Vocab Bloom Hub \u2014 a modular NestJS server providing dictionary APIs, lexical search, semantic graph data, and language processing services for multilingual vocabulary datasets.",
+  "description": "Backend API for Vocab Bloom Hub — a modular NestJS server providing dictionary APIs, lexical search, semantic graph data, and language processing services for multilingual vocabulary datasets.",
   "keywords": [
     "backend",
     "nestjs",
@@ -72,6 +72,7 @@
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.22.0",
+    "prom-client": "^15.1.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "swagger-ui-express": "^5.0.1",

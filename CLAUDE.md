@@ -55,7 +55,7 @@ Test files are `*.spec.ts(x)`, colocated with code (e.g. in `__tests__/` dirs). 
 
 ## Environment
 
-A single `.env` at the repo root is used by both apps (frontend scripts wrap with `dotenv -e ../../.env`; server loads it at the top of `src/main.ts`). Relevant vars: `SERVER_PORT`, `FRONT_PORT`, `DATABASE_URL`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `NEXT_PUBLIC_BASE_API_URL`, `TRUST_PROXY` (Express `trust proxy` behind a reverse proxy, see `docs/deployment/reverse-proxy.md`), `LOG_LEVEL` (server log verbosity: `verbose`/`debug`/`log`/`warn`/`error`/`fatal`; defaults to `debug` in development, `log` otherwise).
+A single `.env` at the repo root is used by both apps (frontend scripts wrap with `dotenv -e ../../.env`; server loads it at the top of `src/main.ts`). Relevant vars: `SERVER_PORT`, `FRONT_PORT`, `DATABASE_URL`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `NEXT_PUBLIC_BASE_API_URL`, `TRUST_PROXY` (Express `trust proxy` behind a reverse proxy, see `docs/deployment/reverse-proxy.md`), `METRICS_ENABLED` / `METRICS_PATH` (Prometheus endpoint, `docs/observability.md`), `LOG_LEVEL` (server log verbosity: `verbose`/`debug`/`log`/`warn`/`error`/`fatal`; defaults to `debug` in development, `log` otherwise).
 
 Database: the `DATABASE_URL` scheme selects the driver — `postgres://` connects to Postgres, `sqlite:<path>` (e.g. `sqlite:./e2e.sqlite`, `sqlite::memory:`) runs better-sqlite3 on that file, any other scheme fails startup. When unset, it falls back to `dev.sqlite` at the repo root. The two modes manage the schema differently (config in `apps/server/src/db/typeorm-options.ts`):
 

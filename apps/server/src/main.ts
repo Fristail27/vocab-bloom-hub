@@ -15,6 +15,7 @@ import { buildAdminDocument } from './openapi/build-openapi';
 import { PublicOpenApiService } from './modules/PublicApiModule/public-openapi.service';
 import { getLogLevels } from './core/logging/get-log-levels';
 import { getCorsOrigins, getTrustProxy, isSwaggerEnabled, shouldCompress } from './core/utils/http-hardening';
+import { getMetricsPath, isMetricsEnabled } from './modules/MetricsModule/metrics.config';
 import {
   assertPublicApiConfig,
   getApiSurfaces,
@@ -120,6 +121,11 @@ async function bootstrap() {
   );
   logger.log(
     `Swagger UI: ${isSwaggerEnabled() ? 'enabled at /api' : 'disabled (production)'}; public OpenAPI document at ${PUBLIC_API_PREFIX}/openapi.json`,
+  );
+  logger.log(
+    isMetricsEnabled()
+      ? `Prometheus metrics: enabled at ${getMetricsPath()} — keep it off the public internet (docs/observability.md)`
+      : 'Prometheus metrics: disabled (METRICS_ENABLED=false)',
   );
   const surfaces = getApiSurfaces();
   const rateLimit = getPublicApiRateLimit();
