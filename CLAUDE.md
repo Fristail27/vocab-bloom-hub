@@ -4,11 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Vocab Bloom Hub — a monorepo for a multilingual dictionary/vocabulary platform. Yarn 4 workspaces (`apps/*`), Node >= 24:
+Vocab Bloom Hub — a monorepo for a multilingual dictionary/vocabulary platform. Yarn 4 workspaces (`apps/*`, `packages/*`), Node >= 24:
 
 - `apps/frontend` — Next.js 16 (App Router) admin UI with Ant Design, Sass modules, and next-intl (en/ru locales via the `[locale]` route segment; middleware in `src/proxy.ts`).
 - `apps/server` — NestJS 11 API with TypeORM. Swagger UI is served at `/api` on the running server.
 - `apps/e2e` — Playwright browser tests that boot both apps against an isolated SQLite database (own tsconfig on purpose: jest and Playwright globals must not share a TS project).
+- `packages/npm-sdk` — `@vocab-bloom-hub/client`, the typed Node.js / browser client of the public API: types generated from `apps/server/openapi/public-v1.json` (`src/generated/openapi.ts`, committed) plus a hand-written wrapper; tsup build (ESM + CJS + d.ts), no runtime dependencies. Not published to npm before the alpha (#308).
 
 ## Commands
 
@@ -29,6 +30,10 @@ yarn workspace e2e test                   # rerun without rebuilding the fronten
 yarn workspace server openapi:generate    # rewrite apps/server/openapi/public-v1.json (committed) + admin.json (ignored)
 yarn workspace server openapi:check       # fail if the committed public spec is stale (CI runs it)
 
+yarn workspace @vocab-bloom-hub/client generate        # regenerate the SDK types from the public spec (commit the result)
+yarn workspace @vocab-bloom-hub/client generate:check  # fail if the generated SDK types are stale (CI runs it)
+yarn workspace @vocab-bloom-hub/client build / test    # SDK build; unit tests + the client against the real server
+
 yarn workspace server bench [--explain]   # latency of the hot reads on DATABASE_URL (full dictionary), see docs/performance.md
 yarn workspace server test:postgres       # Postgres-only suites: query-plan guard, trigram search (CI runs them)
 
@@ -39,7 +44,7 @@ yarn check          # lint + format:check (run before finishing work)
 
 Indexes a decorator cannot express (`COLLATE "C"`, GIN) are declared with `MANUALLY_MANAGED_INDEX` (`synchronize: false`) and created by their migration; `test:postgres` fails when a hot query stops using an index.
 
-After changing anything under `/api/v1` (routes, DTOs, Swagger decorators, the response types in `types/public/v1`) run `openapi:generate` and commit `apps/server/openapi/public-v1.json` and `public-v1.schemas.json` (the response schemas generated from the types; a new public route must be registered in `src/openapi/public-responses.ts`) — CI and `test/public-openapi.e2e-spec.ts` compare them with the code.
+After changing anything under `/api/v1` (routes, DTOs, Swagger decorators, the response types in `types/public/v1`) run `openapi:generate`, then `yarn workspace @vocab-bloom-hub/client generate`, and commit `apps/server/openapi/public-v1.json`, `public-v1.schemas.json` and `packages/npm-sdk/src/generated/openapi.ts` (the response schemas generated from the types; a new public route must be registered in `src/openapi/public-responses.ts`) — CI and `test/public-openapi.e2e-spec.ts` compare them with the code.
 
 Test files are `*.spec.ts(x)`, colocated with code (e.g. in `__tests__/` dirs). Server tests run in node env; frontend tests run in jsdom with styles mocked and the `@/` alias mapped.
 

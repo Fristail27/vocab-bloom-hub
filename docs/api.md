@@ -182,6 +182,14 @@ schemas — no TypeScript at runtime. `test/public-schemas.e2e-spec.ts` calls ev
 seeded dictionary and validates the real bodies against the served schemas (strictly, unknown
 fields fail), which is what makes the schemas trustworthy for SDK generators (#275, #276).
 
+### SDKs
+
+- **Node.js / TypeScript** — [`@vocab-bloom-hub/client`](../packages/npm-sdk/README.md) (issue #275):
+  one method per endpoint, types generated from `openapi/public-v1.json`, typed errors, cursor
+  iteration, optional ETag cache. Built and tested in this repository; published to npm with the
+  first alpha (#308).
+- **Python** — planned (#276).
+
 ### Caching
 
 Dictionary data changes rarely, so the public `GET` reads are built to be cached by browsers,
