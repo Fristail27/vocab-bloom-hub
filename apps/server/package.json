@@ -57,7 +57,7 @@
     "test:postgres": "jest --config ./test/jest-postgres.json --runInBand"
   },
   "dependencies": {
-    "@nestjs/common": "^11.1.28",
+    "@nestjs/common": "^11.2.3",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.28",
     "@nestjs/microservices": "^11.1.29",

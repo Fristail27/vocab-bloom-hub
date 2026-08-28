@@ -1832,9 +1832,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/common@npm:^11.1.28":
-  version: 11.1.28
-  resolution: "@nestjs/common@npm:11.1.28"
+"@nestjs/common@npm:^11.2.3":
+  version: 11.2.3
+  resolution: "@nestjs/common@npm:11.2.3"
   dependencies:
     file-type: "npm:21.3.4"
     iterare: "npm:1.2.1"
@@ -1851,7 +1851,7 @@ __metadata:
       optional: true
     class-validator:
       optional: true
-  checksum: 10c0/aaf9a773fd8523972c5f971e77b9809ebd6fab682a4b791599927b546501e17909947e68a2f97cf6d7a28ebef409765c8453f9ce45a61410e0fbdba58d3733bb
+  checksum: 10c0/b8712fc715645ba541d437e9adb1f826c52714105c47dc735fafe787785129f2bbe5b852525299b2803e8e38eab0e3740a2fd88ddbefb36a7dadddf87b968936
   languageName: node
   linkType: hard
 
@@ -10168,7 +10168,7 @@ __metadata:
   resolution: "server@workspace:apps/server"
   dependencies:
     "@nestjs/cli": "npm:^11.0.24"
-    "@nestjs/common": "npm:^11.1.28"
+    "@nestjs/common": "npm:^11.2.3"
     "@nestjs/config": "npm:^4.0.2"
     "@nestjs/core": "npm:^11.1.28"
     "@nestjs/microservices": "npm:^11.1.29"
