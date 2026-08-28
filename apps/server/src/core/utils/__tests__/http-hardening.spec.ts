@@ -1,7 +1,13 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import type { Request, Response } from 'express';
 
-import { getCorsOrigins, isSwaggerEnabled, shouldCompress } from '../http-hardening';
+import {
+  getCorsOrigins,
+  getTrustProxy,
+  isSwaggerEnabled,
+  parseTrustProxy,
+  shouldCompress,
+} from '../http-hardening';
 
 describe('HTTP hardening utils (issue #183)', () => {
   describe('getCorsOrigins', () => {
@@ -52,6 +58,31 @@ describe('HTTP hardening utils (issue #183)', () => {
 
     it('disables Swagger in production', () => {
       expect(isSwaggerEnabled({ NODE_ENV: 'production' })).toBe(false);
+    });
+  });
+
+  describe('parseTrustProxy (issue #283)', () => {
+    it('ignores X-Forwarded-* when unset, blank or switched off', () => {
+      expect(parseTrustProxy(undefined)).toBe(false);
+      expect(parseTrustProxy('  ')).toBe(false);
+      expect(parseTrustProxy('false')).toBe(false);
+      expect(parseTrustProxy('0')).toBe(false);
+    });
+
+    it('turns a hop count into a number and true into every hop', () => {
+      expect(parseTrustProxy('1')).toBe(1);
+      expect(parseTrustProxy(' 2 ')).toBe(2);
+      expect(parseTrustProxy('true')).toBe(true);
+    });
+
+    it('passes address lists and the Express keywords through unchanged', () => {
+      expect(parseTrustProxy('loopback')).toBe('loopback');
+      expect(parseTrustProxy('10.0.0.0/8, 172.16.0.0/12')).toBe('10.0.0.0/8, 172.16.0.0/12');
+    });
+
+    it('reads TRUST_PROXY from the environment', () => {
+      expect(getTrustProxy({})).toBe(false);
+      expect(getTrustProxy({ TRUST_PROXY: '1' })).toBe(1);
     });
   });
 });

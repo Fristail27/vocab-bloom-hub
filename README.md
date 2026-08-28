@@ -112,7 +112,7 @@ The project is in **early development** (`0.x`). The English dictionary, the adm
 │   ├── frontend/   → Next.js admin UI (en/ru locales)
 │   ├── server/     → NestJS API; also exports shared types (types/) and constants (core/) used by the frontend
 │   └── e2e/        → Playwright browser tests that boot both apps against an isolated SQLite database
-├── docs/           → In-depth documentation (environment, authentication, migrations, data) and the Russian README
+├── docs/           → In-depth documentation (deployment, environment, authentication, migrations, data) and the Russian README
 ├── eslint/         → Shared ESLint config pieces (base / next / nest)
 ├── .github/        → CI workflows, issue/PR templates, Dependabot, CODEOWNERS
 ├── .env            → Single environment file used by both apps (not committed)
@@ -209,19 +209,19 @@ Full reference with defaults and startup validation rules: [`docs/environment.md
 
 ## 🚢 Deployment
 
-There is no Docker image or hosted build yet; both apps are deployed as plain Node.js processes.
+There is no Docker image or hosted build yet; both apps run as plain Node.js processes behind a reverse proxy that terminates TLS (the admin cookie is `secure` in production) and routes `/api/*` to the server and everything else to the frontend.
 
-1. Provide the environment (as a root `.env` or process variables): `NODE_ENV=production`, a `postgres://` `DATABASE_URL`, strong `ADMIN_USERNAME` / `ADMIN_PASSWORD`, `CORS_ORIGINS` with the admin UI origin, and `NEXT_PUBLIC_BASE_API_URL` pointing at the public API URL.
-2. Build: `yarn workspace server build` and `yarn workspace frontend build` (`NEXT_PUBLIC_*` values are baked in at this step).
-3. Start: `yarn workspace server start` and `yarn workspace frontend start`. Pending migrations run automatically on server startup; the server refuses to boot on SQLite or without credentials in production.
-4. Serve the UI over HTTPS — the auth cookie is `secure` in production and will not be sent over plain HTTP.
+1. Provide the environment: `NODE_ENV=production`, a `postgres://` `DATABASE_URL`, strong `ADMIN_USERNAME` / `ADMIN_PASSWORD`, `NEXT_PUBLIC_BASE_API_URL` and `CORS_ORIGINS` set to the public origin, `TRUST_PROXY=1`.
+2. Build both apps (`yarn workspace server build`, `yarn workspace frontend build`) and start them (`yarn workspace server start:prod`, `yarn workspace frontend start`); pending migrations run on server start.
+3. Put Caddy or nginx in front — copy-and-adapt configs, exposure profiles (public dictionary + private admin) and a security checklist are in the guide.
 
-Details, including how to adopt migrations on a database created by the old auto-sync mode: [`docs/migrations.md`](docs/migrations.md).
+Full guide: [`docs/deployment/`](docs/deployment/README.md) → [`reverse-proxy.md`](docs/deployment/reverse-proxy.md).
 
 ---
 
 ## 📚 Documentation
 
+- [`docs/deployment/`](docs/deployment/README.md) — production build and start, and [`reverse-proxy.md`](docs/deployment/reverse-proxy.md): TLS, Caddy / nginx configs, exposure profiles, keeping the admin API private
 - [`docs/environment.md`](docs/environment.md) — every environment variable, driver selection, startup checks
 - [`docs/authentication.md`](docs/authentication.md) — how the single-admin login, login proof and JWT cookie work
 - [`docs/migrations.md`](docs/migrations.md) — TypeORM migrations workflow for Postgres, deployment and troubleshooting

@@ -112,7 +112,7 @@
 │   ├── frontend/   → Админ-панель на Next.js (локали en/ru)
 │   ├── server/     → API на NestJS; также экспортирует общие типы (types/) и константы (core/), которые использует фронтенд
 │   └── e2e/        → Браузерные тесты Playwright: поднимают оба приложения на изолированной SQLite-базе
-├── docs/           → Подробная документация (окружение, аутентификация, миграции, данные) и этот README на русском
+├── docs/           → Подробная документация (деплой, окружение, аутентификация, миграции, данные) и этот README на русском
 ├── eslint/         → Общие части конфигурации ESLint (base / next / nest)
 ├── .github/        → CI-воркфлоу, шаблоны issue/PR, Dependabot, CODEOWNERS
 ├── .env            → Единый файл окружения для обоих приложений (не коммитится)
@@ -209,19 +209,19 @@ DATABASE_URL=postgres://... yarn workspace server migration:run      # такж�
 
 ## 🚢 Деплой
 
-Docker-образа и готовой хостинг-сборки пока нет; оба приложения разворачиваются как обычные Node.js-процессы.
+Docker-образа и готовой хостинг-сборки пока нет; оба приложения работают как обычные Node.js-процессы за reverse proxy, который терминирует TLS (auth-cookie в production помечена `secure`) и направляет `/api/*` на сервер, а всё остальное — на фронтенд.
 
-1. Задайте окружение (корневой `.env` или переменные процесса): `NODE_ENV=production`, `DATABASE_URL` со схемой `postgres://`, надёжные `ADMIN_USERNAME` / `ADMIN_PASSWORD`, `CORS_ORIGINS` с origin админ-панели и `NEXT_PUBLIC_BASE_API_URL` с публичным адресом API.
-2. Соберите: `yarn workspace server build` и `yarn workspace frontend build` (значения `NEXT_PUBLIC_*` встраиваются на этом шаге).
-3. Запустите: `yarn workspace server start` и `yarn workspace frontend start`. Неприменённые миграции выполняются автоматически при старте сервера; в production сервер отказывается стартовать на SQLite или без учётных данных.
-4. Отдавайте UI по HTTPS — auth-cookie в production помечена `secure` и по обычному HTTP не отправляется.
+1. Задайте окружение: `NODE_ENV=production`, `DATABASE_URL` со схемой `postgres://`, надёжные `ADMIN_USERNAME` / `ADMIN_PASSWORD`, `NEXT_PUBLIC_BASE_API_URL` и `CORS_ORIGINS` с публичным origin, `TRUST_PROXY=1`.
+2. Соберите оба приложения (`yarn workspace server build`, `yarn workspace frontend build`) и запустите их (`yarn workspace server start:prod`, `yarn workspace frontend start`); неприменённые миграции выполняются при старте сервера.
+3. Поставьте впереди Caddy или nginx — готовые к адаптации конфиги, профили экспозиции (публичный словарь + приватная админка) и чеклист безопасности — в руководстве.
 
-Подробности, включая перевод базы, созданной старым режимом автосинхронизации, на миграции: [`migrations.md`](migrations.md).
+Полное руководство: [`deployment/`](deployment/README.md) → [`reverse-proxy.md`](deployment/reverse-proxy.md).
 
 ---
 
 ## 📚 Документация
 
+- [`deployment/`](deployment/README.md) — сборка и запуск в production, и [`reverse-proxy.md`](deployment/reverse-proxy.md): TLS, конфиги Caddy / nginx, профили экспозиции, приватная админка
 - [`environment.md`](environment.md) — все переменные окружения, выбор драйвера БД, проверки при старте
 - [`authentication.md`](authentication.md) — как устроены вход единственного администратора, login proof и JWT-cookie
 - [`migrations.md`](migrations.md) — процесс работы с миграциями TypeORM для Postgres, деплой и решение проблем
