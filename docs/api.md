@@ -225,14 +225,11 @@ instance that must not be readable from outside runs with `PUBLIC_API_ENABLED=fa
 ## Keeping the admin API private behind a reverse proxy
 
 When one instance serves both surfaces and only the dictionary should be reachable from the
-internet, expose `/api/v1` and block the admin prefixes at the proxy — or serve the admin
-prefixes only from a private network. The full deployment guide (TLS, Caddy / nginx configs,
-exposure profiles) is tracked in #283; the rule of thumb until then:
-
-```nginx
-location /api/v1/ { proxy_pass http://server:3010; }
-location ~ ^/api/(en|settings|auth)(/|$) { return 404; }
-```
+internet, expose `/api/v1` and fence the admin prefixes (`/api/en`, `/api/settings`,
+`/api/auth`) at the proxy — by address list or basic auth — or serve them only from a private
+network. Tested Caddy and nginx configs for that, TLS, the `TRUST_PROXY` setting the rate limits
+need behind a proxy, and the other exposure profiles are in
+[`deployment/reverse-proxy.md`](./deployment/reverse-proxy.md).
 
 Set `CORS_ORIGINS` to the origins that may call the API from a browser; `curl`-style clients
 are not affected by CORS.

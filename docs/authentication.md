@@ -104,7 +104,8 @@ On successful login the server:
 1. Signs a JWT with payload `{ username, roles: ['admin'] }`, secret `secretHash + loginHash`, and
    `expiresIn: '1d'`.
 2. Sets it as the `bearer` cookie: `httpOnly`, `sameSite: 'lax'`, `maxAge: 24h`, `secure` in
-   production.
+   production — so a production instance must be served over HTTPS
+   ([deployment/reverse-proxy.md](./deployment/reverse-proxy.md)).
 3. Also returns `{ token }` in the response body.
 
 ## Authenticated requests

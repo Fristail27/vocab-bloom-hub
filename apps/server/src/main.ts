@@ -14,7 +14,7 @@ import { AllExceptionsFilter } from './core/filters/all-exceptions.filter';
 import { buildAdminDocument } from './openapi/build-openapi';
 import { PublicOpenApiService } from './modules/PublicApiModule/public-openapi.service';
 import { getLogLevels } from './core/logging/get-log-levels';
-import { getCorsOrigins, isSwaggerEnabled, shouldCompress } from './core/utils/http-hardening';
+import { getCorsOrigins, getTrustProxy, isSwaggerEnabled, shouldCompress } from './core/utils/http-hardening';
 import {
   assertPublicApiConfig,
   getApiSurfaces,
@@ -49,6 +49,10 @@ async function bootstrap() {
   }
 
   const app = await NestFactory.create(AppModule, { logger: getLogLevels() });
+  // Behind a reverse proxy the client address comes from X-Forwarded-For;
+  // TRUST_PROXY says which hops may set it (docs/deployment/reverse-proxy.md)
+  const trustProxy = getTrustProxy();
+  app.getHttpAdapter().getInstance().set('trust proxy', trustProxy);
   const httpServer = app.getHttpServer();
   // The batched dictionary import finishes in minutes and streams progress
   // continuously, so the long-request budget no longer needs 20-minute timeouts
@@ -109,6 +113,11 @@ async function bootstrap() {
     }`,
   );
   logger.log(`CORS origins: ${corsOrigins.join(', ')}`);
+  logger.log(
+    trustProxy === false
+      ? 'Trust proxy: off — X-Forwarded-* headers are ignored (set TRUST_PROXY behind a reverse proxy)'
+      : `Trust proxy: ${String(trustProxy)} — client addresses are read from X-Forwarded-For`,
+  );
   logger.log(
     `Swagger UI: ${isSwaggerEnabled() ? 'enabled at /api' : 'disabled (production)'}; public OpenAPI document at ${PUBLIC_API_PREFIX}/openapi.json`,
   );
