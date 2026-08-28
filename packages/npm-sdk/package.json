@@ -1,0 +1,54 @@
+{
+  "name": "@vocab-bloom-hub/client",
+  "version": "0.0.1",
+  "description": "Typed Node.js / browser client for the Vocab Bloom Hub public dictionary API (/api/v1).",
+  "license": "MIT",
+  "homepage": "https://github.com/Fristail27/vocab-bloom-hub/tree/main/packages/npm-sdk#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Fristail27/vocab-bloom-hub.git",
+    "directory": "packages/npm-sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/Fristail27/vocab-bloom-hub/issues"
+  },
+  "keywords": [
+    "dictionary",
+    "vocabulary",
+    "english",
+    "api-client",
+    "sdk",
+    "vocab-bloom-hub"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "generate": "openapi-typescript ../../apps/server/openapi/public-v1.json -o src/generated/openapi.ts && yarn run -T prettier --write src/generated/openapi.ts",
+    "generate:check": "node scripts/check-generated.js",
+    "build": "tsup",
+    "typecheck": "yarn run -T tsc --noEmit -p tsconfig.json",
+    "test": "yarn run -T jest --config jest.config.ts"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.13.0",
+    "tsup": "^8.5.1"
+  }
+}

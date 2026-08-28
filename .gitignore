@@ -35,6 +35,7 @@
 # production
 /apps/frontend/build
 /apps/server/dist
+/packages/*/dist
 /apps/server/build
 
 # misc
