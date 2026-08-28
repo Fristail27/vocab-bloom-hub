@@ -278,7 +278,8 @@ describe('EnService word CRUD (issue #187)', () => {
           id: form.id,
           word: 'ran',
           form_of_word: EnWordFormsE.past_simple,
-          area_variant: null,
+          // a form saved without a region reads as common (the form contract is non-null)
+          area_variant: EnAreaVariantsE.common,
           transcription: null,
         },
       ]);

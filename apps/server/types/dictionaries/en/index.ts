@@ -80,10 +80,14 @@ export type EnMeaningT = Omit<
 };
 export type EnShortTranslationT = Omit<EnShortTranslation, 'updateAt' | 'createdAt' | 'word_entry' | 'word'>;
 
-export type EnWordFormT = Pick<
-  Omit<EnWordT, 'forms'>,
-  'id' | 'area_variant' | 'transcription' | 'form_of_word' | 'word' | 'is_obsolete'
->;
+// Picked from the entity, not from EnWordT: the two types reference each
+// other and schema generators (openapi:generate, #305) cannot follow a
+// circular Pick<Omit<…>>. The shape is the same as before
+export type EnWordFormT = Pick<EnWord, 'id' | 'transcription' | 'form_of_word' | 'is_obsolete'> & {
+  word: string;
+  // required on the write path (AddWordReqFormDTO), so never null on a form
+  area_variant: EnAreaVariantsE;
+};
 
 export type EnWordT = Omit<
   EnWord,

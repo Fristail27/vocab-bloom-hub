@@ -39,7 +39,7 @@ yarn check          # lint + format:check (run before finishing work)
 
 Indexes a decorator cannot express (`COLLATE "C"`, GIN) are declared with `MANUALLY_MANAGED_INDEX` (`synchronize: false`) and created by their migration; `test:postgres` fails when a hot query stops using an index.
 
-After changing anything under `/api/v1` (routes, DTOs, Swagger decorators) run `openapi:generate` and commit `apps/server/openapi/public-v1.json` — CI and `test/public-openapi.e2e-spec.ts` compare it with the code.
+After changing anything under `/api/v1` (routes, DTOs, Swagger decorators, the response types in `types/public/v1`) run `openapi:generate` and commit `apps/server/openapi/public-v1.json` and `public-v1.schemas.json` (the response schemas generated from the types; a new public route must be registered in `src/openapi/public-responses.ts`) — CI and `test/public-openapi.e2e-spec.ts` compare them with the code.
 
 Test files are `*.spec.ts(x)`, colocated with code (e.g. in `__tests__/` dirs). Server tests run in node env; frontend tests run in jsdom with styles mocked and the `@/` alias mapped.
 

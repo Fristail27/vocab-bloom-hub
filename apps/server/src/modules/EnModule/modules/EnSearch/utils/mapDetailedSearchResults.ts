@@ -19,7 +19,8 @@ export const mapDetailedSearchResults = (
   const matchesLanguage = (language: AvailableTranslationLanguagesE) =>
     !translation_languages || translation_languages.includes(language);
 
-  return words.map((w) => ({
+  // the timestamps are not part of the contract (EnWordT omits them)
+  return words.map(({ createdAt: _createdAt, updateAt: _updateAt, ...w }) => ({
     ...w,
     phrasal_variants: undefined,
     word: w.word.word,

@@ -79,14 +79,16 @@ export class EnWord {
   @Column({ type: 'simple-enum', enum: WordLevelE, nullable: true })
   word_level?: WordLevelE | null;
 
+  // nullable in the schema, so nullable in the contract (openapi:generate
+  // derives the public schemas from these types, issue #305)
   @Column({ type: 'simple-enum', enum: EnAreaVariantsE, nullable: true })
-  area_variant!: EnAreaVariantsE;
+  area_variant?: EnAreaVariantsE | null;
 
   @Column({ type: 'simple-enum', enum: CategoryE, array: true, default: [] })
   categories?: CategoryE[];
 
   @Column({ type: 'simple-enum', enum: LanguageRegisterE, nullable: true })
-  language_register!: LanguageRegisterE;
+  language_register?: LanguageRegisterE | null;
 
   @Column({ type: 'simple-enum', enum: EnPartOfSpeechE })
   part_of_speech!: EnPartOfSpeechE;

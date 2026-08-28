@@ -8,7 +8,7 @@ import { LanguageRegisterE } from 'server/types';
 import { getLanguageRegisterOptions } from './utils';
 
 type LanguageRegisterSelectP = {
-  value: LanguageRegisterE;
+  value?: LanguageRegisterE | undefined;
   onChange: (v: LanguageRegisterE) => void;
 };
 export const LanguageRegisterSelect: React.FC<LanguageRegisterSelectP> = ({ value, onChange }) => {

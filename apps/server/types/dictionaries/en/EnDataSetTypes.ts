@@ -1,5 +1,6 @@
 import { EnWord } from '../../../src/modules/EnModule/entities/en_word.entity';
 import {
+  EnAreaVariantsE,
   EnMeaningT,
   EnMeaningTranslationT,
   EnPartOfSpeechE,
@@ -46,11 +47,15 @@ export type DataSetWordT = Omit<
   | 'id'
   | 'form_of_word'
   | 'word_level'
+  | 'area_variant'
+  | 'language_register'
   | 'verb___transitivity'
   | 'verb___phrasal_object_pattern'
 > & {
   word: string;
   word_level: WordLevelE | '';
+  area_variant: EnAreaVariantsE | '';
+  language_register: LanguageRegisterE | '';
   verb___transitivity: EnVerbTransitivityE | '';
   verb___phrasal_object_pattern: EnPhrasalObjectPatternE | '';
   meanings: EnMeaningDST[];
@@ -76,6 +81,8 @@ export type DataSetPhraseT = Omit<
   | 'id'
   | 'form_of_word'
   | 'word_level'
+  | 'area_variant'
+  | 'language_register'
   | 'verb___transitivity'
   | 'verb___phrasal_object_pattern'
   | 'verb___is_phrasal'
@@ -89,6 +96,8 @@ export type DataSetPhraseT = Omit<
 > & {
   phrase: string;
   level: WordLevelE | '';
+  area_variant: EnAreaVariantsE | '';
+  language_register: LanguageRegisterE | '';
   meanings: EnMeaningDST[];
   short_translations: EnShortTranslationDST[];
   version: string;
