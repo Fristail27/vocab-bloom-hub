@@ -230,6 +230,7 @@ Docker-образа и готовой хостинг-сборки пока не�
 - [`authentication.md`](authentication.md) — как устроены вход единственного администратора, login proof и JWT-cookie
 - [`migrations.md`](migrations.md) — процесс работы с миграциями TypeORM для Postgres, деплой и решение проблем
 - [`offline-import.md`](offline-import.md) — перенос словаря между инстансами без интернета (экспорт → копирование → импорт из файла)
+- [`observability.md`](observability.md) — метрики Prometheus: включение эндпоинта, как держать его приватным, все метрики и полезные запросы
 - [`performance.md`](performance.md) — задержки горячих чтений на полном словаре (Postgres vs SQLite), индексы за ними, бенчмарк и guard планов запросов
 - [`api.md`](api.md) — контракт публичного `/api/v1` (конверт, ошибки, лимит запросов, кэширование, экспорт OpenAPI, устаревшие алиасы) и переключатели public-only / admin-only
 - [`data.md`](data.md) — откуда берутся данные словаря (сгенерированы LLM, `generated_by_model`), известные ограничения, как сообщать об ошибках; условия использования — в [`DATA_LICENSE.md`](../DATA_LICENSE.md)

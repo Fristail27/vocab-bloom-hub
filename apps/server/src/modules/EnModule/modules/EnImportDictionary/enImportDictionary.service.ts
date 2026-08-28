@@ -5,8 +5,10 @@ import {
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { MetricsService } from '../../../MetricsModule/metrics.service';
 import { EntityManager, FindOptionsRelations, FindOptionsWhere, In, Not, Repository } from 'typeorm';
 import * as yazl from 'yazl';
 import { randomUUID } from 'node:crypto';
@@ -107,6 +109,7 @@ export class EnImportDictionaryService {
     private readonly enWordsRep: Repository<EnWord>,
 
     private readonly settingsService: SettingsService,
+    @Optional() private readonly metrics?: MetricsService,
   ) {}
 
   /**
@@ -199,6 +202,7 @@ export class EnImportDictionaryService {
       stage,
     };
     res.write(JSON.stringify(chunk) + '\n');
+    this.metrics?.transferProgressed('import', EnDictionaryImportPhasesE[stage], chunk.percent);
     await new Promise((r) => setTimeout(r, 1));
   }
 
@@ -708,6 +712,7 @@ export class EnImportDictionaryService {
       ...(datasetVersion && { datasetVersion }),
     };
     res.write(JSON.stringify(firstChunk) + '\n');
+    this.metrics?.transferStarted('import');
 
     try {
       // meaning → synonym / antonym links are collected across every file and
@@ -726,6 +731,9 @@ export class EnImportDictionaryService {
           count += n;
         },
       );
+    } catch (error) {
+      this.metrics?.transferFinished('import', 'failure');
+      throw error;
     } finally {
       await source.dispose().catch((error) => {
         this.logger.warn(
@@ -750,6 +758,7 @@ export class EnImportDictionaryService {
       ...(datasetVersion && { datasetVersion }),
     };
     res.write(JSON.stringify(finalChunk) + '\n');
+    this.metrics?.transferFinished('import', 'success');
 
     res.end();
 
@@ -870,7 +879,9 @@ export class EnImportDictionaryService {
     const emit = (percent: number, stage: EnDictionaryImportPhasesE) => {
       const chunk: ImportDictionaryChunkT = { percent, stage };
       res.write(JSON.stringify(chunk) + '\n');
+      this.metrics?.transferProgressed('export', EnDictionaryImportPhasesE[stage], percent);
     };
+    this.metrics?.transferStarted('export');
 
     try {
       const wordsLines = await this.exportEntities(
@@ -975,6 +986,10 @@ export class EnImportDictionaryService {
         exportId,
       } as ImportDictionaryChunkT;
       res.write(JSON.stringify(finalChunk) + '\n');
+      this.metrics?.transferFinished('export', 'success');
+    } catch (error) {
+      this.metrics?.transferFinished('export', 'failure');
+      throw error;
     } finally {
       await Promise.allSettled([
         unlink(wordsPath),

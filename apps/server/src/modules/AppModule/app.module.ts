@@ -9,6 +9,10 @@ import { SettingsModule } from '../SettingsModule/settings.module';
 import { PublicApiModule } from '../PublicApiModule/public-api.module';
 import { apiSurfaceMiddleware } from '../../core/middleware/api-surface.middleware';
 import { buildTypeOrmOptions } from '../../db/typeorm-options';
+import { MetricsModule } from '../MetricsModule/metrics.module';
+import { MetricsService } from '../MetricsModule/metrics.service';
+import { httpMetricsMiddleware, metricsEndpoint } from '../MetricsModule/metrics.middleware';
+import { getMetricsPath, isMetricsEnabled } from '../MetricsModule/metrics.config';
 
 @Module({
   imports: [
@@ -16,6 +20,7 @@ import { buildTypeOrmOptions } from '../../db/typeorm-options';
     EnModule,
     SettingsModule,
     PublicApiModule,
+    MetricsModule,
     // Default limits; endpoints refine them through @Throttle. The guard
     // (AppThrottlerGuard) is attached to login, the legacy search aliases and
     // the whole public prefix (PUBLIC_API_RATE_LIMIT).
@@ -30,7 +35,16 @@ import { buildTypeOrmOptions } from '../../db/typeorm-options';
   ],
 })
 export class AppModule implements NestModule {
+  constructor(private readonly metrics: MetricsService) {}
+
   configure(consumer: MiddlewareConsumer): void {
+    if (isMetricsEnabled()) {
+      // Prometheus (issue #281): every request is timed before routing so
+      // 404s count too, and the exposition is served outside both API surfaces
+      const path = getMetricsPath();
+      consumer.apply(httpMetricsMiddleware(this.metrics, path)).forRoutes('*');
+      consumer.apply(metricsEndpoint(this.metrics)).forRoutes(path);
+    }
     // version header on the public prefix and the PUBLIC_API_ENABLED /
     // ADMIN_API_ENABLED switches; runs before routing so 404s are covered too
     consumer.apply(apiSurfaceMiddleware).forRoutes('*');

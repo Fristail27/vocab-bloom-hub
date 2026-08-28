@@ -231,6 +231,7 @@ dictionary is not readable from outside. Both switches are described in
       ([`../api.md`](../api.md#caching)).
 - [ ] Admin prefixes are either fenced at the proxy (profile b) or switched off
       (`ADMIN_API_ENABLED=false`, profile c).
-- [ ] Operational endpoints that may come later (metrics, #281) are not exposed publicly.
+- [ ] The Prometheus endpoint (`METRICS_ENABLED`, [`../observability.md`](../observability.md)) is
+      scraped on the private network or fenced like the admin prefixes — never public.
 - [ ] The import/export stream works through the proxy: start an export from the admin UI and
       watch the progress bar move, not jump.

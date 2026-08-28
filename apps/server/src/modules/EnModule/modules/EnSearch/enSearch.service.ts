@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
+import { MetricsService, SearchTierT } from '../../../MetricsModule/metrics.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsRelations, In, Repository } from 'typeorm';
 import { EnWord } from '../../entities/en_word.entity';
@@ -21,13 +22,21 @@ import { RELATION_LOAD_STRATEGY } from '../../utils/wordRelations';
  */
 export const SEARCH_MIN_SUBSTRING_LENGTH = 3;
 
-type OrderedIdsT = { ids: number[]; similarity: Map<number, number>; fuzzy: boolean; short_term: boolean };
+type OrderedIdsT = {
+  ids: number[];
+  similarity: Map<number, number>;
+  fuzzy: boolean;
+  short_term: boolean;
+  // the tier that produced the top answer (Prometheus, issue #281)
+  tier: SearchTierT;
+};
 
 @Injectable()
 export class EnSearchService {
   constructor(
     @InjectRepository(EnWord)
     private readonly enWordsRep: Repository<EnWord>,
+    @Optional() private readonly metrics?: MetricsService,
   ) {}
 
   private async getExactMatchesAndPhrasalVerbsIds(search: string) {
@@ -256,18 +265,21 @@ export class EnSearchService {
     const ordered: number[] = [];
     // a blank term names nothing; the prefix tier would otherwise match every headword
     if (search.length === 0) {
-      return { ids: ordered, similarity: new Map(), fuzzy: false, short_term: true };
+      return { ids: ordered, similarity: new Map(), fuzzy: false, short_term: true, tier: 'none' };
     }
-    const pushUpToTarget = (set: Set<number>) => {
+    // the tier of the first id pushed: the one that produced the top answer
+    let tier: SearchTierT = 'none';
+    const pushUpToTarget = (set: Set<number>, from: SearchTierT) => {
       for (const id of set) {
         if (ordered.length >= target) return;
+        if (ordered.length === 0) tier = from;
         ordered.push(id);
       }
     };
 
     const { exactSet, phrasalSet } = await this.getExactMatchesAndPhrasalVerbsIds(search);
-    pushUpToTarget(exactSet);
-    pushUpToTarget(phrasalSet);
+    pushUpToTarget(exactSet, 'exact');
+    pushUpToTarget(phrasalSet, 'phrasal');
     // exact/phrasal ids beyond the target still must not resurface in lower tiers
     let excludedIds = [...exactSet, ...phrasalSet];
 
@@ -275,17 +287,17 @@ export class EnSearchService {
       !type || type === EnEntryTypesE.word
         ? await this.getWordsStartsFromSearch(search, excludedIds, target - ordered.length)
         : new Set<number>();
-    pushUpToTarget(wordsStartFromSet);
+    pushUpToTarget(wordsStartFromSet, 'prefix');
     excludedIds = [...excludedIds, ...wordsStartFromSet];
 
     // the short-term flow stops here: no phrase, suffix, substring or fuzzy
     // tier for a one- or two-character term (both index lookups so far)
     if (search.length < SEARCH_MIN_SUBSTRING_LENGTH) {
-      return { ids: ordered, similarity: new Map(), fuzzy: false, short_term: true };
+      return { ids: ordered, similarity: new Map(), fuzzy: false, short_term: true, tier };
     }
 
     const phrasesExactSet = await this.getPhrases(search, type, excludedIds, target - ordered.length);
-    pushUpToTarget(phrasesExactSet);
+    pushUpToTarget(phrasesExactSet, 'phrase');
     excludedIds = [...excludedIds, ...phrasesExactSet];
 
     const wordsEndsFromSet = await this.getWordsEndsFromSearch(
@@ -294,7 +306,7 @@ export class EnSearchService {
       excludedIds,
       target - ordered.length,
     );
-    pushUpToTarget(wordsEndsFromSet);
+    pushUpToTarget(wordsEndsFromSet, 'suffix');
     excludedIds = [...excludedIds, ...wordsEndsFromSet];
 
     const anyMatchesWordsSet = await this.getAnyMatchesWords(
@@ -303,13 +315,20 @@ export class EnSearchService {
       excludedIds,
       target - ordered.length,
     );
-    pushUpToTarget(anyMatchesWordsSet);
+    pushUpToTarget(anyMatchesWordsSet, 'contains');
 
     if (ordered.length === 0) {
       const similarity = await this.getFuzzyMatches(search, type, target);
-      return { ids: [...similarity.keys()], similarity, fuzzy: similarity.size > 0, short_term: false };
+      const fuzzy = similarity.size > 0;
+      return {
+        ids: [...similarity.keys()],
+        similarity,
+        fuzzy,
+        short_term: false,
+        tier: fuzzy ? 'fuzzy' : 'none',
+      };
     }
-    return { ids: ordered, similarity: new Map(), fuzzy: false, short_term: false };
+    return { ids: ordered, similarity: new Map(), fuzzy: false, short_term: false, tier };
   }
 
   private async findWordsByIdsOrdered(
@@ -330,7 +349,8 @@ export class EnSearchService {
 
   async searchFlat({ search: s, type, limit }: SearchReqDTO): Promise<SearchItemsT> {
     const search = s.trim().toLowerCase();
-    const { ids, similarity, fuzzy, short_term } = await this.collectOrderedIds(search, type, limit);
+    const { ids, similarity, fuzzy, short_term, tier } = await this.collectOrderedIds(search, type, limit);
+    this.metrics?.searchAnswered(tier, short_term);
     const words = await this.findWordsByIdsOrdered(ids, { word: true, forms: { word: true } });
     return { items: mapSearchResults(words, similarity), fuzzy, short_term };
   }
@@ -350,7 +370,12 @@ export class EnSearchService {
   }: SearchDetailedReqDTO): Promise<SearchDetailedItemsT> {
     const search = s.trim().toLowerCase();
     // one id past the requested page tells whether the next page exists
-    const { ids, similarity, fuzzy, short_term } = await this.collectOrderedIds(search, type, page * limit + 1);
+    const { ids, similarity, fuzzy, short_term, tier } = await this.collectOrderedIds(
+      search,
+      type,
+      page * limit + 1,
+    );
+    this.metrics?.searchAnswered(tier, short_term);
     const pageIds = ids.slice((page - 1) * limit, page * limit);
 
     const relations: FindOptionsRelations<EnWord> = { word: true, forms: { word: true } };
