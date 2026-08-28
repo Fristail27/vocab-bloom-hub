@@ -5,7 +5,14 @@ import clsx from 'clsx';
 import { App, Button, Tag, Typography } from 'antd';
 import { useParams } from 'next/navigation';
 import { EditOutlined } from '@ant-design/icons';
-import { EnMeaningT, EnPartOfSpeechE, EnShortTranslationT, EnWordFormT, EnWordT } from 'server/types';
+import {
+  EnMeaningT,
+  EnPartOfSpeechE,
+  EnShortTranslationT,
+  EnWordFormT,
+  EnWordT,
+  EnAreaVariantsE,
+} from 'server/types';
 import { WordForms } from '@/app/[locale]/(main-admin-content)/managing/_components/WordCard/components/WordForms';
 import { FormsByPartOfSpeech } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/constants';
 import { Icon } from '@/core/ui/Icon';
@@ -126,7 +133,7 @@ export const WordCard: React.FC<WordCardP> = ({ word, mode = WordCardModeE.view 
         )}
         <div className={clsx(styles.line, styles.mainLine)}>
           <Tag className={styles.mainTag} color="volcano" variant="outlined">
-            <Icon name={FlagByAreaEnum[word.area_variant] as IconNamesT} />
+            <Icon name={FlagByAreaEnum[word.area_variant ?? EnAreaVariantsE.common] as IconNamesT} />
             {word.word}
           </Tag>
           <Tag color="blue" variant="outlined">

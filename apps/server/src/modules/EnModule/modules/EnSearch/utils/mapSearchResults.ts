@@ -4,7 +4,8 @@ import { EnWord } from '../../../entities/en_word.entity';
 
 /** `similarity`: the fuzzy tier's score per word id; absent from exact answers */
 export const mapSearchResults = (words: EnWord[], similarity?: Map<number, number>): EnSearchWordT[] => {
-  return words.map((w) => ({
+  // the timestamps are not part of the contract (EnWordT omits them)
+  return words.map(({ createdAt: _createdAt, updateAt: _updateAt, ...w }) => ({
     ...w,
     phrasal_variants: undefined,
     word: w.word.word,

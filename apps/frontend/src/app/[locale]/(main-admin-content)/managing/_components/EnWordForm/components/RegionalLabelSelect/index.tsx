@@ -8,7 +8,7 @@ import { EnAreaVariantsE } from 'server/types';
 import { getRegionalLabelOptions } from './utils';
 
 type RegionalLabelSelectP = {
-  value: EnAreaVariantsE;
+  value?: EnAreaVariantsE | undefined;
   width?: number | string | undefined;
   onChange: (v: EnAreaVariantsE) => void;
 };

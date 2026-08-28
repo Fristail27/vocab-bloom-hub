@@ -97,14 +97,14 @@ export const CommonInfoFields: React.FC<CommonInfoFieldsP> = ({ pos, value, onCh
       <div className={styles.line}>
         <LanguageRegisterSelect
           onChange={(v) => changeField(v, 'language_register')}
-          value={value.language_register}
+          value={value.language_register ?? undefined}
         />
         <WordLevelSelect
           value={value.word_level as WordLevelE}
           onChange={(v) => changeField(v as WordLevelE, 'word_level')}
         />
         <RegionalLabelSelect
-          value={value.area_variant}
+          value={value.area_variant ?? undefined}
           onChange={(v) => changeField(v as EnAreaVariantsE, 'area_variant')}
         />
         <CategorySelect

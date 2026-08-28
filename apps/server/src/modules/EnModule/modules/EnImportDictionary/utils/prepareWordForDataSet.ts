@@ -88,7 +88,8 @@ export const mapFormsForDS = (f: EnWord): EnWordFormDST => {
     is_obsolete: !!f.is_obsolete,
     transcription: f.transcription || '',
     word: f.word.word,
-    area_variant: f.area_variant,
+    // the column is nullable, the form contract is not: an unmarked form is common
+    area_variant: f.area_variant ?? EnAreaVariantsE.common,
     form_of_word: f.form_of_word,
   };
 };

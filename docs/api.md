@@ -149,8 +149,8 @@ translations; the counts are refreshed at most once a minute).
 
 ### OpenAPI document
 
-The contract above is also an OpenAPI 3 document (issue #273), built from the controllers and
-DTOs of the running code — nothing is hand-written, so it cannot drift:
+The contract above is also an OpenAPI 3 document (issue #273), built from the controllers,
+DTOs and response types of the running code — nothing is hand-written, so it cannot drift:
 
 - **`GET /api/v1/openapi.json`** serves it from any running instance, production included
   (the Swagger UI at `/api` stays development-only). It carries the caching headers of the
@@ -160,15 +160,27 @@ DTOs of the running code — nothing is hand-written, so it cannot drift:
   contract change shows up in a pull request diff.
 
 ```bash
-yarn workspace server openapi:generate   # rewrites openapi/public-v1.json (+ admin.json, not committed)
-yarn workspace server openapi:check      # fails when the committed file is stale — CI runs this
+yarn workspace server openapi:generate   # rewrites openapi/public-v1.json + public-v1.schemas.json (+ admin.json, not committed)
+yarn workspace server openapi:check      # fails when a committed file is stale — CI runs this
 ```
 
 The generator bootstraps the application without listening, on an in-memory SQLite database,
 so it needs no `.env` and its output depends on the source code only. After changing anything
-under `/api/v1` (a route, a DTO, a Swagger decorator) run `openapi:generate` and commit the
-result; the `check-pull-request` workflow rejects a stale spec. `admin.json` — the whole API
-including the admin surface — is written next to it for local use and ignored by git.
+under `/api/v1` (a route, a DTO, a Swagger decorator, a type in `types/public/v1`) run
+`openapi:generate` and commit the result; the `check-pull-request` workflow rejects a stale
+spec. `admin.json` — the whole API including the admin surface — is written next to it for
+local use and ignored by git.
+
+**Response schemas** (issue #305). The controllers type their answers with the TypeScript
+contract in `apps/server/types/public/v1`, which Swagger cannot see, so the generator reads
+those types with `ts-json-schema-generator`, converts the result to OpenAPI 3.0 component
+schemas (`nullable` for `| null`, enums, generics inlined; `src/openapi/json-schema-to-openapi.ts`)
+and commits them to `openapi/public-v1.schemas.json`. `src/openapi/public-responses.ts` maps
+every public operation to its response type and error statuses; the document build fails for a
+route missing there, so an endpoint cannot ship untyped. The running server serves the committed
+schemas — no TypeScript at runtime. `test/public-schemas.e2e-spec.ts` calls every operation on a
+seeded dictionary and validates the real bodies against the served schemas (strictly, unknown
+fields fail), which is what makes the schemas trustworthy for SDK generators (#275, #276).
 
 ### Caching
 
