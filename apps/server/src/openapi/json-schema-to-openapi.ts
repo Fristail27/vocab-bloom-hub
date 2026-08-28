@@ -7,8 +7,9 @@
  * becomes `nullable: true`; `const` becomes a one-value `enum`; instantiated
  * generics (`PublicListResT<A,B>`, which the generator names with angle
  * brackets) are inlined into the aliases that use them so every remaining
- * schema has a plain identifier for a name. `additionalProperties: false` is
- * dropped: a field added to a response is not a breaking change for consumers.
+ * schema has a plain identifier for a name; a plain alias (`type A = B`) is
+ * resolved to its target. `additionalProperties: false` is dropped: a field
+ * added to a response is not a breaking change for consumers.
  */
 export type JsonSchemaT = Record<string, unknown>;
 export type SchemaMapT = Record<string, JsonSchemaT>;
@@ -83,12 +84,54 @@ const convertNode = (node: unknown, definitions: SchemaMapT): unknown => {
   return schema;
 };
 
+// A definition that is nothing but a reference (`type A = B`) adds a schema
+// without a shape of its own; model generators turn it into a wrapper class
+// (a pydantic RootModel, for instance). Every reference to it is pointed at
+// the target instead and the alias is dropped.
+const resolveAliases = (schemas: SchemaMapT): SchemaMapT => {
+  const aliasOf = new Map<string, string>();
+  for (const [name, schema] of Object.entries(schemas)) {
+    const keys = Object.keys(schema);
+    if (
+      keys.length === 1 &&
+      typeof schema.$ref === 'string' &&
+      schema.$ref.startsWith(COMPONENT_SCHEMAS_PREFIX)
+    ) {
+      aliasOf.set(name, schema.$ref.slice(COMPONENT_SCHEMAS_PREFIX.length));
+    }
+  }
+  const target = (name: string): string => {
+    let current = name;
+    while (aliasOf.has(current)) current = aliasOf.get(current) as string;
+    return current;
+  };
+  const rewrite = (node: unknown): unknown => {
+    if (Array.isArray(node)) return node.map(rewrite);
+    if (!node || typeof node !== 'object') return node;
+    const schema = node as JsonSchemaT;
+    if (typeof schema.$ref === 'string' && schema.$ref.startsWith(COMPONENT_SCHEMAS_PREFIX)) {
+      return {
+        ...schema,
+        $ref: `${COMPONENT_SCHEMAS_PREFIX}${target(schema.$ref.slice(COMPONENT_SCHEMAS_PREFIX.length))}`,
+      };
+    }
+    return Object.fromEntries(Object.entries(schema).map(([key, value]) => [key, rewrite(value)]));
+  };
+  return Object.fromEntries(
+    Object.entries(schemas)
+      .filter(([name]) => !aliasOf.has(name))
+      .map(([name, schema]) => [name, rewrite(schema) as JsonSchemaT]),
+  );
+};
+
 /** `{ definitions }` from the generator → OpenAPI component schemas, named by the exported types */
 export const toOpenApiSchemas = (jsonSchema: { definitions?: SchemaMapT }): SchemaMapT => {
   const definitions = jsonSchema.definitions ?? {};
-  return Object.fromEntries(
-    Object.entries(definitions)
-      .filter(([name]) => !isGenericName(name))
-      .map(([name, schema]) => [name, convertNode(schema, definitions) as JsonSchemaT]),
+  return resolveAliases(
+    Object.fromEntries(
+      Object.entries(definitions)
+        .filter(([name]) => !isGenericName(name))
+        .map(([name, schema]) => [name, convertNode(schema, definitions) as JsonSchemaT]),
+    ),
   );
 };

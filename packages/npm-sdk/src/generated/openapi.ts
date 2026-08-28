@@ -209,7 +209,7 @@ export interface components {
        */
       type?: 'word' | 'grammar_pattern' | 'phrase';
       /** @default 10 */
-      limit: Record<string, never>;
+      limit: number;
     };
     SearchDetailedV1ReqDTO: {
       search: string;
@@ -415,16 +415,15 @@ export interface components {
       language: 'ru';
       variants_of_words: string[];
     };
-    PublicWordV1T: components['schemas']['EnWordT'];
     PublicWordV1ResT: {
-      data: components['schemas']['PublicWordV1T'];
+      data: components['schemas']['EnWordT'];
     };
     PublicHeadwordV1MetaT: {
       word: string;
       count: number;
     };
     PublicHeadwordV1ResT: {
-      data: components['schemas']['PublicWordV1T'][];
+      data: components['schemas']['EnWordT'][];
       meta: components['schemas']['PublicHeadwordV1MetaT'];
     };
     PublicMeaningV1T: {
@@ -496,7 +495,7 @@ export interface components {
       next_cursor: string | null;
     };
     PublicWordsV1ResT: {
-      data: components['schemas']['PublicWordV1T'][];
+      data: components['schemas']['EnWordT'][];
       meta: components['schemas']['PublicWordsV1MetaT'];
     };
     PublicDatasetCountsV1T: {

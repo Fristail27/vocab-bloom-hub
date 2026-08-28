@@ -3,7 +3,7 @@
     "type": "object",
     "properties": {
       "count": {
-        "type": "number"
+        "type": "integer"
       },
       "fuzzy": {
         "type": "boolean"
@@ -40,7 +40,7 @@
     "type": "object",
     "properties": {
       "id": {
-        "type": "number"
+        "type": "integer"
       },
       "generated": {
         "type": "boolean"
@@ -297,7 +297,7 @@
         "$ref": "#/components/schemas/EnAreaVariantsE"
       },
       "id": {
-        "type": "number"
+        "type": "integer"
       },
       "transcription": {
         "type": "string",
@@ -322,10 +322,10 @@
     "type": "object",
     "properties": {
       "page": {
-        "type": "number"
+        "type": "integer"
       },
       "limit": {
-        "type": "number"
+        "type": "integer"
       },
       "has_more": {
         "type": "boolean"
@@ -403,7 +403,7 @@
         "type": "number"
       },
       "id": {
-        "type": "number"
+        "type": "integer"
       },
       "generated": {
         "type": "boolean"
@@ -548,7 +548,7 @@
         }
       },
       "id": {
-        "type": "number"
+        "type": "integer"
       },
       "categories": {
         "type": "array",
@@ -577,7 +577,7 @@
         "nullable": true
       },
       "sort_order": {
-        "type": "number"
+        "type": "integer"
       },
       "title": {
         "type": "string"
@@ -612,7 +612,7 @@
     "type": "object",
     "properties": {
       "id": {
-        "type": "number"
+        "type": "integer"
       },
       "language": {
         "type": "string",
@@ -645,7 +645,7 @@
     "type": "object",
     "properties": {
       "id": {
-        "type": "number"
+        "type": "integer"
       },
       "description": {
         "type": "string"
@@ -670,14 +670,11 @@
       "variants_of_words"
     ]
   },
-  "PublicWordV1T": {
-    "$ref": "#/components/schemas/EnWordT"
-  },
   "PublicWordV1ResT": {
     "type": "object",
     "properties": {
       "data": {
-        "$ref": "#/components/schemas/PublicWordV1T"
+        "$ref": "#/components/schemas/EnWordT"
       }
     },
     "required": [
@@ -691,7 +688,7 @@
         "type": "string"
       },
       "count": {
-        "type": "number"
+        "type": "integer"
       }
     },
     "required": [
@@ -705,7 +702,7 @@
       "data": {
         "type": "array",
         "items": {
-          "$ref": "#/components/schemas/PublicWordV1T"
+          "$ref": "#/components/schemas/EnWordT"
         }
       },
       "meta": {
@@ -721,7 +718,7 @@
     "type": "object",
     "properties": {
       "word_id": {
-        "type": "number"
+        "type": "integer"
       },
       "part_of_speech": {
         "$ref": "#/components/schemas/EnPartOfSpeechE"
@@ -736,7 +733,7 @@
     "type": "object",
     "properties": {
       "word_id": {
-        "type": "number"
+        "type": "integer"
       },
       "part_of_speech": {
         "$ref": "#/components/schemas/EnPartOfSpeechE"
@@ -760,7 +757,7 @@
         }
       },
       "id": {
-        "type": "number"
+        "type": "integer"
       },
       "categories": {
         "type": "array",
@@ -789,7 +786,7 @@
         "nullable": true
       },
       "sort_order": {
-        "type": "number"
+        "type": "integer"
       },
       "title": {
         "type": "string"
@@ -844,7 +841,7 @@
     "type": "object",
     "properties": {
       "word_id": {
-        "type": "number"
+        "type": "integer"
       },
       "part_of_speech": {
         "$ref": "#/components/schemas/EnPartOfSpeechE"
@@ -856,7 +853,7 @@
         "$ref": "#/components/schemas/EnAreaVariantsE"
       },
       "id": {
-        "type": "number"
+        "type": "integer"
       },
       "transcription": {
         "type": "string",
@@ -901,13 +898,13 @@
     "type": "object",
     "properties": {
       "word_id": {
-        "type": "number"
+        "type": "integer"
       },
       "part_of_speech": {
         "$ref": "#/components/schemas/EnPartOfSpeechE"
       },
       "id": {
-        "type": "number"
+        "type": "integer"
       },
       "description": {
         "type": "string"
@@ -938,16 +935,16 @@
     "type": "object",
     "properties": {
       "meaning_id": {
-        "type": "number"
+        "type": "integer"
       },
       "word_id": {
-        "type": "number"
+        "type": "integer"
       },
       "part_of_speech": {
         "$ref": "#/components/schemas/EnPartOfSpeechE"
       },
       "id": {
-        "type": "number"
+        "type": "integer"
       },
       "language": {
         "type": "string",
@@ -1019,7 +1016,7 @@
     "type": "object",
     "properties": {
       "limit": {
-        "type": "number"
+        "type": "integer"
       },
       "has_more": {
         "type": "boolean"
@@ -1041,7 +1038,7 @@
       "data": {
         "type": "array",
         "items": {
-          "$ref": "#/components/schemas/PublicWordV1T"
+          "$ref": "#/components/schemas/EnWordT"
         }
       },
       "meta": {
@@ -1057,28 +1054,28 @@
     "type": "object",
     "properties": {
       "entries": {
-        "type": "number"
+        "type": "integer"
       },
       "words": {
-        "type": "number"
+        "type": "integer"
       },
       "phrases": {
-        "type": "number"
+        "type": "integer"
       },
       "grammar_patterns": {
-        "type": "number"
+        "type": "integer"
       },
       "word_forms": {
-        "type": "number"
+        "type": "integer"
       },
       "meanings": {
-        "type": "number"
+        "type": "integer"
       },
       "meaning_translations": {
-        "type": "number"
+        "type": "integer"
       },
       "short_translations": {
-        "type": "number"
+        "type": "integer"
       }
     },
     "required": [

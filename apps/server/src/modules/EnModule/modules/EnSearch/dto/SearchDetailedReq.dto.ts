@@ -14,14 +14,14 @@ export class SearchDetailedReqDTO {
 
   // Every item may carry joined meanings and translations, so both the page
   // size and the pagination depth are capped tighter than in the base search
-  @ApiPropertyOptional({ minimum: 1, maximum: 20, default: 10 })
+  @ApiPropertyOptional({ type: 'integer', minimum: 1, maximum: 20, default: 10 })
   @IsOptional()
   @IsInt()
   @Min(1)
   @Max(20)
   limit?: number = 10;
 
-  @ApiPropertyOptional({ minimum: 1, maximum: 20, default: 1 })
+  @ApiPropertyOptional({ type: 'integer', minimum: 1, maximum: 20, default: 1 })
   @IsOptional()
   @IsInt()
   @Min(1)

@@ -10,6 +10,7 @@ Vocab Bloom Hub — a monorepo for a multilingual dictionary/vocabulary platform
 - `apps/server` — NestJS 11 API with TypeORM. Swagger UI is served at `/api` on the running server.
 - `apps/e2e` — Playwright browser tests that boot both apps against an isolated SQLite database (own tsconfig on purpose: jest and Playwright globals must not share a TS project).
 - `packages/npm-sdk` — `@vocab-bloom-hub/client`, the typed Node.js / browser client of the public API: types generated from `apps/server/openapi/public-v1.json` (`src/generated/openapi.ts`, committed) plus a hand-written wrapper; tsup build (ESM + CJS + d.ts), no runtime dependencies. Not published to npm before the alpha (#308).
+- `packages/python-sdk` — `vocab-bloom-hub` on PyPI (import `vocab_bloom_hub`), the Python client: pydantic models generated from the same spec (`src/vocab_bloom_hub/_generated/models.py`, committed), sync + async clients on httpx; managed with `uv` (`uv sync`, `uv run ruff/mypy/pytest`), Python ≥ 3.10. The live tests start the server through `yarn workspace server fixture:public-api`. Not published before the alpha (#310).
 
 ## Commands
 
@@ -34,6 +35,10 @@ yarn workspace @vocab-bloom-hub/client generate        # regenerate the SDK type
 yarn workspace @vocab-bloom-hub/client generate:check  # fail if the generated SDK types are stale (CI runs it)
 yarn workspace @vocab-bloom-hub/client build / test    # SDK build; unit tests + the client against the real server
 
+cd packages/python-sdk && uv sync                          # Python SDK environment (.venv)
+uv run python scripts/generate_models.py [--check]         # pydantic models from the public spec (commit the result)
+uv run ruff check . && uv run mypy && uv run pytest        # Python SDK lint, types, tests (live tests boot the server via yarn)
+
 yarn workspace server bench [--explain]   # latency of the hot reads on DATABASE_URL (full dictionary), see docs/performance.md
 yarn workspace server test:postgres       # Postgres-only suites: query-plan guard, trigram search (CI runs them)
 
@@ -44,7 +49,7 @@ yarn check          # lint + format:check (run before finishing work)
 
 Indexes a decorator cannot express (`COLLATE "C"`, GIN) are declared with `MANUALLY_MANAGED_INDEX` (`synchronize: false`) and created by their migration; `test:postgres` fails when a hot query stops using an index.
 
-After changing anything under `/api/v1` (routes, DTOs, Swagger decorators, the response types in `types/public/v1`) run `openapi:generate`, then `yarn workspace @vocab-bloom-hub/client generate`, and commit `apps/server/openapi/public-v1.json`, `public-v1.schemas.json` and `packages/npm-sdk/src/generated/openapi.ts` (the response schemas generated from the types; a new public route must be registered in `src/openapi/public-responses.ts`) — CI and `test/public-openapi.e2e-spec.ts` compare them with the code.
+After changing anything under `/api/v1` (routes, DTOs, Swagger decorators, the response types in `types/public/v1`) run `openapi:generate`, then `yarn workspace @vocab-bloom-hub/client generate` and `uv run python scripts/generate_models.py` in `packages/python-sdk`, and commit `apps/server/openapi/public-v1.json`, `public-v1.schemas.json`, `packages/npm-sdk/src/generated/openapi.ts` and `packages/python-sdk/src/vocab_bloom_hub/_generated/models.py` (the response schemas generated from the types; a new public route must be registered in `src/openapi/public-responses.ts`) — CI and `test/public-openapi.e2e-spec.ts` compare them with the code.
 
 Test files are `*.spec.ts(x)`, colocated with code (e.g. in `__tests__/` dirs). Server tests run in node env; frontend tests run in jsdom with styles mocked and the `@/` alias mapped.
 

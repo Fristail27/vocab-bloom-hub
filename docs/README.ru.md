@@ -85,6 +85,7 @@
   - _Documentation_ — встроенный справочник по модели данных.
 - **REST API** с документацией Swagger/OpenAPI: публичный read-only версионированный префикс `/api/v1` для приложений-потребителей (без логина, с лимитом запросов) и админский API, защищённый единственным админским логином (httpOnly JWT-cookie или Bearer-токен) — см. [`api.md`](api.md).
 - **Node.js / TypeScript SDK** для публичного API — [`@vocab-bloom-hub/client`](../packages/npm-sdk/README.md): типизированные методы по эндпоинтам, итерация по курсору, типизированные ошибки, ETag-кэш; типы генерируются из закоммиченного OpenAPI-документа (публикация в npm — после альфы, #308).
+- **Python SDK** — [`vocab-bloom-hub`](../packages/python-sdk/README.md): sync + async клиенты, pydantic-модели из того же спека, `words_dataframe()` для ноутбуков (публикация в PyPI — после альфы, #310).
 - **Импорт / экспорт словаря** в виде NDJSON-датасетов (`POST /api/en/dictionary/import`, `GET /api/en/dictionary/export`) — весь словарь можно версионировать, передавать и переносить между окружениями, в том числе офлайн: из загруженного архива или папки на сервере (см. [`offline-import.md`](offline-import.md)).
 - **Поиск** по словам, значениям и переводам.
 - **PostgreSQL** в production с миграциями TypeORM, применяемыми при старте, и **SQLite** без настройки для локальной разработки и тестов.
@@ -114,6 +115,7 @@
 │   ├── server/     → API на NestJS; также экспортирует общие типы (types/) и константы (core/), которые использует фронтенд
 │   └── e2e/        → Браузерные тесты Playwright: поднимают оба приложения на изолированной SQLite-базе
 ├── packages/npm-sdk → @vocab-bloom-hub/client, Node.js / TypeScript SDK публичного API
+├── packages/python-sdk → vocab-bloom-hub, Python SDK публичного API (uv, httpx, pydantic)
 ├── docs/           → Подробная документация (деплой, окружение, аутентификация, миграции, данные) и этот README на русском
 ├── eslint/         → Общие части конфигурации ESLint (base / next / nest)
 ├── .github/        → CI-воркфлоу, шаблоны issue/PR, Dependabot, CODEOWNERS

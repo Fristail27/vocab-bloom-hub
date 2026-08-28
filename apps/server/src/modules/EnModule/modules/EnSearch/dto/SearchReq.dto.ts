@@ -12,7 +12,7 @@ export class SearchReqDTO {
   @IsEnum(EnEntryTypesE)
   type?: EnEntryTypesE;
 
-  @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 10 })
+  @ApiPropertyOptional({ type: 'integer', minimum: 1, maximum: 100, default: 10 })
   @IsOptional()
   @IsInt()
   @Min(1)

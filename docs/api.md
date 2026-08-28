@@ -188,7 +188,10 @@ fields fail), which is what makes the schemas trustworthy for SDK generators (#2
   one method per endpoint, types generated from `openapi/public-v1.json`, typed errors, cursor
   iteration, optional ETag cache. Built and tested in this repository; published to npm with the
   first alpha (#308).
-- **Python** — planned (#276).
+- **Python** — [`vocab-bloom-hub`](../packages/python-sdk/README.md) (issue #276): sync and async
+  clients on httpx, pydantic models generated from the same spec, typed exceptions, cursor
+  iteration, ETag cache, `words_dataframe()` for notebooks. Published to PyPI with the first alpha
+  (#310).
 
 ### Caching
 

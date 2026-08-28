@@ -29,6 +29,9 @@ const generated = {
     },
     FormT: { type: 'object', properties: { id: { type: 'number' } }, additionalProperties: false },
     LevelE: { type: 'string', enum: ['A1', 'A2'] },
+    // `type PublicWordT = WordT`: a bare alias, resolved to its target
+    PublicWordT: { $ref: '#/definitions/WordT' },
+    WordResT: { type: 'object', properties: { data: { $ref: '#/definitions/PublicWordT' } } },
   },
 };
 
@@ -36,7 +39,7 @@ describe('JSON Schema → OpenAPI 3.0 component schemas (issue #305)', () => {
   const schemas = toOpenApiSchemas(generated);
 
   it('inlines instantiated generics into their aliases and keeps plain names only', () => {
-    expect(Object.keys(schemas).sort()).toEqual(['FormT', 'ItemResT', 'LevelE', 'WordT']);
+    expect(Object.keys(schemas).sort()).toEqual(['FormT', 'ItemResT', 'LevelE', 'WordResT', 'WordT']);
     expect(schemas.ItemResT).toEqual({
       type: 'object',
       properties: { data: { $ref: '#/components/schemas/WordT' } },
@@ -62,6 +65,14 @@ describe('JSON Schema → OpenAPI 3.0 component schemas (issue #305)', () => {
     const props = schemas.WordT.properties as Record<string, unknown>;
     expect(props.language).toEqual({ type: 'string', enum: ['ru'] });
     expect(props.word).toEqual({ type: 'string', description: 'The headword' });
+  });
+
+  it('resolves a bare alias to its target and drops the alias schema', () => {
+    expect(schemas).not.toHaveProperty('PublicWordT');
+    expect(schemas.WordResT).toEqual({
+      type: 'object',
+      properties: { data: { $ref: '#/components/schemas/WordT' } },
+    });
   });
 
   it('fails on a reference to a generic that was not generated', () => {

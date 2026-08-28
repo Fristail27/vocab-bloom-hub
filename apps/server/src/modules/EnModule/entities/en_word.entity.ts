@@ -46,6 +46,7 @@ import { MANUALLY_MANAGED_INDEX } from './manually-managed-index';
 // straight from en_words without joining en_entries; same migration
 @Index('IDX_EN_WORD_C', ['word'], MANUALLY_MANAGED_INDEX)
 export class EnWord {
+  /** @asType integer */
   @PrimaryGeneratedColumn()
   @IsNumber()
   @IsPositive()

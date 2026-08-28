@@ -22,6 +22,7 @@ import { checkIsPostgres } from '../../../../configuration';
 @Index('IDX_EN_MEANING_WORD', ['word'])
 @Index('IDX_EN_MEANING_WORD_SORT', ['word', 'sort_order'])
 export class EnMeaning {
+  /** @asType integer */
   @PrimaryGeneratedColumn()
   @IsNumber()
   @IsPositive()
@@ -52,6 +53,7 @@ export class EnMeaning {
   @Column({ type: 'simple-enum', enum: LanguageRegisterE, nullable: true })
   language_register?: LanguageRegisterE | null;
 
+  /** @asType integer */
   @Column({ type: 'int' })
   sort_order!: number;
 
