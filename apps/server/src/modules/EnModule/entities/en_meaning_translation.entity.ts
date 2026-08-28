@@ -17,6 +17,7 @@ import { checkIsPostgres } from '../../../../configuration';
 @Index('IDX_EN_MEANING_TRANSLATION_MEANING', ['meaning'])
 @Index('IDX_EN_MEANING_TRANSLATION_LANGUAGE', ['language'])
 export class EnMeaningTranslation {
+  /** @asType integer */
   @PrimaryGeneratedColumn()
   @IsNumber()
   @IsPositive()

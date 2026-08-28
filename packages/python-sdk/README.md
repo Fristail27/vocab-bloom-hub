@@ -1,0 +1,121 @@
+# vocab-bloom-hub
+
+Typed Python client for the public read-only API of a [Vocab Bloom Hub](https://github.com/Fristail27/vocab-bloom-hub) instance — an English dictionary with IPA, CEFR levels, sense-level definitions, examples, Russian translations and inflected forms, served under `/api/v1`.
+
+- Sync (`VocabBloomClient`) and async (`AsyncVocabBloomClient`) on `httpx`; one method per endpoint.
+- pydantic models generated from the server's OpenAPI document — the types cannot drift from the API.
+- Typed exceptions, cursor iteration, optional ETag cache, `words_dataframe()` for notebooks.
+- Python 3.10+; dependencies: `httpx`, `pydantic` (`pandas` optional).
+
+## Install
+
+Not on PyPI yet — it follows the first alpha release ([#310](https://github.com/Fristail27/vocab-bloom-hub/issues/310)). Until then install from the repository:
+
+```bash
+pip install "git+https://github.com/Fristail27/vocab-bloom-hub#subdirectory=packages/python-sdk"
+# with pandas support
+pip install "vocab-bloom-hub[pandas] @ git+https://github.com/Fristail27/vocab-bloom-hub#subdirectory=packages/python-sdk"
+```
+
+## Quick start
+
+```python
+from vocab_bloom_hub import NotFoundError, VocabBloomClient
+
+client = VocabBloomClient("https://dict.example.com")
+
+# search: relevance tiers, typo tolerance
+result = client.search("recieve")
+print(result.meta.fuzzy, result.data[0].word)  # True receive
+
+# a headword with every part of speech, forms, meanings and translations
+try:
+    run = client.word("run")
+    print(run.data[0].meanings[0].definition)
+except NotFoundError:
+    print("no such word")
+
+# walk the whole dictionary, page after page
+for word in client.iter_words(word_level=["A1", "A2"], with_meanings=True):
+    print(word.word, len(word.meanings))
+
+# a notebook: the filtered list as a DataFrame (pip install "vocab-bloom-hub[pandas]")
+frame = client.words_dataframe(part_of_speech=["noun"], category=["IT"])
+```
+
+Async, the same methods awaited:
+
+```python
+from vocab_bloom_hub import AsyncVocabBloomClient
+
+async with AsyncVocabBloomClient("https://dict.example.com") as client:
+    meta = await client.meta()
+    async for word in client.iter_words(limit=100):
+        ...
+```
+
+## API
+
+| Method                                      | Endpoint                           | Answer                        |
+| ------------------------------------------- | ---------------------------------- | ----------------------------- |
+| `search(search, *, type, limit)`            | `POST /search`                     | `SearchResponse`              |
+| `search_detailed(search, *, ...)`           | `POST /search/detailed`            | `DetailedSearchResponse`      |
+| `word(headword)`                            | `GET /words/{word}`                | `HeadwordResponse`            |
+| `word_by_id(id)`                            | `GET /words/id/{id}`               | `WordResponse`                |
+| `meanings(headword)`                        | `GET /words/{word}/meanings`       | `MeaningsResponse`            |
+| `translations(headword, *, language)`       | `GET /words/{word}/translations`   | `TranslationsResponse`        |
+| `forms(headword)`                           | `GET /words/{word}/forms`          | `FormsResponse`               |
+| `words(**filters, cursor, limit, with_...)` | `GET /words`                       | `WordsResponse` (one page)    |
+| `iter_words(**filters, ...)`                | `GET /words`, following the cursor | `Iterator[Word]`              |
+| `random(**filters)`                         | `GET /random`                      | `WordResponse`                |
+| `meta()`                                    | `GET /meta`                        | `MetaResponse`                |
+| `openapi()`                                 | `GET /openapi.json`                | `dict` — the OpenAPI document |
+| `words_dataframe(**filters, ...)`           | `GET /words`, every page           | `pandas.DataFrame`            |
+
+Every response is the `{ data, meta }` envelope the API answers with, as a pydantic model. Filters (`part_of_speech`, `word_level`, `language_register`, `category`, `area_variant`, `form_of_word`) take lists of strings or of the exported enums (`PartOfSpeech`, `WordLevel`, ...); values of one filter are OR-ed, different filters are AND-ed. The contract itself — tiers, filters, cursor pagination, caching — is documented in the server's [`docs/api.md`](https://github.com/Fristail27/vocab-bloom-hub/blob/main/docs/api.md).
+
+### Options
+
+```python
+VocabBloomClient(
+    "https://dict.example.com",  # origin of the instance; /api/v1 is appended
+    headers={"X-App": "my-app"},  # sent with every request
+    timeout=10.0,  # seconds, or an httpx.Timeout
+    cache=True,  # ETag revalidation (below); or your own ResponseCache
+    transport=...,  # a custom httpx transport (tests, instrumentation)
+)
+```
+
+Use the client as a context manager (`with` / `async with`) to close the connection pool.
+
+### Errors
+
+| Exception         | When                                     | Fields                                         |
+| ----------------- | ---------------------------------------- | ---------------------------------------------- |
+| `NotFoundError`   | 404                                      | `status`, `code` (`word_doesnt_found`), `body` |
+| `RateLimitError`  | 429 — the public rate limit              | `retry_after` (seconds, from `Retry-After`)    |
+| `NetworkError`    | no answer: DNS, connection, TLS, timeout | `status == 0`, `code == "network_error"`       |
+| `VocabBloomError` | everything else                          | `status`, `code`, `body`                       |
+
+`code` is the machine-readable error of the API (`invalid_cursor`, `too_many_requests`, ...), or `http_error` when the answer was not JSON (a proxy page, for instance).
+
+### ETag cache
+
+With `cache=True` every `GET` answer is kept in memory per URL together with its `ETag`; the next read of the same URL sends `If-None-Match` and, on `304 Not Modified`, returns the kept body — the round trip stays, the payload does not. `MemoryCache` holds 500 entries (least recently used out); pass any object with `get(url)` / `set(url, entry)` for a store of your own. Off by default.
+
+## Development
+
+```bash
+cd packages/python-sdk
+uv sync                                           # Python 3.12 + dependencies into .venv
+uv run python scripts/generate_models.py          # models from apps/server/openapi/public-v1.json
+uv run python scripts/generate_models.py --check  # fail when the generated models are stale (CI)
+uv run ruff check . && uv run ruff format --check . && uv run mypy
+uv run pytest                                     # unit tests + the client against the real server
+```
+
+`src/vocab_bloom_hub/_generated/models.py` is produced by `datamodel-code-generator` from the committed public spec and committed itself: a contract change on the server shows up as a diff here, and `tests/test_contract.py` fails until every operation of the spec has a client method. The live tests start the server through `yarn workspace server fixture:public-api` (Node.js and the monorepo's dependencies installed), on an in-memory SQLite database.
+
+## License
+
+MIT — the dictionary data an instance serves is [CC BY 4.0](https://github.com/Fristail27/vocab-bloom-hub/blob/main/DATA_LICENSE.md).

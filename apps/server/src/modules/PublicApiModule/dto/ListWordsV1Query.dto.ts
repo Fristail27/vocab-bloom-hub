@@ -17,7 +17,7 @@ export class ListWordsV1QueryDTO extends WordFiltersV1QueryDTO {
   @MaxLength(PUBLIC_CURSOR_MAX_LENGTH)
   cursor?: string;
 
-  @ApiPropertyOptional({ default: PUBLIC_LIST_DEFAULT_LIMIT, maximum: PUBLIC_LIST_MAX_LIMIT })
+  @ApiPropertyOptional({ type: 'integer', default: PUBLIC_LIST_DEFAULT_LIMIT, maximum: PUBLIC_LIST_MAX_LIMIT })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

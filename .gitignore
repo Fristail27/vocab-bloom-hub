@@ -36,6 +36,13 @@
 /apps/frontend/build
 /apps/server/dist
 /packages/*/dist
+
+# python-sdk
+/packages/python-sdk/.venv
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 /apps/server/build
 
 # misc

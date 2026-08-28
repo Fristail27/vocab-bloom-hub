@@ -72,6 +72,47 @@ jobs:
       - name: Server e2e tests
         run: yarn workspace server test:e2e
 
+  python-sdk:
+    name: python-sdk
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: packages/python-sdk/uv.lock
+
+      - name: Install
+        run: uv sync --locked
+        working-directory: packages/python-sdk
+
+      - name: Generated models are up to date with the OpenAPI spec
+        run: uv run python scripts/generate_models.py --check
+        working-directory: packages/python-sdk
+
+      - name: Lint and format
+        run: uv run ruff check . && uv run ruff format --check .
+        working-directory: packages/python-sdk
+
+      - name: Typecheck
+        run: uv run mypy
+        working-directory: packages/python-sdk
+
+      - name: Tests (unit + the client against the real server)
+        run: uv run pytest
+        working-directory: packages/python-sdk
+
+      - name: Build the distribution
+        run: uv build
+        working-directory: packages/python-sdk
+
   postgres:
     name: postgres-only tests
     runs-on: ubuntu-latest

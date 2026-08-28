@@ -9,3 +9,7 @@ apps/e2e/.tmp
 
 # generated OpenAPI documents: the generator's own formatting is the committed one
 apps/server/openapi/
+
+# python: formatted by ruff
+packages/python-sdk/.venv
+packages/python-sdk/src/vocab_bloom_hub/_generated
