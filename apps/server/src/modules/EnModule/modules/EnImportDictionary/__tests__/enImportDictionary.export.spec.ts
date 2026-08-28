@@ -272,9 +272,14 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
       files: Record<string, { lines: number }>;
       synonym_links: number;
       antonym_links: number;
+      license: string;
+      attribution: string;
     };
     expect(typeof manifest.version).toBe('string');
     expect(manifest.version.length).toBeGreaterThan(0);
+    // the terms of the data travel with every export (issue #270)
+    expect(manifest.license).toBe('CC-BY-4.0');
+    expect(manifest.attribution).toContain('CC BY 4.0');
     // "in the long run" links to run and give up (issue #259)
     expect(manifest.synonym_links).toBe(2);
     expect(manifest.antonym_links).toBe(1);

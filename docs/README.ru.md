@@ -16,6 +16,7 @@
   <a href="https://github.com/Fristail27/vocab-bloom-hub/actions/workflows/check-pull-request.yml"><img src="https://github.com/Fristail27/vocab-bloom-hub/actions/workflows/check-pull-request.yml/badge.svg?branch=main" alt="CI" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/actions/workflows/codeql.yml"><img src="https://github.com/Fristail27/vocab-bloom-hub/actions/workflows/codeql.yml/badge.svg?branch=main" alt="CodeQL" /></a>
   <a href="../LICENSE"><img src="https://img.shields.io/github/license/Fristail27/vocab-bloom-hub" alt="Лицензия: MIT" /></a>
+  <a href="../DATA_LICENSE.md"><img src="https://img.shields.io/badge/data-CC%20BY%204.0-lightgrey" alt="Данные: CC BY 4.0" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/commits/main"><img src="https://img.shields.io/github/last-commit/Fristail27/vocab-bloom-hub" alt="Последний коммит" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/issues"><img src="https://img.shields.io/github/issues/Fristail27/vocab-bloom-hub" alt="Открытые issues" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/pulls"><img src="https://img.shields.io/github/issues-pr/Fristail27/vocab-bloom-hub" alt="Открытые pull requests" /></a>
@@ -111,7 +112,7 @@
 │   ├── frontend/   → Админ-панель на Next.js (локали en/ru)
 │   ├── server/     → API на NestJS; также экспортирует общие типы (types/) и константы (core/), которые использует фронтенд
 │   └── e2e/        → Браузерные тесты Playwright: поднимают оба приложения на изолированной SQLite-базе
-├── docs/           → Подробная документация (окружение, аутентификация, миграции) и этот README на русском
+├── docs/           → Подробная документация (окружение, аутентификация, миграции, данные) и этот README на русском
 ├── eslint/         → Общие части конфигурации ESLint (base / next / nest)
 ├── .github/        → CI-воркфлоу, шаблоны issue/PR, Dependabot, CODEOWNERS
 ├── .env            → Единый файл окружения для обоих приложений (не коммитится)
@@ -227,6 +228,7 @@ Docker-образа и готовой хостинг-сборки пока не�
 - [`offline-import.md`](offline-import.md) — перенос словаря между инстансами без интернета (экспорт → копирование → импорт из файла)
 - [`performance.md`](performance.md) — задержки горячих чтений на полном словаре (Postgres vs SQLite), индексы за ними, бенчмарк и guard планов запросов
 - [`api.md`](api.md) — контракт публичного `/api/v1` (конверт, ошибки, лимит запросов, кэширование, экспорт OpenAPI, устаревшие алиасы) и переключатели public-only / admin-only
+- [`data.md`](data.md) — откуда берутся данные словаря (сгенерированы LLM, `generated_by_model`), известные ограничения, как сообщать об ошибках; условия использования — в [`DATA_LICENSE.md`](../DATA_LICENSE.md)
 - [`../README.md`](../README.md) — этот README на английском
 - Swagger UI по адресу `/api` на запущенном сервере — актуальный справочник API; публичный контракт в формате OpenAPI: [`apps/server/openapi/public-v1.json`](../apps/server/openapi/public-v1.json) или `GET /api/v1/openapi.json`
 
@@ -264,4 +266,5 @@ Docker-образа и готовой хостинг-сборки пока не�
 
 ## 📄 Лицензия
 
-[MIT](../LICENSE) © Alexey Ryzhov (Fristail27)
+- **Код** — [MIT](../LICENSE) © Alexey Ryzhov (Fristail27)
+- **Данные словаря** (выгрузки, публичный API, датасет на HuggingFace) — [CC BY 4.0](../DATA_LICENSE.md): свободное использование и переработка, в том числе коммерческие, с указанием источника. Данные в основном сгенерированы LLM и не проверены людьми — см. [`data.md`](data.md), прежде чем на них полагаться.

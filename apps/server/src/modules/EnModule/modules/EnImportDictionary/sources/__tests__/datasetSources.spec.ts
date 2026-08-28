@@ -94,6 +94,11 @@ describe('dataset sources (issue #269)', () => {
       expect(parseManifest({ version: '1', files: {} })).toBeNull();
       expect(parseManifest({ version: '1', files: { a: { lines: -1 } } })).toBeNull();
       expect(parseManifest({ ...manifest, antonym_links: 'many' })).toBeNull();
+      // the license fields (issue #270) are optional strings
+      expect(
+        parseManifest({ ...manifest, license: 'CC-BY-4.0', attribution: 'Vocab Bloom Hub' }),
+      ).not.toBeNull();
+      expect(parseManifest({ ...manifest, license: 4 })).toBeNull();
     });
   });
 

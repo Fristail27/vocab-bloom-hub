@@ -96,8 +96,11 @@ export type PublicMetaV1T = {
   // version of the dataset the dictionary was last imported from; null when
   // the data was authored in place or imported from a dataset without a manifest
   dataset_version: string | null;
-  // SPDX identifier of the dictionary data license; null until it is decided (issue #270)
-  license: string | null;
+  // the dictionary data license (issue #270): SPDX identifier, its text, and
+  // the attribution line a consumer has to show
+  license: string;
+  license_url: string;
+  attribution: string;
   counts: PublicDatasetCountsV1T;
 };
 export type PublicMetaV1ResT = PublicItemResT<PublicMetaV1T>;

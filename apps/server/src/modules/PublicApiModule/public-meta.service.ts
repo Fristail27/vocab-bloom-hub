@@ -3,16 +3,13 @@ import { EnStatisticsService } from '../EnModule/modules/EnStatistics/enStatisti
 import { SettingsService } from '../SettingsModule/settings.service';
 import { DATASET_VERSION_SETTINGS_FIELD } from '../EnModule/modules/EnImportDictionary/constants';
 import { PUBLIC_API_VERSION } from '../../core/utils/public-api';
+import { DATA_LICENSE } from '../../../core/constants/data_license';
 import { PublicDatasetCountsV1T, PublicMetaV1T } from '../../../types';
 
 // The counters are a dozen COUNT(*) queries over the whole dictionary; the
 // public prefix may be polled by every consumer, so they are refreshed at
 // most this often
 export const META_COUNTS_TTL_MS = 60_000;
-
-// The data license is not decided yet (issue #270); the field is part of the
-// contract already so consumers can rely on its presence
-export const PUBLIC_DATA_LICENSE: string | null = null;
 
 /** GET /api/v1/meta: what the instance serves (issue #272) */
 @Injectable()
@@ -48,7 +45,9 @@ export class PublicMetaService {
       api_version: PUBLIC_API_VERSION,
       app_version: this.settingsService.getVersion() ?? '',
       dataset_version,
-      license: PUBLIC_DATA_LICENSE,
+      license: DATA_LICENSE.spdx,
+      license_url: DATA_LICENSE.url,
+      attribution: DATA_LICENSE.attribution,
       counts,
     };
   }
