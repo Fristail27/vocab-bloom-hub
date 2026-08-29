@@ -1,0 +1,19 @@
+# Build the images from this checkout instead of pulling them from GHCR
+# (contributors, forks, an unpublished change):
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+# The built images take the names docker-compose.yml expects, so a later
+# plain `docker compose up` keeps using them until `docker compose pull`.
+services:
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+      # baked into the browser bundle; the default /api (same origin, through
+      # the reverse proxy) needs no rebuild when the hostname changes
+      args:
+        NEXT_PUBLIC_BASE_API_URL: ${NEXT_PUBLIC_BASE_API_URL:-/api}

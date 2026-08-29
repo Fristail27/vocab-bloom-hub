@@ -1,8 +1,8 @@
 # Deployment
 
 How to run a Vocab Bloom Hub instance in production: as plain Node.js processes (this page) or
-in containers ([`docker.md`](./docker.md) — `docker compose up` with Postgres included). Either
-way a reverse proxy with TLS goes in front. Published images are tracked in #317.
+in containers ([`docker.md`](./docker.md) — `docker compose up` with the published images and
+Postgres included). Either way a reverse proxy with TLS goes in front.
 
 | Page                                           | What it covers                                                                                      |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |

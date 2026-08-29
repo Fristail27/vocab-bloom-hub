@@ -22,8 +22,10 @@ yarn build          # production build of both apps (server → apps/server/dist
 yarn start          # start both production builds (concurrently); start:server / start:front for one
                     # CI boots them against Postgres and probes /api/ready (.github/scripts/production-smoke.sh)
 
-docker compose up -d --build              # Postgres + server + frontend from apps/*/Dockerfile (docs/deployment/docker.md);
-                                          # .env from .env.example; CI runs it too (.github/scripts/compose-smoke.sh)
+docker compose up -d                      # Postgres + server + frontend from the GHCR images (docs/deployment/docker.md);
+                                          # .env from .env.example; VBH_TAG picks the image tag (main / semver / latest)
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build   # build from this checkout instead (CI does this)
+                                          # images are published by .github/workflows/docker.yml: main → `main` + `sha-…`, tags v* → semver + latest
 
 yarn test           # all tests (root jest config with projects: server + frontend)
 yarn jest path/to/file.spec.ts            # single test file
