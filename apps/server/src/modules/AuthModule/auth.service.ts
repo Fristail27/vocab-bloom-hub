@@ -1,6 +1,6 @@
 import { timingSafeEqual } from 'crypto';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { createJwt, validateJwt } from '../../../core/utils/auth';
 import {
   LOGIN_PROOF_SLOT_TOLERANCE,
@@ -40,11 +40,27 @@ export class AuthService {
     return { loginHash, secretHash };
   }
 
-  setTokenToCookie(token: string, res: Response) {
+  /**
+   * The admin cookie is `secure` whenever the request itself came over
+   * https — directly or through a proxy that sets X-Forwarded-Proto (read
+   * only with TRUST_PROXY, see docs/deployment/reverse-proxy.md) — so a
+   * TLS deployment never sends it over plain http, while an instance
+   * reached over http (docker compose on a workstation, a LAN without
+   * certificates) can still sign in. Production over plain http is logged
+   * as a warning: the token would travel unencrypted (issue #316).
+   */
+  setTokenToCookie(token: string, res: Response, req: Request) {
     if (token) {
+      const secure = req.secure;
+      if (!secure && process.env.NODE_ENV === 'production') {
+        this.logger.warn(
+          'Admin cookie set without the secure flag: the request came over plain http. ' +
+            'Put TLS in front (docs/deployment/reverse-proxy.md) and set TRUST_PROXY so the server sees https.',
+        );
+      }
       res.cookie('bearer', token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure,
         sameSite: 'lax',
         maxAge: 24 * 60 * 60 * 1000,
       });

@@ -180,3 +180,31 @@ describe('AbstractBaseApi', () => {
     });
   });
 });
+
+describe('AbstractBaseApi.baseURL (issue #316)', () => {
+  const saved = { public: process.env.NEXT_PUBLIC_BASE_API_URL, internal: process.env.API_INTERNAL_URL };
+
+  afterEach(() => {
+    process.env.NEXT_PUBLIC_BASE_API_URL = saved.public;
+    if (saved.internal === undefined) delete process.env.API_INTERNAL_URL;
+    else process.env.API_INTERNAL_URL = saved.internal;
+  });
+
+  it('resolves a relative NEXT_PUBLIC_BASE_API_URL against the page origin in the browser', () => {
+    process.env.NEXT_PUBLIC_BASE_API_URL = '/api';
+    expect(AbstractBaseApi.baseURL).toBe(`${window.location.origin}/api`);
+    process.env.NEXT_PUBLIC_BASE_API_URL = 'https://dict.example.com/api';
+    expect(AbstractBaseApi.baseURL).toBe('https://dict.example.com/api');
+  });
+
+  it('defaults to /api on the page origin', () => {
+    delete process.env.NEXT_PUBLIC_BASE_API_URL;
+    expect(AbstractBaseApi.baseURL).toBe(`${window.location.origin}/api`);
+  });
+
+  it('ignores API_INTERNAL_URL in the browser: it is the server-side address only', () => {
+    process.env.NEXT_PUBLIC_BASE_API_URL = 'https://dict.example.com/api';
+    process.env.API_INTERNAL_URL = 'http://server:3010/api';
+    expect(AbstractBaseApi.baseURL).toBe('https://dict.example.com/api');
+  });
+});

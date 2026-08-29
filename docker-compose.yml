@@ -1,0 +1,74 @@
+# Vocab Bloom Hub: Postgres + API + admin UI (docs/deployment/docker.md).
+#   cp .env.example .env   # set the passwords
+#   docker compose up -d --build
+# The apps are published on localhost only; put a reverse proxy with TLS in
+# front for anything beyond this host (docs/deployment/reverse-proxy.md) —
+# the admin login cookie is `secure` on https.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vocab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-vocab_bloom}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    image: vocab-bloom-hub-server
+    env_file: ${ENV_FILE:-.env}
+    environment:
+      NODE_ENV: production
+      # inside the container the server always listens on 3010; SERVER_PORT in
+      # .env is the host port it is published on
+      SERVER_PORT: 3010
+      # the compose network address of the database; DATABASE_URL in .env may
+      # point at an external Postgres instead — then drop the postgres service
+      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-vocab}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vocab_bloom}}
+      # datasets the import page may load from the server (./imports on the host)
+      DICTIONARY_IMPORT_DIR: /data/dictionary-imports
+    volumes:
+      - ./imports:/data/dictionary-imports:ro
+    ports:
+      - '127.0.0.1:${SERVER_PORT:-3010}:3010'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # SIGTERM → the server drains its requests for up to SHUTDOWN_TIMEOUT (30 s)
+    stop_grace_period: 45s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+      # baked into the browser bundle; the default /api (same origin, through
+      # the reverse proxy) needs no rebuild when the hostname changes
+      args:
+        NEXT_PUBLIC_BASE_API_URL: ${NEXT_PUBLIC_BASE_API_URL:-/api}
+    image: vocab-bloom-hub-frontend
+    env_file: ${ENV_FILE:-.env}
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # server-side rendering talks to the API directly, inside the compose network
+      API_INTERNAL_URL: http://server:3010/api
+    ports:
+      - '127.0.0.1:${FRONT_PORT:-3000}:3000'
+    depends_on:
+      server:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

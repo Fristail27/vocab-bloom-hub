@@ -213,7 +213,11 @@ Full reference with defaults and startup validation rules: [`docs/environment.md
 
 ## 🚢 Deployment
 
-There is no Docker image or hosted build yet; both apps run as plain Node.js processes behind a reverse proxy that terminates TLS (the admin cookie is `secure` in production) and routes `/api/*` to the server and everything else to the frontend.
+Two supported shapes, both behind a reverse proxy that terminates TLS and routes `/api/*` to the server and everything else to the frontend (the admin cookie is `secure` whenever the login came over https).
+
+**Docker** — `cp .env.example .env`, set the passwords, `docker compose up -d --build`: Postgres, the API and the admin UI, published on localhost. Guide: [`docs/deployment/docker.md`](docs/deployment/docker.md). Published images follow the alpha (#317).
+
+**Native Node.js:**
 
 1. Provide the environment: `NODE_ENV=production`, a `postgres://` `DATABASE_URL`, strong `ADMIN_USERNAME` / `ADMIN_PASSWORD`, `NEXT_PUBLIC_BASE_API_URL` and `CORS_ORIGINS` set to the public origin, `TRUST_PROXY=1`.
 2. `yarn build`, then `yarn start` (or `yarn start:server` / `yarn start:front` under systemd or PM2 — example files in the guide); pending migrations run on server start. `ENV_FILE` points at an environment file outside the checkout; `GET /api/health` and `GET /api/ready` are the probes; SIGTERM stops the server gracefully.
@@ -225,7 +229,7 @@ Full guide: [`docs/deployment/`](docs/deployment/README.md) → [`reverse-proxy.
 
 ## 📚 Documentation
 
-- [`docs/deployment/`](docs/deployment/README.md) — production build and start, and [`reverse-proxy.md`](docs/deployment/reverse-proxy.md): TLS, Caddy / nginx configs, exposure profiles, keeping the admin API private
+- [`docs/deployment/`](docs/deployment/README.md) — production build and start, probes, graceful stop, systemd / PM2; [`docker.md`](docs/deployment/docker.md): the two images and `docker compose` with Postgres; [`reverse-proxy.md`](docs/deployment/reverse-proxy.md): TLS, Caddy / nginx configs, exposure profiles, keeping the admin API private
 - [`docs/operations.md`](docs/operations.md) — operating an instance: what holds state and what to back up, database backup vs dictionary export, upgrading and rolling back, dataset updates vs code updates, sizing
 - [`docs/environment.md`](docs/environment.md) — every environment variable, driver selection, startup checks
 - [`docs/authentication.md`](docs/authentication.md) — how the single-admin login, login proof and JWT cookie work

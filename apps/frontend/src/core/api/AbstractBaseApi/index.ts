@@ -12,8 +12,23 @@ type RequestOptions = RequestInit & {
 export type DownloadedFileT = { blob: Blob; filename?: string };
 
 export class AbstractBaseApi {
+  /**
+   * Where the API is. In the browser: NEXT_PUBLIC_BASE_API_URL, inlined at
+   * build time; a relative value (the default `/api`) is resolved against the
+   * page origin, i.e. "the API is served under this origin by the proxy".
+   * During server-side rendering: API_INTERNAL_URL when set — the address the
+   * frontend process reaches the server by directly (in docker compose
+   * `http://server:3010/api`, issue #316) — otherwise the public URL, which
+   * must then be absolute.
+   */
   static get baseURL(): string {
-    return process.env.NEXT_PUBLIC_BASE_API_URL || '/api';
+    const isServer = typeof window === 'undefined';
+    if (isServer && process.env.API_INTERNAL_URL) return process.env.API_INTERNAL_URL;
+    const configured = process.env.NEXT_PUBLIC_BASE_API_URL || '/api';
+    if (!isServer && !/^[a-z][a-z0-9+.-]*:\/\//i.test(configured)) {
+      return new URL(configured, window.location.origin).toString();
+    }
+    return configured;
   }
 
   private static buildUrl(endpoint: string, query?: RequestOptions['query']) {
