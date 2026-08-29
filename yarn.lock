@@ -10906,10 +10906,13 @@ __metadata:
     "@types/multer": "npm:^2.2.0"
     "@types/supertest": "npm:^7.2.1"
     "@types/yauzl": "npm:^3.4.0"
+    "@types/yazl": "npm:^3.3.1"
     ajv: "npm:^8.20.0"
+    better-sqlite3: "npm:^13.0.3"
     class-transformer: "npm:^0.5.1"
     class-validator: "npm:^0.15.1"
     compression: "npm:^1.8.1"
+    dotenv: "npm:^17.4.2"
     helmet: "npm:^8.3.0"
     jest: "npm:^30.4.2"
     jsonwebtoken: "npm:^9.0.3"
@@ -10928,6 +10931,7 @@ __metadata:
     typeorm: "npm:^1.1.0"
     typescript: "npm:^6.0.3"
     yauzl: "npm:^3.4.0"
+    yazl: "npm:^3.3.1"
   languageName: unknown
   linkType: soft
 
@@ -12530,11 +12534,8 @@ __metadata:
     "@next/eslint-plugin-next": "npm:^16.2.12"
     "@types/jest": "npm:^30.0.0"
     "@types/node": "npm:^26"
-    "@types/yazl": "npm:^3.3.1"
     antd: "npm:^6.6.1"
-    better-sqlite3: "npm:^13.0.3"
     concurrently: "npm:^10.0.5"
-    dotenv: "npm:^17.4.2"
     dotenv-cli: "npm:^11.0.0"
     eslint: "npm:^10.7.0"
     eslint-config-prettier: "npm:^10.1.8"
@@ -12552,7 +12553,6 @@ __metadata:
     ts-jest: "npm:^29.4.12"
     typescript: "npm:^6.0.3"
     typescript-eslint: "npm:^8.65.0"
-    yazl: "npm:^3.3.1"
   languageName: unknown
   linkType: soft
 

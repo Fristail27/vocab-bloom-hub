@@ -1,4 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { Logger } from '@nestjs/common';
 
 import { hashLoginString } from '../../../../core/utils/crypto';
 import { AuthService } from '../auth.service';
@@ -119,32 +120,56 @@ describe('AuthService', () => {
 
   describe('setTokenToCookie', () => {
     const mockRes = () => ({ cookie: jest.fn() }) as any;
+    const mockReq = (secure: boolean) => ({ secure }) as any;
 
-    it('устанавливает куку с правильными параметрами', () => {
+    it('устанавливает secure-куку, когда запрос пришёл по https', () => {
       const res = mockRes();
-      service.setTokenToCookie(FAKE_TOKEN, res);
+      service.setTokenToCookie(FAKE_TOKEN, res, mockReq(true));
 
       expect(res.cookie).toHaveBeenCalledWith(
         'bearer',
         FAKE_TOKEN,
         expect.objectContaining({
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          secure: true,
           sameSite: 'lax',
           maxAge: 24 * 60 * 60 * 1000,
         }),
       );
     });
 
+    it('ставит обычную куку по http и предупреждает об этом в production (issue #316)', () => {
+      const saved = process.env.NODE_ENV;
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      try {
+        process.env.NODE_ENV = 'development';
+        const res = mockRes();
+        service.setTokenToCookie(FAKE_TOKEN, res, mockReq(false));
+        expect(res.cookie).toHaveBeenCalledWith(
+          'bearer',
+          FAKE_TOKEN,
+          expect.objectContaining({ secure: false }),
+        );
+        expect(warn).not.toHaveBeenCalled();
+
+        process.env.NODE_ENV = 'production';
+        service.setTokenToCookie(FAKE_TOKEN, mockRes(), mockReq(false));
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('without the secure flag'));
+      } finally {
+        process.env.NODE_ENV = saved;
+        warn.mockRestore();
+      }
+    });
+
     it('не вызывает res.cookie если токен пустой', () => {
       const res = mockRes();
-      service.setTokenToCookie('', res);
+      service.setTokenToCookie('', res, mockReq(true));
       expect(res.cookie).not.toHaveBeenCalled();
     });
 
     it('не вызывает res.cookie если токен undefined', () => {
       const res = mockRes();
-      service.setTokenToCookie(undefined as any, res);
+      service.setTokenToCookie(undefined as any, res, mockReq(true));
       expect(res.cookie).not.toHaveBeenCalled();
     });
   });

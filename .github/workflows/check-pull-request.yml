@@ -211,6 +211,43 @@ jobs:
           path: production-smoke.log
           retention-days: 7
 
+  docker:
+    name: docker images and compose
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # The Dockerfiles and docker-compose.yml (issue #316) are exercised the way
+    # an operator uses them: build both images, `docker compose up`, wait for
+    # the readiness probe and the login page, sign in over plain http
+    # (the cookie must not be `secure` there), stop gracefully
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Environment file
+        run: |
+          cp .env.example .env
+          sed -i 's/^ADMIN_PASSWORD=.*/ADMIN_PASSWORD=ci-admin-password/; s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci-postgres-password/; s#^DATABASE_URL=.*#DATABASE_URL=postgres://vocab:ci-postgres-password@postgres:5432/vocab_bloom#' .env
+
+      - name: Build images and start
+        run: docker compose up -d --build --wait --wait-timeout 300
+
+      - name: Probe and sign in
+        run: bash .github/scripts/compose-smoke.sh
+
+      - name: Stop gracefully
+        run: |
+          docker compose stop -t 45 server
+          docker compose logs server | grep -q 'Shutdown complete (SIGTERM)'
+          docker compose down -v
+
+      - name: Compose logs
+        if: failure()
+        run: docker compose logs
+
   e2e:
     name: browser e2e
     runs-on: ubuntu-latest

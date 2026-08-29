@@ -22,6 +22,9 @@ yarn build          # production build of both apps (server → apps/server/dist
 yarn start          # start both production builds (concurrently); start:server / start:front for one
                     # CI boots them against Postgres and probes /api/ready (.github/scripts/production-smoke.sh)
 
+docker compose up -d --build              # Postgres + server + frontend from apps/*/Dockerfile (docs/deployment/docker.md);
+                                          # .env from .env.example; CI runs it too (.github/scripts/compose-smoke.sh)
+
 yarn test           # all tests (root jest config with projects: server + frontend)
 yarn jest path/to/file.spec.ts            # single test file
 yarn jest --selectProjects server         # only server tests (or: frontend)

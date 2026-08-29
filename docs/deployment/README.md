@@ -1,11 +1,13 @@
 # Deployment
 
-How to run a Vocab Bloom Hub instance in production. There is no Docker image or hosted build
-yet (tracked in #265); both apps are deployed as plain Node.js processes behind a reverse proxy.
+How to run a Vocab Bloom Hub instance in production: as plain Node.js processes (this page) or
+in containers ([`docker.md`](./docker.md) — `docker compose up` with Postgres included). Either
+way a reverse proxy with TLS goes in front. Published images are tracked in #317.
 
 | Page                                           | What it covers                                                                                      |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | this page                                      | Building and starting the two processes, probes, graceful stop, process managers                    |
+| [`docker.md`](./docker.md)                     | The two images, `docker-compose.yml` with Postgres, build arguments, upgrading containers           |
 | [`examples/`](./examples/)                     | systemd units for both processes and a PM2 process file                                             |
 | [`reverse-proxy.md`](./reverse-proxy.md)       | TLS, routing both apps on one host, keeping the admin API private (Caddy / nginx), `TRUST_PROXY`    |
 | [`../operations.md`](../operations.md)         | Day two: what to back up, database backup vs dictionary export, upgrading and rolling back, sizing  |

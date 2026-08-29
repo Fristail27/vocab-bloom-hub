@@ -53,7 +53,7 @@ describe('AuthController', () => {
       mockAuthService.login.mockResolvedValue(FAKE_TOKEN);
       const res = makeRes();
 
-      const result = await controller.login({ hash: 'correct-hash', salt: 'aabb' }, res);
+      const result = await controller.login({ hash: 'correct-hash', salt: 'aabb' }, res, makeReq() as Request);
 
       expect(result).toEqual({ token: FAKE_TOKEN });
       expect(mockAuthService.login).toHaveBeenCalledWith('correct-hash', 'aabb');
@@ -63,25 +63,25 @@ describe('AuthController', () => {
       mockAuthService.login.mockResolvedValue(FAKE_TOKEN);
       const res = makeRes();
 
-      await controller.login({ hash: 'correct-hash', salt: 'aabb' }, res);
+      await controller.login({ hash: 'correct-hash', salt: 'aabb' }, res, makeReq() as Request);
 
-      expect(mockAuthService.setTokenToCookie).toHaveBeenCalledWith(FAKE_TOKEN, res);
+      expect(mockAuthService.setTokenToCookie).toHaveBeenCalledWith(FAKE_TOKEN, res, expect.anything());
     });
 
     it('пробрасывает ошибку от authService.login', async () => {
       mockAuthService.login.mockRejectedValue(new Error('login or password is wrong'));
       const res = makeRes();
 
-      await expect(controller.login({ hash: 'wrong-hash', salt: 'aabb' }, res)).rejects.toThrow(
-        'login or password is wrong',
-      );
+      await expect(
+        controller.login({ hash: 'wrong-hash', salt: 'aabb' }, res, makeReq() as Request),
+      ).rejects.toThrow('login or password is wrong');
     });
 
     it('не вызывает setTokenToCookie при ошибке логина', async () => {
       mockAuthService.login.mockRejectedValue(new Error('bad credentials'));
       const res = makeRes();
 
-      await controller.login({ hash: 'wrong', salt: 'aabb' }, res).catch(() => {});
+      await controller.login({ hash: 'wrong', salt: 'aabb' }, res, makeReq() as Request).catch(() => {});
 
       expect(mockAuthService.setTokenToCookie).not.toHaveBeenCalled();
     });
@@ -111,7 +111,7 @@ describe('AuthController', () => {
 
       expect(result).toEqual({ isValid: true });
       expect(mockAuthService.createJwtToken).toHaveBeenCalled();
-      expect(mockAuthService.setTokenToCookie).toHaveBeenCalledWith(FAKE_TOKEN, res);
+      expect(mockAuthService.setTokenToCookie).toHaveBeenCalledWith(FAKE_TOKEN, res, expect.anything());
     });
 
     it('возвращает { isValid: false } и не обновляет куку при невалидном токене', async () => {

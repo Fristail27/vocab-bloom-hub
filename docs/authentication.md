@@ -103,9 +103,13 @@ On successful login the server:
 
 1. Signs a JWT with payload `{ username, roles: ['admin'] }`, secret `secretHash + loginHash`, and
    `expiresIn: '1d'`.
-2. Sets it as the `bearer` cookie: `httpOnly`, `sameSite: 'lax'`, `maxAge: 24h`, `secure` in
-   production — so a production instance must be served over HTTPS
-   ([deployment/reverse-proxy.md](./deployment/reverse-proxy.md)).
+2. Sets it as the `bearer` cookie: `httpOnly`, `sameSite: 'lax'`, `maxAge: 24h`, and `secure`
+   whenever the login request itself came over https — directly, or through a reverse proxy
+   whose `X-Forwarded-Proto` the server trusts (`TRUST_PROXY`,
+   [deployment/reverse-proxy.md](./deployment/reverse-proxy.md)). A login over plain http gets a
+   cookie without the flag, so an instance reached over http (`docker compose` on a
+   workstation, a LAN without certificates) can sign in; in production that case is logged as a
+   warning at every login, because the token travels unencrypted (issue #316).
 3. Also returns `{ token }` in the response body.
 
 ## Authenticated requests

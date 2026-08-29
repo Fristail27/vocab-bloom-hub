@@ -18,9 +18,10 @@ export class AuthController {
   async login(
     @Body() { hash, salt }: LoginReqDTO,
     @Res({ passthrough: true }) res: Response,
+    @Req() req: Request,
   ): Promise<LoginResBody> {
     const token = await this.authService.login(hash, salt);
-    this.authService.setTokenToCookie(token, res);
+    this.authService.setTokenToCookie(token, res, req);
 
     return { token };
   }
@@ -35,7 +36,7 @@ export class AuthController {
 
     if (isValid) {
       const newToken = await this.authService.createJwtToken();
-      this.authService.setTokenToCookie(newToken, res);
+      this.authService.setTokenToCookie(newToken, res, req);
     }
     return { isValid };
   }

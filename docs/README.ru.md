@@ -213,7 +213,11 @@ DATABASE_URL=postgres://... yarn workspace server migration:run      # такж�
 
 ## 🚢 Деплой
 
-Docker-образа и готовой хостинг-сборки пока нет; оба приложения работают как обычные Node.js-процессы за reverse proxy, который терминирует TLS (auth-cookie в production помечена `secure`) и направляет `/api/*` на сервер, а всё остальное — на фронтенд.
+Два поддерживаемых варианта, оба за reverse proxy, который терминирует TLS и направляет `/api/*` на сервер, а всё остальное — на фронтенд (auth-cookie помечена `secure`, когда вход выполнен по https).
+
+**Docker** — `cp .env.example .env`, задать пароли, `docker compose up -d --build`: Postgres, API и админка, опубликованы на localhost. Руководство: [`deployment/docker.md`](deployment/docker.md). Публикация образов — после альфы (#317).
+
+**Нативный Node.js:**
 
 1. Задайте окружение: `NODE_ENV=production`, `DATABASE_URL` со схемой `postgres://`, надёжные `ADMIN_USERNAME` / `ADMIN_PASSWORD`, `NEXT_PUBLIC_BASE_API_URL` и `CORS_ORIGINS` с публичным origin, `TRUST_PROXY=1`.
 2. `yarn build`, затем `yarn start` (или `yarn start:server` / `yarn start:front` под systemd или PM2 — примеры файлов в руководстве); неприменённые миграции выполняются при старте сервера. `ENV_FILE` указывает на файл окружения вне репозитория; `GET /api/health` и `GET /api/ready` — пробы; SIGTERM останавливает сервер аккуратно.
@@ -225,7 +229,7 @@ Docker-образа и готовой хостинг-сборки пока не�
 
 ## 📚 Документация
 
-- [`deployment/`](deployment/README.md) — сборка и запуск в production, и [`reverse-proxy.md`](deployment/reverse-proxy.md): TLS, конфиги Caddy / nginx, профили экспозиции, приватная админка
+- [`deployment/`](deployment/README.md) — сборка и запуск в production, пробы, аккуратная остановка, systemd / PM2; [`docker.md`](deployment/docker.md): два образа и `docker compose` с Postgres; [`reverse-proxy.md`](deployment/reverse-proxy.md): TLS, конфиги Caddy / nginx, профили экспозиции, приватная админка
 - [`operations.md`](operations.md) — эксплуатация инстанса: где хранится состояние и что бэкапить, бэкап базы vs экспорт словаря, обновление и откат, обновление датасета vs обновление кода, размер базы
 - [`environment.md`](environment.md) — все переменные окружения, выбор драйвера БД, проверки при старте
 - [`authentication.md`](authentication.md) — как устроены вход единственного администратора, login proof и JWT-cookie
