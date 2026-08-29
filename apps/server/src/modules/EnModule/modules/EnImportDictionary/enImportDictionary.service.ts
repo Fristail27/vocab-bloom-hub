@@ -5,6 +5,7 @@ import {
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  OnModuleDestroy,
   Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -97,10 +98,24 @@ const SQL_PARAMS_CHUNK = 500;
 const MANIFEST_CACHE_TTL_MS = 5 * 60 * 1000;
 
 @Injectable()
-export class EnImportDictionaryService {
+export class EnImportDictionaryService implements OnModuleDestroy {
   private readonly logger = new Logger(EnImportDictionaryService.name);
 
   private readonly pendingExports = new Map<string, PendingExport>();
+
+  /**
+   * A stop must not leave export archives behind in the temp directory (their
+   * 15-minute cleanup timers die with the process), so every pending export
+   * is cleaned up here; the timers are unref'd so a waiting archive never
+   * keeps the process alive on its own (issue #315)
+   */
+  onModuleDestroy(): void {
+    for (const exportId of [...this.pendingExports.keys()]) {
+      const entry = this.pendingExports.get(exportId);
+      if (entry) clearTimeout(entry.timeout);
+      this.cleanupExport(exportId);
+    }
+  }
 
   private manifestCache: { manifest: DatasetManifestT; fetchedAt: number } | null = null;
 
@@ -974,6 +989,7 @@ export class EnImportDictionaryService {
       await this.zipFiles(zipPath, [wordsPath, phrasalVerbsPath, phrasesPath, grammarPath, manifestPath]);
 
       const timeout = setTimeout(() => this.cleanupExport(exportId), EXPORT_TTL_MS);
+      timeout.unref();
       this.pendingExports.set(exportId, { filePath: zipPath, createdAt: Date.now(), timeout });
 
       this.logger.log(

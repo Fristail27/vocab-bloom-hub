@@ -154,6 +154,63 @@ jobs:
       - name: Postgres-only tests (query plans, trigram search)
         run: yarn workspace server test:postgres
 
+  production-start:
+    name: production build and start
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # The built artifacts are started the way an operator starts them (issue
+    # #315): `yarn build`, then `yarn start` against Postgres — production
+    # refuses SQLite — until the readiness probe and the login page answer;
+    # then SIGTERM must stop the server gracefully within SHUTDOWN_TIMEOUT
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: vocab
+          POSTGRES_PASSWORD: vocab
+          POSTGRES_DB: vocab_bloom
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vocab"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://vocab:vocab@localhost:5432/vocab_bloom
+      ADMIN_USERNAME: smoke-admin
+      ADMIN_PASSWORD: smoke-password
+      SERVER_PORT: '3010'
+      PORT: '3000'
+      NEXT_PUBLIC_BASE_API_URL: http://localhost:3010/api
+      CORS_ORIGINS: http://localhost:3000
+      SHUTDOWN_TIMEOUT: '20'
+      LOG_LEVEL: log
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup
+
+      - name: Production build (server + frontend)
+        run: yarn build
+
+      - name: Start, probe, stop gracefully
+        run: bash .github/scripts/production-smoke.sh
+
+      - name: Upload the start log
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-smoke-log
+          path: production-smoke.log
+          retention-days: 7
+
   e2e:
     name: browser e2e
     runs-on: ubuntu-latest

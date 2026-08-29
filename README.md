@@ -216,7 +216,7 @@ Full reference with defaults and startup validation rules: [`docs/environment.md
 There is no Docker image or hosted build yet; both apps run as plain Node.js processes behind a reverse proxy that terminates TLS (the admin cookie is `secure` in production) and routes `/api/*` to the server and everything else to the frontend.
 
 1. Provide the environment: `NODE_ENV=production`, a `postgres://` `DATABASE_URL`, strong `ADMIN_USERNAME` / `ADMIN_PASSWORD`, `NEXT_PUBLIC_BASE_API_URL` and `CORS_ORIGINS` set to the public origin, `TRUST_PROXY=1`.
-2. Build both apps (`yarn workspace server build`, `yarn workspace frontend build`) and start them (`yarn workspace server start:prod`, `yarn workspace frontend start`); pending migrations run on server start.
+2. `yarn build`, then `yarn start` (or `yarn start:server` / `yarn start:front` under systemd or PM2 — example files in the guide); pending migrations run on server start. `ENV_FILE` points at an environment file outside the checkout; `GET /api/health` and `GET /api/ready` are the probes; SIGTERM stops the server gracefully.
 3. Put Caddy or nginx in front — copy-and-adapt configs, exposure profiles (public dictionary + private admin) and a security checklist are in the guide.
 
 Full guide: [`docs/deployment/`](docs/deployment/README.md) → [`reverse-proxy.md`](docs/deployment/reverse-proxy.md).

@@ -3,7 +3,15 @@ import nextConfig from './eslint/next';
 
 export default [
   {
-    ignores: ['**/node_modules/**', '**/.next/**', '**/dist/**', '**/coverage/**', '**/build/**'],
+    ignores: [
+      '**/node_modules/**',
+      '**/.next/**',
+      '**/dist/**',
+      '**/coverage/**',
+      '**/build/**',
+      // operator-facing example files (PM2 process file), not project code
+      'docs/**/examples/**',
+    ],
   },
   ...nextConfig,
   ...nestConfig,

@@ -69,8 +69,8 @@ The procedure:
 DATABASE_URL=... yarn workspace server migration:show
 # 3. deploy: new code, yarn install --immutable, rebuild both apps, restart the processes
 #    (docs/deployment/README.md) — pending migrations run on the server's start
-# 4. confirm: the server is up, migration:show lists nothing pending,
-#    GET /api/v1/meta returns the new app_version
+# 4. confirm: GET /api/ready answers 200 (migrations ran, the database answers),
+#    migration:show lists nothing pending, GET /api/health returns the new version
 ```
 
 **Rollback = restore the pre-upgrade backup and start the previous version.** That is the only

@@ -18,6 +18,9 @@ Vocab Bloom Hub — a monorepo for a multilingual dictionary/vocabulary platform
 yarn dev            # run server + frontend together (concurrently)
 yarn server:dev     # NestJS with watch (port SERVER_PORT, default 3010)
 yarn front:dev      # Next.js dev (port FRONT_PORT, default 3000)
+yarn build          # production build of both apps (server → apps/server/dist, frontend → .next)
+yarn start          # start both production builds (concurrently); start:server / start:front for one
+                    # CI boots them against Postgres and probes /api/ready (.github/scripts/production-smoke.sh)
 
 yarn test           # all tests (root jest config with projects: server + frontend)
 yarn jest path/to/file.spec.ts            # single test file
@@ -55,7 +58,7 @@ Test files are `*.spec.ts(x)`, colocated with code (e.g. in `__tests__/` dirs). 
 
 ## Environment
 
-A single `.env` at the repo root is used by both apps (frontend scripts wrap with `dotenv -e ../../.env`; server loads it at the top of `src/main.ts`). Relevant vars: `SERVER_PORT`, `FRONT_PORT`, `DATABASE_URL`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `NEXT_PUBLIC_BASE_API_URL`, `TRUST_PROXY` (Express `trust proxy` behind a reverse proxy, see `docs/deployment/reverse-proxy.md`), `METRICS_ENABLED` / `METRICS_PATH` (Prometheus endpoint, `docs/observability.md`), `LOG_LEVEL` (server log verbosity: `verbose`/`debug`/`log`/`warn`/`error`/`fatal`; defaults to `debug` in development, `log` otherwise).
+A single `.env` at the repo root is used by both apps (frontend scripts wrap with `dotenv -e ../../.env`; server loads it at the top of `src/main.ts`). Relevant vars: `SERVER_PORT`, `FRONT_PORT`, `DATABASE_URL`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `NEXT_PUBLIC_BASE_API_URL`, `TRUST_PROXY` (Express `trust proxy` behind a reverse proxy, see `docs/deployment/reverse-proxy.md`), `METRICS_ENABLED` / `METRICS_PATH` (Prometheus endpoint, `docs/observability.md`), `LOG_LEVEL` (server log verbosity: `verbose`/`debug`/`log`/`warn`/`error`/`fatal`; defaults to `debug` in development, `log` otherwise), `ENV_FILE` (absolute path of the env file to load instead of the root `.env`; the server exits when it is named but unreadable), `SHUTDOWN_TIMEOUT` (seconds a graceful SIGTERM stop may take before the watchdog forces exit, default 30). Probes: `GET /api/health` (liveness) and `GET /api/ready` (readiness, 503 without the database or while stopping) — `HealthModule`, outside both API surfaces, see `docs/deployment/README.md`.
 
 Database: the `DATABASE_URL` scheme selects the driver — `postgres://` connects to Postgres, `sqlite:<path>` (e.g. `sqlite:./e2e.sqlite`, `sqlite::memory:`) runs better-sqlite3 on that file, any other scheme fails startup. When unset, it falls back to `dev.sqlite` at the repo root. The two modes manage the schema differently (config in `apps/server/src/db/typeorm-options.ts`):
 

@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 const packageJson = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8'));
 
@@ -8,6 +8,22 @@ export default () => ({
 });
 
 export class ConfigurationError extends Error {}
+
+export type EnvFileT = {
+  path: string;
+  // true when ENV_FILE named the file: it must then exist, a missing default
+  // is only a warning (the variables may come from the process environment)
+  explicit: boolean;
+};
+
+// Where the environment file is: ENV_FILE when set (a build deployed outside
+// the repository tree has no "repo root" to fall back to, issue #315),
+// otherwise the historical root .env the caller resolves from its own location
+export const resolveEnvFile = (fallbackPath: string, env: NodeJS.ProcessEnv = process.env): EnvFileT => {
+  const explicit = env.ENV_FILE?.trim();
+  if (!explicit) return { path: fallbackPath, explicit: false };
+  return { path: resolve(explicit), explicit: true };
+};
 
 const POSTGRES_SCHEMES = ['postgres://', 'postgresql://'];
 const SQLITE_SCHEME = 'sqlite:';
