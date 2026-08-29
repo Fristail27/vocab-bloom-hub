@@ -7,6 +7,7 @@ yet (tracked in #265); both apps are deployed as plain Node.js processes behind 
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | this page                                      | Building and starting the two processes, what production requires                                   |
 | [`reverse-proxy.md`](./reverse-proxy.md)       | TLS, routing both apps on one host, keeping the admin API private (Caddy / nginx), `TRUST_PROXY`    |
+| [`../operations.md`](../operations.md)         | Day two: what to back up, database backup vs dictionary export, upgrading and rolling back, sizing  |
 | [`../environment.md`](../environment.md)       | Every environment variable, startup validation                                                      |
 | [`../migrations.md`](../migrations.md)         | Postgres schema migrations: automatic run on start, adopting an old auto-synced database, rollbacks |
 | [`../offline-import.md`](../offline-import.md) | Loading the dictionary on an instance without internet access                                       |
@@ -68,5 +69,8 @@ minutes; the proxy must not buffer that stream (covered in the proxy guide).
 
 ## Upgrading
 
-Pull the new version, `yarn install --immutable`, rebuild both apps, restart the processes:
-pending migrations run on the server's start. Backup, restore and rollback are tracked in #282.
+Back up the database first, then pull the new version, `yarn install --immutable`, rebuild both
+apps and restart the processes: pending migrations run on the server's start and bind the
+database to the new version. Rolling back means restoring that backup — the full procedure, what
+to back up and how dataset updates differ from code updates are in
+[`../operations.md`](../operations.md).

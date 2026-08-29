@@ -103,7 +103,9 @@ match. A start with no pending migrations is effectively instant.
 
 Deploying therefore is just: ship the new code (which includes the new migration files) and
 restart the service. The manual `migration:run` / `migration:revert` commands remain available
-for applying ahead of a restart or rolling back.
+for applying ahead of a restart or rolling back a migration you have just written. On a
+production instance the rollback path is a database backup taken before the upgrade, not
+`migration:revert` — see [`operations.md`](./operations.md#upgrading-the-code).
 
 ## Adopting a pre-existing database
 
