@@ -116,7 +116,7 @@ The project is in **early development** (`0.x`). The English dictionary, the adm
 │   └── e2e/        → Playwright browser tests that boot both apps against an isolated SQLite database
 ├── packages/npm-sdk → @vocab-bloom-hub/client, the Node.js / TypeScript SDK of the public API
 ├── packages/python-sdk → vocab-bloom-hub, the Python SDK of the public API (uv, httpx, pydantic)
-├── docs/           → In-depth documentation (deployment, environment, authentication, migrations, data) and the Russian README
+├── docs/           → In-depth documentation (deployment, operations, environment, authentication, migrations, data) and the Russian README
 ├── eslint/         → Shared ESLint config pieces (base / next / nest)
 ├── .github/        → CI workflows, issue/PR templates, Dependabot, CODEOWNERS
 ├── .env            → Single environment file used by both apps (not committed)
@@ -226,6 +226,7 @@ Full guide: [`docs/deployment/`](docs/deployment/README.md) → [`reverse-proxy.
 ## 📚 Documentation
 
 - [`docs/deployment/`](docs/deployment/README.md) — production build and start, and [`reverse-proxy.md`](docs/deployment/reverse-proxy.md): TLS, Caddy / nginx configs, exposure profiles, keeping the admin API private
+- [`docs/operations.md`](docs/operations.md) — operating an instance: what holds state and what to back up, database backup vs dictionary export, upgrading and rolling back, dataset updates vs code updates, sizing
 - [`docs/environment.md`](docs/environment.md) — every environment variable, driver selection, startup checks
 - [`docs/authentication.md`](docs/authentication.md) — how the single-admin login, login proof and JWT cookie work
 - [`docs/migrations.md`](docs/migrations.md) — TypeORM migrations workflow for Postgres, deployment and troubleshooting

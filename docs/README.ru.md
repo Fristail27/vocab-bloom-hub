@@ -116,7 +116,7 @@
 │   └── e2e/        → Браузерные тесты Playwright: поднимают оба приложения на изолированной SQLite-базе
 ├── packages/npm-sdk → @vocab-bloom-hub/client, Node.js / TypeScript SDK публичного API
 ├── packages/python-sdk → vocab-bloom-hub, Python SDK публичного API (uv, httpx, pydantic)
-├── docs/           → Подробная документация (деплой, окружение, аутентификация, миграции, данные) и этот README на русском
+├── docs/           → Подробная документация (деплой, эксплуатация, окружение, аутентификация, миграции, данные) и этот README на русском
 ├── eslint/         → Общие части конфигурации ESLint (base / next / nest)
 ├── .github/        → CI-воркфлоу, шаблоны issue/PR, Dependabot, CODEOWNERS
 ├── .env            → Единый файл окружения для обоих приложений (не коммитится)
@@ -226,6 +226,7 @@ Docker-образа и готовой хостинг-сборки пока не�
 ## 📚 Документация
 
 - [`deployment/`](deployment/README.md) — сборка и запуск в production, и [`reverse-proxy.md`](deployment/reverse-proxy.md): TLS, конфиги Caddy / nginx, профили экспозиции, приватная админка
+- [`operations.md`](operations.md) — эксплуатация инстанса: где хранится состояние и что бэкапить, бэкап базы vs экспорт словаря, обновление и откат, обновление датасета vs обновление кода, размер базы
 - [`environment.md`](environment.md) — все переменные окружения, выбор драйвера БД, проверки при старте
 - [`authentication.md`](authentication.md) — как устроены вход единственного администратора, login proof и JWT-cookie
 - [`migrations.md`](migrations.md) — процесс работы с миграциями TypeORM для Postgres, деплой и решение проблем
