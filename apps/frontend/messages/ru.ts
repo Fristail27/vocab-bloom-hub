@@ -84,6 +84,13 @@ export default {
     data_license: 'Каждая выгрузка распространяется по лицензии',
     data_attribution: 'Атрибуция:',
     up_to_date: 'У вас уже актуальная версия словаря',
+    auto_import_running: 'Словарь загружается автоматически: {stage} {percent}%',
+    auto_import_downloading: 'Словарь загружается автоматически: скачивание датасета…',
+    auto_import_failed:
+      'Автоматическая загрузка словаря не удалась ({error}). Она повторится при следующем запуске сервера; пока можно импортировать датасет из файла.',
+    auto_import_completed: 'Словарь загружен автоматически: версия {version}',
+    manual_import_running: 'Идёт импорт, запущенный из другой сессии: {stage} {percent}%',
+    import_locked: 'Дождитесь окончания текущего импорта, прежде чем запускать новый',
     source_huggingface: 'С HuggingFace',
     source_archive: 'Архив',
     source_files: 'Отдельные файлы',

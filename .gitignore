@@ -63,6 +63,9 @@ __pycache__/
 /apps/server/yarn-error.log*
 /apps/server/.pnpm-debug.log*
 
+# datasets dropped in for docker compose (mounted as DICTIONARY_IMPORT_DIR)
+/imports/
+
 # env files (can opt-in for committing if needed)
 /apps/frontend/.env*
 /apps/server/.env*

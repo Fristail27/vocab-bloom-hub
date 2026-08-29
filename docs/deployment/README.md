@@ -125,10 +125,18 @@ Neither file is required: `yarn start` under any supervisor that forwards SIGTER
 
 ## First data
 
-A fresh instance has an empty dictionary. Sign in to the admin UI and run _Import dictionary_ —
-from the published HuggingFace dataset, or from an archive when the host has no internet access
-([`../offline-import.md`](../offline-import.md)). The import streams its progress for a few
-minutes; the proxy must not buffer that stream (covered in the proxy guide).
+A fresh instance has an empty dictionary. Two ways to fill it:
+
+- **By itself, on first start** — set `DICTIONARY_AUTO_IMPORT=true` in `.env` (the compose
+  file does; a native start leaves it off): with no dataset version recorded, the server loads
+  the published dataset from HuggingFace — or the newest dataset in `DICTIONARY_IMPORT_DIR` —
+  in the background, logs the progress and answers `503 importing` on `/api/ready` until it is
+  done; a failed load is retried on the next start
+  ([`docker.md`](./docker.md#first-start-the-dictionary-loads-itself)).
+- **From the admin UI** — sign in and run _Import dictionary_: from HuggingFace, or from an
+  archive when the host has no internet access ([`../offline-import.md`](../offline-import.md)).
+  The import streams its progress for a few minutes; the proxy must not buffer that stream
+  (covered in the proxy guide). One import runs at a time; a second one is refused with `409`.
 
 ## Upgrading
 

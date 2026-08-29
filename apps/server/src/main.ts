@@ -21,6 +21,7 @@ import { getCorsOrigins, getTrustProxy, isSwaggerEnabled, shouldCompress } from 
 import { getMetricsPath, isMetricsEnabled } from './modules/MetricsModule/metrics.config';
 import { HEALTH_PATH, READY_PATH } from './modules/HealthModule/health.controller';
 import { getShutdownTimeout } from './core/utils/shutdown';
+import { isAutoImportEnabled } from './modules/EnModule/modules/EnImportDictionary/dictionaryBootstrap.service';
 import {
   assertPublicApiConfig,
   getApiSurfaces,
@@ -127,6 +128,11 @@ async function bootstrap() {
   logger.log(`Server listening on port ${port}`);
   logger.log(
     `Probes: liveness at ${HEALTH_PATH}, readiness at ${READY_PATH}; graceful shutdown on SIGTERM, up to ${getShutdownTimeout()} s (SHUTDOWN_TIMEOUT)`,
+  );
+  logger.log(
+    isAutoImportEnabled()
+      ? 'Dictionary auto-import: enabled — an empty dictionary is loaded on first start (DICTIONARY_AUTO_IMPORT)'
+      : 'Dictionary auto-import: disabled (DICTIONARY_AUTO_IMPORT) — load the dictionary from the admin UI',
   );
   logger.log(
     `Database: ${

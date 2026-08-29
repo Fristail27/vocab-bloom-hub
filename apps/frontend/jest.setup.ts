@@ -7,7 +7,8 @@ const g = globalThis as Record<string, unknown>;
 if (!g.TextEncoder) g.TextEncoder = TextEncoder;
 if (!g.TextDecoder) g.TextDecoder = TextDecoder;
 
-if (!window.matchMedia) {
+// route handlers are tested in the node environment, where there is no window
+if (typeof window !== 'undefined' && !window.matchMedia) {
   window.matchMedia = (query: string): MediaQueryList =>
     ({
       matches: false,
@@ -21,7 +22,7 @@ if (!window.matchMedia) {
     }) as MediaQueryList;
 }
 
-if (!window.ResizeObserver) {
+if (typeof window !== 'undefined' && !window.ResizeObserver) {
   window.ResizeObserver = class {
     observe() {}
     unobserve() {}

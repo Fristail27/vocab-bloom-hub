@@ -1,5 +1,5 @@
-import { type Response } from 'express';
 import { DatasetManifestT } from '../../../../../../types';
+import type { ImportProgressSink } from '../progress';
 
 /**
  * Where the dataset files come from. The import pipeline only ever sees
@@ -10,10 +10,10 @@ export interface DatasetSource {
   /** The dataset manifest, or null when the source has none (HuggingFace may be unreachable) */
   readManifest(): Promise<DatasetManifestT | null>;
   /**
-   * Makes the given dataset file available locally, streaming download
-   * progress into `res` when it has to be fetched first
+   * Makes the given dataset file available locally, reporting download
+   * progress to `progress` when it has to be fetched first
    */
-  acquireFile(fileName: string, res: Response): Promise<AcquiredFileT>;
+  acquireFile(fileName: string, progress: ImportProgressSink): Promise<AcquiredFileT>;
   /** Releases everything the source holds on disk (extracted archives, uploads) */
   dispose(): Promise<void>;
 }

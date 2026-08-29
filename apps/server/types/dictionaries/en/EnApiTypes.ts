@@ -158,6 +158,33 @@ export type ImportDictionaryChunkT = {
   datasetVersion?: string | undefined;
 };
 
+/** Who started an import: an admin from the UI, or the server itself on first start (issue #268) */
+export enum ImportTriggerE {
+  manual = 'manual',
+  auto = 'auto',
+}
+
+/**
+ * The import slot of the process — what is running now, or how the last
+ * import ended (`GET /api/en/dictionary/import/status`, the admin banner,
+ * the readiness probe). One import runs at a time.
+ */
+export type ImportStatusT = {
+  running: boolean;
+  trigger?: ImportTriggerE | undefined;
+  /** Human-readable source, e.g. "HuggingFace" or the dataset file name */
+  label?: string | undefined;
+  stage?: EnDictionaryImportPhasesE | undefined;
+  /** 0–100 over the whole import, download excluded */
+  percent?: number | undefined;
+  started_at?: string | undefined;
+  finished_at?: string | undefined;
+  /** Set when the last import failed; the error code or message */
+  error?: string | undefined;
+  /** Version of the dataset being (or last) imported, when its manifest names one */
+  dataset_version?: string | undefined;
+};
+
 // manifest.json stored next to the jsonl files in the dataset repository;
 // the export writes it into the archive, the import reads it for progress
 // totals and the dataset version
@@ -198,6 +225,7 @@ export type ImportSourcesT = {
   files: ImportSourceFileT[];
 };
 export type GetImportSourcesResT = ImportSourcesT | ErrorResT;
+export type GetImportStatusResT = ImportStatusT | ErrorResT;
 
 export type EnPosStatT = { part_of_speech: EnPartOfSpeechE; count: number };
 export type EnWordLevelStatT = { word_level: WordLevelE | null; count: number };

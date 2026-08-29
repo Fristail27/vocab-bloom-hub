@@ -16,6 +16,8 @@ import { EnMeaningController } from './modules/EnMeaning/enMeaning.controller';
 import { EnMeaningService } from './modules/EnMeaning/enMeaning.service';
 import { EnImportDictionaryService } from './modules/EnImportDictionary/enImportDictionary.service';
 import { EnImportDictionaryController } from './modules/EnImportDictionary/enImportDictionary.controller';
+import { DictionaryBootstrapService } from './modules/EnImportDictionary/dictionaryBootstrap.service';
+import { ImportStatusModule } from './modules/EnImportDictionary/importStatus.module';
 import { EnSearchController } from './modules/EnSearch/enSearch.controller';
 import { EnSearchService } from './modules/EnSearch/enSearch.service';
 import { EnStatisticsController } from './modules/EnStatistics/enStatistics.controller';
@@ -25,6 +27,9 @@ import { EnAdminListsService } from './modules/EnAdminLists/enAdminLists.service
 
 @Module({
   imports: [
+    // the import slot (issue #268), global so HealthModule reads it too; imported here
+    // so EnModule stays self-contained for the tests that boot it alone
+    ImportStatusModule,
     TypeOrmModule.forFeature([EnEntry, EnWord, EnMeaning, EnMeaningTranslation, EnShortTranslation]),
     // the import service records the dataset version of the last import
     SettingsModule,
@@ -48,6 +53,7 @@ import { EnAdminListsService } from './modules/EnAdminLists/enAdminLists.service
     EnMeaningTranslationService,
     EnMeaningService,
     EnImportDictionaryService,
+    DictionaryBootstrapService,
     EnSearchService,
     EnStatisticsService,
     EnAdminListsService,

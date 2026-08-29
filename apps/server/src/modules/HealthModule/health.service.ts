@@ -2,7 +2,9 @@ import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { getVersion } from '../../../configuration';
+import { ImportTriggerE } from '../../../types';
 import type { HealthResT, ReadyResT } from '../../../types';
+import { ImportStatusService } from '../EnModule/modules/EnImportDictionary/importStatus.service';
 
 // A readiness probe must answer quickly even when the database hangs: past
 // this the instance is reported as not ready rather than kept waiting
@@ -19,7 +21,10 @@ export class HealthService implements OnModuleDestroy {
   private readonly logger = new Logger(HealthService.name);
   private shuttingDown = false;
 
-  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly importStatus: ImportStatusService,
+  ) {}
 
   onModuleDestroy(): void {
     this.shuttingDown = true;
@@ -32,6 +37,16 @@ export class HealthService implements OnModuleDestroy {
   async ready(): Promise<ReadyResT> {
     if (this.shuttingDown) return { status: 'error', reason: 'shutting_down' };
     if (!(await this.isDatabaseReachable())) return { status: 'error', reason: 'database_unreachable' };
+    // the automatic import on first start (issue #268): not ready while the
+    // dictionary is being loaded, nor when that load failed and the
+    // dictionary is missing — an admin import (manual or the next start) clears it
+    const imp = this.importStatus.snapshot();
+    if (imp.running && imp.trigger === ImportTriggerE.auto) {
+      return { status: 'error', reason: 'importing', percent: imp.percent, stage: imp.stage };
+    }
+    if (!imp.running && imp.trigger === ImportTriggerE.auto && imp.error) {
+      return { status: 'error', reason: 'import_failed', error: imp.error };
+    }
     return { status: 'ok' };
   }
 

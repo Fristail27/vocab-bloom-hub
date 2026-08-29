@@ -215,7 +215,7 @@ DATABASE_URL=postgres://... yarn workspace server migration:run      # такж�
 
 Два поддерживаемых варианта, оба за reverse proxy, который терминирует TLS и направляет `/api/*` на сервер, а всё остальное — на фронтенд (auth-cookie помечена `secure`, когда вход выполнен по https).
 
-**Docker** — скачать `docker-compose.yml` и `.env.example` (как `.env`, задать пароли), `docker compose up -d`: Postgres, API и админка из опубликованных образов `ghcr.io/fristail27/vocab-bloom-hub-server` / `-frontend` (`main` — dev-сборки, semver-теги с первого релиза), опубликованы на localhost. Руководство: [`deployment/docker.md`](deployment/docker.md).
+**Docker** — скачать `docker-compose.yml` и `.env.example` (как `.env`, задать пароли), `docker compose up -d`: Postgres, API и админка из опубликованных образов `ghcr.io/fristail27/vocab-bloom-hub-server` / `-frontend` (`main` — dev-сборки, semver-теги с первого релиза), опубликованы на localhost; словарь загружается сам при первом старте (`DICTIONARY_AUTO_IMPORT`, прогресс виден в `/api/ready`). Руководство: [`deployment/docker.md`](deployment/docker.md).
 
 **Нативный Node.js:**
 

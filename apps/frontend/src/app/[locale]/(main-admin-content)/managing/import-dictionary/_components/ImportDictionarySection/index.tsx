@@ -7,6 +7,7 @@ import { ImportDictionaryChunkT, ImportSourceFileT, ImportSourceKindE } from 'se
 import { EnDictionaryImportPhasesE } from 'server/src/modules/EnModule/modules/EnImportDictionary/constants';
 import { ErrorCodes } from 'server/core/constants/error_codes';
 import { EnApi } from '@/core/api/EnApi';
+import { useImportStatus } from '@/components/AutoImportBanner/useImportStatus';
 import { formatTime, getDownloadProgressStr } from './utils';
 import { ImportStatusE } from './constants';
 import { ImportSourceTabE, ManifestModeE, ManualManifestT, SlotFilesT } from './types';
@@ -51,6 +52,11 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
   const { message } = App.useApp();
 
   const inProgress = status === ImportStatusE.in_progress;
+  // the server runs one import at a time (issue #268): while the automatic
+  // load on first start or an import from another session holds the slot,
+  // the start button waits — the banner above says what is running
+  const slot = useImportStatus();
+  const lockedByOther = !inProgress && !!slot?.running;
   const fromHuggingFace = sourceTab === ImportSourceTabE.huggingface;
   const isUpToDate =
     fromHuggingFace && !!installedVersion && !!latestVersion && installedVersion === latestVersion;
@@ -244,12 +250,13 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
         <Button
           type={isUpToDate ? 'default' : 'primary'}
           onClick={importDictionary}
-          disabled={!canStart}
+          disabled={!canStart || lockedByOther}
           className={styles.startBtn}
         >
           {status === ImportStatusE.error ? t('retry_importing') : t('start_importing')}
         </Button>
       )}
+      {lockedByOther && <Text type="warning">{t('import_locked')}</Text>}
       {inProgress && statusMessage && <Text italic>{statusMessage}</Text>}
       {status !== ImportStatusE.idle && (
         <Text type="secondary">

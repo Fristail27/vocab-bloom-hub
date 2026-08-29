@@ -37,8 +37,11 @@ import {
   ImportDictionaryChunkT,
   ImportSourceKindE,
   ImportSourcesT,
+  ImportTriggerE,
 } from '../../../../../types';
 import { SettingsService } from '../../../SettingsModule/settings.service';
+import { ImportStatusService } from './importStatus.service';
+import { HttpImportProgressSink, ImportProgressSink } from './progress';
 import { ErrorCodes } from '../../../../../core/constants/error_codes';
 import { DATA_LICENSE } from '../../../../../core/constants/data_license';
 import { getVersion } from '../../../../../configuration';
@@ -125,6 +128,8 @@ export class EnImportDictionaryService implements OnModuleDestroy {
 
     private readonly settingsService: SettingsService,
     @Optional() private readonly metrics?: MetricsService,
+    // the one import slot of the process (issue #268); absent in the unit tests
+    @Optional() private readonly importStatus?: ImportStatusService,
   ) {}
 
   /**
@@ -147,14 +152,14 @@ export class EnImportDictionaryService implements OnModuleDestroy {
 
   private async streamJsonlImport<T>(
     source: DatasetSource,
-    res: Response,
+    progress: ImportProgressSink,
     fileName: string,
     stage: EnDictionaryImportPhasesE,
     allLength: number,
     plusCount: () => number,
     handleChunk: (lines: T[]) => Promise<void>,
   ): Promise<void> {
-    const { path: filePath, temporary } = await source.acquireFile(fileName, res);
+    const { path: filePath, temporary } = await source.acquireFile(fileName, progress);
     if (!filePath) {
       this.logger.warn(`Dataset file "${fileName}" is absent from the source, stage "${stage}" skipped`);
       return;
@@ -179,7 +184,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         await handleChunk(lines);
         let count = 0;
         for (let i = 0; i < lines.length; i++) count = plusCount();
-        await this.reportImportProgress(res, count + 1, allLength, stage);
+        await this.reportImportProgress(progress, count + 1, allLength, stage);
       };
 
       for await (const l of rl) {
@@ -207,7 +212,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
 
   // Called once per imported chunk; the tiny pause lets the progress stream flush
   private async reportImportProgress(
-    res: Response,
+    progress: ImportProgressSink,
     count: number,
     allLength: number,
     stage: EnDictionaryImportPhasesE,
@@ -216,7 +221,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       percent: Math.min(100, (count / allLength) * 100),
       stage,
     };
-    res.write(JSON.stringify(chunk) + '\n');
+    progress.write(chunk);
     this.metrics?.transferProgressed('import', EnDictionaryImportPhasesE[stage], chunk.percent);
     await new Promise((r) => setTimeout(r, 1));
   }
@@ -545,7 +550,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
 
   /** Writes the collected links of both kinds, each as its own progress stage */
   private async linkPendingWords(
-    res: Response,
+    progress: ImportProgressSink,
     pendingLinks: PendingWordLinksT,
     allLength: number,
     getCount: () => number,
@@ -556,10 +561,10 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       if (pending.length === 0) continue;
       const stage = LINK_STAGES[kind];
       const linkStartedAt = Date.now();
-      await this.reportImportProgress(res, getCount(), allLength, stage);
+      await this.reportImportProgress(progress, getCount(), allLength, stage);
       await this.bulkLinkWords(kind, pending, async (processedLinks) => {
         addCount(processedLinks);
-        await this.reportImportProgress(res, getCount(), allLength, stage);
+        await this.reportImportProgress(progress, getCount(), allLength, stage);
       });
       this.logger.log(`Linked ${kind} of ${pending.length} meanings in ${Date.now() - linkStartedAt}ms`);
     }
@@ -567,14 +572,14 @@ export class EnImportDictionaryService implements OnModuleDestroy {
 
   private async saveWords(
     source: DatasetSource,
-    res: Response,
+    progress: ImportProgressSink,
     allLength: number,
     plusCount: () => number,
     pendingLinks: PendingWordLinksT,
   ): Promise<void> {
     await this.streamJsonlImport<DataSetWordT>(
       source,
-      res,
+      progress,
       DATASET_FILE_NAMES.words,
       EnDictionaryImportPhasesE.saving_words,
       allLength,
@@ -587,14 +592,14 @@ export class EnImportDictionaryService implements OnModuleDestroy {
 
   private async saveGrammarPatterns(
     source: DatasetSource,
-    res: Response,
+    progress: ImportProgressSink,
     allLength: number,
     plusCount: () => number,
     pendingLinks: PendingWordLinksT,
   ): Promise<void> {
     await this.streamJsonlImport<DataSetGrammarPatternT>(
       source,
-      res,
+      progress,
       DATASET_FILE_NAMES.grammarPatterns,
       EnDictionaryImportPhasesE.saving_grammar_patterns,
       allLength,
@@ -607,14 +612,14 @@ export class EnImportDictionaryService implements OnModuleDestroy {
 
   private async savePhrases(
     source: DatasetSource,
-    res: Response,
+    progress: ImportProgressSink,
     allLength: number,
     plusCount: () => number,
     pendingLinks: PendingWordLinksT,
   ): Promise<void> {
     await this.streamJsonlImport<DataSetPhraseT>(
       source,
-      res,
+      progress,
       DATASET_FILE_NAMES.phrases,
       EnDictionaryImportPhasesE.saving_phrases,
       allLength,
@@ -627,13 +632,13 @@ export class EnImportDictionaryService implements OnModuleDestroy {
 
   private async savePhrasalVerbs(
     source: DatasetSource,
-    res: Response,
+    progress: ImportProgressSink,
     allLength: number,
     plusCount: () => number,
   ): Promise<void> {
     await this.streamJsonlImport<DataSetWordT>(
       source,
-      res,
+      progress,
       DATASET_FILE_NAMES.phrasalVerbs,
       EnDictionaryImportPhasesE.saving_phrasal_verbs,
       allLength,
@@ -667,7 +672,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
   async importDictionary(body: ImportDictionaryReq, res: Response): Promise<void> {
     const source = await this.openSource(body.source);
     const label = body.source?.kind === ImportSourceKindE.file ? `file "${body.source.path}"` : 'HuggingFace';
-    await this.runImport(source, label, res);
+    await this.importFrom(source, label, new HttpImportProgressSink(res), ImportTriggerE.manual);
   }
 
   /**
@@ -684,18 +689,60 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     const names = Object.values(files)
       .flat()
       .map((f) => `"${f.originalname}"`);
-    await this.runImport(source, `upload ${names.join(', ')}`, res);
+    await this.importFrom(
+      source,
+      `upload ${names.join(', ')}`,
+      new HttpImportProgressSink(res),
+      ImportTriggerE.manual,
+    );
+  }
+
+  /**
+   * The import pipeline behind every entry point — the admin endpoints and
+   * the automatic import on first start (issue #268). Claims the process's
+   * single import slot first: a second import while one runs is refused
+   * with 409 `import_in_progress` before anything is downloaded or written.
+   */
+  async importFrom(
+    source: DatasetSource,
+    label: string,
+    progress: ImportProgressSink,
+    trigger: ImportTriggerE,
+  ): Promise<void> {
+    this.importStatus?.begin(trigger, label);
+    const tracked: ImportProgressSink = {
+      start: () => progress.start(),
+      write: (chunk) => {
+        this.importStatus?.progress(chunk);
+        progress.write(chunk);
+      },
+      end: () => progress.end(),
+    };
+    try {
+      const datasetVersion = await this.runImport(source, label, tracked);
+      this.importStatus?.end({ dataset_version: datasetVersion });
+    } catch (error) {
+      const message =
+        error instanceof HttpException
+          ? String((error.getResponse() as { message?: unknown }).message ?? error.message)
+          : error instanceof Error
+            ? error.message
+            : String(error);
+      this.importStatus?.end({ error: message });
+      throw error;
+    }
   }
 
   /** The import pipeline shared by every source; the source is disposed at the end */
-  private async runImport(source: DatasetSource, label: string, res: Response): Promise<void> {
+  private async runImport(
+    source: DatasetSource,
+    label: string,
+    progress: ImportProgressSink,
+  ): Promise<string | undefined> {
     // the manifest is read before the stream opens: a local source has
     // already validated it, HuggingFace may be unreachable
     const manifest = await source.readManifest();
-
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.setHeader('Transfer-Encoding', 'chunked');
-    res.setHeader('X-Accel-Buffering', 'no');
+    progress.start();
 
     const startedAt = Date.now();
     this.logger.log(`Dictionary import from ${label} started`);
@@ -726,19 +773,19 @@ export class EnImportDictionaryService implements OnModuleDestroy {
           : EnDictionaryImportPhasesE.saving_words,
       ...(datasetVersion && { datasetVersion }),
     };
-    res.write(JSON.stringify(firstChunk) + '\n');
+    progress.write(firstChunk);
     this.metrics?.transferStarted('import');
 
     try {
       // meaning → synonym / antonym links are collected across every file and
       // written last, once all the entries they can point at exist
       const pendingLinks: PendingWordLinksT = { synonyms: [], antonyms: [] };
-      await this.saveWords(source, res, allLength, plusCount, pendingLinks);
-      await this.savePhrasalVerbs(source, res, allLength, plusCount);
-      await this.saveGrammarPatterns(source, res, allLength, plusCount, pendingLinks);
-      await this.savePhrases(source, res, allLength, plusCount, pendingLinks);
+      await this.saveWords(source, progress, allLength, plusCount, pendingLinks);
+      await this.savePhrasalVerbs(source, progress, allLength, plusCount);
+      await this.saveGrammarPatterns(source, progress, allLength, plusCount, pendingLinks);
+      await this.savePhrases(source, progress, allLength, plusCount, pendingLinks);
       await this.linkPendingWords(
-        res,
+        progress,
         pendingLinks,
         allLength,
         () => count,
@@ -772,14 +819,14 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       stage: EnDictionaryImportPhasesE.completed,
       ...(datasetVersion && { datasetVersion }),
     };
-    res.write(JSON.stringify(finalChunk) + '\n');
+    progress.write(finalChunk);
     this.metrics?.transferFinished('import', 'success');
-
-    res.end();
+    progress.end();
 
     this.logger.log(
       `Dictionary import from ${label} completed: ${count} records in ${Date.now() - startedAt}ms`,
     );
+    return datasetVersion;
   }
 
   private getExportTmpDir(): string {
