@@ -62,4 +62,16 @@ token="$(echo "$cookie" | sed -E 's/^[Ss]et-[Cc]ookie: bearer=([^;]*).*/\1/')"
 [ "$(http_status -H "Cookie: bearer=$token" "$SERVER_URL/api/settings/all")" = 200 ] || fail "admin API refused the cookie"
 echo "ok: admin API accepts the cookie"
 
+# --- the same through the frontend origin: without a reverse proxy the browser
+# calls /api under the page origin and Next.js forwards it to the server
+salt="$(openssl rand -hex 16)"
+proof="$(printf '%s' "$slot:$salt" | openssl dgst -sha256 -mac HMAC -macopt "key:$login_hash" -r | cut -d' ' -f1)"
+headers="$(curl -s -D - -o /dev/null -H 'Content-Type: application/json' \
+  -d "{\"hash\":\"$proof\",\"salt\":\"$salt\"}" "$FRONT_URL/api/auth/login")"
+echo "$headers" | grep -q '^HTTP/[0-9.]* 20[01]' || fail "login through the frontend origin failed: $(echo "$headers" | head -1)"
+echo "$headers" | grep -qi '^set-cookie: bearer=' || fail "login through the frontend origin set no bearer cookie"
+[ "$(http_status -H "Cookie: bearer=$token" "$FRONT_URL/api/en/dictionary/import/status")" = 200 ] || fail "admin API through the frontend origin refused the cookie"
+[ "$(http_status "$FRONT_URL/api/v1/meta")" = 200 ] || fail "/api/v1/meta through the frontend origin is not 200"
+echo "ok: /api on the frontend origin reaches the server"
+
 echo "compose smoke test passed"

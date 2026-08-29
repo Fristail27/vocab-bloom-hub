@@ -9,6 +9,8 @@
  *   yarn workspace server fixture:public-api
  */
 process.env.DATABASE_URL = 'sqlite::memory:';
+// the fixture seeds its own words; the first-start import must stay off
+process.env.DICTIONARY_AUTO_IMPORT = 'false';
 process.env.ADMIN_USERNAME ??= 'fixture-admin';
 process.env.ADMIN_PASSWORD ??= 'fixture-password';
 

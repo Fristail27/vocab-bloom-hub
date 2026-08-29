@@ -53,6 +53,9 @@ export default defineConfig({
         ADMIN_USERNAME: E2E_USERNAME,
         ADMIN_PASSWORD: E2E_PASSWORD,
         LOG_LEVEL: 'warn',
+        // a developer's .env may turn the first-start import on; the browser
+        // tests seed their own data and must never reach for HuggingFace
+        DICTIONARY_AUTO_IMPORT: 'false',
       },
     },
     {

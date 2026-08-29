@@ -1,16 +1,23 @@
-# Vocab Bloom Hub: Postgres + API + admin UI (docs/deployment/docker.md).
+# Vocab Bloom Hub: API + admin UI, with or without a bundled Postgres
+# (docs/deployment/docker.md).
 #   cp .env.example .env   # set the passwords
 #   docker compose up -d    # pulls the published images
+# The bundled database is the `db` profile: COMPOSE_PROFILES=db in .env (the
+# template's default) starts it and the server uses it; without the profile
+# only the two apps start and DATABASE_URL in .env must name an external
+# Postgres — nothing in this file needs editing either way.
 # The apps are published on localhost only; put a reverse proxy with TLS in
 # front for anything beyond this host (docs/deployment/reverse-proxy.md) —
 # the admin login cookie is `secure` on https.
 
 services:
   postgres:
+    profiles: [db]
     image: postgres:17-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-vocab}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      # not published outside the compose network; .env.example still sets it
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vocab}
       POSTGRES_DB: ${POSTGRES_DB:-vocab_bloom}
     volumes:
       - postgres-data:/var/lib/postgresql/data
@@ -32,18 +39,22 @@ services:
       # inside the container the server always listens on 3010; SERVER_PORT in
       # .env is the host port it is published on
       SERVER_PORT: 3010
-      # the compose network address of the database; DATABASE_URL in .env may
-      # point at an external Postgres instead — then drop the postgres service
-      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-vocab}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vocab_bloom}}
+      # the bundled database (profile `db`) unless .env names another one;
+      # a database on the Docker host is host.docker.internal, not localhost
+      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-vocab}:${POSTGRES_PASSWORD:-vocab}@postgres:5432/${POSTGRES_DB:-vocab_bloom}}
       # datasets the import page may load from the server (./imports on the host)
       DICTIONARY_IMPORT_DIR: /data/dictionary-imports
+      # an empty instance loads the dictionary by itself on first start — from
+      # ./imports when a dataset is there, otherwise from HuggingFace; the
+      # readiness probe reports `importing` meanwhile (docs/deployment/docker.md)
+      DICTIONARY_AUTO_IMPORT: ${DICTIONARY_AUTO_IMPORT:-true}
     volumes:
       - ./imports:/data/dictionary-imports:ro
     ports:
       - '127.0.0.1:${SERVER_PORT:-3010}:3010'
-    depends_on:
-      postgres:
-        condition: service_healthy
+    # no depends_on: the database may live outside this file. The server
+    # retries the connection for a minute at start and, past that, exits and
+    # is restarted here — a bundled Postgres is ready long before.
     # SIGTERM → the server drains its requests for up to SHUTDOWN_TIMEOUT (30 s)
     stop_grace_period: 45s
     restart: unless-stopped
@@ -54,7 +65,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      # server-side rendering talks to the API directly, inside the compose network
+      # server-side rendering and the /api/* forwarding talk to the API
+      # directly, inside the compose network
       API_INTERNAL_URL: http://server:3010/api
     ports:
       - '127.0.0.1:${FRONT_PORT:-3000}:3000'

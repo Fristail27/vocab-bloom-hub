@@ -231,6 +231,9 @@ jobs:
         run: |
           cp .env.example .env
           sed -i 's/^ADMIN_PASSWORD=.*/ADMIN_PASSWORD=ci-admin-password/; s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci-postgres-password/; s#^DATABASE_URL=.*#DATABASE_URL=postgres://vocab:ci-postgres-password@postgres:5432/vocab_bloom#' .env
+          # the full dictionary from HuggingFace takes minutes and a network;
+          # the automatic import is covered by the server e2e suite instead
+          echo 'DICTIONARY_AUTO_IMPORT=false' >> .env
 
       # the build override: the images of this checkout, not the published ones
       - name: Build images and start

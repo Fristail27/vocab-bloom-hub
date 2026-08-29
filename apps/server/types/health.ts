@@ -12,12 +12,25 @@ export type HealthResT = {
   version: string;
 };
 
-export type ReadinessFailureReasonE = 'database_unreachable' | 'shutting_down';
+export type ReadinessFailureReasonE = 'database_unreachable' | 'shutting_down' | 'importing' | 'import_failed';
 
 /**
  * GET /api/ready — readiness: the instance can take traffic. Answers 200 with
- * `status: 'ok'` (migrations applied, database answering) or 503 with the
- * reason: the database does not answer, or a stop is in progress and the
- * process is draining its requests.
+ * `status: 'ok'` (migrations applied, database answering, dictionary in
+ * place) or 503 with the reason: the database does not answer, a stop is in
+ * progress and the process is draining its requests, the automatic import of
+ * the dictionary is still running (`percent`, `stage`), or that import
+ * failed and the dictionary is not loaded (`error`; issue #268).
  */
-export type ReadyResT = { status: 'ok' } | { status: 'error'; reason: ReadinessFailureReasonE };
+export type ReadyResT =
+  | { status: 'ok' }
+  | {
+      status: 'error';
+      reason: ReadinessFailureReasonE;
+      /** `importing`: 0–100 of the running import */
+      percent?: number | undefined;
+      /** `importing`: the current stage of the import (EnDictionaryImportPhasesE) */
+      stage?: number | undefined;
+      /** `import_failed`: why */
+      error?: string | undefined;
+    };

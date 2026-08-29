@@ -84,6 +84,13 @@ export default {
     data_license: 'Every export is licensed under',
     data_attribution: 'Attribution:',
     up_to_date: 'You already have the latest dictionary version',
+    auto_import_running: 'The dictionary is being loaded automatically: {stage} {percent}%',
+    auto_import_downloading: 'The dictionary is being loaded automatically: downloading the dataset…',
+    auto_import_failed:
+      'The automatic dictionary load failed ({error}). It runs again on the next server start; meanwhile you can import a dataset from a file.',
+    auto_import_completed: 'The dictionary was loaded automatically: version {version}',
+    manual_import_running: 'An import started from another session is running: {stage} {percent}%',
+    import_locked: 'Wait for the running import to finish before starting another one',
     source_huggingface: 'From HuggingFace',
     source_archive: 'Archive',
     source_files: 'Separate files',

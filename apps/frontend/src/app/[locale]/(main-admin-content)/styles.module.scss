@@ -6,6 +6,15 @@
   overflow: hidden;
 }
 
+// the import banner above the page content (issue #268); empty when nothing runs
+.mainColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
 .mainPage {
   display: flex;
   flex-direction: column;

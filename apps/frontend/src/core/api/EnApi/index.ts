@@ -39,6 +39,7 @@ import {
   PublicSearchDetailedV1ResT,
   PublicSearchV1ResT,
   GetImportSourcesResT,
+  GetImportStatusResT,
   ImportDictionaryChunkT,
   ImportDictionaryReqT,
   UploadDictionaryReqT,
@@ -225,6 +226,11 @@ export class EnApi extends AbstractBaseApi {
   /** Server-side datasets the import page can offer (DICTIONARY_IMPORT_DIR) */
   static async getImportSources(): Promise<GetImportSourcesResT> {
     return this.get<GetImportSourcesResT>(`${this.baseURL}/en/dictionary/import/sources`);
+  }
+
+  /** What the import slot holds: a running (automatic or manual) import, or how the last one ended (issue #268) */
+  static async getImportStatus(): Promise<GetImportStatusResT> {
+    return this.get<GetImportStatusResT>(`${this.baseURL}/en/dictionary/import/status`);
   }
 
   /**

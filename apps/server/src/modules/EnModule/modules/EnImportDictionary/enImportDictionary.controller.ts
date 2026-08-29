@@ -22,8 +22,10 @@ import { AdminGuard } from '../../../AuthModule/guards/admin.guard';
 import { ImportDictionaryReq } from './dto/ImportDictionaryReq.dto';
 import { UploadDictionaryReqDTO } from './dto/UploadDictionaryReq.dto';
 import { DatasetManifestT, ImportSourcesT } from '../../../../../types';
+import type { ImportStatusT } from '../../../../../types';
 import { ErrorCodes } from '../../../../../core/constants/error_codes';
 import { MAX_UPLOAD_BYTES, UPLOAD_ARCHIVE_FIELD, UPLOAD_FILE_FIELDS } from './constants';
+import { ImportStatusService } from './importStatus.service';
 import { UploadedFilesByFieldT } from './sources';
 
 // Uploaded files land here until the import has unpacked them; multer
@@ -34,7 +36,10 @@ const UPLOAD_FIELDS = [UPLOAD_ARCHIVE_FIELD, ...Object.keys(UPLOAD_FILE_FIELDS)]
 @ApiTags('En_Words')
 @Controller('/api/en/dictionary/')
 export class EnImportDictionaryController {
-  constructor(private readonly enImportDictionaryService: EnImportDictionaryService) {}
+  constructor(
+    private readonly enImportDictionaryService: EnImportDictionaryService,
+    private readonly importStatus: ImportStatusService,
+  ) {}
 
   @UseGuards(AdminGuard)
   @Get('manifest')
@@ -46,6 +51,13 @@ export class EnImportDictionaryController {
   @Get('import/sources')
   async getImportSources(): Promise<ImportSourcesT> {
     return this.enImportDictionaryService.getImportSources();
+  }
+
+  /** What is running (or last ran) in the import slot: the admin banner polls this (issue #268) */
+  @UseGuards(AdminGuard)
+  @Get('import/status')
+  getImportStatus(): ImportStatusT {
+    return this.importStatus.snapshot();
   }
 
   @UseGuards(AdminGuard)

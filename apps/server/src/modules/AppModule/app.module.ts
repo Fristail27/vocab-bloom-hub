@@ -10,6 +10,7 @@ import { PublicApiModule } from '../PublicApiModule/public-api.module';
 import { apiSurfaceMiddleware } from '../../core/middleware/api-surface.middleware';
 import { buildTypeOrmOptions } from '../../db/typeorm-options';
 import { HealthModule } from '../HealthModule/health.module';
+import { ImportStatusModule } from '../EnModule/modules/EnImportDictionary/importStatus.module';
 import { MetricsModule } from '../MetricsModule/metrics.module';
 import { MetricsService } from '../MetricsModule/metrics.service';
 import { httpMetricsMiddleware, metricsEndpoint } from '../MetricsModule/metrics.middleware';
@@ -22,6 +23,8 @@ import { getMetricsPath, isMetricsEnabled } from '../MetricsModule/metrics.confi
     SettingsModule,
     PublicApiModule,
     MetricsModule,
+    // the import slot and its status, read by HealthModule and written by EnModule (issue #268)
+    ImportStatusModule,
     HealthModule,
     // Default limits; endpoints refine them through @Throttle. The guard
     // (AppThrottlerGuard) is attached to login, the legacy search aliases and

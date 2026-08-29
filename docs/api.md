@@ -250,7 +250,9 @@ instance that must not be readable from outside runs with `PUBLIC_API_ENABLED=fa
 Two routes live under `/api` but belong to neither surface: the liveness probe
 `GET /api/health` (`200 { status: 'ok', version }`) and the readiness probe `GET /api/ready`
 (`200 { status: 'ok' }`, or `503 { status: 'error', reason }` while the database does not answer
-or a shutdown is draining requests). They need no login, are not rate-limited, ignore both
+(`database_unreachable`), a shutdown is draining requests (`shutting_down`), the automatic
+dictionary load of the first start is still running (`importing`, with `percent` and `stage`)
+or that load failed (`import_failed`, with `error`)). They need no login, are not rate-limited, ignore both
 switches above and are sent with `Cache-Control: no-store`. They are not part of the `/api/v1`
 contract — the public OpenAPI document does not list them and the SDKs do not wrap them; they
 are for process managers, orchestrators and the reverse proxy

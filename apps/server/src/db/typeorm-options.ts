@@ -32,6 +32,11 @@ export const buildTypeOrmOptions = (): TypeOrmModuleOptions => {
       // A failed migration keeps the server down instead of serving a schema
       // the code does not match.
       migrationsRun: true,
+      // The database may still be starting (docker compose brings both up at
+      // once, an external instance may lag): keep trying for a minute before
+      // giving up — the process manager restarts the server after that
+      retryAttempts: 20,
+      retryDelay: 3000,
     };
   }
 

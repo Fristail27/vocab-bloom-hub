@@ -16,6 +16,8 @@ export enum ErrorCodes {
   dataset_file_not_found = 'dataset_file_not_found',
   dataset_invalid = 'dataset_invalid',
   dataset_upload_missing = 'dataset_upload_missing',
+  // one import at a time (issue #268)
+  import_in_progress = 'import_in_progress',
   translation_doesnt_found = 'translation_doesnt_found',
   setting_field_doesnt_found = 'setting_field_doesnt_found',
   setting_field_already_exists = 'setting_field_already_exists',

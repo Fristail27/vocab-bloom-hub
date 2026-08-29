@@ -9,7 +9,12 @@ jest.mock('next-intl', () => ({
 }));
 
 jest.mock('@/core/api/EnApi', () => ({
-  EnApi: { importDictionary: jest.fn(), uploadDictionary: jest.fn(), getImportSources: jest.fn() },
+  EnApi: {
+    importDictionary: jest.fn(),
+    uploadDictionary: jest.fn(),
+    getImportSources: jest.fn(),
+    getImportStatus: jest.fn(),
+  },
 }));
 
 import { EnApi } from '@/core/api/EnApi';
@@ -42,6 +47,7 @@ describe('ImportDictionarySection', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (EnApi.getImportSources as jest.Mock).mockResolvedValue({ import_dir_configured: false, files: [] });
+    (EnApi.getImportStatus as jest.Mock).mockResolvedValue({ running: false });
   });
 
   it('доводит прогресс до 100% и прячет кнопку после успешного импорта', async () => {
