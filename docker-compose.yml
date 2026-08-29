@@ -1,6 +1,6 @@
 # Vocab Bloom Hub: Postgres + API + admin UI (docs/deployment/docker.md).
 #   cp .env.example .env   # set the passwords
-#   docker compose up -d --build
+#   docker compose up -d    # pulls the published images
 # The apps are published on localhost only; put a reverse proxy with TLS in
 # front for anything beyond this host (docs/deployment/reverse-proxy.md) —
 # the admin login cookie is `secure` on https.
@@ -22,10 +22,10 @@ services:
     restart: unless-stopped
 
   server:
-    build:
-      context: .
-      dockerfile: apps/server/Dockerfile
-    image: vocab-bloom-hub-server
+    # published by .github/workflows/docker.yml: `main` / `sha-…` from main,
+    # `1.2.3` / `1.2` / `latest` from release tags (docs/deployment/docker.md);
+    # VBH_TAG in .env pins a version. docker-compose.build.yml builds instead.
+    image: ghcr.io/fristail27/vocab-bloom-hub-server:${VBH_TAG:-main}
     env_file: ${ENV_FILE:-.env}
     environment:
       NODE_ENV: production
@@ -49,14 +49,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    build:
-      context: .
-      dockerfile: apps/frontend/Dockerfile
-      # baked into the browser bundle; the default /api (same origin, through
-      # the reverse proxy) needs no rebuild when the hostname changes
-      args:
-        NEXT_PUBLIC_BASE_API_URL: ${NEXT_PUBLIC_BASE_API_URL:-/api}
-    image: vocab-bloom-hub-frontend
+    image: ghcr.io/fristail27/vocab-bloom-hub-frontend:${VBH_TAG:-main}
     env_file: ${ENV_FILE:-.env}
     environment:
       NODE_ENV: production

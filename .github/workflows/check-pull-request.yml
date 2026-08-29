@@ -232,8 +232,9 @@ jobs:
           cp .env.example .env
           sed -i 's/^ADMIN_PASSWORD=.*/ADMIN_PASSWORD=ci-admin-password/; s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci-postgres-password/; s#^DATABASE_URL=.*#DATABASE_URL=postgres://vocab:ci-postgres-password@postgres:5432/vocab_bloom#' .env
 
+      # the build override: the images of this checkout, not the published ones
       - name: Build images and start
-        run: docker compose up -d --build --wait --wait-timeout 300
+        run: docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build --wait --wait-timeout 300
 
       - name: Probe and sign in
         run: bash .github/scripts/compose-smoke.sh

@@ -215,7 +215,7 @@ Full reference with defaults and startup validation rules: [`docs/environment.md
 
 Two supported shapes, both behind a reverse proxy that terminates TLS and routes `/api/*` to the server and everything else to the frontend (the admin cookie is `secure` whenever the login came over https).
 
-**Docker** — `cp .env.example .env`, set the passwords, `docker compose up -d --build`: Postgres, the API and the admin UI, published on localhost. Guide: [`docs/deployment/docker.md`](docs/deployment/docker.md). Published images follow the alpha (#317).
+**Docker** — download `docker-compose.yml` and `.env.example` (as `.env`, set the passwords), `docker compose up -d`: Postgres, the API and the admin UI from the published images `ghcr.io/fristail27/vocab-bloom-hub-server` / `-frontend` (`main` = development builds, semver tags from the first release), published on localhost. Guide: [`docs/deployment/docker.md`](docs/deployment/docker.md).
 
 **Native Node.js:**
 

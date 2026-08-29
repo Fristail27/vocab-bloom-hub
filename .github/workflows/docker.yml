@@ -1,0 +1,182 @@
+name: docker-images
+
+# Builds the server and frontend images and publishes them to GHCR (issue #317):
+#   ghcr.io/fristail27/vocab-bloom-hub-server
+#   ghcr.io/fristail27/vocab-bloom-hub-frontend
+# Tags: every push to main → `main` + `sha-<short sha>` (development builds);
+# a release tag v1.2.3 → `1.2.3`, `1.2` and `latest`. Pull requests only build
+# (amd64, no push) so a broken Dockerfile fails the check.
+# Each platform is built on its own native runner and the two digests are
+# merged into one multi-platform manifest (docs/deployment/docker.md).
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    paths:
+      - apps/server/Dockerfile
+      - apps/frontend/Dockerfile
+      - .dockerignore
+      - .github/workflows/docker.yml
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  # GHCR wants lowercase names; the owner is lowercased below
+  IMAGE_PREFIX: vocab-bloom-hub
+
+jobs:
+  build:
+    name: build ${{ matrix.image }} (${{ matrix.platform }})
+    # native runner per platform, no QEMU (an `include` mapping would add a
+    # stray job on pull requests, where arm64 is not in the platform list)
+    runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [server, frontend]
+        # pull requests: one platform is enough to prove the Dockerfile builds
+        platform: ${{ fromJSON(github.event_name == 'pull_request' && '["linux/amd64"]' || '["linux/amd64", "linux/arm64"]') }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Image name
+        id: image
+        run: |
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "name=${REGISTRY}/${owner}/${IMAGE_PREFIX}-${{ matrix.image }}" >> "$GITHUB_OUTPUT"
+          echo "arch=$(echo '${{ matrix.platform }}' | cut -d/ -f2)" >> "$GITHUB_OUTPUT"
+
+      # OCI labels (source, revision, licenses, version) for the image config;
+      # the tags are applied when the manifest is merged
+      - name: Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          labels: |
+            org.opencontainers.image.title=Vocab Bloom Hub ${{ matrix.image }}
+            org.opencontainers.image.licenses=MIT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build (and push by digest)
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/${{ matrix.image }}/Dockerfile
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # the frontend bakes the browser-side API base in; the relative
+          # default works behind the documented reverse proxy
+          build-args: |
+            NEXT_PUBLIC_BASE_API_URL=/api
+          cache-from: type=gha,scope=${{ matrix.image }}-${{ steps.image.outputs.arch }}
+          cache-to: type=gha,scope=${{ matrix.image }}-${{ steps.image.outputs.arch }},mode=max
+          # pushed without a tag; the merge job names the multi-platform manifest
+          outputs: ${{ github.event_name != 'pull_request' && format('type=image,name={0},push-by-digest=true,name-canonical=true,push=true', steps.image.outputs.name) || 'type=cacheonly' }}
+
+      - name: Export digest
+        if: github.event_name != 'pull_request'
+        run: |
+          mkdir -p /tmp/digests/${{ matrix.image }}
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${{ matrix.image }}/${digest#sha256:}"
+
+      - name: Upload digest
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: digests-${{ matrix.image }}-${{ steps.image.outputs.arch }}
+          path: /tmp/digests/${{ matrix.image }}/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: publish ${{ matrix.image }} manifest
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        image: [server, frontend]
+
+    steps:
+      - name: Image name
+        id: image
+        run: |
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "name=${REGISTRY}/${owner}/${IMAGE_PREFIX}-${{ matrix.image }}" >> "$GITHUB_OUTPUT"
+
+      - name: Download digests
+        uses: actions/download-artifact@v7
+        with:
+          path: /tmp/digests
+          pattern: digests-${{ matrix.image }}-*
+          merge-multiple: true
+
+      - name: Tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          # main → `main` + `sha-abc1234` (development builds, not releases);
+          # v1.2.3 → `1.2.3`, `1.2` and `latest` (latest=auto: stable releases
+          # only); a prerelease such as v0.1.0-alpha.1 gets its exact version
+          # tag and nothing else. No bare major while on 0.x.
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=sha-,enable=${{ github.ref_type == 'branch' }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
+          # the manifest carries the annotations GHCR shows (source, revision, description)
+          annotations: |
+            org.opencontainers.image.title=Vocab Bloom Hub ${{ matrix.image }}
+            org.opencontainers.image.licenses=MIT
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create the multi-platform manifest
+        working-directory: /tmp/digests
+        run: |
+          args=()
+          while IFS= read -r tag; do args+=(-t "$tag"); done < <(jq -r '.tags[]' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+          while IFS= read -r annotation; do
+            [ -n "$annotation" ] && args+=(--annotation "$annotation")
+          done < <(jq -r '.annotations[]' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+          docker buildx imagetools create "${args[@]}" $(printf '${{ steps.image.outputs.name }}@sha256:%s ' *)
+
+      - name: Inspect
+        run: docker buildx imagetools inspect ${{ steps.image.outputs.name }}:${{ steps.meta.outputs.version }}

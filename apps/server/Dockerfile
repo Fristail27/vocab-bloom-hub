@@ -28,6 +28,10 @@ RUN yarn workspaces focus server --production
 
 # --- runtime
 FROM node:24-alpine AS runtime
+# links the GHCR package to the repository; version and revision are added by CI
+LABEL org.opencontainers.image.source="https://github.com/Fristail27/vocab-bloom-hub" \
+      org.opencontainers.image.description="Vocab Bloom Hub API (NestJS)" \
+      org.opencontainers.image.licenses="MIT"
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=prod-deps /app/node_modules ./node_modules
