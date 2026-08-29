@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 
-import { assertRequiredConfig, ConfigurationError, parseDatabaseUrl } from '../configuration';
+import { resolve } from 'node:path';
+
+import { assertRequiredConfig, ConfigurationError, parseDatabaseUrl, resolveEnvFile } from '../configuration';
 
 type ConfigurationModule = typeof import('../configuration');
 
@@ -174,5 +176,22 @@ describe('checkIsPostgres driver locking (issue #186)', () => {
     process.env.DATABASE_URL = 'postgres://db';
 
     expect(() => cfg.assertDatabaseDriverConsistent()).not.toThrow();
+  });
+});
+
+describe('resolveEnvFile (issue #315)', () => {
+  it('falls back to the path the caller resolved when ENV_FILE is unset or blank', () => {
+    expect(resolveEnvFile('/repo/.env', {})).toEqual({ path: '/repo/.env', explicit: false });
+    expect(resolveEnvFile('/repo/.env', { ENV_FILE: '   ' })).toEqual({ path: '/repo/.env', explicit: false });
+  });
+
+  it('uses ENV_FILE when set, as an absolute path, and marks it explicit', () => {
+    expect(resolveEnvFile('/repo/.env', { ENV_FILE: '/etc/vocab-bloom-hub/.env' })).toEqual({
+      path: '/etc/vocab-bloom-hub/.env',
+      explicit: true,
+    });
+    const relative = resolveEnvFile('/repo/.env', { ENV_FILE: 'config/.env' });
+    expect(relative.explicit).toBe(true);
+    expect(relative.path).toBe(resolve('config/.env'));
   });
 });

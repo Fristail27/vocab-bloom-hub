@@ -33,9 +33,9 @@
     "url": "git+https://github.com/Fristail27/vocab-bloom-hub.git"
   },
   "scripts": {
-    "dev": "dotenv -e ../../.env -- next dev",
-    "build": "dotenv -e ../../.env -- next build",
-    "start": "dotenv -e ../../.env -- next start"
+    "dev": "dotenv -e \"${ENV_FILE:-../../.env}\" -- next dev",
+    "build": "dotenv -e \"${ENV_FILE:-../../.env}\" -- next build",
+    "start": "dotenv -e \"${ENV_FILE:-../../.env}\" -- next start"
   },
   "dependencies": {
     "dotenv": "^17.4.2",

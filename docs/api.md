@@ -245,6 +245,17 @@ instance runs with `ADMIN_API_ENABLED=false` (edit the data elsewhere and move i
 dataset export / import, see [offline-import.md](./offline-import.md)); an internal editing
 instance that must not be readable from outside runs with `PUBLIC_API_ENABLED=false`.
 
+## Probes: `/api/health` and `/api/ready`
+
+Two routes live under `/api` but belong to neither surface: the liveness probe
+`GET /api/health` (`200 { status: 'ok', version }`) and the readiness probe `GET /api/ready`
+(`200 { status: 'ok' }`, or `503 { status: 'error', reason }` while the database does not answer
+or a shutdown is draining requests). They need no login, are not rate-limited, ignore both
+switches above and are sent with `Cache-Control: no-store`. They are not part of the `/api/v1`
+contract — the public OpenAPI document does not list them and the SDKs do not wrap them; they
+are for process managers, orchestrators and the reverse proxy
+([`deployment/README.md`](./deployment/README.md#probes)).
+
 ## Keeping the admin API private behind a reverse proxy
 
 When one instance serves both surfaces and only the dictionary should be reachable from the

@@ -233,5 +233,8 @@ dictionary is not readable from outside. Both switches are described in
       (`ADMIN_API_ENABLED=false`, profile c).
 - [ ] The Prometheus endpoint (`METRICS_ENABLED`, [`../observability.md`](../observability.md)) is
       scraped on the private network or fenced like the admin prefixes — never public.
+- [ ] The probes `GET /api/health` and `GET /api/ready` ([`README.md`](./README.md#probes)) reach
+      the server through the general `/api/` rule; they carry no data and may stay public, or be
+      fenced with the admin prefixes when only the proxy and the monitoring need them.
 - [ ] The import/export stream works through the proxy: start an export from the admin UI and
       watch the progress bar move, not jump.

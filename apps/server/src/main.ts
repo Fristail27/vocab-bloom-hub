@@ -1,9 +1,12 @@
 import { config } from 'dotenv';
 import path from 'path';
+import { resolveEnvFile } from '../configuration';
 // The env must be loaded before any entity import: column types are resolved
-// inside entity decorators at import time (see checkIsPostgres)
-const envPath = path.resolve(__dirname, '../../../../.env');
-const dotenvResult = config({ path: envPath });
+// inside entity decorators at import time (see checkIsPostgres). ENV_FILE
+// names the file explicitly (a build deployed outside the repository tree);
+// the default is the repository root, resolved from dist/src
+const envFile = resolveEnvFile(path.resolve(__dirname, '../../../../.env'));
+const dotenvResult = config({ path: envFile.path });
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { SwaggerModule } from '@nestjs/swagger';
@@ -16,6 +19,8 @@ import { PublicOpenApiService } from './modules/PublicApiModule/public-openapi.s
 import { getLogLevels } from './core/logging/get-log-levels';
 import { getCorsOrigins, getTrustProxy, isSwaggerEnabled, shouldCompress } from './core/utils/http-hardening';
 import { getMetricsPath, isMetricsEnabled } from './modules/MetricsModule/metrics.config';
+import { HEALTH_PATH, READY_PATH } from './modules/HealthModule/health.controller';
+import { getShutdownTimeout } from './core/utils/shutdown';
 import {
   assertPublicApiConfig,
   getApiSurfaces,
@@ -34,13 +39,23 @@ import {
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
+  if (dotenvResult.error && envFile.explicit) {
+    // an explicitly named file that is missing is a deployment mistake, not a
+    // "variables come from the environment" setup: fail before hashing
+    // whatever the environment happens to hold
+    logger.error(`ENV_FILE=${envFile.path} could not be read: ${dotenvResult.error.message}`);
+    process.exit(1);
+  }
   if (dotenvResult.error) {
-    logger.warn(`Root .env not loaded from ${envPath} — relying on the process environment`);
+    logger.warn(`Root .env not loaded from ${envFile.path} — relying on the process environment`);
+  } else {
+    logger.log(`Environment loaded from ${envFile.path}${envFile.explicit ? ' (ENV_FILE)' : ''}`);
   }
   try {
     assertRequiredConfig();
     assertPublicApiConfig();
     assertDatabaseDriverConsistent();
+    getShutdownTimeout();
   } catch (error) {
     if (error instanceof ConfigurationError) {
       logger.error(error.message);
@@ -99,6 +114,10 @@ async function bootstrap() {
   );
   const { httpAdapter } = app.get(HttpAdapterHost);
   app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));
+  // SIGTERM / SIGINT (process manager, container stop) close the app in
+  // order: readiness turns 503, the listener closes, requests in flight
+  // finish, the database pool closes; ShutdownWatchdog bounds the wait
+  app.enableShutdownHooks();
 
   const port = process.env.SERVER_PORT || 3010;
   await app.listen(port);
@@ -106,6 +125,9 @@ async function bootstrap() {
   const isPostgres = checkIsPostgres();
   const { sqlitePath } = parseDatabaseUrl(process.env.DATABASE_URL);
   logger.log(`Server listening on port ${port}`);
+  logger.log(
+    `Probes: liveness at ${HEALTH_PATH}, readiness at ${READY_PATH}; graceful shutdown on SIGTERM, up to ${getShutdownTimeout()} s (SHUTDOWN_TIMEOUT)`,
+  );
   logger.log(
     `Database: ${
       isPostgres

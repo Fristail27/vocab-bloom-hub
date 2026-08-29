@@ -216,7 +216,7 @@ DATABASE_URL=postgres://... yarn workspace server migration:run      # такж�
 Docker-образа и готовой хостинг-сборки пока нет; оба приложения работают как обычные Node.js-процессы за reverse proxy, который терминирует TLS (auth-cookie в production помечена `secure`) и направляет `/api/*` на сервер, а всё остальное — на фронтенд.
 
 1. Задайте окружение: `NODE_ENV=production`, `DATABASE_URL` со схемой `postgres://`, надёжные `ADMIN_USERNAME` / `ADMIN_PASSWORD`, `NEXT_PUBLIC_BASE_API_URL` и `CORS_ORIGINS` с публичным origin, `TRUST_PROXY=1`.
-2. Соберите оба приложения (`yarn workspace server build`, `yarn workspace frontend build`) и запустите их (`yarn workspace server start:prod`, `yarn workspace frontend start`); неприменённые миграции выполняются при старте сервера.
+2. `yarn build`, затем `yarn start` (или `yarn start:server` / `yarn start:front` под systemd или PM2 — примеры файлов в руководстве); неприменённые миграции выполняются при старте сервера. `ENV_FILE` указывает на файл окружения вне репозитория; `GET /api/health` и `GET /api/ready` — пробы; SIGTERM останавливает сервер аккуратно.
 3. Поставьте впереди Caddy или nginx — готовые к адаптации конфиги, профили экспозиции (публичный словарь + приватная админка) и чеклист безопасности — в руководстве.
 
 Полное руководство: [`deployment/`](deployment/README.md) → [`reverse-proxy.md`](deployment/reverse-proxy.md).

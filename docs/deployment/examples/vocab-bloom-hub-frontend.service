@@ -1,0 +1,40 @@
+# systemd unit for the Vocab Bloom Hub admin UI (docs/deployment/README.md).
+# Install: copy to /etc/systemd/system/, adjust the paths and the user, then
+#   systemctl daemon-reload && systemctl enable --now vocab-bloom-hub-frontend
+# Assumes the repository is checked out and built (yarn build) under
+# /opt/vocab-bloom-hub. NEXT_PUBLIC_* values were inlined at build time;
+# the same file must have been present for `yarn build`.
+
+[Unit]
+Description=Vocab Bloom Hub admin UI
+Documentation=https://github.com/Fristail27/vocab-bloom-hub/blob/main/docs/deployment/README.md
+After=network-online.target vocab-bloom-hub-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=vocab-bloom-hub
+Group=vocab-bloom-hub
+WorkingDirectory=/opt/vocab-bloom-hub/apps/frontend
+# `next start` reads the process environment (it does not know ENV_FILE):
+# systemd loads the same file the server uses
+EnvironmentFile=/etc/vocab-bloom-hub/.env
+Environment=NODE_ENV=production
+# `next start` listens on PORT; FRONT_PORT from the .env is the development
+# port of `next dev`
+Environment=PORT=3000
+# same as `yarn start:front` at the repository root, without yarn in between
+# (next is hoisted to the root node_modules by the workspace install)
+ExecStart=/usr/bin/node /opt/vocab-bloom-hub/node_modules/next/dist/bin/next start
+
+KillSignal=SIGTERM
+TimeoutStopSec=30
+Restart=always
+RestartSec=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

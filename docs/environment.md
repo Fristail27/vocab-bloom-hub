@@ -4,7 +4,15 @@ A single `.env` file at the **repository root** is used by both apps:
 
 - the server loads it at the very top of `apps/server/src/main.ts` (before any entity import — see
   [Driver locking](#database-driver-locking));
-- the frontend scripts wrap Next.js with `dotenv -e ../../.env`.
+- the frontend scripts wrap Next.js with `dotenv -e "${ENV_FILE:-../../.env}"`.
+
+**`ENV_FILE`** names another file, for a build that runs outside the repository tree or keeps its
+secrets under `/etc`: `ENV_FILE=/etc/vocab-bloom-hub/.env yarn start`. The server logs which file
+it loaded and exits with code 1 when an explicitly named file cannot be read (a missing default
+is only a warning: the variables may come from the process environment). Use an absolute path —
+the server resolves a relative one from its working directory, the frontend scripts from
+`apps/frontend`. Variables already present in the process environment always win over the file
+(dotenv never overrides them).
 
 In deployments without an `.env` file the variables can come from the process environment; the
 server logs a warning when the root `.env` could not be loaded.
@@ -34,6 +42,8 @@ server logs a warning when the root `.env` could not be loaded.
 | `PUBLIC_API_CACHE_MAX_AGE` | no                | `3600`                             | server   | Seconds a shared cache (browser, CDN, reverse proxy) may keep a public GET answer: `Cache-Control: public, max-age=<value>` on every successful `/api/v1` GET. `0` sends `public, no-cache` (revalidate on each use; the `ETag` makes that a bodiless `304`). Anything but a non-negative integer fails startup. See [api.md](./api.md#caching).                                                                                                                                   |
 | `DICTIONARY_IMPORT_DIR`    | no                | — (server-side datasets disabled)  | server   | Folder the dictionary import may read datasets from (zip archives or dataset folders in the export format, one level deep), e.g. a mounted volume. Paths in import requests are resolved inside it only. Unset, the _From file_ tab of the import page offers uploads only. See [offline-import.md](./offline-import.md).                                                                                                                                                          |
 | `LOG_LEVEL`                | no                | `debug` in development, else `log` | server   | Minimum server log level: `verbose` / `debug` / `log` / `warn` / `error` / `fatal`. Unknown values fall back to the default.                                                                                                                                                                                                                                                                                                                                                       |
+| `ENV_FILE`                 | no                | the root `.env`                    | both     | Path of the environment file to load instead of the repository root `.env` (absolute path). The server exits when the named file cannot be read; see above.                                                                                                                                                                                                                                                                                                                        |
+| `SHUTDOWN_TIMEOUT`         | no                | `30`                               | server   | Seconds a graceful stop may take after SIGTERM / SIGINT: the listener closes, requests in flight finish, the database pool closes. Past the budget the server logs `forcing exit` and exits with code 1 instead of waiting for the process manager's SIGKILL. Whole seconds, at least 1; anything else fails startup. See [deployment/README.md](./deployment/README.md#stopping-and-restarting).                                                                                  |
 | `NODE_ENV`                 | no                | —                                  | both     | `development` enables debug logging; `production` makes the auth cookie `secure`, requires a `postgres://` `DATABASE_URL` and disables the Swagger UI at `/api`. Schema management does not depend on it: SQLite always synchronizes, Postgres always uses migrations.                                                                                                                                                                                                             |
 
 ## Startup validation
@@ -49,7 +59,9 @@ The server validates its configuration before Nest is created (`assertRequiredCo
   never runs on SQLite silently;
 - `DATABASE_URL` is set but its scheme is not recognized (`postgres://`, `postgresql://` or
   `sqlite:<path>`) — guessing the driver would silently switch how the schema is managed
-  (auto-DDL vs migrations).
+  (auto-DDL vs migrations);
+- `ENV_FILE` names a file that cannot be read, or `SHUTDOWN_TIMEOUT`, `PUBLIC_API_RATE_LIMIT`,
+  `PUBLIC_API_CACHE_MAX_AGE` hold values that do not parse.
 
 The resolved database driver is logged at startup:
 `Database: Postgres (DATABASE_URL)` or `better-sqlite3 (<path>)`.
@@ -79,6 +91,8 @@ NEXT_PUBLIC_BASE_API_URL=http://localhost:3010/api
 CORS_ORIGINS=http://localhost:3000
 # Behind a reverse proxy only: how many proxy hops set X-Forwarded-For (docs/deployment/reverse-proxy.md)
 # TRUST_PROXY=1
+# Graceful stop budget in seconds after SIGTERM (docs/deployment/README.md)
+# SHUTDOWN_TIMEOUT=30
 # Prometheus metrics (docs/observability.md); off by default, keep the endpoint private
 # METRICS_ENABLED=true
 # METRICS_PATH=/metrics

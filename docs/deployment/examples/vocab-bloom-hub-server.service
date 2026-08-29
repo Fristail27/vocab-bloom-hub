@@ -1,0 +1,44 @@
+# systemd unit for the Vocab Bloom Hub API (docs/deployment/README.md).
+# Install: copy to /etc/systemd/system/, adjust the paths and the user, then
+#   systemctl daemon-reload && systemctl enable --now vocab-bloom-hub-server
+# Assumes the repository is checked out and built (yarn build) under
+# /opt/vocab-bloom-hub and the environment file lives outside the tree.
+
+[Unit]
+Description=Vocab Bloom Hub API
+Documentation=https://github.com/Fristail27/vocab-bloom-hub/blob/main/docs/deployment/README.md
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=vocab-bloom-hub
+Group=vocab-bloom-hub
+WorkingDirectory=/opt/vocab-bloom-hub/apps/server
+# The server reads the file named by ENV_FILE itself (and exits when it is
+# missing); EnvironmentFile= would work too, but keeping one mechanism
+# makes `journalctl` show which file was loaded
+Environment=NODE_ENV=production
+Environment=ENV_FILE=/etc/vocab-bloom-hub/.env
+# same as `yarn start:server` at the repository root, without yarn in between:
+# the signal reaches node directly and the exit code is node's own
+ExecStart=/usr/bin/node dist/src/main.js
+
+# Stop: SIGTERM, then the server drains its requests for up to SHUTDOWN_TIMEOUT
+# (30 s by default) and exits by itself. TimeoutStopSec must stay above it,
+# otherwise systemd sends SIGKILL first.
+KillSignal=SIGTERM
+TimeoutStopSec=45
+# Restart on any exit: a crash, a lost database at startup (the migrations
+# fail and the process exits 1), an OOM kill. RestartSec keeps a broken
+# configuration from looping hot.
+Restart=always
+RestartSec=5
+
+# Hardening (optional): the server writes only temporary files
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target
