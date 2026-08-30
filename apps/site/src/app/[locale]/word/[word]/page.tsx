@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import type { EnMeaningT, EnWordT } from 'server/types';
 
+import { Pronounce } from '@/components/Pronounce';
 import { WordSearch } from '@/components/WordSearch';
 import { fetchHeadword } from '@/core/dictionary';
 import { Link } from '@/i18n/navigation';
@@ -126,7 +127,8 @@ const Entry = ({ entry, labels }: { entry: EnWordT; labels: Record<string, strin
       <ul className={styles.forms}>
         {entry.forms.map((form) => (
           <li key={form.id}>
-            {form.word} <small>{String(form.form_of_word).replace(/_/g, ' ')}</small>
+            {form.word} <Pronounce word={form.word} small />{' '}
+            <small>{String(form.form_of_word).replace(/_/g, ' ')}</small>
           </li>
         ))}
       </ul>
@@ -176,6 +178,7 @@ export default async function WordPage({ params }: WordPageP) {
     <div className={`container ${styles.page}`}>
       <div className={styles.headword}>
         <h1>{meta.word}</h1>
+        <Pronounce word={meta.word} />
         {transcription && <span className={styles.transcription}>{ipa(transcription)}</span>}
       </div>
       <p className={styles.meta}>{t('entries', { count: meta.count })}</p>
