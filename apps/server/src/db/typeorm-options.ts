@@ -7,9 +7,18 @@ import { EnMeaning } from '../modules/EnModule/entities/en_meaning.entity';
 import { EnMeaningTranslation } from '../modules/EnModule/entities/en_meaning_translation.entity';
 import { EnShortTranslation } from '../modules/EnModule/entities/en_short_translation.entity';
 import { Settings } from '../modules/SettingsModule/entities/settings.entity';
+import { AuditLog } from '../modules/AuditModule/entities/audit_log.entity';
 import { migrations } from './migrations';
 
-export const DB_ENTITIES = [EnEntry, EnWord, EnMeaning, EnMeaningTranslation, EnShortTranslation, Settings];
+export const DB_ENTITIES = [
+  EnEntry,
+  EnWord,
+  EnMeaning,
+  EnMeaningTranslation,
+  EnShortTranslation,
+  Settings,
+  AuditLog,
+];
 
 // checkIsPostgres() is locked at the first call (entity import), so the
 // DataSource driver can never diverge from the entity column types

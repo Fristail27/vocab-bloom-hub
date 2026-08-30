@@ -1,4 +1,15 @@
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Inject,
+  Optional,
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { AuditActionE, AuditEntityTypeE } from '../../../types';
+import { AuditService } from '../AuditModule/audit.service';
+import { diffSnapshots, snapshotScalars } from '../AuditModule/audit-diff';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { EnEntry } from './entities/en_entry.entity';
@@ -30,6 +41,12 @@ import { EditPhrasalBaseReqDTO } from './dto/EditPhrasalBase.dto';
 @Injectable()
 export class EnService {
   private readonly logger = new Logger(EnService.name);
+
+  // the audit journal records every admin mutation (issue #334); optional so
+  // test modules that boot without AuditModule still resolve
+  @Optional()
+  @Inject(AuditService)
+  private readonly auditService?: AuditService;
 
   constructor(
     @InjectRepository(EnWord)
@@ -183,6 +200,13 @@ export class EnService {
       return baseWord;
     });
 
+    await this.auditService?.record({
+      action: AuditActionE.create,
+      entityType: AuditEntityTypeE.word,
+      entityId: baseWord.id,
+      headword: body.word,
+    });
+
     // the request echoed back plus the id of the created base entry
     return { ...body, id: baseWord.id };
   }
@@ -219,16 +243,23 @@ export class EnService {
       }
     });
     this.logger.log(`Word "${word.word.word}" deleted, id=${id}`);
+    await this.auditService?.record({
+      action: AuditActionE.delete,
+      entityType: AuditEntityTypeE.word,
+      entityId: id,
+      headword: word.word.word,
+    });
     return { success: true };
   }
 
   async editWord(id: number, body: EditCommonInfoOfWordReqDTO): Promise<EditCommonInfoOfWordResT> {
-    const word = await this.enWordsRep.findOne({ where: { id } });
+    const word = await this.enWordsRep.findOne({ where: { id }, relations: { word: true } });
 
     if (!word) {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);
     }
 
+    const before = snapshotScalars(word);
     const {
       verb___transitivity,
       verb___is_irregular,
@@ -287,6 +318,17 @@ export class EnService {
     word.version = CustomVersionDictionaryOfWord;
     await this.enWordsRep.save(word);
     this.logger.log(`Word common info updated, id=${id}`);
+    // the version stamp changes on every edit and would drown the real diff
+    const after = snapshotScalars(word);
+    delete before.version;
+    delete after.version;
+    await this.auditService?.record({
+      action: AuditActionE.update,
+      entityType: AuditEntityTypeE.word,
+      entityId: id,
+      headword: word.word.word,
+      diff: diffSnapshots(before, after),
+    });
     return { success: true };
   }
 
@@ -305,6 +347,12 @@ export class EnService {
     word.base_phrasal = phrasalBase;
     await this.enWordsRep.save(word);
     this.logger.log(`Phrasal base of word id=${body.id} set to id=${body.phrasal_base_id}`);
+    await this.auditService?.record({
+      action: AuditActionE.update,
+      entityType: AuditEntityTypeE.word,
+      entityId: body.id,
+      diff: { phrasal_base_id: { before: null, after: body.phrasal_base_id } },
+    });
     return { success: true };
   }
 
@@ -353,6 +401,12 @@ export class EnService {
     });
 
     this.logger.log(`Word form "${body.word}" added to word id=${body.base_word_id}, id=${res.id}`);
+    await this.auditService?.record({
+      action: AuditActionE.create,
+      entityType: AuditEntityTypeE.word_form,
+      entityId: res.id,
+      headword: body.word,
+    });
 
     return { success: true, id: res.id };
   }
@@ -366,6 +420,7 @@ export class EnService {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);
     }
 
+    const before = snapshotScalars(word);
     await this.dataSource.transaction(async (em) => {
       const wordsRep = em.getRepository(EnWord);
 
@@ -396,6 +451,13 @@ export class EnService {
     });
 
     this.logger.log(`Word form updated, id=${body.id}`);
+    await this.auditService?.record({
+      action: AuditActionE.update,
+      entityType: AuditEntityTypeE.word_form,
+      entityId: body.id,
+      headword: word.word.word,
+      diff: diffSnapshots(before, snapshotScalars(word)),
+    });
 
     return { success: true };
   }

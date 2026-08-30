@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   HttpException,
   Injectable,
   InternalServerErrorException,
@@ -8,6 +9,8 @@ import {
   OnModuleDestroy,
   Optional,
 } from '@nestjs/common';
+import { AuditActionE, AuditEntityTypeE, AuditTriggerE } from '../../../../../types';
+import { AuditService } from '../../../AuditModule/audit.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MetricsService } from '../../../MetricsModule/metrics.service';
 import { EntityManager, FindOptionsRelations, FindOptionsWhere, In, Not, Repository } from 'typeorm';
@@ -103,6 +106,11 @@ const MANIFEST_CACHE_TTL_MS = 5 * 60 * 1000;
 @Injectable()
 export class EnImportDictionaryService implements OnModuleDestroy {
   private readonly logger = new Logger(EnImportDictionaryService.name);
+
+  // the audit journal records every import run as one summary row (issue #334)
+  @Optional()
+  @Inject(AuditService)
+  private readonly auditService?: AuditService;
 
   private readonly pendingExports = new Map<string, PendingExport>();
 
@@ -721,6 +729,15 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     try {
       const datasetVersion = await this.runImport(source, label, tracked);
       this.importStatus?.end({ dataset_version: datasetVersion });
+      await this.auditService?.record({
+        trigger: AuditTriggerE.import,
+        action: AuditActionE.import,
+        entityType: AuditEntityTypeE.dictionary,
+        diff: {
+          source: { before: null, after: label },
+          ...(datasetVersion ? { dataset_version: { before: null, after: datasetVersion } } : {}),
+        },
+      });
     } catch (error) {
       const message =
         error instanceof HttpException

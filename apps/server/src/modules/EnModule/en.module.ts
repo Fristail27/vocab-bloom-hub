@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { AuditModule } from '../AuditModule/audit.module';
+import { AuditController } from '../AuditModule/audit.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SettingsModule } from '../SettingsModule/settings.module';
 import { EnController } from './en.controller';
@@ -30,6 +32,7 @@ import { EnAdminListsService } from './modules/EnAdminLists/enAdminLists.service
     // the import slot (issue #268), global so HealthModule reads it too; imported here
     // so EnModule stays self-contained for the tests that boot it alone
     ImportStatusModule,
+    AuditModule,
     TypeOrmModule.forFeature([EnEntry, EnWord, EnMeaning, EnMeaningTranslation, EnShortTranslation]),
     // the import service records the dataset version of the last import
     SettingsModule,
@@ -40,6 +43,8 @@ import { EnAdminListsService } from './modules/EnAdminLists/enAdminLists.service
     // and /api/en/meaning-translations are swallowed by the GET /api/en/:id route
     EnStatisticsController,
     EnAdminListsController,
+    // the journal's route must also be matched before GET /api/en/:id
+    AuditController,
     EnController,
     EnShortTranslationController,
     EnMeaningTranslationController,

@@ -1,4 +1,6 @@
-import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
+import { Inject, Optional, Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
+import { AuditActionE, AuditEntityTypeE } from '../../../types';
+import { AuditService } from '../AuditModule/audit.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Settings } from './entities/settings.entity';
@@ -9,6 +11,11 @@ import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class SettingsService {
   private readonly logger = new Logger(SettingsService.name);
+  // the audit journal records every admin mutation (issue #334); optional so
+  // test modules that boot without AuditModule still resolve
+  @Optional()
+  @Inject(AuditService)
+  private readonly auditService?: AuditService;
 
   constructor(
     @InjectRepository(Settings)
@@ -51,6 +58,12 @@ export class SettingsService {
     await this.settingsRepository.save({ field, value });
 
     this.logger.log(`Setting "${field}" created`);
+    await this.auditService?.record({
+      action: AuditActionE.create,
+      entityType: AuditEntityTypeE.setting,
+      headword: field,
+      diff: { value: { before: null, after: value } },
+    });
 
     return { success: true };
   }
@@ -60,10 +73,17 @@ export class SettingsService {
     if (!setting) {
       throw new NotFoundException(ErrorCodes.setting_field_doesnt_found);
     }
+    const previous = setting.value;
     setting.value = value;
 
     await this.settingsRepository.save(setting);
     this.logger.log(`Setting "${field}" updated`);
+    await this.auditService?.record({
+      action: AuditActionE.update,
+      entityType: AuditEntityTypeE.setting,
+      headword: field,
+      diff: previous === value ? null : { value: { before: previous, after: value } },
+    });
     return { success: true };
   }
 
@@ -82,6 +102,11 @@ export class SettingsService {
     }
 
     this.logger.log(`Setting "${field}" deleted`);
+    await this.auditService?.record({
+      action: AuditActionE.delete,
+      entityType: AuditEntityTypeE.setting,
+      headword: field,
+    });
 
     return { success: true };
   }

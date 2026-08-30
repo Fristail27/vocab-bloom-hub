@@ -1,6 +1,9 @@
 import { AbstractBaseApi, type ApiQueryT, type DownloadedFileT } from '../AbstractBaseApi';
 import {
   AddMeaningReqT,
+  AuditListT,
+  ListAuditQueryT,
+  ListAuditResT,
   AddMeaningResT,
   AddMeaningTranslationReqT,
   AddMeaningTranslationResT,
@@ -304,6 +307,10 @@ export class EnApi extends AbstractBaseApi {
     onProgress?: (loaded: number, total: number) => void,
   ): Promise<DownloadedFileT | ErrorResT> {
     return this.downloadFile(`${this.baseURL}/en/dictionary/export/download/${exportId}`, {}, onProgress);
+  }
+
+  static async getAuditLog(query: ListAuditQueryT): Promise<ListAuditResT> {
+    return this.get<AuditListT>(`${this.baseURL}/en/audit`, { query });
   }
 
   static async getStatistics(): Promise<GetEnStatisticsResT> {

@@ -1,0 +1,41 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: flex-end;
+}
+
+.filter {
+  min-width: 220px;
+}
+
+.search {
+  max-width: 260px;
+  align-self: flex-end;
+}
+
+.entityId {
+  color: var(--ant-color-text-tertiary, #999);
+}
+
+.diff {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    margin: 2px 0;
+  }
+
+  code {
+    background: var(--ant-color-fill-tertiary, rgba(0, 0, 0, 0.04));
+    border-radius: 4px;
+    padding: 0 4px;
+  }
+}
