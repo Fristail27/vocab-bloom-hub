@@ -11,6 +11,7 @@ body:
       options:
         - server
         - admin
+        - site
         - npm-sdk
         - python-sdk
         - docs
