@@ -17,3 +17,10 @@ services:
       # the reverse proxy) needs no rebuild when the hostname changes
       args:
         NEXT_PUBLIC_BASE_API_URL: ${NEXT_PUBLIC_BASE_API_URL:-/api}
+
+  site:
+    build:
+      context: .
+      dockerfile: apps/site/Dockerfile
+      args:
+        NEXT_PUBLIC_BASE_API_URL: ${NEXT_PUBLIC_BASE_API_URL:-/api}

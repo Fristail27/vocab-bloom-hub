@@ -34,14 +34,14 @@
   },
   "scripts": {
     "dev": "dotenv -e \"${ENV_FILE:-../../.env}\" -- next dev",
-    "build": "dotenv -e \"${ENV_FILE:-../../.env}\" -- next build",
+    "build": "NODE_ENV=production dotenv -e \"${ENV_FILE:-../../.env}\" -- next build",
     "start": "dotenv -e \"${ENV_FILE:-../../.env}\" -- next start"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
     "js-cookie": "^3.0.7",
     "next": "16.3.2",
-    "next-intl": "^4.13.7",
+    "next-intl": "^4.14.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "sass": "^1.102.0"
@@ -53,6 +53,7 @@
     "@types/js-cookie": "^3.0.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv-cli": "^11.0.0",
     "typescript": "^6.0.3"
   }
 }

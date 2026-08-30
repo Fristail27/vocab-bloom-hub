@@ -1,5 +1,5 @@
-# Build context for apps/server/Dockerfile and apps/frontend/Dockerfile
-# (both are built from the repository root). Everything not needed to
+# Build context for the Dockerfiles of apps/server, apps/frontend and
+# apps/site (all built from the repository root). Everything not needed to
 # install and build is left out: secrets, local databases, build outputs.
 .git
 .github
@@ -17,7 +17,6 @@ node_modules
 .env
 .env.*
 !.env.example
-docs
 packages/python-sdk/.venv
 packages/python-sdk/dist
 apps/e2e/playwright-report

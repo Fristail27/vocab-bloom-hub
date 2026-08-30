@@ -1,0 +1,24 @@
+.switch {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  font-size: 0.85rem;
+
+  a {
+    padding: 3px 8px;
+    color: var(--muted);
+    text-transform: uppercase;
+
+    &:hover {
+      text-decoration: none;
+      color: var(--fg);
+    }
+  }
+
+  .active {
+    background: var(--surface);
+    color: var(--fg);
+    font-weight: 600;
+  }
+}

@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Vocab Bloom Hub — a monorepo for a multilingual dictionary/vocabulary platform. Yarn 4 workspaces (`apps/*`, `packages/*`), Node >= 24:
 
 - `apps/frontend` — Next.js 16 (App Router) admin UI with Ant Design, Sass modules, and next-intl (en/ru locales via the `[locale]` route segment; middleware in `src/proxy.ts`).
+- `apps/site` — Next.js 16 project website (next-intl en/ru, Sass modules, no Ant Design): the landing, the documentation rendered at build time from the repository's Markdown (`src/content/registry.ts` maps files to routes, links between the files are rewritten), the public API reference and the playground generated from `apps/server/openapi/public-v1.json` (`src/content/openapi.ts`, `playground.ts`), and server-rendered word pages over the public API (`src/core/dictionary.ts`; `API_INTERNAL_URL`, the same `/api/*` forwarding route as the frontend). Types from `server/types`. Served next to an instance as the `site` compose profile (off by default), image `vocab-bloom-hub-site`, port `SITE_PORT` (3020).
 - `apps/server` — NestJS 11 API with TypeORM. Swagger UI is served at `/api` on the running server.
 - `apps/e2e` — Playwright browser tests that boot both apps against an isolated SQLite database (own tsconfig on purpose: jest and Playwright globals must not share a TS project).
 - `packages/npm-sdk` — `@vocab-bloom-hub/client`, the typed Node.js / browser client of the public API: types generated from `apps/server/openapi/public-v1.json` (`src/generated/openapi.ts`, committed) plus a hand-written wrapper; tsup build (ESM + CJS + d.ts), no runtime dependencies. Not published to npm before the alpha (#308).
@@ -15,15 +16,17 @@ Vocab Bloom Hub — a monorepo for a multilingual dictionary/vocabulary platform
 ## Commands
 
 ```bash
-yarn dev            # run server + frontend together (concurrently)
+yarn dev            # run server + frontend + site together (concurrently)
 yarn server:dev     # NestJS with watch (port SERVER_PORT, default 3010)
 yarn front:dev      # Next.js dev (port FRONT_PORT, default 3000)
+yarn site:dev       # website dev (port SITE_PORT, default 3020); site:build / start:site for the production build
 yarn build          # production build of both apps (server → apps/server/dist, frontend → .next)
 yarn start          # start both production builds (concurrently); start:server / start:front for one
                     # CI boots them against Postgres and probes /api/ready (.github/scripts/production-smoke.sh)
 
 docker compose up -d                      # server + frontend from the GHCR images, plus the bundled Postgres when
-                                          # COMPOSE_PROFILES=db (the .env.example default; docs/deployment/docker.md);
+                                          # COMPOSE_PROFILES=db (the .env.example default; docs/deployment/docker.md)
+                                          # and the website when the profile list has `site` (COMPOSE_PROFILES=db,site);
                                           # an external database: drop the profile, set DATABASE_URL. VBH_TAG picks the image tag
 docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build   # build from this checkout instead (CI does this)
                                           # images are published by .github/workflows/docker.yml: main → `main` + `sha-…`, tags v* → semver + latest

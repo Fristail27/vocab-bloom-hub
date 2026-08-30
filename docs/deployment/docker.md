@@ -1,14 +1,15 @@
 # Docker
 
-Running Vocab Bloom Hub in containers: two published images — the API and the admin UI — and a
-`docker-compose.yml` that adds Postgres (issues #316, #317).
+Running Vocab Bloom Hub in containers: three published images — the API, the admin UI and the
+project website — and a `docker-compose.yml` that adds Postgres (issues #316, #317, #277).
 
-| Image                                         | What                              |
-| --------------------------------------------- | --------------------------------- |
-| `ghcr.io/fristail27/vocab-bloom-hub-server`   | the API (NestJS), port 3010       |
-| `ghcr.io/fristail27/vocab-bloom-hub-frontend` | the admin UI (Next.js), port 3000 |
+| Image                                         | What                                                                  |
+| --------------------------------------------- | --------------------------------------------------------------------- |
+| `ghcr.io/fristail27/vocab-bloom-hub-server`   | the API (NestJS), port 3010                                           |
+| `ghcr.io/fristail27/vocab-bloom-hub-frontend` | the admin UI (Next.js), port 3000                                     |
+| `ghcr.io/fristail27/vocab-bloom-hub-site`     | the website (Next.js), port 3020 — the `site` profile, off by default |
 
-Both are published to the GitHub Container Registry by `.github/workflows/docker.yml` for
+All three are published to the GitHub Container Registry by `.github/workflows/docker.yml` for
 `linux/amd64` and `linux/arm64`:
 
 | Tag             | Built from                                | Use it for                                                      |
@@ -77,14 +78,15 @@ applies its migrations on start and rollback is the backup
 
 ## What is in `docker-compose.yml`
 
-| Service    | Image                                           | Notes                                                                                                                                                                           |
-| ---------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `postgres` | `postgres:17-alpine` (profile `db`)             | Data in the named volume `postgres-data`; `pg_isready` healthcheck; `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` from `.env`; skipped for an external database (below) |
-| `server`   | `ghcr.io/…/vocab-bloom-hub-server:${VBH_TAG}`   | Retries the database for a minute, runs pending migrations on start, listens on `3010`; `./imports` is mounted as `DICTIONARY_IMPORT_DIR` (read-only)                           |
-| `frontend` | `ghcr.io/…/vocab-bloom-hub-frontend:${VBH_TAG}` | The standalone Next.js build on `3000`; server-side rendering reaches the API at `http://server:3010/api` (`API_INTERNAL_URL`)                                                  |
+| Service    | Image                                                        | Notes                                                                                                                                                                           |
+| ---------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `postgres` | `postgres:17-alpine` (profile `db`)                          | Data in the named volume `postgres-data`; `pg_isready` healthcheck; `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` from `.env`; skipped for an external database (below) |
+| `server`   | `ghcr.io/…/vocab-bloom-hub-server:${VBH_TAG}`                | Retries the database for a minute, runs pending migrations on start, listens on `3010`; `./imports` is mounted as `DICTIONARY_IMPORT_DIR` (read-only)                           |
+| `frontend` | `ghcr.io/…/vocab-bloom-hub-frontend:${VBH_TAG}`              | The standalone Next.js build on `3000`; server-side rendering reaches the API at `http://server:3010/api` (`API_INTERNAL_URL`)                                                  |
+| `site`     | `ghcr.io/…/vocab-bloom-hub-site:${VBH_TAG}` (profile `site`) | The project website on `3020` — see [below](#the-website); the word pages reach the API at `http://server:3010/api` (`API_INTERNAL_URL`)                                        |
 
-Host ports come from `SERVER_PORT` / `FRONT_PORT` in `.env` (defaults `3010` / `3000`); inside
-the containers the apps always listen on `3010` / `3000`.
+Host ports come from `SERVER_PORT` / `FRONT_PORT` / `SITE_PORT` in `.env` (defaults `3010` /
+`3000` / `3020`); inside the containers the apps always listen on `3010` / `3000` / `3020`.
 
 **Without a reverse proxy** (a workstation, a LAN) the browser calls the API under the page
 origin — `http://localhost:3000/api/…` — and the frontend forwards `/api/*` to the server
@@ -123,6 +125,35 @@ The server has no `depends_on` the database: it retries the connection for a min
 and, past that, exits and is restarted by compose — a bundled Postgres is ready long before, an
 external one may lag behind a reboot.
 
+### The website
+
+The `site` service is the project website of [the repository](https://github.com/Fristail27/vocab-bloom-hub)
+served next to _this_ instance: the documentation (rendered from the repository's own Markdown
+at build time), the reference of the public API (from the OpenAPI document), a playground that
+sends real requests, and word pages — `/en/word/run` — rendered from `GET /api/v1/words/run`
+of the instance, the search-engine entry points of a public dictionary (issue #277).
+
+It is a compose **profile**, like the bundled database, and off by default: an installation
+that only needs the dictionary and the admin UI never starts it. To have it:
+
+```dotenv
+COMPOSE_PROFILES=db,site
+# SITE_PORT=3020                               # the host port
+# NEXT_PUBLIC_SITE_URL=https://vocabbloom.example  # its public origin, for sitemap.xml
+```
+
+`docker compose up -d` then pulls the third image and the site answers on
+`http://localhost:3020`. Behind the reverse proxy a public instance routes `/` to the site and
+`/api/*` to the server ([`reverse-proxy.md`](./reverse-proxy.md#c-public-only-instance)); the
+admin UI can stay on another hostname or off (`ADMIN_API_ENABLED=false`). The site's browser
+code calls the API under its own origin (`NEXT_PUBLIC_BASE_API_URL=/api`, a build argument
+like the frontend's), and without a proxy the site forwards `/api/*` to `API_INTERNAL_URL`
+itself — the same mechanism as the admin UI. Nothing of the site is needed for the API or the
+admin UI to work.
+
+The pages that read the repository are built into the image: the site of a given tag documents
+that tag. The word pages are rendered on request and cached for an hour.
+
 ## Building the images yourself
 
 Contributors, forks and unpublished changes build from the checkout with the override file:
@@ -132,11 +163,12 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 # or one image at a time, from the repository root
 docker build -f apps/server/Dockerfile   -t ghcr.io/fristail27/vocab-bloom-hub-server:main   .
 docker build -f apps/frontend/Dockerfile -t ghcr.io/fristail27/vocab-bloom-hub-frontend:main .
+docker build -f apps/site/Dockerfile     -t ghcr.io/fristail27/vocab-bloom-hub-site:main     .
 ```
 
-Both are multi-stage builds on `node:24-alpine`, built from the **repository root** (the
-workspace install needs every `package.json`, and the frontend imports types from the server
-workspace):
+All are multi-stage builds on `node:24-alpine`, built from the **repository root** (the
+workspace install needs every `package.json`, and the frontend and the site import types from
+the server workspace):
 
 - **server** — a full workspace install with the native toolchain, the Nest build, then a
   runtime stage holding `dist/` and only the production dependencies of the `server` workspace
@@ -147,6 +179,9 @@ workspace):
 - **frontend** — `next build` with `output: 'standalone'` (traced from the monorepo root), the
   runtime stage holds `server.js`, the traced `node_modules`, `.next/static` and `public`.
   `HEALTHCHECK` on `GET /en/login`.
+- **site** — the same shape as the frontend; the build stage also copies the READMEs, `docs/`,
+  the licences and the OpenAPI document, since the pages are rendered from them at build time.
+  `HEALTHCHECK` on `GET /en`.
 
 **`NEXT_PUBLIC_BASE_API_URL` is a build argument**: it is inlined into the browser bundle by
 `next build` and cannot be changed by starting the container with another value. The published
@@ -196,6 +231,7 @@ _Change visibility_) — until then `docker compose up` needs `docker login ghcr
 - **Datasets from a folder**: drop an exported archive into `./imports` on the host; the import
   page lists it ([`../offline-import.md`](../offline-import.md)).
 
-CI builds both images from the checkout and runs `docker compose up` against them on every
-pull request (`docker` job in `.github/workflows/check-pull-request.yml`), probing `/api/ready`
-and the login page, so the Dockerfiles cannot rot.
+CI builds the three images from the checkout and runs `docker compose up` against them, with
+the `site` profile, on every pull request (`docker` job in
+`.github/workflows/check-pull-request.yml`), probing `/api/ready`, the login page and the
+website, so the Dockerfiles cannot rot.

@@ -212,6 +212,11 @@ the data on a private instance and move it over with the dataset export / import
 ([`../offline-import.md`](../offline-import.md)). The frontend can be left out entirely;
 `/api/v1` needs only the server.
 
+Such an instance is where the project website belongs (the `site` profile,
+[`docker.md`](./docker.md#the-website)): the proxy routes `/api/*` to the server and everything
+else to the site (`127.0.0.1:3020`) instead of the admin UI — the documentation, the API
+reference, the playground and the word pages then run over this dictionary.
+
 The opposite switch, `PUBLIC_API_ENABLED=false`, makes an editing-only instance whose
 dictionary is not readable from outside. Both switches are described in
 [`../api.md`](../api.md#running-a-public-only-or-admin-only-instance).

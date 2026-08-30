@@ -11,12 +11,15 @@ import {
 
 describe('HTTP hardening utils (issue #183)', () => {
   describe('getCorsOrigins', () => {
-    it('falls back to the local frontend origin', () => {
-      expect(getCorsOrigins({})).toEqual(['http://localhost:3000']);
+    it('falls back to the local admin UI and website origins', () => {
+      expect(getCorsOrigins({})).toEqual(['http://localhost:3000', 'http://localhost:3020']);
     });
 
-    it('respects FRONT_PORT in the fallback', () => {
-      expect(getCorsOrigins({ FRONT_PORT: '4000' })).toEqual(['http://localhost:4000']);
+    it('respects FRONT_PORT and SITE_PORT in the fallback', () => {
+      expect(getCorsOrigins({ FRONT_PORT: '4000', SITE_PORT: '4020' })).toEqual([
+        'http://localhost:4000',
+        'http://localhost:4020',
+      ]);
     });
 
     it('parses a comma-separated CORS_ORIGINS list, trimming spaces and empty entries', () => {
@@ -25,7 +28,10 @@ describe('HTTP hardening utils (issue #183)', () => {
     });
 
     it('ignores a blank CORS_ORIGINS value', () => {
-      expect(getCorsOrigins({ CORS_ORIGINS: '   ' })).toEqual(['http://localhost:3000']);
+      expect(getCorsOrigins({ CORS_ORIGINS: '   ' })).toEqual([
+        'http://localhost:3000',
+        'http://localhost:3020',
+      ]);
     });
   });
 

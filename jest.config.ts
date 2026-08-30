@@ -1,3 +1,8 @@
 export default {
-  projects: ['<rootDir>/apps/server', '<rootDir>/apps/frontend', '<rootDir>/packages/npm-sdk'],
+  projects: [
+    '<rootDir>/apps/server',
+    '<rootDir>/apps/frontend',
+    '<rootDir>/apps/site',
+    '<rootDir>/packages/npm-sdk',
+  ],
 };

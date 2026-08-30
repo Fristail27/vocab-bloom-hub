@@ -10,7 +10,8 @@ export const getCorsOrigins = (env: NodeJS.ProcessEnv = process.env): string[] =
       .map((origin) => origin.trim())
       .filter(Boolean);
   }
-  return [`http://localhost:${env.FRONT_PORT || 3000}`];
+  // the admin UI and the project website on this host (yarn dev)
+  return [`http://localhost:${env.FRONT_PORT || 3000}`, `http://localhost:${env.SITE_PORT || 3020}`];
 };
 
 // Progress endpoints stream newline-delimited chunks and mark themselves with

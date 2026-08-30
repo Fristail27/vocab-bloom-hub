@@ -5,18 +5,22 @@
 # follows the request scheme, so a proxy with TLS gets a secure one).
 #
 # Needs ADMIN_USERNAME / ADMIN_PASSWORD (read from .env when not exported)
-# and curl + openssl. Ports: SERVER_PORT / FRONT_PORT (defaults 3010 / 3000).
+# and curl + openssl. Ports: SERVER_PORT / FRONT_PORT / SITE_PORT (defaults
+# 3010 / 3000 / 3020); the website checks run when the `site` profile is on.
 set -euo pipefail
 
 ENV_FILE="${ENV_FILE:-.env}"
-env_value() { grep -E "^$1=" "$ENV_FILE" 2>/dev/null | tail -1 | cut -d= -f2-; }
+# empty when the variable is not in the file: grep's exit status must not stop the script (set -e)
+env_value() { { grep -E "^$1=" "$ENV_FILE" 2>/dev/null || true; } | tail -1 | cut -d= -f2-; }
 ADMIN_USERNAME="${ADMIN_USERNAME:-$(env_value ADMIN_USERNAME)}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-$(env_value ADMIN_PASSWORD)}"
 SERVER_URL="http://localhost:${SERVER_PORT:-$(env_value SERVER_PORT)}"
 FRONT_URL="http://localhost:${FRONT_PORT:-$(env_value FRONT_PORT)}"
-SERVER_URL="${SERVER_URL%:}"; FRONT_URL="${FRONT_URL%:}"
+SITE_URL="http://localhost:${SITE_PORT:-$(env_value SITE_PORT)}"
+SERVER_URL="${SERVER_URL%:}"; FRONT_URL="${FRONT_URL%:}"; SITE_URL="${SITE_URL%:}"
 [ "$SERVER_URL" = "http://localhost" ] && SERVER_URL="http://localhost:3010"
 [ "$FRONT_URL" = "http://localhost" ] && FRONT_URL="http://localhost:3000"
+[ "$SITE_URL" = "http://localhost" ] && SITE_URL="http://localhost:3020"
 
 fail() { echo "::error::$1"; exit 1; }
 http_status() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
@@ -73,5 +77,18 @@ echo "$headers" | grep -qi '^set-cookie: bearer=' || fail "login through the fro
 [ "$(http_status -H "Cookie: bearer=$token" "$FRONT_URL/api/en/dictionary/import/status")" = 200 ] || fail "admin API through the frontend origin refused the cookie"
 [ "$(http_status "$FRONT_URL/api/v1/meta")" = 200 ] || fail "/api/v1/meta through the frontend origin is not 200"
 echo "ok: /api on the frontend origin reaches the server"
+
+# --- the website (profile `site`, issue #277): static pages, and the API through its origin
+if echo ",$(env_value COMPOSE_PROFILES)," | grep -q ',site,'; then
+  wait_for 60 "website ($SITE_URL/en = 200)" test "$(http_status "$SITE_URL/en")" = 200
+  [ "$(http_status "$SITE_URL/en/docs/deployment/docker")" = 200 ] || fail "a documentation page is not 200"
+  [ "$(http_status "$SITE_URL/en/api")" = 200 ] || fail "the API reference is not 200"
+  [ "$(http_status "$SITE_URL/en/playground")" = 200 ] || fail "the playground is not 200"
+  [ "$(http_status "$SITE_URL/api/v1/meta")" = 200 ] || fail "/api/v1/meta through the site origin is not 200"
+  # an empty dictionary: the word index renders, a headword is a clean 404
+  [ "$(http_status "$SITE_URL/en/word")" = 200 ] || fail "the word index is not 200"
+  [ "$(http_status "$SITE_URL/en/word/run")" = 404 ] || fail "a missing headword is not a 404"
+  echo "ok: the website renders and reaches the API"
+fi
 
 echo "compose smoke test passed"
