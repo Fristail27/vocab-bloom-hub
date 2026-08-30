@@ -87,6 +87,7 @@ The project is in **early development** (`0.x`). The English dictionary, the adm
 - **Node.js / TypeScript SDK** for the public API — [`@vocab-bloom-hub/client`](packages/npm-sdk/README.md): typed methods per endpoint, cursor iteration, typed errors, ETag cache; types generated from the committed OpenAPI document (npm publishing follows the alpha, #308).
 - **Python SDK** — [`vocab-bloom-hub`](packages/python-sdk/README.md): sync + async clients, pydantic models from the same spec, `words_dataframe()` for notebooks (PyPI publishing follows the alpha, #310).
 - **Dictionary import / export** as NDJSON datasets (`POST /api/en/dictionary/import`, `GET /api/en/dictionary/export`), so the whole dictionary can be versioned, shared or moved between environments — including offline, from an uploaded archive or a folder on the server (see [`docs/offline-import.md`](docs/offline-import.md)).
+- **Website** — [`apps/site`](apps/site): the documentation rendered from this repository, the public API reference from the OpenAPI document, a live playground and word pages over a running instance; the `site` profile of `docker-compose.yml`.
 - **Search** across words, meanings and translations.
 - **PostgreSQL** in production with TypeORM migrations applied on startup, and a zero-config **SQLite** fallback for local development and tests.
 - **Shared API types** — the frontend imports request/response types and error codes straight from the `server` workspace, so the two apps never drift apart.
@@ -112,6 +113,7 @@ The project is in **early development** (`0.x`). The English dictionary, the adm
 .
 ├── apps/
 │   ├── frontend/   → Next.js admin UI (en/ru locales)
+│   ├── site/       → Next.js project website: docs, API reference, playground, word pages (en/ru)
 │   ├── server/     → NestJS API; also exports shared types (types/) and constants (core/) used by the frontend
 │   └── e2e/        → Playwright browser tests that boot both apps against an isolated SQLite database
 ├── packages/npm-sdk → @vocab-bloom-hub/client, the Node.js / TypeScript SDK of the public API
@@ -172,7 +174,7 @@ All commands run from the repository root.
 
 | Command                              | What it does                                                                                         |
 | ------------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| `yarn dev`                           | Run the API and the admin UI together (with watch)                                                   |
+| `yarn dev`                           | Run the API, the admin UI and the website together (with watch)                                      |
 | `yarn server:dev` / `yarn front:dev` | Run only the API (port `SERVER_PORT`, default 3010) or only the UI (port `FRONT_PORT`, default 3000) |
 | `yarn test`                          | All unit tests (server + frontend)                                                                   |
 | `yarn jest --selectProjects server`  | Only server tests (or `frontend`)                                                                    |

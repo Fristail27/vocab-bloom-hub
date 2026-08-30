@@ -1,8 +1,9 @@
 name: docker-images
 
-# Builds the server and frontend images and publishes them to GHCR (issue #317):
+# Builds the server, frontend and site images and publishes them to GHCR (issue #317):
 #   ghcr.io/fristail27/vocab-bloom-hub-server
 #   ghcr.io/fristail27/vocab-bloom-hub-frontend
+#   ghcr.io/fristail27/vocab-bloom-hub-site
 # Tags: every push to main → `main` + `sha-<short sha>` (development builds);
 # a release tag v1.2.3 → `1.2.3`, `1.2` and `latest`. Pull requests only build
 # (amd64, no push) so a broken Dockerfile fails the check.
@@ -17,6 +18,7 @@ on:
     paths:
       - apps/server/Dockerfile
       - apps/frontend/Dockerfile
+      - apps/site/Dockerfile
       - .dockerignore
       - .github/workflows/docker.yml
   workflow_dispatch:
@@ -39,7 +41,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: [server, frontend]
+        image: [server, frontend, site]
         # pull requests: one platform is enough to prove the Dockerfile builds
         platform: ${{ fromJSON(github.event_name == 'pull_request' && '["linux/amd64"]' || '["linux/amd64", "linux/arm64"]') }}
 
@@ -84,8 +86,8 @@ jobs:
           file: apps/${{ matrix.image }}/Dockerfile
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          # the frontend bakes the browser-side API base in; the relative
-          # default works behind the documented reverse proxy
+          # the frontend and the site bake the browser-side API base in; the
+          # relative default works behind the documented reverse proxy
           build-args: |
             NEXT_PUBLIC_BASE_API_URL=/api
           cache-from: type=gha,scope=${{ matrix.image }}-${{ steps.image.outputs.arch }}
@@ -120,7 +122,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        image: [server, frontend]
+        image: [server, frontend, site]
 
     steps:
       - name: Image name

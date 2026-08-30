@@ -55,6 +55,7 @@ yarn build                        # server → apps/server/dist, frontend → ap
 yarn start                        # both processes in one terminal (concurrently); stops both when one exits
 yarn start:server                 # node apps/server/dist/src/main.js — listens on SERVER_PORT (3010)
 yarn start:front                  # next start — listens on PORT (3000)
+yarn site:build && yarn start:site # the project website, optional — listens on SITE_PORT (3020); docker.md#the-website
 ```
 
 The environment comes from the root `.env` or from the file named by **`ENV_FILE`** — an

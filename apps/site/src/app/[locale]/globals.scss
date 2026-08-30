@@ -1,0 +1,264 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1b1f24;
+  --muted: #59636e;
+  --border: #d9dee4;
+  --surface: #f6f8fa;
+  --accent: #2b62d9;
+  --accent-fg: #ffffff;
+  --code-bg: #f3f5f7;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --max-width: 1180px;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1116;
+    --fg: #e6edf3;
+    --muted: #9aa4b1;
+    --border: #2a313b;
+    --surface: #161b22;
+    --accent: #6ea0ff;
+    --accent-fg: #0e1116;
+    --code-bg: #161b22;
+    --shadow: none;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+code,
+pre,
+kbd {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.page {
+  min-height: calc(100vh - 140px);
+  padding: 32px 0 64px;
+}
+
+// Markdown rendered from the repository (docs, README, licences)
+.markdown {
+  h1,
+  h2,
+  h3,
+  h4 {
+    line-height: 1.25;
+    margin: 1.6em 0 0.6em;
+    scroll-margin-top: 80px;
+  }
+
+  h1 {
+    font-size: 2rem;
+    margin-top: 0;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    padding-bottom: 0.3em;
+    border-bottom: 1px solid var(--border);
+  }
+
+  h3 {
+    font-size: 1.2rem;
+  }
+
+  p,
+  ul,
+  ol,
+  table,
+  pre,
+  blockquote {
+    margin: 0 0 1em;
+  }
+
+  li + li {
+    margin-top: 0.25em;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 2em 0;
+  }
+
+  blockquote {
+    margin-left: 0;
+    padding: 0.5em 1em;
+    border-left: 4px solid var(--accent);
+    background: var(--surface);
+    color: var(--muted);
+  }
+
+  code {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.1em 0.35em;
+  }
+
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    line-height: 1.5;
+
+    code {
+      background: none;
+      border: 0;
+      padding: 0;
+    }
+  }
+
+  table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: 0.95em;
+
+    th,
+    td {
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      background: var(--surface);
+    }
+  }
+
+  // highlight.js tokens
+  .hljs-comment,
+  .hljs-quote {
+    color: var(--muted);
+    font-style: italic;
+  }
+  .hljs-keyword,
+  .hljs-selector-tag,
+  .hljs-meta,
+  .hljs-built_in,
+  .hljs-name {
+    color: #b0349a;
+  }
+  .hljs-string,
+  .hljs-attr,
+  .hljs-template-variable,
+  .hljs-addition {
+    color: #1f7a3a;
+  }
+  .hljs-number,
+  .hljs-literal,
+  .hljs-variable,
+  .hljs-symbol,
+  .hljs-bullet {
+    color: #b7582f;
+  }
+  .hljs-title,
+  .hljs-section,
+  .hljs-attribute,
+  .hljs-type {
+    color: #2b62d9;
+  }
+  .hljs-deletion {
+    color: #b3261e;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .hljs-keyword,
+    .hljs-selector-tag,
+    .hljs-meta,
+    .hljs-built_in,
+    .hljs-name {
+      color: #e58be0;
+    }
+    .hljs-string,
+    .hljs-attr,
+    .hljs-template-variable,
+    .hljs-addition {
+      color: #7ee787;
+    }
+    .hljs-number,
+    .hljs-literal,
+    .hljs-variable,
+    .hljs-symbol,
+    .hljs-bullet {
+      color: #ffa657;
+    }
+    .hljs-title,
+    .hljs-section,
+    .hljs-attribute,
+    .hljs-type {
+      color: #79c0ff;
+    }
+  }
+}
+
+.button {
+  display: inline-block;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+  line-height: 1.2;
+
+  &:hover {
+    text-decoration: none;
+    background: var(--surface);
+  }
+
+  &.primary {
+    background: var(--accent);
+    color: var(--accent-fg);
+
+    &:hover {
+      filter: brightness(1.08);
+    }
+  }
+}

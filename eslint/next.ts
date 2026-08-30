@@ -5,7 +5,7 @@ import base from './base';
 export default [
   ...base,
   {
-    files: ['apps/frontend/**/*.{ts,tsx}'],
+    files: ['apps/frontend/**/*.{ts,tsx}', 'apps/site/**/*.{ts,tsx}'],
     plugins: {
       '@next/next': nextPlugin,
     },

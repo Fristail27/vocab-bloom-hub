@@ -1,11 +1,14 @@
-# Vocab Bloom Hub: API + admin UI, with or without a bundled Postgres
-# (docs/deployment/docker.md).
+# Vocab Bloom Hub: API + admin UI, with or without a bundled Postgres, and
+# the project website on request (docs/deployment/docker.md).
 #   cp .env.example .env   # set the passwords
 #   docker compose up -d    # pulls the published images
 # The bundled database is the `db` profile: COMPOSE_PROFILES=db in .env (the
 # template's default) starts it and the server uses it; without the profile
 # only the two apps start and DATABASE_URL in .env must name an external
-# Postgres — nothing in this file needs editing either way.
+# Postgres. The website (docs, API reference, playground, word pages) is
+# the `site` profile: COMPOSE_PROFILES=db,site starts it too — off by
+# default, an installation does not need it. Nothing in this file needs
+# editing either way.
 # The apps are published on localhost only; put a reverse proxy with TLS in
 # front for anything beyond this host (docs/deployment/reverse-proxy.md) —
 # the admin login cookie is `secure` on https.
@@ -70,6 +73,24 @@ services:
       API_INTERNAL_URL: http://server:3010/api
     ports:
       - '127.0.0.1:${FRONT_PORT:-3000}:3000'
+    depends_on:
+      server:
+        condition: service_started
+    restart: unless-stopped
+
+  site:
+    # the project website next to this instance (profile `site`, issue #277):
+    # the documentation and the API reference are static; the playground and
+    # the word pages talk to the public API of `server`
+    profiles: [site]
+    image: ghcr.io/fristail27/vocab-bloom-hub-site:${VBH_TAG:-main}
+    env_file: ${ENV_FILE:-.env}
+    environment:
+      NODE_ENV: production
+      PORT: 3020
+      API_INTERNAL_URL: http://server:3010/api
+    ports:
+      - '127.0.0.1:${SITE_PORT:-3020}:3020'
     depends_on:
       server:
         condition: service_started

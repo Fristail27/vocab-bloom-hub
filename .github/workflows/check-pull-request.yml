@@ -45,6 +45,8 @@ jobs:
 
       - name: Typecheck frontend
         run: yarn workspace frontend tsc --noEmit
+      - name: Typecheck site
+        run: yarn workspace site tsc --noEmit
 
       - name: Typecheck server
         run: yarn workspace server tsc --noEmit
@@ -217,9 +219,10 @@ jobs:
     timeout-minutes: 30
 
     # The Dockerfiles and docker-compose.yml (issue #316) are exercised the way
-    # an operator uses them: build both images, `docker compose up`, wait for
-    # the readiness probe and the login page, sign in over plain http
-    # (the cookie must not be `secure` there), stop gracefully
+    # an operator uses them: build the three images, `docker compose up` with
+    # the site profile, wait for the readiness probe and the login page, sign
+    # in over plain http (the cookie must not be `secure` there), check the
+    # website reaches the API, stop gracefully
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -234,6 +237,8 @@ jobs:
           # the full dictionary from HuggingFace takes minutes and a network;
           # the automatic import is covered by the server e2e suite instead
           echo 'DICTIONARY_AUTO_IMPORT=false' >> .env
+          # the website too (profile `site`), so its image and its wiring are checked
+          sed -i 's/^COMPOSE_PROFILES=.*/COMPOSE_PROFILES=db,site/' .env
 
       # the build override: the images of this checkout, not the published ones
       - name: Build images and start

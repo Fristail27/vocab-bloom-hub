@@ -15,6 +15,7 @@ COPY package.json yarn.lock .yarnrc.yml ./
 COPY apps/server/package.json apps/server/
 COPY apps/frontend/package.json apps/frontend/
 COPY apps/e2e/package.json apps/e2e/
+COPY apps/site/package.json apps/site/
 COPY packages/npm-sdk/package.json packages/npm-sdk/
 RUN yarn install --immutable
 
