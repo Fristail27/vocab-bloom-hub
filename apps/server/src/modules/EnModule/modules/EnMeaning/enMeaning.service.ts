@@ -1,4 +1,7 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Inject, Optional, BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { AuditActionE, AuditEntityTypeE } from '../../../../../types';
+import { AuditService } from '../../../AuditModule/audit.service';
+import { diffSnapshots, snapshotScalars } from '../../../AuditModule/audit-diff';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { AddMeaningResT, DeleteMeaningResT, EditMeaningResT } from '../../../../../types';
@@ -37,6 +40,11 @@ const assertNoSynonymAntonymConflict = (
 @Injectable()
 export class EnMeaningService {
   private readonly logger = new Logger(EnMeaningService.name);
+  // the audit journal records every admin mutation (issue #334); optional so
+  // test modules that boot without AuditModule still resolve
+  @Optional()
+  @Inject(AuditService)
+  private readonly auditService?: AuditService;
 
   constructor(
     @InjectRepository(EnWord)
@@ -121,6 +129,15 @@ export class EnMeaningService {
     }
 
     this.logger.log(`Meaning added to word id=${word_id}, id=${res.id}`);
+    // inside addWord's transaction the word's own create row is enough
+    if (!manager) {
+      await this.auditService?.record({
+        action: AuditActionE.create,
+        entityType: AuditEntityTypeE.meaning,
+        entityId: res.id,
+        headword: word.word.word,
+      });
+    }
 
     return { success: true, id: res.id };
   }
@@ -135,6 +152,7 @@ export class EnMeaningService {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);
     }
 
+    const before = snapshotScalars(meaning);
     if (body.title && body.title !== meaning.title) meaning.title = body.title;
     if (body.definition && body.definition !== meaning.definition) meaning.definition = body.definition;
     if (body.sort_order && body.sort_order !== meaning.sort_order) meaning.sort_order = body.sort_order;
@@ -162,13 +180,31 @@ export class EnMeaningService {
 
     await this.enMeaningsRep.save(meaning);
     this.logger.log(`Meaning updated, id=${body.id}`);
+    await this.auditService?.record({
+      action: AuditActionE.update,
+      entityType: AuditEntityTypeE.meaning,
+      entityId: body.id,
+      headword: meaning.word.word.word,
+      diff: diffSnapshots(before, snapshotScalars(meaning)),
+    });
     return { success: true };
   }
 
   async deleteMeaning(id: number): Promise<DeleteMeaningResT> {
+    // loaded first only for the journal: the headword survives the delete
+    const meaning = await this.enMeaningsRep.findOne({
+      where: { id },
+      relations: { word: { word: true } },
+    });
     await this.enMeaningsRep.delete({ id });
 
     this.logger.log(`Meaning deleted, id=${id}`);
+    await this.auditService?.record({
+      action: AuditActionE.delete,
+      entityType: AuditEntityTypeE.meaning,
+      entityId: id,
+      headword: meaning?.word.word.word ?? null,
+    });
 
     return { success: true };
   }
