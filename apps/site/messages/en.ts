@@ -139,6 +139,7 @@ export default {
     page_title: '{word} — meanings, forms, translations',
     page_description: 'The dictionary entry for "{word}".',
     entries: '{count, plural, one {# entry} other {# entries}}',
+    pronounce: 'Pronounce {word}',
     synonyms: 'Synonyms',
     antonyms: 'Antonyms',
     base_form: 'Base form',

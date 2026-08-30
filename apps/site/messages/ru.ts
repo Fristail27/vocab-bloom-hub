@@ -139,6 +139,7 @@ export default {
     page_title: '{word} — значения, формы, переводы',
     page_description: 'Словарная статья «{word}».',
     entries: '{count, plural, one {# статья} few {# статьи} other {# статей}}',
+    pronounce: 'Произнести {word}',
     synonyms: 'Синонимы',
     antonyms: 'Антонимы',
     base_form: 'Базовая форма',
