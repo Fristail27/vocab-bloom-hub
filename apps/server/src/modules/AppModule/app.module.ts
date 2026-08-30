@@ -1,5 +1,6 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { LoggerModule } from 'nestjs-pino';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
 import configuration from '../../../configuration';
@@ -15,9 +16,13 @@ import { MetricsModule } from '../MetricsModule/metrics.module';
 import { MetricsService } from '../MetricsModule/metrics.service';
 import { httpMetricsMiddleware, metricsEndpoint } from '../MetricsModule/metrics.middleware';
 import { getMetricsPath, isMetricsEnabled } from '../MetricsModule/metrics.config';
+import { getLoggerParams } from '../../core/logging/logger';
 
 @Module({
   imports: [
+    // pino behind every Logger and one line per request (issue #280); the
+    // factory reads LOG_LEVEL / LOG_FORMAT once the environment is loaded
+    LoggerModule.forRootAsync({ useFactory: getLoggerParams }),
     AuthModule,
     EnModule,
     SettingsModule,

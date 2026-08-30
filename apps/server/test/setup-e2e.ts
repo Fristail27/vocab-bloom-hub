@@ -11,3 +11,8 @@ process.env.DATABASE_URL = 'sqlite::memory:';
 // close and surfaces as "Parse Error: Expected HTTP/" or ECONNRESET, about
 // once in ten full runs. One connection per request removes the race.
 http.globalAgent = new http.Agent({ keepAlive: false });
+
+// Every request writes one log line since issue #280; the suites make
+// thousands, so the shared default is the warnings only — a suite that
+// asserts on the log passes its own level (logging.e2e-spec.ts)
+process.env.LOG_LEVEL ??= 'warn';

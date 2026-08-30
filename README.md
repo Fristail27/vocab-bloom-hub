@@ -205,6 +205,7 @@ A single `.env` at the repository root is shared by both apps. The most importan
 | `NEXT_PUBLIC_BASE_API_URL` | no (`/api`)   | API base URL used by the browser; inlined at build time                        |
 | `CORS_ORIGINS`             | no            | Comma-separated allowed origins                                                |
 | `LOG_LEVEL`                | no            | `verbose` / `debug` / `log` / `warn` / `error` / `fatal`                       |
+| `LOG_FORMAT`               | no            | `json` (one object per line; default in production) or `pretty` (terminal)     |
 | `NODE_ENV`                 | no            | `production` requires Postgres, secures the auth cookie and disables Swagger   |
 
 Full reference with defaults and startup validation rules: [`docs/environment.md`](docs/environment.md).
@@ -235,7 +236,7 @@ Full guide: [`docs/deployment/`](docs/deployment/README.md) → [`reverse-proxy.
 - [`docs/authentication.md`](docs/authentication.md) — how the single-admin login, login proof and JWT cookie work
 - [`docs/migrations.md`](docs/migrations.md) — TypeORM migrations workflow for Postgres, deployment and troubleshooting
 - [`docs/offline-import.md`](docs/offline-import.md) — moving a dictionary between instances without internet access (export → copy → import from file)
-- [`docs/observability.md`](docs/observability.md) — Prometheus metrics: enabling the endpoint, keeping it private, every metric and useful queries
+- [`docs/observability.md`](docs/observability.md) — Prometheus metrics and structured JSON logs: enabling the endpoint, keeping it private, every metric, the log fields and the request id, shipping the logs to a collector
 - [`docs/performance.md`](docs/performance.md) — latency of the hot reads on the full dictionary (Postgres vs SQLite), the indexes behind them, the benchmark and the query-plan guard
 - [`docs/api.md`](docs/api.md) — the public `/api/v1` contract (envelope, errors, rate limit, caching, OpenAPI export, deprecated aliases) and the public-only / admin-only switches
 - [`docs/data.md`](docs/data.md) — where the dictionary data comes from (LLM-generated, `generated_by_model`), known limitations, how to report errors; the terms are in [`DATA_LICENSE.md`](DATA_LICENSE.md)

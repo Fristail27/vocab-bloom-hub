@@ -177,7 +177,10 @@ _Change visibility_) — until then `docker compose up` needs `docker login ghcr
 ## Operating
 
 - **Logs**: `docker compose logs -f server` — the same startup lines as the native start
-  (environment file, database, probes, surfaces).
+  (environment file, database, probes, surfaces), then one JSON line per request (the images run
+  with `NODE_ENV=production`, so `LOG_FORMAT=json`): request id, method, path, status, duration;
+  errors with their stack. Fields, `jq` recipes and shipping them to Loki or another collector:
+  [`../observability.md`](../observability.md#logs).
 - **Probes**: `GET /api/health` and `GET /api/ready` ([`README.md`](./README.md#probes)); the
   compose healthchecks use the liveness one, so a container with an unreachable database stays
   up (restarting it would not help) and reports `503` on `/api/ready` — as does a container
