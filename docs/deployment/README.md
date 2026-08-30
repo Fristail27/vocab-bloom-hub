@@ -62,8 +62,9 @@ absolute path, for a checkout that keeps its secrets under `/etc` or a build tha
 the repository tree ([`../environment.md`](../environment.md)). On start the server logs which
 file it loaded, validates the configuration (exits with code 1 and a message when something
 required is missing or `ENV_FILE` cannot be read), runs pending migrations, and logs the
-resolved database, CORS origins, trust-proxy setting, probe paths and which API surfaces are
-enabled. Both processes are stateless apart from the database and, if used,
+resolved database, CORS origins, trust-proxy setting, probe paths, log format and which API
+surfaces are enabled. The log goes to stdout — JSON lines with `NODE_ENV=production`
+([`../observability.md`](../observability.md#logs)) — and the process manager keeps it. Both processes are stateless apart from the database and, if used,
 `DICTIONARY_IMPORT_DIR`.
 
 CI starts the production build the same way on every pull request — `yarn build`, `yarn start`

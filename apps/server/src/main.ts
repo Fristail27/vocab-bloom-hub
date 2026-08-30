@@ -6,7 +6,8 @@ import { resolveEnvFile } from '../configuration';
 // names the file explicitly (a build deployed outside the repository tree);
 // the default is the repository root, resolved from dist/src
 const envFile = resolveEnvFile(path.resolve(__dirname, '../../../../.env'));
-const dotenvResult = config({ path: envFile.path });
+// quiet: dotenv 17 otherwise prints a tip of its own on stdout, between the JSON log lines
+const dotenvResult = config({ path: envFile.path, quiet: true });
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { SwaggerModule } from '@nestjs/swagger';
@@ -16,7 +17,8 @@ import { AppModule } from './modules/AppModule/app.module';
 import { AllExceptionsFilter } from './core/filters/all-exceptions.filter';
 import { buildAdminDocument } from './openapi/build-openapi';
 import { PublicOpenApiService } from './modules/PublicApiModule/public-openapi.service';
-import { getLogLevels } from './core/logging/get-log-levels';
+import { createNestLogger, getLoggerParams } from './core/logging/logger';
+import { getLogFormat, getLogLevel } from './core/logging/logging.config';
 import { getCorsOrigins, getTrustProxy, isSwaggerEnabled, shouldCompress } from './core/utils/http-hardening';
 import { getMetricsPath, isMetricsEnabled } from './modules/MetricsModule/metrics.config';
 import { HEALTH_PATH, READY_PATH } from './modules/HealthModule/health.controller';
@@ -38,6 +40,17 @@ import {
 } from '../configuration';
 
 async function bootstrap() {
+  // Every line, the bootstrap ones included, goes through pino (issue #280):
+  // JSON for a log collector, pino-pretty in a terminal (LOG_FORMAT)
+  try {
+    Logger.overrideLogger(createNestLogger(getLoggerParams()));
+  } catch (error) {
+    if (error instanceof ConfigurationError) {
+      new Logger('Bootstrap').error(error.message);
+      process.exit(1);
+    }
+    throw error;
+  }
   const logger = new Logger('Bootstrap');
 
   if (dotenvResult.error && envFile.explicit) {
@@ -65,7 +78,7 @@ async function bootstrap() {
     throw error;
   }
 
-  const app = await NestFactory.create(AppModule, { logger: getLogLevels() });
+  const app = await NestFactory.create(AppModule);
   // Behind a reverse proxy the client address comes from X-Forwarded-For;
   // TRUST_PROXY says which hops may set it (docs/deployment/reverse-proxy.md)
   const trustProxy = getTrustProxy();
@@ -126,6 +139,9 @@ async function bootstrap() {
   const isPostgres = checkIsPostgres();
   const { sqlitePath } = parseDatabaseUrl(process.env.DATABASE_URL);
   logger.log(`Server listening on port ${port}`);
+  logger.log(
+    `Logs: ${getLogFormat()} at level ${getLogLevel()} (LOG_FORMAT, LOG_LEVEL); one line per request with its x-request-id, probes and metrics excluded`,
+  );
   logger.log(
     `Probes: liveness at ${HEALTH_PATH}, readiness at ${READY_PATH}; graceful shutdown on SIGTERM, up to ${getShutdownTimeout()} s (SHUTDOWN_TIMEOUT)`,
   );

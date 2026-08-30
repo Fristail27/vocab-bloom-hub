@@ -15,18 +15,21 @@ export class AllExceptionsFilter extends BaseExceptionFilter {
     const res = ctx.getResponse<Response>();
     const requestContext = `${req.method} ${req.url}`;
 
+    // the server's own failures carry the error with its stack (`err` in the
+    // JSON line, issue #280); a client's mistake is one warning line
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
-      const message = JSON.stringify(exception.getResponse());
+      const message = `${status} on ${requestContext}: ${JSON.stringify(exception.getResponse())}`;
       if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
-        this.logger.error(`${status} on ${requestContext}: ${message}`, exception.stack);
+        this.logger.error({ err: exception, statusCode: status }, message);
       } else {
-        this.logger.warn(`${status} on ${requestContext}: ${message}`);
+        this.logger.warn(message);
       }
     } else {
+      const err = exception instanceof Error ? exception : new Error(String(exception));
       this.logger.error(
+        { err, statusCode: HttpStatus.INTERNAL_SERVER_ERROR },
         `Unhandled exception on ${requestContext}`,
-        exception instanceof Error ? exception.stack : String(exception),
       );
     }
 

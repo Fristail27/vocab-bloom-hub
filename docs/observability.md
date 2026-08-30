@@ -1,11 +1,11 @@
-# Observability: Prometheus metrics
+# Observability: metrics and logs
 
 The server exposes a Prometheus exposition at `METRICS_PATH` (default `/metrics`) when
 `METRICS_ENABLED=true` (issue #281). It answers the two questions an operator has about a
 running instance — _can it take my traffic?_ and _why is it slow since yesterday?_ — with
 numbers that logs cannot give cheaply: request rate and latency per route, error rate, which
 search tier answers, how the dictionary grows, what an import is doing, how busy the Postgres
-pool is.
+pool is. The [logs](#logs) below carry the rest: what happened to one request, with what error.
 
 ## Enabling and scraping
 
@@ -103,6 +103,108 @@ sum(rate(vbh_search_tier_hits_total{tier="fuzzy"}[1h])) / sum(rate(vbh_search_ti
 # an import that is stuck: in progress for long with no progress change
 vbh_dictionary_transfer_in_progress == 1 and changes(vbh_dictionary_transfer_progress_percent[10m]) == 0
 ```
+
+## Logs
+
+The server writes its log to **stdout**, one line per event, and nothing else: where the lines
+end up is the process manager's business — `docker compose logs -f server` (Docker keeps them
+in `/var/lib/docker/containers/…/*-json.log`), `journalctl -u vocab-bloom-hub-server` under
+systemd, pm2's files. `LOG_FORMAT` picks their shape (issue #280):
+
+- **`json`** — the default with `NODE_ENV=production`, so in the Docker images: one JSON object
+  per line, what a log collector reads without parsing rules;
+- **`pretty`** — the default otherwise (`yarn dev`, the tests): the same lines rendered for a
+  terminal, `[10:00:01.234] INFO: [Bootstrap] Server listening on port 3010`.
+
+`LOG_LEVEL` is the minimum level, in Nest's names — `verbose` / `debug` / `log` / `warn` /
+`error` / `fatal` (pino's `trace` and `info` are accepted too); `log` by default. Both are read
+at start: change them in `.env` and restart the server (`docker compose up -d server` recreates
+the container with the new environment).
+
+### What the lines look like
+
+```json
+{"level":"info","time":"2026-08-30T10:00:01.234Z","pid":1,"hostname":"a1b2c3d4","context":"Bootstrap","msg":"Server listening on port 3010"}
+{"level":"info","time":"2026-08-30T10:00:05.678Z","pid":1,"hostname":"a1b2c3d4","reqId":"6f1c2b3a-…","req":{"id":"6f1c2b3a-…","method":"GET","url":"/api/v1/words/run","remoteAddress":"203.0.113.7","userAgent":"curl/8.7.1"},"res":{"statusCode":200},"responseTime":12,"msg":"GET /api/v1/words/run 200 12ms"}
+{"level":"error","time":"2026-08-30T10:00:09.012Z","pid":1,"hostname":"a1b2c3d4","reqId":"9c8d7e6f-…","context":"AllExceptionsFilter","statusCode":500,"err":{"type":"QueryFailedError","message":"…","stack":"QueryFailedError: …\n    at …"},"msg":"Unhandled exception on GET /api/en/words"}
+```
+
+| Field                        | What                                                                                                                                                                                                                                                                                                                                                                   |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `level`                      | `trace` / `debug` / `info` / `warn` / `error` / `fatal` — as a word, not pino's number                                                                                                                                                                                                                                                                                 |
+| `time`                       | ISO 8601, UTC                                                                                                                                                                                                                                                                                                                                                          |
+| `context`                    | The class that wrote the line (`Bootstrap`, `EnImportDictionaryService`, `AllExceptionsFilter`, …)                                                                                                                                                                                                                                                                     |
+| `msg`                        | The message                                                                                                                                                                                                                                                                                                                                                            |
+| `req`, `res`, `responseTime` | The **request line**, written once per request when its response has finished: `req.id`, `method`, `url`, `remoteAddress` (the client — from `X-Forwarded-For` behind a proxy with `TRUST_PROXY`), `userAgent`; `res.statusCode`; `responseTime` in milliseconds. At `info`, or `error` when the server answered `5xx`. The probes and the metrics endpoint have none. |
+| `reqId`                      | On **every** line written while a request is being handled — the request line, the exception filter, an import that failed in a request — so one id finds all of them                                                                                                                                                                                                  |
+| `err`                        | `type`, `message`, `stack` on the errors the server raised itself                                                                                                                                                                                                                                                                                                      |
+
+The **request id** is a UUID generated per request and echoed in the `X-Request-Id` response
+header. An `X-Request-Id` that comes in — from the reverse proxy
+(`header_up X-Request-Id {http.request.uuid}` in Caddy, `proxy_set_header X-Request-Id $request_id;`
+in nginx) or from a client — is reused when it is 1–128 characters of `A-Z a-z 0-9 . _ -`, so
+the proxy's access log and the server's lines share one id; anything else is replaced.
+
+Not logged: `GET /api/health`, `GET /api/ready` and `METRICS_PATH` — polled every few seconds.
+Never logged: the `Authorization` header, the `Cookie` header (the admin `bearer`), `Set-Cookie`.
+The request line carries no headers but the user agent, and pino's redaction masks those three
+should a request object ever be logged by hand.
+
+### Reading them
+
+```bash
+docker compose logs -f server                                  # as they come
+docker compose logs --no-log-prefix server | jq -Rc 'fromjson? | select(.level == "error")'
+docker compose logs --no-log-prefix server | jq -Rc 'fromjson? | select(.res.statusCode >= 500) | {time, msg, id: .req.id}'
+docker compose logs --no-log-prefix server | jq -Rc 'fromjson? | select(.reqId == "6f1c2b3a-…")'   # everything of one request
+docker compose logs --no-log-prefix server | jq -Rc 'fromjson? | select(.responseTime > 1000) | .msg'
+journalctl -u vocab-bloom-hub-server -o cat | jq -Rc 'fromjson? | select(.level == "error")'   # native start under systemd
+```
+
+(`jq -R … fromjson?` skips the odd non-JSON line, such as a Node warning on stderr.)
+
+### Shipping them to a collector
+
+Nothing in the images or the compose file: a collector reads what Docker already stores. The
+usual self-hosted setup is [Grafana Loki](https://grafana.com/oss/loki/) with an agent on the
+Docker host — Grafana Alloy discovers the containers through the Docker socket, reads their
+stdout and pushes the lines to Loki:
+
+```alloy
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+}
+
+loki.source.docker "containers" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.containers.output
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+```
+
+In Grafana the JSON fields become filters: `{container="vocab-bloom-hub-server-1"} | json | level="error"`,
+`… | json | res_statusCode >= 500`, `… | json | reqId="6f1c2b3a-…"`. The same lines suit any
+collector that reads container stdout (Promtail, Fluent Bit, Vector, Filebeat, the CloudWatch
+or Datadog agents), and Docker's own
+[logging drivers](https://docs.docker.com/engine/logging/configure/) send them straight from
+the daemon — `awslogs`, `gelf`, `syslog`, `fluentd`, or the Loki plugin — through a compose
+override or `/etc/docker/daemon.json`, again without touching this repository's files. A native
+start under systemd goes through journald, which every collector reads as well.
 
 ## Not here yet
 

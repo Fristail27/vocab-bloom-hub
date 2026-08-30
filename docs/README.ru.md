@@ -205,6 +205,7 @@ DATABASE_URL=postgres://... yarn workspace server migration:run      # такж�
 | `NEXT_PUBLIC_BASE_API_URL` | нет (`/api`) | Базовый URL API для браузера; встраивается на этапе сборки                        |
 | `CORS_ORIGINS`             | нет          | Разрешённые origin через запятую                                                  |
 | `LOG_LEVEL`                | нет          | `verbose` / `debug` / `log` / `warn` / `error` / `fatal`                          |
+| `LOG_FORMAT`               | нет          | `json` (объект на строку; по умолчанию в production) или `pretty` (терминал)      |
 | `NODE_ENV`                 | нет          | `production` требует Postgres, делает auth-cookie `secure` и отключает Swagger    |
 
 Полный справочник со значениями по умолчанию и правилами проверки при старте: [`environment.md`](environment.md).
@@ -235,7 +236,7 @@ DATABASE_URL=postgres://... yarn workspace server migration:run      # такж�
 - [`authentication.md`](authentication.md) — как устроены вход единственного администратора, login proof и JWT-cookie
 - [`migrations.md`](migrations.md) — процесс работы с миграциями TypeORM для Postgres, деплой и решение проблем
 - [`offline-import.md`](offline-import.md) — перенос словаря между инстансами без интернета (экспорт → копирование → импорт из файла)
-- [`observability.md`](observability.md) — метрики Prometheus: включение эндпоинта, как держать его приватным, все метрики и полезные запросы
+- [`observability.md`](observability.md) — метрики Prometheus и структурированные JSON-логи: включение эндпоинта, как держать его приватным, все метрики, поля лога и request id, отправка логов в систему сбора
 - [`performance.md`](performance.md) — задержки горячих чтений на полном словаре (Postgres vs SQLite), индексы за ними, бенчмарк и guard планов запросов
 - [`api.md`](api.md) — контракт публичного `/api/v1` (конверт, ошибки, лимит запросов, кэширование, экспорт OpenAPI, устаревшие алиасы) и переключатели public-only / admin-only
 - [`data.md`](data.md) — откуда берутся данные словаря (сгенерированы LLM, `generated_by_model`), известные ограничения, как сообщать об ошибках; условия использования — в [`DATA_LICENSE.md`](../DATA_LICENSE.md)
