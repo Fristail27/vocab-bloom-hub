@@ -230,6 +230,9 @@ _Change visibility_) — until then `docker compose up` needs `docker login ghcr
   — the same migrations the server would apply on start.
 - **Datasets from a folder**: drop an exported archive into `./imports` on the host; the import
   page lists it ([`../offline-import.md`](../offline-import.md)).
+- **Metrics with dashboards**: `docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d`
+  adds a local Prometheus + Grafana with a provisioned dashboard and turns the server's metrics
+  on ([`../observability.md`](../observability.md#prometheus--grafana-in-docker)).
 
 CI builds the three images from the checkout and runs `docker compose up` against them, with
 the `site` profile, on every pull request (`docker` job in

@@ -1,0 +1,11 @@
+# Scrape config of the docker-compose.observability.yml stack (issue #331):
+# the server inside the compose network, on its fixed container port. If
+# METRICS_PATH is changed in .env, change `metrics_path` here to match.
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: vocab-bloom-hub
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['server:3010']

@@ -29,6 +29,7 @@ docker compose up -d                      # server + frontend from the GHCR imag
                                           # and the website when the profile list has `site` (COMPOSE_PROFILES=db,site);
                                           # an external database: drop the profile, set DATABASE_URL. VBH_TAG picks the image tag
 docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build   # build from this checkout instead (CI does this)
+docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d   # + local Prometheus & Grafana with a provisioned dashboard; enables the server metrics (docs/observability.md)
                                           # images are published by .github/workflows/docker.yml: main → `main` + `sha-…`, tags v* → semver + latest
 
 yarn test           # all tests (root jest config with projects: server + frontend)

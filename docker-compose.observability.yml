@@ -1,0 +1,54 @@
+# Optional Prometheus + Grafana next to an instance (issue #331):
+#   docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+# Prometheus scrapes the server's /metrics over the compose network (the
+# overlay turns METRICS_ENABLED on for the server); Grafana comes with the
+# datasource and the dashboard in observability/ already provisioned —
+# open http://localhost:3001 (GRAFANA_PORT), log in with
+# GRAFANA_ADMIN_USER / GRAFANA_ADMIN_PASSWORD (admin / admin by default).
+# Both UIs are published on localhost only and are never part of the
+# default stack. See docs/observability.md#prometheus--grafana-in-docker.
+
+services:
+  server:
+    environment:
+      METRICS_ENABLED: 'true'
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    command:
+      # the image's own defaults for console templates etc.; the flags are
+      # repeated because `command` replaces them entirely
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}'
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - '127.0.0.1:${PROMETHEUS_PORT:-9090}:9090'
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:12.0.0
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      # no phone-home from a local stack
+      GF_ANALYTICS_REPORTING_ENABLED: 'false'
+      GF_ANALYTICS_CHECK_FOR_UPDATES: 'false'
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      # 3001 by default: 3000 is the admin UI (FRONT_PORT)
+      - '127.0.0.1:${GRAFANA_PORT:-3001}:3000'
+    depends_on:
+      prometheus:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  prometheus-data:
+  grafana-data:

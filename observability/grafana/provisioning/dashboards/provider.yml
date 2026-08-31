@@ -1,0 +1,11 @@
+# Loads every dashboard JSON committed under observability/grafana/dashboards
+# (mounted read-only into the container).
+apiVersion: 1
+
+providers:
+  - name: vocab-bloom-hub
+    type: file
+    folder: ''
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards
