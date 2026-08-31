@@ -29,6 +29,8 @@ server logs a warning when the root `.env` could not be loaded.
 | `ADMIN_USERNAME`           | **yes**           | —                                                               | server         | Admin login. Together with `ADMIN_PASSWORD` it derives the login-proof key and the JWT signing secret (see [authentication.md](./authentication.md)).                                                                                                                                                                                                                                                                                                                                                                                 |
 | `ADMIN_PASSWORD`           | **yes**           | —                                                               | server         | Admin password. The server refuses to start when it is missing or blank.                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `DATABASE_URL`             | **in production** | SQLite fallback (dev only)                                      | server         | Database URL; the scheme selects the driver. `postgres://user:pass@host:5432/db` (or `postgresql://`) runs Postgres with the schema managed by migrations (see [migrations.md](./migrations.md)). `sqlite:<path>` (e.g. `sqlite:./my.sqlite`, `sqlite::memory:`) runs better-sqlite3 with `synchronize` — used by the browser e2e tests for an isolated database. Any other scheme fails startup. When absent in development, TypeORM falls back to `dev.sqlite` at the repo root.                                                    |
+| `DB_POOL_SIZE`             | no                | `10`                                                            | server         | Maximum connections in the Postgres pool (the pg driver's `max`; ignored on SQLite — it has no pool). Raise it when the pool metrics (`vbh_db_pool_connections`, see [observability.md](./observability.md)) show clients waiting; on a managed Postgres keep `replicas × DB_POOL_SIZE` under the instance's connection limit, leaving headroom for migrations and ad-hoc sessions. A whole number, at least 1; anything else fails startup.                                                                                          |
+| `DB_POOL_IDLE_TIMEOUT`     | no                | `10`                                                            | server         | Seconds an idle Postgres pool connection is kept before it is closed (the pg driver's `idleTimeoutMillis`). `0` keeps idle connections open forever. Whole seconds; anything else fails startup.                                                                                                                                                                                                                                                                                                                                      |
 | `SERVER_PORT`              | no                | `3010`                                                          | server         | Port the NestJS API listens on.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `FRONT_PORT`               | no                | `3000`                                                          | frontend       | Port the Next.js dev server listens on (wired through `next.config.ts`).                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `SITE_PORT`                | no                | `3020`                                                          | site           | Port the website listens on (`yarn site:dev` / `yarn start:site`; the host port of the `site` compose service). See [deployment/docker.md](./deployment/docker.md#the-website).                                                                                                                                                                                                                                                                                                                                                       |
@@ -67,11 +69,13 @@ The server validates its configuration before Nest is created (`assertRequiredCo
   `sqlite:<path>`) — guessing the driver would silently switch how the schema is managed
   (auto-DDL vs migrations);
 - `ENV_FILE` names a file that cannot be read, or `SHUTDOWN_TIMEOUT`, `LOG_FORMAT`,
-  `AUDIT_RETENTION_DAYS`, `PUBLIC_API_RATE_LIMIT`, `PUBLIC_API_CACHE_MAX_AGE` hold values that
-  do not parse.
+  `AUDIT_RETENTION_DAYS`, `PUBLIC_API_RATE_LIMIT`, `PUBLIC_API_CACHE_MAX_AGE`, `DB_POOL_SIZE`,
+  `DB_POOL_IDLE_TIMEOUT` hold values that do not parse.
 
 The resolved database driver is logged at startup:
-`Database: Postgres (DATABASE_URL)` or `better-sqlite3 (<path>)`.
+`Database: Postgres (DATABASE_URL)` or `better-sqlite3 (<path>)`; on Postgres the next line
+reports the resolved pool settings (`Database pool: up to N connections …`). Changing the pool
+variables requires a server restart — they are read once, when the pool is created.
 
 ## Database driver locking
 
@@ -98,6 +102,10 @@ NEXT_PUBLIC_BASE_API_URL=http://localhost:3010/api
 CORS_ORIGINS=http://localhost:3000
 # Behind a reverse proxy only: how many proxy hops set X-Forwarded-For (docs/deployment/reverse-proxy.md)
 # TRUST_PROXY=1
+# Postgres pool: max connections and idle timeout in seconds (defaults shown;
+# keep replicas × DB_POOL_SIZE under a managed instance's connection limit)
+# DB_POOL_SIZE=10
+# DB_POOL_IDLE_TIMEOUT=10
 # Graceful stop budget in seconds after SIGTERM (docs/deployment/README.md)
 # SHUTDOWN_TIMEOUT=30
 # Log lines: json (one object per line, the production default) or pretty; minimum level (docs/observability.md)

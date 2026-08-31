@@ -42,6 +42,35 @@ describe('buildTypeOrmOptions (issue #181)', () => {
       expect(options.migrations).not.toHaveLength(0);
     });
 
+    it('applies the pg driver pool defaults (issue #333)', () => {
+      process.env.DATABASE_URL = 'postgres://db';
+      const { buildTypeOrmOptions } = loadFreshOptions();
+
+      const options = buildTypeOrmOptions() as { extra?: { max: number; idleTimeoutMillis: number } };
+
+      expect(options.extra).toEqual({ max: 10, idleTimeoutMillis: 10_000 });
+    });
+
+    it('sizes the pool from DB_POOL_SIZE / DB_POOL_IDLE_TIMEOUT (issue #333)', () => {
+      process.env.DATABASE_URL = 'postgres://db';
+      const prevSize = process.env.DB_POOL_SIZE;
+      const prevIdle = process.env.DB_POOL_IDLE_TIMEOUT;
+      process.env.DB_POOL_SIZE = '25';
+      process.env.DB_POOL_IDLE_TIMEOUT = '0';
+      try {
+        const { buildTypeOrmOptions } = loadFreshOptions();
+
+        const options = buildTypeOrmOptions() as { extra?: { max: number; idleTimeoutMillis: number } };
+
+        expect(options.extra).toEqual({ max: 25, idleTimeoutMillis: 0 });
+      } finally {
+        if (prevSize === undefined) delete process.env.DB_POOL_SIZE;
+        else process.env.DB_POOL_SIZE = prevSize;
+        if (prevIdle === undefined) delete process.env.DB_POOL_IDLE_TIMEOUT;
+        else process.env.DB_POOL_IDLE_TIMEOUT = prevIdle;
+      }
+    });
+
     it('stays on migrations even in development mode', () => {
       process.env.DATABASE_URL = 'postgres://db';
       const prevNodeEnv = process.env.NODE_ENV;
@@ -69,6 +98,8 @@ describe('buildTypeOrmOptions (issue #181)', () => {
       expect(options.synchronize).toBe(true);
       expect(options.migrationsRun).toBeUndefined();
       expect(options.migrations).toBeUndefined();
+      // better-sqlite3 has no pool; the DB_POOL_* knobs are Postgres-only
+      expect((options as { extra?: unknown }).extra).toBeUndefined();
     });
 
     it('points at dev.sqlite in the repo root', () => {
