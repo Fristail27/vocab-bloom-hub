@@ -26,9 +26,11 @@ import {
   EnPartOfSpeechE,
   EnWordFormsE,
   EnWordT,
+  ResetEntryUserModifiedResT,
 } from '../../../types';
 import { ErrorCodes } from '../../../core/constants/error_codes';
 import { prepareWordFromDB } from './utils/prepareWordFromDB';
+import { markEntryUserModified, markEntryUserModifiedByRow } from './utils/markEntryUserModified';
 import { FULL_WORD_RELATIONS, RELATION_LOAD_STRATEGY } from './utils/wordRelations';
 import { AddWordReqDTO, AddWordReqFormDTO } from './dto/AddWordReq.dto';
 import { AddWordFormReqDTO } from './dto/AddWordFormReq.dto';
@@ -196,6 +198,8 @@ export class EnService {
         }
       }
 
+      // an admin-created word is the admin's own content from the start
+      await markEntryUserModified(em, body.word);
       this.logger.log(`Word "${body.word}" (${body.part_of_speech}) created, id=${baseWord.id}`);
       return baseWord;
     });
@@ -214,12 +218,15 @@ export class EnService {
   async deleteWord(id: number): Promise<DeleteResT> {
     const word = await this.enWordsRep.findOne({
       where: { id },
-      relations: { word: true, forms: { word: true } },
+      relations: { word: true, forms: { word: true }, base_form: { word: true } },
     });
     if (!word) {
       this.logger.warn(`Delete requested for missing word, id=${id}`);
       return { success: false };
     }
+    // deleting a form row is an edit of its base word's entry; the flag is a
+    // no-op when the delete removes the entry itself (issue #328)
+    const flaggedEntry = word.base_form?.word.word ?? word.word.word;
     const entryWords = new Set<string>(word.forms.map((f) => f.word.word));
     entryWords.add(word.word.word);
 
@@ -241,6 +248,7 @@ export class EnService {
           await em.getRepository(EnEntry).delete({ word: entryStr });
         }
       }
+      await markEntryUserModified(em, flaggedEntry);
     });
     this.logger.log(`Word "${word.word.word}" deleted, id=${id}`);
     await this.auditService?.record({
@@ -317,6 +325,7 @@ export class EnService {
     if (pattern && pattern.join() !== word.pattern?.join()) word.pattern = pattern;
     word.version = CustomVersionDictionaryOfWord;
     await this.enWordsRep.save(word);
+    await markEntryUserModifiedByRow(this.enWordsRep.manager, id);
     this.logger.log(`Word common info updated, id=${id}`);
     // the version stamp changes on every edit and would drown the real diff
     const after = snapshotScalars(word);
@@ -346,6 +355,7 @@ export class EnService {
     }
     word.base_phrasal = phrasalBase;
     await this.enWordsRep.save(word);
+    await markEntryUserModifiedByRow(this.enWordsRep.manager, body.id);
     this.logger.log(`Phrasal base of word id=${body.id} set to id=${body.phrasal_base_id}`);
     await this.auditService?.record({
       action: AuditActionE.update,
@@ -353,6 +363,30 @@ export class EnService {
       entityId: body.id,
       diff: { phrasal_base_id: { before: null, after: body.phrasal_base_id } },
     });
+    return { success: true };
+  }
+
+  /**
+   * Clears the user-modified flag (issue #328). The entry becomes eligible
+   * for replacement again on the next dictionary update; nothing is restored
+   * immediately — the admin's content stays until an update runs.
+   */
+  async resetEntryUserModified(word: string): Promise<ResetEntryUserModifiedResT> {
+    const entryRep = this.dataSource.getRepository(EnEntry);
+    const entry = await entryRep.findOne({ where: { word } });
+    if (!entry) {
+      throw new NotFoundException(ErrorCodes.word_doesnt_found);
+    }
+    if (entry.user_modified) {
+      await entryRep.update({ word }, { user_modified: false });
+      await this.auditService?.record({
+        action: AuditActionE.update,
+        entityType: AuditEntityTypeE.word,
+        headword: word,
+        diff: { user_modified: { before: true, after: false } },
+      });
+      this.logger.log(`User-modified flag cleared for entry "${word}"`);
+    }
     return { success: true };
   }
 
@@ -390,7 +424,7 @@ export class EnService {
     }
     const res = await this.dataSource.transaction(async (em) => {
       const entry = await this.getOrAddEntry(em, body.word, EnEntryTypesE.word);
-      return em.getRepository(EnWord).save({
+      const saved = await em.getRepository(EnWord).save({
         word: entry,
         form_of_word: body.form_of_word,
         area_variant: body.area_variant,
@@ -398,6 +432,9 @@ export class EnService {
         part_of_speech: baseWord.part_of_speech,
         transcription: body.transcription,
       });
+      // a new form is an edit of its base word's entry (issue #328)
+      await markEntryUserModifiedByRow(em, body.base_word_id);
+      return saved;
     });
 
     this.logger.log(`Word form "${body.word}" added to word id=${body.base_word_id}, id=${res.id}`);
@@ -448,6 +485,7 @@ export class EnService {
       }
 
       await wordsRep.save(word);
+      await markEntryUserModifiedByRow(em, body.id);
     });
 
     this.logger.log(`Word form updated, id=${body.id}`);

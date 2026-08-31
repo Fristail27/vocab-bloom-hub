@@ -7,6 +7,17 @@
     width: max-content;
   }
 
+  .actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .hfTab {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
   .progress {
     // Фиксированная ширина под "100.00%" + tabular-nums, чтобы полоса
     // не дёргалась от смены ширины цифр.

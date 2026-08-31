@@ -14,6 +14,7 @@ import {
 import { ErrorCodes } from '../../../../../core/constants/error_codes';
 import { EnMeaningTranslation } from '../../entities/en_meaning_translation.entity';
 import { EnMeaning } from '../../entities/en_meaning.entity';
+import { markEntryUserModified } from '../../utils/markEntryUserModified';
 
 @Injectable()
 export class EnMeaningTranslationService {
@@ -48,6 +49,7 @@ export class EnMeaningTranslationService {
     }
 
     const res = await em.getRepository(EnMeaningTranslation).save({ meaning, ...newMeaning });
+    await markEntryUserModified(em, meaning.word.word.word);
     this.logger.log(`Meaning translation added to meaning id=${meaning_id}, id=${res.id}`);
     // inside addWord's / addMeaning's transaction the parent row is enough
     if (!manager) {
@@ -80,6 +82,7 @@ export class EnMeaningTranslationService {
       meaningTr.variants_of_words = body.variant_of_words;
 
     await this.enMeaningTranslationRep.save(meaningTr);
+    await markEntryUserModified(this.enMeaningTranslationRep.manager, meaningTr.meaning.word.word.word);
     this.logger.log(`Meaning translation updated, id=${body.id}`);
     await this.auditService?.record({
       action: AuditActionE.update,
@@ -98,6 +101,9 @@ export class EnMeaningTranslationService {
       relations: { meaning: { word: { word: true } } },
     });
     await this.enMeaningTranslationRep.delete({ id });
+    if (meaningTr) {
+      await markEntryUserModified(this.enMeaningTranslationRep.manager, meaningTr.meaning.word.word.word);
+    }
 
     this.logger.log(`Meaning translation deleted, id=${id}`);
     await this.auditService?.record({

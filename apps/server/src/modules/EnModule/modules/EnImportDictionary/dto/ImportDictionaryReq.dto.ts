@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsEnum,
   IsNotEmpty,
   IsOptional,
@@ -34,4 +35,13 @@ export class ImportDictionaryReq {
   @ValidateNested()
   @Type(() => ImportDictionarySourceDTO)
   source?: ImportDictionarySourceDTO | undefined;
+
+  // Update mode (issue #328): entries already in the dictionary are replaced
+  // with the dataset content — except entries the admin edited
+  // (user_modified), which are kept. Off, the import only adds what is
+  // missing (the historical behavior).
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  update?: boolean | undefined;
 }

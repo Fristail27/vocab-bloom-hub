@@ -274,6 +274,7 @@ export interface components {
       base_phrasal?: string;
       base_form?: Record<string, never>;
       similarity?: number;
+      user_modified?: boolean;
     };
     /** @enum {string} */
     WordLevelE: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
@@ -361,6 +362,7 @@ export interface components {
       base_phrasal?: string;
       base_form?: Record<string, never>;
       similarity?: number;
+      user_modified?: boolean;
       id: number;
       generated?: boolean;
       generated_by_model?: string | null;

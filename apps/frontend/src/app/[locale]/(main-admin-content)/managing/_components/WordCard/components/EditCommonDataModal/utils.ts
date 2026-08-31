@@ -15,6 +15,10 @@ export const getDefaultValue = (
     meanings: _meanings,
     short_translations: _short_translations,
     phrasal_variants: _phrasal_variants,
+    // read-only marks, not form fields: the edit endpoint whitelists its
+    // request body and would reject them (issue #328)
+    user_modified: _user_modified,
+    similarity: _similarity,
     ...common
   } = word;
 

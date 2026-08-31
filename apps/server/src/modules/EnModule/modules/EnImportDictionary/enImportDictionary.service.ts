@@ -85,6 +85,18 @@ import {
 } from './sources';
 
 type PendingWordLinksT = Record<WordLinkKindT, PendingWordLinkT[]>;
+
+/**
+ * Entry-level decisions of one update-mode import (issue #328), shared by
+ * every chunk of every file: an entry is replaced at most once per run (a
+ * later chunk with another part of speech must not wipe what an earlier
+ * chunk just wrote), and the sets are the update summary at the end.
+ */
+type UpdateModeContextT = {
+  replaced: Set<string>;
+  added: Set<string>;
+  kept: Set<string>;
+};
 const LINK_LABELS: Record<WordLinkKindT, string> = { synonyms: 'Synonym', antonyms: 'Antonym' };
 const LINK_STAGES: Record<WordLinkKindT, EnDictionaryImportPhasesE> = {
   synonyms: EnDictionaryImportPhasesE.linking_synonyms,
@@ -278,10 +290,22 @@ export class EnImportDictionaryService implements OnModuleDestroy {
    * skipping, base row + forms + meanings + translations — at a cost of a
    * handful of queries per chunk instead of ~26 per line.
    */
-  private async bulkSaveWords(lines: EnWordT[], pendingLinks?: PendingWordLinksT): Promise<void> {
+  private async bulkSaveWords(
+    lines: EnWordT[],
+    pendingLinks?: PendingWordLinksT,
+    updateCtx?: UpdateModeContextT,
+  ): Promise<void> {
     const { chunked, wordKey, entryTypeOf } = EnImportDictionaryService;
 
     await this.enWordsRep.manager.transaction(async (em) => {
+      // 0. update mode (issue #328): entries the admin edited are kept, the
+      // other existing entries have their content replaced by this dataset —
+      // each at most once per run
+      if (updateCtx) {
+        lines = await this.applyUpdateMode(em, lines, updateCtx);
+        if (lines.length === 0) return;
+      }
+
       // 1. every entry spelling this chunk needs (base words + their forms)
       const entryTypes = new Map<string, EnEntryTypesE>();
       for (const line of lines) {
@@ -408,6 +432,91 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         await em.getRepository(EnShortTranslation).insert(batch);
       }
     });
+  }
+
+  /**
+   * The entry-level pass of an update-mode chunk (issue #328): drops the
+   * lines of entries the admin edited (kept), deletes the current content of
+   * the other existing entries so the dataset lines re-create it (replaced),
+   * and records entries new to the dictionary (added). Entries this run has
+   * already replaced or added are left alone — their content IS the new
+   * dataset content.
+   */
+  private async applyUpdateMode(
+    em: EntityManager,
+    lines: EnWordT[],
+    updateCtx: UpdateModeContextT,
+  ): Promise<EnWordT[]> {
+    const { chunked } = EnImportDictionaryService;
+
+    const headwords = [...new Set(lines.map((l) => l.word))];
+    const existing = new Set<string>();
+    const flagged = new Set<string>();
+    for (const batch of chunked(headwords, SQL_PARAMS_CHUNK)) {
+      const rows = await em.getRepository(EnEntry).find({ where: { word: In(batch) } });
+      for (const row of rows) {
+        existing.add(row.word);
+        if (row.user_modified) flagged.add(row.word);
+      }
+    }
+
+    flagged.forEach((w) => updateCtx.kept.add(w));
+    const kept = lines.filter((l) => !flagged.has(l.word));
+
+    const toReplace = [...new Set(kept.map((l) => l.word))].filter(
+      (w) => existing.has(w) && !updateCtx.replaced.has(w) && !updateCtx.added.has(w),
+    );
+    await this.deleteEntryContent(em, toReplace);
+    toReplace.forEach((w) => updateCtx.replaced.add(w));
+    for (const line of kept) {
+      if (!existing.has(line.word)) updateCtx.added.add(line.word);
+    }
+    return kept;
+  }
+
+  /**
+   * Deletes the base word rows of the given entries together with their form
+   * rows; meanings, translations and outgoing synonym / antonym junction
+   * rows die by FK cascade. The entry rows themselves stay, so links other
+   * entries hold TO these words survive the replacement.
+   */
+  private async deleteEntryContent(em: EntityManager, headwords: string[]): Promise<void> {
+    const { chunked } = EnImportDictionaryService;
+    if (headwords.length === 0) return;
+
+    // base rows only: a row of this entry that is a form of another base
+    // word (e.g. "left" as the past of "leave") belongs to that word's
+    // content and is replaced with it, not here
+    const baseIds: number[] = [];
+    for (const batch of chunked(headwords, SQL_PARAMS_CHUNK)) {
+      const rows = await em
+        .getRepository(EnWord)
+        .createQueryBuilder('w')
+        .innerJoin('w.word', 'entry')
+        .select('w.id', 'id')
+        .where('entry.word IN (:...batch)', { batch })
+        .andWhere('w.base_form IS NULL')
+        .getRawMany<{ id: number }>();
+      rows.forEach((r) => baseIds.push(r.id));
+    }
+    if (baseIds.length === 0) return;
+
+    // the forms of those base rows live under their own entries and would
+    // survive the base delete as orphans (base_form is ON DELETE SET NULL)
+    const formIds: number[] = [];
+    for (const batch of chunked(baseIds, SQL_PARAMS_CHUNK)) {
+      const rows = await em
+        .getRepository(EnWord)
+        .createQueryBuilder('w')
+        .select('w.id', 'id')
+        .where('w.base_form IN (:...batch)', { batch })
+        .getRawMany<{ id: number }>();
+      rows.forEach((r) => formIds.push(r.id));
+    }
+
+    for (const batch of chunked([...formIds, ...baseIds], SQL_PARAMS_CHUNK)) {
+      await em.getRepository(EnWord).delete(batch);
+    }
   }
 
   // Links phrasal variants to their base verbs with one lookup per chunk
@@ -584,6 +693,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     allLength: number,
     plusCount: () => number,
     pendingLinks: PendingWordLinksT,
+    updateCtx?: UpdateModeContextT,
   ): Promise<void> {
     await this.streamJsonlImport<DataSetWordT>(
       source,
@@ -593,7 +703,11 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       allLength,
       plusCount,
       async (lines) => {
-        await this.bulkSaveWords(lines.map(mapWordFromSetToDB) as unknown as EnWordT[], pendingLinks);
+        await this.bulkSaveWords(
+          lines.map(mapWordFromSetToDB) as unknown as EnWordT[],
+          pendingLinks,
+          updateCtx,
+        );
       },
     );
   }
@@ -604,6 +718,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     allLength: number,
     plusCount: () => number,
     pendingLinks: PendingWordLinksT,
+    updateCtx?: UpdateModeContextT,
   ): Promise<void> {
     await this.streamJsonlImport<DataSetGrammarPatternT>(
       source,
@@ -613,7 +728,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       allLength,
       plusCount,
       async (lines) => {
-        await this.bulkSaveWords(lines.map(mapGrammarPatternFromSetToDB), pendingLinks);
+        await this.bulkSaveWords(lines.map(mapGrammarPatternFromSetToDB), pendingLinks, updateCtx);
       },
     );
   }
@@ -624,6 +739,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     allLength: number,
     plusCount: () => number,
     pendingLinks: PendingWordLinksT,
+    updateCtx?: UpdateModeContextT,
   ): Promise<void> {
     await this.streamJsonlImport<DataSetPhraseT>(
       source,
@@ -633,7 +749,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       allLength,
       plusCount,
       async (lines) => {
-        await this.bulkSaveWords(lines.map(mapPhraseFromSetToDB), pendingLinks);
+        await this.bulkSaveWords(lines.map(mapPhraseFromSetToDB), pendingLinks, updateCtx);
       },
     );
   }
@@ -679,8 +795,12 @@ export class EnImportDictionaryService implements OnModuleDestroy {
 
   async importDictionary(body: ImportDictionaryReq, res: Response): Promise<void> {
     const source = await this.openSource(body.source);
-    const label = body.source?.kind === ImportSourceKindE.file ? `file "${body.source.path}"` : 'HuggingFace';
-    await this.importFrom(source, label, new HttpImportProgressSink(res), ImportTriggerE.manual);
+    const sourceLabel =
+      body.source?.kind === ImportSourceKindE.file ? `file "${body.source.path}"` : 'HuggingFace';
+    const label = body.update ? `${sourceLabel} (update)` : sourceLabel;
+    await this.importFrom(source, label, new HttpImportProgressSink(res), ImportTriggerE.manual, {
+      update: body.update === true,
+    });
   }
 
   /**
@@ -716,6 +836,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     label: string,
     progress: ImportProgressSink,
     trigger: ImportTriggerE,
+    options?: { update?: boolean },
   ): Promise<void> {
     this.importStatus?.begin(trigger, label);
     const tracked: ImportProgressSink = {
@@ -726,8 +847,11 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       },
       end: () => progress.end(),
     };
+    const updateCtx: UpdateModeContextT | undefined = options?.update
+      ? { replaced: new Set(), added: new Set(), kept: new Set() }
+      : undefined;
     try {
-      const datasetVersion = await this.runImport(source, label, tracked);
+      const datasetVersion = await this.runImport(source, label, tracked, updateCtx);
       this.importStatus?.end({ dataset_version: datasetVersion });
       await this.auditService?.record({
         trigger: AuditTriggerE.import,
@@ -736,6 +860,13 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         diff: {
           source: { before: null, after: label },
           ...(datasetVersion ? { dataset_version: { before: null, after: datasetVersion } } : {}),
+          ...(updateCtx
+            ? {
+                updated_entries: { before: null, after: updateCtx.replaced.size },
+                added_entries: { before: null, after: updateCtx.added.size },
+                kept_user_modified: { before: null, after: updateCtx.kept.size },
+              }
+            : {}),
         },
       });
     } catch (error) {
@@ -755,6 +886,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     source: DatasetSource,
     label: string,
     progress: ImportProgressSink,
+    updateCtx?: UpdateModeContextT,
   ): Promise<string | undefined> {
     // the manifest is read before the stream opens: a local source has
     // already validated it, HuggingFace may be unreachable
@@ -797,10 +929,10 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       // meaning → synonym / antonym links are collected across every file and
       // written last, once all the entries they can point at exist
       const pendingLinks: PendingWordLinksT = { synonyms: [], antonyms: [] };
-      await this.saveWords(source, progress, allLength, plusCount, pendingLinks);
+      await this.saveWords(source, progress, allLength, plusCount, pendingLinks, updateCtx);
       await this.savePhrasalVerbs(source, progress, allLength, plusCount);
-      await this.saveGrammarPatterns(source, progress, allLength, plusCount, pendingLinks);
-      await this.savePhrases(source, progress, allLength, plusCount, pendingLinks);
+      await this.saveGrammarPatterns(source, progress, allLength, plusCount, pendingLinks, updateCtx);
+      await this.savePhrases(source, progress, allLength, plusCount, pendingLinks, updateCtx);
       await this.linkPendingWords(
         progress,
         pendingLinks,
@@ -835,13 +967,22 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       percent: 100,
       stage: EnDictionaryImportPhasesE.completed,
       ...(datasetVersion && { datasetVersion }),
+      ...(updateCtx && {
+        updated_entries: updateCtx.replaced.size,
+        added_entries: updateCtx.added.size,
+        kept_user_modified: updateCtx.kept.size,
+      }),
     };
     progress.write(finalChunk);
     this.metrics?.transferFinished('import', 'success');
     progress.end();
 
     this.logger.log(
-      `Dictionary import from ${label} completed: ${count} records in ${Date.now() - startedAt}ms`,
+      `Dictionary import from ${label} completed: ${count} records in ${Date.now() - startedAt}ms` +
+        (updateCtx
+          ? ` (update: ${updateCtx.replaced.size} entries replaced, ${updateCtx.added.size} added, ` +
+            `${updateCtx.kept.size} kept as user-modified)`
+          : ''),
     );
     return datasetVersion;
   }

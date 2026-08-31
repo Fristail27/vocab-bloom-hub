@@ -5,6 +5,7 @@ import { AddEntryWordCollateCIndex1788200000000 } from './1788200000000-AddEntry
 import { AddWordFilterIndexes1788300000000 } from './1788300000000-AddWordFilterIndexes';
 import { AddEntryWordTrigramIndex1788400000000 } from './1788400000000-AddEntryWordTrigramIndex';
 import { AddAuditLog1788500000000 } from './1788500000000-AddAuditLog';
+import { AddEntryUserModifiedFlag1788600000000 } from './1788600000000-AddEntryUserModifiedFlag';
 
 // Every migration class must be listed here: both the CLI DataSource and the
 // runtime TypeORM options read this array. An explicit list (instead of a
@@ -17,4 +18,5 @@ export const migrations = [
   AddWordFilterIndexes1788300000000,
   AddEntryWordTrigramIndex1788400000000,
   AddAuditLog1788500000000,
+  AddEntryUserModifiedFlag1788600000000,
 ];

@@ -109,6 +109,9 @@ export default {
     data_license: 'Every export is licensed under',
     data_attribution: 'Attribution:',
     up_to_date: 'You already have the latest dictionary version',
+    update_available: 'A newer dataset version is available',
+    start_update: 'Update the dictionary',
+    update_summary: 'Update finished: {updated} entries updated, {added} added, {kept} kept with your edits',
     auto_import_running: 'The dictionary is being loaded automatically: {stage} {percent}%',
     auto_import_downloading: 'The dictionary is being loaded automatically: downloading the dataset…',
     auto_import_failed:
@@ -273,6 +276,13 @@ export default {
     verb_phrasal_object_pattern: 'Phrasal Verb Object Pattern',
     description: 'Word Description',
     source_model: 'Source Model',
+    user_modified: 'Modified by you',
+    user_modified_reset: 'Return to the official version',
+    user_modified_reset_confirm:
+      'The next dictionary update will replace this entry with the official dataset content. Your edits stay until then.',
+    user_modified_reset_ok: 'Reset',
+    user_modified_reset_cancel: 'Cancel',
+    user_modified_reset_done: 'The entry will be replaced on the next dictionary update',
     pronunciation: 'Pronunciation',
     version: 'version',
     regional_label: 'Regional Label',

@@ -111,6 +111,9 @@ export type EnWordT = Omit<
   // Trigram similarity (0–1) to the search term, present only on the items
   // of a fuzzy search answer (issue #278): the "did you mean" signal
   similarity?: number | undefined;
+  // The instance admin edited this entry (issue #328): a dictionary update
+  // keeps it instead of replacing it with the published dataset
+  user_modified?: boolean | undefined;
 };
 
 // Base search results carry no meanings/translations — use the detailed search

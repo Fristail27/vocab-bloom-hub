@@ -111,6 +111,11 @@ meaning, with `meaning_id`); `?language=ru` keeps one language only.
 
 `GET /api/v1/words/id/{id}` is the same entry by its numeric id (the `id` of any item above).
 
+Word items carry `user_modified` (issue #328): `true` when the instance admin edited the
+entry, so its content is the instance's own rather than the published dataset's — dictionary
+updates keep such entries (see
+[operations.md](./operations.md#dataset-updates-vs-code-updates)).
+
 #### Filtered list and cursor pagination
 
 `GET /api/v1/words` lists entries ordered by `(word, id)` — the headword by its bytes

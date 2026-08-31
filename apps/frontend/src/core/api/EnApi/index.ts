@@ -25,6 +25,7 @@ import {
   EditMeaningTranslationResT,
   EditPhrasalBaseReqT,
   EditPhrasalBaseResT,
+  ResetEntryUserModifiedResT,
   EditShortTranslationReqT,
   EditShortTranslationResT,
   EditWordFormReqT,
@@ -132,6 +133,15 @@ export class EnApi extends AbstractBaseApi {
 
   static async editPhrasalBase(body: EditPhrasalBaseReqT): Promise<EditPhrasalBaseResT> {
     return this.patch<EditPhrasalBaseResT>(`${this.baseURL}/en/phrasal-base`, body);
+  }
+
+  // Clears the entry's user-modified flag (issue #328): the next dictionary
+  // update replaces the entry with the dataset content again
+  static async resetEntryUserModified(word: string): Promise<ResetEntryUserModifiedResT> {
+    return this.patch<ResetEntryUserModifiedResT>(
+      `${this.baseURL}/en/reset-user-modified/${encodeURIComponent(word)}`,
+      {},
+    );
   }
 
   static async getWordById(id: number): Promise<GetWordByIdResT> {

@@ -380,4 +380,98 @@ describe('En word add/edit routes (e2e, issue #87)', () => {
       await request(server()).get(`/api/en/${wordId}`).set(auth).expect(404);
     });
   });
+
+  describe('user-modified flag (issue #328)', () => {
+    let flagWordId: number;
+    let flagFormId: number;
+
+    const getWord = async () => {
+      const res = await request(server()).get(`/api/en/${flagWordId}`).set(auth).expect(200);
+      return res.body as { user_modified: boolean; forms: Array<{ id: number }>; meanings: Array<unknown> };
+    };
+    const resetFlag = (word: string) =>
+      request(server())
+        .patch(`/api/en/reset-user-modified/${encodeURIComponent(word)}`)
+        .set(auth);
+
+    it('marks an admin-created word from the start', async () => {
+      const addRes = await request(server())
+        .post('/api/en/add/word')
+        .set(auth)
+        .send({ ...makeAddWordBody(), word: 'swim', forms: [] })
+        .expect(201);
+      flagWordId = addRes.body.id as number;
+
+      expect((await getWord()).user_modified).toBe(true);
+    });
+
+    it('clears the flag through PATCH /api/en/reset-user-modified/:word', async () => {
+      await resetFlag('swim').expect(200).expect({ success: true });
+      expect((await getWord()).user_modified).toBe(false);
+    });
+
+    it('404s when resetting a missing entry', async () => {
+      await resetFlag('no-such-entry').expect(404);
+    });
+
+    it('flags the entry again on a common-info edit', async () => {
+      await request(server())
+        .patch(`/api/en/common-info/${flagWordId}`)
+        .set(auth)
+        .send({ description: 'to move through water' })
+        .expect(200);
+      expect((await getWord()).user_modified).toBe(true);
+    });
+
+    it('flags the entry on a meaning mutation', async () => {
+      await resetFlag('swim').expect(200);
+      await request(server())
+        .post('/api/en/word/meaning')
+        .set(auth)
+        .send({
+          word_id: flagWordId,
+          title: 'to swim',
+          definition: 'to move through water',
+          is_obsolete: false,
+          sort_order: 2,
+          examples: [],
+          area_variant: EnAreaVariantsE.common,
+          translations: [],
+        })
+        .expect(201);
+      expect((await getWord()).user_modified).toBe(true);
+    });
+
+    it('flags the base entry when a form is added or edited', async () => {
+      await resetFlag('swim').expect(200);
+      const addFormRes = await request(server())
+        .post('/api/en/word-form')
+        .set(auth)
+        .send({
+          word: 'swam',
+          form_of_word: EnWordFormsE.past_simple,
+          area_variant: EnAreaVariantsE.common,
+          transcription: 'swæm',
+          base_word_id: flagWordId,
+        })
+        .expect(201);
+      flagFormId = addFormRes.body.id as number;
+      // the flag lands on the base word's entry, not on the form's own entry
+      expect((await getWord()).user_modified).toBe(true);
+
+      await resetFlag('swim').expect(200);
+      await request(server())
+        .patch('/api/en/word-form')
+        .set(auth)
+        .send({ id: flagFormId, transcription: 'swæm' })
+        .expect(200);
+      expect((await getWord()).user_modified).toBe(true);
+    });
+
+    it('flags the base entry when a form row is deleted', async () => {
+      await resetFlag('swim').expect(200);
+      await request(server()).delete(`/api/en/${flagFormId}`).set(auth).expect(200);
+      expect((await getWord()).user_modified).toBe(true);
+    });
+  });
 });

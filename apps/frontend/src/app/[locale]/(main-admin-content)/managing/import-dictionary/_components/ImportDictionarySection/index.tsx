@@ -34,6 +34,12 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
   const [percents, setPercents] = React.useState<number>(0);
   const [status, setStatus] = React.useState<ImportStatusE>(ImportStatusE.idle);
   const [statusMessage, setStatusMessage] = React.useState<string>('');
+  // summary of an update-mode import (issue #328), from the completed chunk
+  const [updateSummary, setUpdateSummary] = React.useState<{
+    updated: number;
+    added: number;
+    kept: number;
+  } | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = React.useState<number>(0);
   const [installedVersion, setInstalledVersion] = React.useState<string | undefined>(yourVersion);
   const [latestVersion, setLatestVersion] = React.useState<string | undefined>(latestVersionProp);
@@ -52,6 +58,9 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
   const { message } = App.useApp();
 
   const inProgress = status === ImportStatusE.in_progress;
+  // a populated dictionary updates in place (issue #328): entries the admin
+  // edited are kept, the rest is replaced with the new dataset
+  const updateAvailable = !!installedVersion && !!latestVersion && installedVersion !== latestVersion;
   // the server runs one import at a time (issue #268): while the automatic
   // load on first start or an import from another session holds the slot,
   // the start button waits — the banner above says what is running
@@ -101,10 +110,11 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
     [message, tErr],
   );
 
-  const importDictionary = async () => {
+  const importDictionary = async (update = false) => {
     setStatus(ImportStatusE.in_progress);
     setPercents(0);
     setStatusMessage('');
+    setUpdateSummary(null);
 
     let completedSeen = false;
     let seenDatasetVersion: string | undefined;
@@ -121,6 +131,13 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
         completedSeen = true;
         setPercents(100);
         setStatusMessage('');
+        if (c.updated_entries !== undefined) {
+          setUpdateSummary({
+            updated: c.updated_entries,
+            added: c.added_entries ?? 0,
+            kept: c.kept_user_modified ?? 0,
+          });
+        }
       } else if (c.stage === EnDictionaryImportPhasesE.downloading_database) {
         const progressPart = getDownloadProgressStr(c);
         setStatusMessage(`${t(`en_saving_${c.stage}`)} ${progressPart} ${percent.toFixed(2)}%`);
@@ -154,9 +171,12 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
         return EnApi.uploadDictionary({ archive }, {}, handleChunk, onError);
       }
       return EnApi.importDictionary(
-        sourceTab === ImportSourceTabE.archive && serverPath
-          ? { source: { kind: ImportSourceKindE.file, path: serverPath } }
-          : {},
+        {
+          ...(sourceTab === ImportSourceTabE.archive && serverPath
+            ? { source: { kind: ImportSourceKindE.file, path: serverPath } }
+            : {}),
+          ...(update ? { update: true } : {}),
+        },
         handleChunk,
         onError,
       );
@@ -198,9 +218,12 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
             key: ImportSourceTabE.huggingface,
             label: t('source_huggingface'),
             children: (
-              <Text strong>
-                {t('latest_version')}: {latestVersion || '—'}
-              </Text>
+              <div className={styles.hfTab}>
+                <Text strong>
+                  {t('latest_version')}: {latestVersion || '—'}
+                </Text>
+                {updateAvailable && !inProgress && <Text type="warning">{t('update_available')}</Text>}
+              </div>
             ),
           },
           {
@@ -246,15 +269,39 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
       />
       {isUpToDate && !inProgress && <Text type="success">{t('up_to_date')}</Text>}
       {(status === ImportStatusE.idle || status === ImportStatusE.error) && (
-        // an up-to-date dictionary demotes the button but keeps re-import possible
-        <Button
-          type={isUpToDate ? 'default' : 'primary'}
-          onClick={importDictionary}
-          disabled={!canStart || lockedByOther}
-          className={styles.startBtn}
-        >
-          {status === ImportStatusE.error ? t('retry_importing') : t('start_importing')}
-        </Button>
+        <div className={styles.actions}>
+          {/* the one-click update (issue #328): replaces everything except
+              the entries the admin edited; only for the published dataset */}
+          {fromHuggingFace && updateAvailable && (
+            <Button
+              type="primary"
+              onClick={() => importDictionary(true)}
+              disabled={lockedByOther}
+              className={styles.startBtn}
+            >
+              {t('start_update')}
+            </Button>
+          )}
+          {/* an up-to-date dictionary (or an offered update) demotes the
+              add-only button but keeps re-import possible */}
+          <Button
+            type={isUpToDate || (fromHuggingFace && updateAvailable) ? 'default' : 'primary'}
+            onClick={() => importDictionary()}
+            disabled={!canStart || lockedByOther}
+            className={styles.startBtn}
+          >
+            {status === ImportStatusE.error ? t('retry_importing') : t('start_importing')}
+          </Button>
+        </div>
+      )}
+      {updateSummary && status === ImportStatusE.success && (
+        <Text type="success">
+          {t('update_summary', {
+            updated: updateSummary.updated,
+            added: updateSummary.added,
+            kept: updateSummary.kept,
+          })}
+        </Text>
       )}
       {lockedByOther && <Text type="warning">{t('import_locked')}</Text>}
       {inProgress && statusMessage && <Text italic>{statusMessage}</Text>}
