@@ -1,0 +1,12 @@
+# Provisioned into the Grafana of docker-compose.observability.yml. The
+# fixed uid is what the committed dashboard references.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: vbh-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

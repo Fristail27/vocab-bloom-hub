@@ -45,6 +45,56 @@ scrape_configs:
       - targets: ['127.0.0.1:3010']
 ```
 
+## Prometheus + Grafana in Docker
+
+A ready-made local stack ships next to the main compose file (issue #331) — optional, never
+part of the default stack:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+```
+
+That starts, on localhost only:
+
+- **Prometheus** at `http://localhost:9090` (`PROMETHEUS_PORT`), scraping the server's
+  `/metrics` over the compose network every 15 s (`observability/prometheus.yml`; edit it if
+  you change `METRICS_PATH`), keeping `PROMETHEUS_RETENTION` (15 days) of data in a named
+  volume;
+- **Grafana** at `http://localhost:3001` (`GRAFANA_PORT`; 3000 is the admin UI), log in with
+  `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` (`admin` / `admin` unless set in `.env`).
+  The Prometheus datasource and the **Vocab Bloom Hub** dashboard are provisioned from
+  `observability/grafana/` at start — request rate, error rate and p95 latency by route,
+  search tiers, dictionary size, import/export progress, the Postgres pool, CPU / memory /
+  event loop lag. The dashboard is a committed file
+  (`observability/grafana/dashboards/vocab-bloom-hub.json`), versioned with the code.
+
+The overlay also sets `METRICS_ENABLED=true` for the `server` service, so the one command
+above is all that is needed. Stopping is the mirror image — add the same `-f` flags to
+`docker compose down`; the named volumes `prometheus-data` and `grafana-data` keep the metric
+history and Grafana state across restarts.
+
+To watch an instance running elsewhere instead, point the scrape target in
+`observability/prometheus.yml` at that host (over a private network — the endpoint must stay
+off the internet, see above) and start only the two observability services:
+`docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d prometheus grafana`.
+
+**Target DOWN with `connection refused`?** The scrape fails while the server is not listening
+yet — most often the server container cannot reach its database and keeps restarting (check
+`docker compose logs server`). The usual cause in a development checkout: the root `.env` holds
+a development `DATABASE_URL` pointing at `localhost` — inside a container that is the container
+itself ([`deployment/docker.md`](./deployment/docker.md#what-is-in-docker-composeyml)). Run the
+stack against the bundled Postgres without editing `.env`:
+
+```bash
+COMPOSE_PROFILES=db DATABASE_URL= docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+```
+
+(shell variables override the `.env` values: the empty `DATABASE_URL` falls back to the bundled
+database, the profile starts it) — or point the container at the host's database with
+`DATABASE_URL=postgres://…@host.docker.internal:5432/… docker compose …`. A target that is
+`down` only briefly right after `up -d` is normal: the server answers `/metrics` once its
+migrations and startup are done.
+
 ## Metrics
 
 ### Process (prom-client defaults)
@@ -212,6 +262,5 @@ start under systemd goes through journald, which every collector reads as well.
 
 ## Not here yet
 
-A Grafana dashboard and a `docker-compose.observability.yml` (Prometheus + Grafana for local
-use) follow once the Docker images of #265 exist. Traces (OpenTelemetry) are out of scope; the
-metrics can be re-exported through an OTel collector's Prometheus receiver.
+Traces (OpenTelemetry) are out of scope; the metrics can be re-exported through an OTel
+collector's Prometheus receiver.
