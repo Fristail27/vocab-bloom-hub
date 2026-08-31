@@ -87,6 +87,10 @@ The tier counter is the tuning signal for the search (issues #278, #292): a grow
 share means users misspell more than the substring tiers catch, a large `none` share means the
 dictionary lacks what they look for.
 
+A sustained `waiting` count on `vbh_db_pool_connections` means requests queue for a database
+connection: raise `DB_POOL_SIZE` (and mind the connection limit of a managed Postgres — see
+[environment.md](./environment.md)).
+
 ## Useful queries
 
 ```promql

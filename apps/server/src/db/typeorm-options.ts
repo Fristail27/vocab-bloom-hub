@@ -8,6 +8,7 @@ import { EnMeaningTranslation } from '../modules/EnModule/entities/en_meaning_tr
 import { EnShortTranslation } from '../modules/EnModule/entities/en_short_translation.entity';
 import { Settings } from '../modules/SettingsModule/entities/settings.entity';
 import { AuditLog } from '../modules/AuditModule/entities/audit_log.entity';
+import { getDbPoolConfig } from '../core/utils/db-pool';
 import { migrations } from './migrations';
 
 export const DB_ENTITIES = [
@@ -29,10 +30,19 @@ export const buildTypeOrmOptions = (): TypeOrmModuleOptions => {
   };
 
   if (checkIsPostgres()) {
+    const pool = getDbPoolConfig();
     return {
       ...base,
       type: 'postgres',
       url: process.env.DATABASE_URL,
+      // Pool limits for the pg driver (issue #333): DB_POOL_SIZE connections
+      // at most, an idle client closed after DB_POOL_IDLE_TIMEOUT seconds.
+      // Keep replicas × DB_POOL_SIZE under a managed instance's connection
+      // limit (docs/environment.md)
+      extra: {
+        max: pool.max,
+        idleTimeoutMillis: pool.idleTimeoutSeconds * 1000,
+      },
       // Schema changes reach Postgres only through committed migrations;
       // auto-DDL against a real database is destructive (see issue #181)
       synchronize: false,

@@ -23,6 +23,7 @@ import { getCorsOrigins, getTrustProxy, isSwaggerEnabled, shouldCompress } from 
 import { getMetricsPath, isMetricsEnabled } from './modules/MetricsModule/metrics.config';
 import { HEALTH_PATH, READY_PATH } from './modules/HealthModule/health.controller';
 import { getShutdownTimeout } from './core/utils/shutdown';
+import { getDbPoolConfig } from './core/utils/db-pool';
 import { isAutoImportEnabled } from './modules/EnModule/modules/EnImportDictionary/dictionaryBootstrap.service';
 import {
   assertPublicApiConfig,
@@ -70,6 +71,8 @@ async function bootstrap() {
     assertPublicApiConfig();
     assertDatabaseDriverConsistent();
     getShutdownTimeout();
+    // Fails here, before Nest is created, instead of inside buildTypeOrmOptions
+    getDbPoolConfig();
   } catch (error) {
     if (error instanceof ConfigurationError) {
       logger.error(error.message);
@@ -157,6 +160,15 @@ async function bootstrap() {
         : `better-sqlite3 (${sqlitePath ?? 'dev.sqlite fallback'}), synchronize=true`
     }`,
   );
+  if (isPostgres) {
+    const pool = getDbPoolConfig();
+    logger.log(
+      `Database pool: up to ${pool.max} connections (DB_POOL_SIZE), ` +
+        (pool.idleTimeoutSeconds === 0
+          ? 'idle connections kept open (DB_POOL_IDLE_TIMEOUT)'
+          : `idle connections closed after ${pool.idleTimeoutSeconds} s (DB_POOL_IDLE_TIMEOUT)`),
+    );
+  }
   logger.log(`CORS origins: ${corsOrigins.join(', ')}`);
   logger.log(
     trustProxy === false
