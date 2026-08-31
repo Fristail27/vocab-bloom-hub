@@ -1156,6 +1156,9 @@
           },
           "similarity": {
             "type": "number"
+          },
+          "user_modified": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -1383,6 +1386,9 @@
           },
           "similarity": {
             "type": "number"
+          },
+          "user_modified": {
+            "type": "boolean"
           },
           "id": {
             "type": "integer"

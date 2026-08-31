@@ -109,6 +109,10 @@ export default {
     data_license: 'Каждая выгрузка распространяется по лицензии',
     data_attribution: 'Атрибуция:',
     up_to_date: 'У вас уже актуальная версия словаря',
+    update_available: 'Доступна новая версия датасета',
+    start_update: 'Обновить словарь',
+    update_summary:
+      'Обновление завершено: обновлено статей — {updated}, добавлено — {added}, сохранено с вашими правками — {kept}',
     auto_import_running: 'Словарь загружается автоматически: {stage} {percent}%',
     auto_import_downloading: 'Словарь загружается автоматически: скачивание датасета…',
     auto_import_failed:
@@ -275,6 +279,13 @@ export default {
     phrasal_base: 'Основа фразового глагола',
     description: 'Описание слова',
     source_model: 'Модель-источник',
+    user_modified: 'Изменено вами',
+    user_modified_reset: 'Вернуть официальную версию',
+    user_modified_reset_confirm:
+      'При следующем обновлении словаря эта статья будет заменена содержимым официального датасета. До обновления ваши правки сохраняются.',
+    user_modified_reset_ok: 'Сбросить',
+    user_modified_reset_cancel: 'Отмена',
+    user_modified_reset_done: 'Статья будет заменена при следующем обновлении словаря',
     pronunciation: 'Транскрипция',
     version: 'Версия',
     regional_label: 'Региональный вариант',

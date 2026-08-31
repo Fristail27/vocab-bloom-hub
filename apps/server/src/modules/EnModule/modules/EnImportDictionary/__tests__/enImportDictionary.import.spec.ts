@@ -22,9 +22,13 @@ import { ErrorCodes } from '../../../../../../core/constants/error_codes';
 import {
   AvailableTranslationLanguagesE,
   EnEntryTypesE,
+  EnAreaVariantsE,
   EnPartOfSpeechE,
+  EnWordFormsE,
   ImportSourceKindE,
 } from '../../../../../../types';
+import { mapWordFromSetToDB } from '../utils';
+import { DataSetWordT } from '../../../../../../types/dictionaries/en/EnDataSetTypes';
 
 type ProgressChunk = {
   percent: number;
@@ -410,6 +414,159 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
       // no manifest — no version to report or persist
       expect(parsed.every((c) => c.datasetVersion === undefined)).toBe(true);
       expect(mockUpsert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('update mode (issue #328)', () => {
+    const makeMeaning = (title: string, extra: Record<string, unknown> = {}) => ({
+      title,
+      definition: title,
+      sort_order: 1,
+      is_obsolete: false,
+      examples: [],
+      area_variant: '',
+      language_register: '',
+      meaning_level: '',
+      categories: [],
+      translations: [],
+      ...extra,
+    });
+
+    const updateManifest = (version: string) =>
+      JSON.stringify({
+        version,
+        files: {
+          'vocab-bloom-hub-en-words.jsonl': { lines: 3 },
+          'vocab-bloom-hub-en-phrasal-verbs.jsonl': { lines: 0 },
+          'vocab-bloom-hub-en-grammar-patterns.jsonl': { lines: 0 },
+          'vocab-bloom-hub-en-phrases.jsonl': { lines: 0 },
+        },
+      });
+
+    const mockWordsDataset = (version: string, words: unknown[]) => {
+      mockDatasetFiles({
+        'manifest.json': updateManifest(version),
+        'vocab-bloom-hub-en-words.jsonl': toNdjson(words),
+        'vocab-bloom-hub-en-phrasal-verbs.jsonl': '',
+        'vocab-bloom-hub-en-grammar-patterns.jsonl': '',
+        'vocab-bloom-hub-en-phrases.jsonl': '',
+      });
+    };
+
+    const wordRowsOf = (headword: string) =>
+      ds
+        .getRepository(EnWord)
+        .createQueryBuilder('w')
+        .innerJoin('w.word', 'entry')
+        .where('entry.word = :word', { word: headword })
+        .getMany();
+
+    it('replaces existing entries, keeps user-modified ones and reports the summary', async () => {
+      mockWordsDataset('0.5.0', [
+        makeSetWord('give', {
+          description: 'v1',
+          forms: [
+            {
+              word: 'gave',
+              form_of_word: EnWordFormsE.past_simple,
+              transcription: 'v1',
+              area_variant: EnAreaVariantsE.common,
+            },
+          ],
+          meanings: [makeMeaning('to hand over v1')],
+        }),
+        makeSetWord('take', { description: 'v1', meanings: [makeMeaning('to grab', { synonyms: ['give'] })] }),
+      ]);
+      await service.importDictionary({}, new FakeProgressRes() as unknown as ExpressResponse);
+      jest.restoreAllMocks();
+
+      // the admin edits "take": the entry is flagged, its content is theirs now
+      await ds.getRepository(EnEntry).update({ word: 'take' }, { user_modified: true });
+
+      mockWordsDataset('0.6.0', [
+        makeSetWord('give', {
+          description: 'v2',
+          forms: [
+            {
+              word: 'gave',
+              form_of_word: EnWordFormsE.past_simple,
+              transcription: 'v2',
+              area_variant: EnAreaVariantsE.common,
+            },
+          ],
+          meanings: [makeMeaning('to hand over v2')],
+        }),
+        makeSetWord('take', { description: 'v2' }),
+        makeSetWord('run', { description: 'new in v2' }),
+      ]);
+      const res = new FakeProgressRes();
+      await service.importDictionary({ update: true }, res as unknown as ExpressResponse);
+
+      // "give" is replaced with the new dataset content, forms included
+      const give = await wordRowsOf('give');
+      expect(give).toHaveLength(1);
+      expect(give[0].description).toBe('v2');
+      const gaveForms = await wordRowsOf('gave');
+      expect(gaveForms.map((f) => f.transcription)).toEqual(['v2']);
+      const meanings = await ds.getRepository(EnMeaning).find({ relations: { synonyms: true } });
+      const titles = meanings.map((m) => m.title).sort();
+      expect(titles).toContain('to hand over v2');
+      expect(titles).not.toContain('to hand over v1');
+
+      // "take" keeps the admin's content — and its link to the replaced
+      // "give" survives, because the entry row itself is never deleted
+      const take = await wordRowsOf('take');
+      expect(take[0].description).toBe('v1');
+      expect(meanings.find((m) => m.title === 'to grab')?.synonyms.map((e) => e.word)).toEqual(['give']);
+
+      // "run" is new
+      expect(await wordRowsOf('run')).toHaveLength(1);
+
+      const finalChunk = JSON.parse(res.chunks[res.chunks.length - 1]) as ProgressChunk &
+        Record<string, number>;
+      expect(finalChunk.stage).toBe(EnDictionaryImportPhasesE.completed);
+      expect(finalChunk.updated_entries).toBe(1);
+      expect(finalChunk.added_entries).toBe(1);
+      expect(finalChunk.kept_user_modified).toBe(1);
+      expect(mockUpsert).toHaveBeenCalledWith(DATASET_VERSION_SETTINGS_FIELD, '0.6.0');
+    });
+
+    it('replaces an entry at most once per run: a later chunk adds to it instead of wiping it', async () => {
+      mockWordsDataset('0.5.0', [makeSetWord('lead', { description: 'old' })]);
+      await service.importDictionary({}, new FakeProgressRes() as unknown as ExpressResponse);
+      jest.restoreAllMocks();
+
+      // two chunks of one update run carry the same headword with different
+      // parts of speech (in a real dataset they may land 500 lines apart)
+      const ctx = { replaced: new Set<string>(), added: new Set<string>(), kept: new Set<string>() };
+      const svc = service as unknown as {
+        bulkSaveWords(lines: unknown[], links?: unknown, ctx?: unknown): Promise<void>;
+      };
+      // makeSetWord builds the loose JSON shape of a dataset line; the real
+      // pipeline parses it from NDJSON, so the cast mirrors runtime behavior
+      const toDbLines = (lines: unknown[]) => (lines as DataSetWordT[]).map(mapWordFromSetToDB);
+      await svc.bulkSaveWords(toDbLines([makeSetWord('lead', { description: 'verb v2' })]), undefined, ctx);
+      await svc.bulkSaveWords(
+        toDbLines([makeSetWord('lead', { part_of_speech: EnPartOfSpeechE.noun, description: 'noun v2' })]),
+        undefined,
+        ctx,
+      );
+
+      const rows = await wordRowsOf('lead');
+      expect(rows.map((r) => r.description).sort()).toEqual(['noun v2', 'verb v2']);
+      expect([...ctx.replaced]).toEqual(['lead']);
+    });
+
+    it('keeps the historical add-only behavior without the update flag', async () => {
+      mockWordsDataset('0.5.0', [makeSetWord('walk', { description: 'v1' })]);
+      await service.importDictionary({}, new FakeProgressRes() as unknown as ExpressResponse);
+      jest.restoreAllMocks();
+
+      mockWordsDataset('0.6.0', [makeSetWord('walk', { description: 'v2' })]);
+      await service.importDictionary({}, new FakeProgressRes() as unknown as ExpressResponse);
+
+      const rows = await wordRowsOf('walk');
+      expect(rows.map((r) => r.description)).toEqual(['v1']);
     });
   });
 

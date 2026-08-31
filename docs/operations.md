@@ -91,23 +91,42 @@ dataset has its own version (`manifest.json`, stored after import as `en_dataset
 exposed by `GET /api/v1/meta` as `dataset_version`). Upgrading the code never changes the
 dictionary; loading a newer dataset never changes the code.
 
-Loading a newer dataset is the same _Import dictionary_ action as the first load — from
-HuggingFace or from a file ([`offline-import.md`](./offline-import.md)). The import **merges**:
+The import page shows both versions side by side — _Your version_ (`en_dataset_version` from
+the settings) against _Latest version_ (the published `manifest.json`) — and offers two ways to
+load a newer dataset (issue #328):
 
-- entries missing in the instance are added;
-- entries that already exist (same word, part of speech and form) are **skipped**, whatever the
-  dataset says about them.
+- **Update the dictionary** — the one-click update, shown when the versions differ. It runs the
+  import in **update mode** (`POST /api/en/dictionary/import` with `update: true`): every entry
+  already in the dictionary is **replaced** with the new dataset content — except the entries
+  you edited, which are **kept** (see the flag below). Entries missing in the instance are
+  added; entries that disappeared from the dataset are **not** deleted. The completed import
+  reports the split — updated / added / kept with your edits — in the UI, the server log and
+  the _History_ page.
+- **Start importing** — the historical add-only merge: entries missing in the instance are
+  added, entries that already exist (same word, part of speech and form) are **skipped**,
+  whatever the dataset says about them. This is what the first load, uploads and the automatic
+  import on first start (`DICTIONARY_AUTO_IMPORT`) do.
 
-So manual edits made in the admin UI survive a dataset update — and so do entries the newer
-dataset has corrected: corrections to existing entries are **not** applied. Today there is no
-way to update existing entries from a dataset while keeping local edits; the choices are:
+### The user-modified flag
 
-- import the newer dataset and keep the instance's version of every existing entry (default);
-- start from an empty database and import the newer dataset when the instance has no edits
-  worth keeping (or after exporting them — the export is a dataset too, importable into the
-  fresh instance _first_, so that its entries win).
+Every admin mutation of an entry's content — editing the word, its forms, meanings,
+translations or links — flags the whole entry as **modified by you** (`user_modified` on
+`en_entries`; an edit to a form flags its base word's entry, because a base word and its forms
+are replaced as one unit). The flag is what update mode consults: flagged entries keep your
+content, everything else follows the dataset. It is visible:
 
-Automatic loading of the dictionary on first start is tracked in #268.
+- on the word card in the admin UI (the _Modified by you_ tag) and in every word answer of the
+  API (`user_modified`);
+- in the _History_ page — the edit that set it is an audit row like any other.
+
+_Return to the official version_ on the word card (or `PATCH
+/api/en/reset-user-modified/:word`) clears the flag: your content stays until the next update
+replaces the entry with the dataset again. Two caveats:
+
+- deleting an **entire** entry leaves nothing to carry the flag, so the next update re-adds the
+  entry from the dataset; deleting only a part of it (one part of speech, a form, a meaning)
+  flags the entry and survives updates;
+- a word the admin created from scratch is flagged from the start — updates never touch it.
 
 ## Sizing
 

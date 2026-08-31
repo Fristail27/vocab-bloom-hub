@@ -9,6 +9,7 @@ export const prepareWordFromDB = (row: EnWord): EnWordT => {
   return {
     ...other,
     word: row.word.word,
+    user_modified: row.word.user_modified ?? false,
     forms: (row.forms || [])?.map(prepareWordForm),
     meanings: (row.meanings || []).map(prepareMeaningFromDB),
     short_translations: (short_translations || []).map(prepareShortTranslationFromDB),

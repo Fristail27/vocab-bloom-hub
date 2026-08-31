@@ -14,6 +14,7 @@ import {
 import { ErrorCodes } from '../../../../../core/constants/error_codes';
 import { AddShortTranslationReqDTO } from './dto/AddShortTranslationReq.dto';
 import { EditShortTranslationReqDTO } from './dto/EditShortTranslationReq.dto';
+import { markEntryUserModified } from '../../utils/markEntryUserModified';
 
 @Injectable()
 export class EnShortTranslationService {
@@ -52,6 +53,7 @@ export class EnShortTranslationService {
       variants_of_words: body.variant_of_words,
     });
 
+    await markEntryUserModified(em, word.word.word);
     this.logger.log(`Short translation added to word id=${body.word_id}, id=${res.id}`);
     // inside addWord's transaction the word's own create row is enough
     if (!manager) {
@@ -73,6 +75,9 @@ export class EnShortTranslationService {
       relations: { word: { word: true } },
     });
     await this.enShortTranslationRep.delete({ id });
+    if (tr) {
+      await markEntryUserModified(this.enShortTranslationRep.manager, tr.word.word.word);
+    }
     this.logger.log(`Short translation deleted, id=${id}`);
     await this.auditService?.record({
       action: AuditActionE.delete,
@@ -106,6 +111,7 @@ export class EnShortTranslationService {
     }
 
     await this.enShortTranslationRep.save(tr);
+    await markEntryUserModified(this.enShortTranslationRep.manager, tr.word.word.word);
     this.logger.log(`Short translation updated, id=${body.id}`);
     await this.auditService?.record({
       action: AuditActionE.update,

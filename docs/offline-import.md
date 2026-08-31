@@ -104,7 +104,10 @@ the files in that folder.
 ## Notes
 
 - Importing does not wipe the database first: records that already exist (same word, part of
-  speech and form) are skipped, the same way the HuggingFace import behaves.
+  speech and form) are skipped, the same way the HuggingFace import behaves. To replace
+  existing entries with the dataset content (keeping the entries you edited), run the import in
+  update mode — see [operations.md](./operations.md#dataset-updates-vs-code-updates)
+  (issue #328).
 - With Docker Compose, mount the folder into the server container and set the variable to the
   mount point, e.g. `- ./imports:/data/dictionary-imports` and
   `DICTIONARY_IMPORT_DIR=/data/dictionary-imports`.

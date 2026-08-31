@@ -31,6 +31,13 @@ export class EnEntry {
   @Column({ type: 'simple-enum', enum: EnEntryTypesE, default: EnEntryTypesE.word })
   type?: EnEntryTypesE;
 
+  // Set by every admin mutation that touches this entry's content (issue
+  // #328); a dictionary update keeps flagged entries instead of replacing
+  // them with the dataset. Edits to a form row flag the base word's entry —
+  // the unit a dataset update replaces.
+  @Column({ type: 'boolean', default: false })
+  user_modified?: boolean;
+
   @OneToMany(() => EnWord, (entry) => entry.word, { onDelete: 'CASCADE' })
   entries!: EnWord[];
 }

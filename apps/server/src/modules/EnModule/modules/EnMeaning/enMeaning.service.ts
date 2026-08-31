@@ -12,6 +12,7 @@ import { EditMeaningReqDTO } from './dto/EditMeaningReq.dto';
 import { EnWord } from '../../entities/en_word.entity';
 import { EnEntry } from '../../entities/en_entry.entity';
 import { EnMeaningTranslationService } from '../EnMeaningTranslation/enMeaningTranslation.service';
+import { markEntryUserModified } from '../../utils/markEntryUserModified';
 import { normalizeWordLinks, WORD_LINK_KINDS, WordLinkKindT } from '../../utils/normalizeWordLinks';
 import { loadEntries, resolveBaseFormHeadwords } from '../../utils/findBaseFormHeadwords';
 
@@ -128,6 +129,7 @@ export class EnMeaningService {
       }
     }
 
+    await markEntryUserModified(em, word.word.word);
     this.logger.log(`Meaning added to word id=${word_id}, id=${res.id}`);
     // inside addWord's transaction the word's own create row is enough
     if (!manager) {
@@ -179,6 +181,7 @@ export class EnMeaningService {
     assertNoSynonymAntonymConflict(meaning.synonyms, meaning.antonyms, headword, this.logger);
 
     await this.enMeaningsRep.save(meaning);
+    await markEntryUserModified(this.enMeaningsRep.manager, headword);
     this.logger.log(`Meaning updated, id=${body.id}`);
     await this.auditService?.record({
       action: AuditActionE.update,
@@ -197,6 +200,9 @@ export class EnMeaningService {
       relations: { word: { word: true } },
     });
     await this.enMeaningsRep.delete({ id });
+    if (meaning) {
+      await markEntryUserModified(this.enMeaningsRep.manager, meaning.word.word.word);
+    }
 
     this.logger.log(`Meaning deleted, id=${id}`);
     await this.auditService?.record({

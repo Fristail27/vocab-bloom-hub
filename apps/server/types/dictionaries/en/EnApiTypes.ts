@@ -146,6 +146,10 @@ export type EditCommonInfoOfWordResT = { success: boolean } | ErrorResT;
 export type EditPhrasalBaseReqT = EditPhrasalBaseReqDTO;
 export type EditPhrasalBaseResT = { success: boolean } | ErrorResT;
 
+// PATCH /en/reset-user-modified/:word (issue #328): clears the entry's
+// user-modified flag so the next dictionary update replaces it again
+export type ResetEntryUserModifiedResT = { success: boolean } | ErrorResT;
+
 export type ImportDictionaryReqT = ImportDictionaryReq;
 // text fields of the multipart upload (the files go in their own fields)
 export type UploadDictionaryReqT = Partial<UploadDictionaryReqDTO>;
@@ -156,6 +160,12 @@ export type ImportDictionaryChunkT = {
   total?: number | undefined;
   exportId?: string | undefined;
   datasetVersion?: string | undefined;
+  // Summary of an update-mode import (issue #328), set on the completed
+  // chunk: entries replaced with the dataset content, entries new to the
+  // dictionary, and entries kept because the admin edited them
+  updated_entries?: number | undefined;
+  added_entries?: number | undefined;
+  kept_user_modified?: number | undefined;
 };
 
 /** Who started an import: an admin from the UI, or the server itself on first start (issue #268) */

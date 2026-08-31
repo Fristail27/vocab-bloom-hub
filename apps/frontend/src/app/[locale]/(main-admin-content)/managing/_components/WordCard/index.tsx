@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import clsx from 'clsx';
-import { App, Button, Tag, Typography } from 'antd';
+import { App, Button, Popconfirm, Tag, Typography } from 'antd';
 import { useParams } from 'next/navigation';
 import { EditOutlined } from '@ant-design/icons';
 import {
@@ -56,20 +56,33 @@ export const WordCard: React.FC<WordCardP> = ({ word, mode = WordCardModeE.view 
     } else {
       setShowEditDataModal(false);
 
-      setState((p) => ({ ...p, ...data }));
+      // every admin edit flags the entry as user-modified on the server (issue #328)
+      setState((p) => ({ ...p, ...data, user_modified: true }));
+    }
+  };
+
+  // Clears the user-modified flag (issue #328): the next dictionary update
+  // replaces this entry with the official dataset content again
+  const resetUserModified = async () => {
+    const res = await EnApi.resetEntryUserModified(word.word);
+    if ('error' in res) {
+      message.error(tError(res.message));
+    } else {
+      setState((p) => ({ ...p, user_modified: false }));
+      message.success(t('user_modified_reset_done'));
     }
   };
 
   const updateFormOfWord = (f: EnWordFormT, type: UpdateTypeE) => {
     switch (type) {
       case UpdateTypeE.add:
-        setState((p) => ({ ...p, forms: [...p.forms, f] }));
+        setState((p) => ({ ...p, user_modified: true, forms: [...p.forms, f] }));
         break;
       case UpdateTypeE.edit:
-        setState((p) => ({ ...p, forms: p.forms.map((fo) => (fo.id === f.id ? f : fo)) }));
+        setState((p) => ({ ...p, user_modified: true, forms: p.forms.map((fo) => (fo.id === f.id ? f : fo)) }));
         break;
       case UpdateTypeE.delete:
-        setState((p) => ({ ...p, forms: p.forms.filter((fo) => fo.id !== f.id) }));
+        setState((p) => ({ ...p, user_modified: true, forms: p.forms.filter((fo) => fo.id !== f.id) }));
         break;
     }
   };
@@ -77,16 +90,21 @@ export const WordCard: React.FC<WordCardP> = ({ word, mode = WordCardModeE.view 
   const updateShortTranslation = (t: EnShortTranslationT, type: UpdateTypeE) => {
     switch (type) {
       case UpdateTypeE.add:
-        setState((p) => ({ ...p, short_translations: [...p.short_translations, t] }));
+        setState((p) => ({ ...p, user_modified: true, short_translations: [...p.short_translations, t] }));
         break;
       case UpdateTypeE.edit:
         setState((p) => ({
           ...p,
+          user_modified: true,
           short_translations: p.short_translations.map((tr) => (tr.id === t.id ? t : tr)),
         }));
         break;
       case UpdateTypeE.delete:
-        setState((p) => ({ ...p, short_translations: p.short_translations.filter((f) => f.id !== t.id) }));
+        setState((p) => ({
+          ...p,
+          user_modified: true,
+          short_translations: p.short_translations.filter((f) => f.id !== t.id),
+        }));
         break;
     }
   };
@@ -94,21 +112,23 @@ export const WordCard: React.FC<WordCardP> = ({ word, mode = WordCardModeE.view 
   const updateMeaning = (m: EnMeaningT, type: UpdateTypeE) => {
     switch (type) {
       case UpdateTypeE.add:
-        setState((p) => ({ ...p, meanings: [...p.meanings, m] }));
+        setState((p) => ({ ...p, user_modified: true, meanings: [...p.meanings, m] }));
         break;
       case UpdateTypeE.edit:
         setState((p) => ({
           ...p,
+          user_modified: true,
           meanings: p.meanings.map((tr) => (tr.id === m.id ? m : tr)),
         }));
         break;
       case UpdateTypeE.delete:
-        setState((p) => ({ ...p, meanings: p.meanings.filter((f) => f.id !== m.id) }));
+        setState((p) => ({ ...p, user_modified: true, meanings: p.meanings.filter((f) => f.id !== m.id) }));
         break;
     }
   };
 
-  const updatePhrasal = (v: string | null) => setState((p) => ({ ...p, base_phrasal: v || undefined }));
+  const updatePhrasal = (v: string | null) =>
+    setState((p) => ({ ...p, user_modified: true, base_phrasal: v || undefined }));
 
   return (
     <>
@@ -170,6 +190,21 @@ export const WordCard: React.FC<WordCardP> = ({ word, mode = WordCardModeE.view 
               <Text>{t('source_model')}:</Text>
               {state.generated_by_model}
             </Tag>
+          )}
+          {state.user_modified && (
+            <Tag className={styles.tag} color="orange" variant="outlined">
+              {t('user_modified')}
+            </Tag>
+          )}
+          {mode === WordCardModeE.edit && state.user_modified && (
+            <Popconfirm
+              title={t('user_modified_reset_confirm')}
+              onConfirm={resetUserModified}
+              okText={t('user_modified_reset_ok')}
+              cancelText={t('user_modified_reset_cancel')}
+            >
+              <Button size="small">{t('user_modified_reset')}</Button>
+            </Popconfirm>
           )}
         </div>
         {word.part_of_speech === EnPartOfSpeechE.noun && <NounInfoTags word={state} />}

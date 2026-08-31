@@ -23,6 +23,7 @@ import {
   EditWordFormResT,
   EnEntryTypesE,
   GetWordByIdResT,
+  ResetEntryUserModifiedResT,
 } from '../../../types';
 import { ErrorCodes } from '../../../core/constants/error_codes';
 import { AddWordReqDTO } from './dto/AddWordReq.dto';
@@ -80,6 +81,14 @@ export class EnController {
   @Get(':id')
   async getWordById(@Param('id') id: string): Promise<GetWordByIdResT> {
     return this.enService.getWordById(+id);
+  }
+
+  // Clears the user-modified flag of an entry (issue #328): the next
+  // dictionary update replaces the entry with the dataset content again
+  @UseGuards(AdminGuard)
+  @Patch('reset-user-modified/:word')
+  async resetEntryUserModified(@Param('word') word: string): Promise<ResetEntryUserModifiedResT> {
+    return this.enService.resetEntryUserModified(word);
   }
 
   @UseGuards(AdminGuard)

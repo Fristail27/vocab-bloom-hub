@@ -312,6 +312,7 @@ class EnSearchWordT(BaseModel):
     base_phrasal: str | None = None
     base_form: dict[str, Any] | None = None
     similarity: float | None = None
+    user_modified: bool | None = None
 
 
 class EnMeaningT(BaseModel):
@@ -344,6 +345,7 @@ class EnWordT(BaseModel):
     base_phrasal: str | None = None
     base_form: dict[str, Any] | None = None
     similarity: float | None = None
+    user_modified: bool | None = None
     id: int
     generated: bool | None = None
     generated_by_model: str | None = None
