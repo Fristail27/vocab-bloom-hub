@@ -2,11 +2,13 @@
   "name": "e2e",
   "version": "0.0.1",
   "private": true,
-  "description": "Browser end-to-end tests for Vocab Bloom Hub: Playwright drives the admin UI against a real NestJS API and an isolated SQLite database.",
+  "description": "Browser end-to-end tests for Vocab Bloom Hub: Playwright drives the admin UI and the website against a real NestJS API and isolated SQLite databases.",
   "license": "MIT",
   "scripts": {
     "test": "playwright test",
-    "test:ui": "playwright test --ui"
+    "test:ui": "playwright test --ui",
+    "test:site": "playwright test --config playwright.site.config.ts",
+    "test:site:ui": "playwright test --config playwright.site.config.ts --ui"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

@@ -301,3 +301,48 @@ jobs:
             apps/e2e/playwright-report
             apps/e2e/test-results
           retention-days: 7
+
+  site-e2e:
+    name: site browser e2e
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup
+
+      # The site build script wraps the command with dotenv -e ../../.env;
+      # all e2e-relevant variables are passed explicitly, the file just has to exist
+      - name: Create empty root .env
+        run: touch .env
+
+      - name: Resolve Playwright version
+        id: playwright-version
+        run: echo "version=$(yarn workspace e2e exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Chromium
+        run: yarn workspace e2e exec playwright install --with-deps chromium
+
+      - name: Build the website for e2e
+        run: yarn e2e:site:build
+
+      - name: Run site browser e2e tests
+        run: yarn workspace e2e test:site
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: site-playwright-report
+          path: |
+            apps/e2e/playwright-report
+            apps/e2e/test-results
+          retention-days: 7
