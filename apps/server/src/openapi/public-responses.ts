@@ -21,7 +21,7 @@ export const PUBLIC_ERROR_DESCRIPTIONS: Record<number, string> = {
   400: 'Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor',
   404: 'Nothing matches',
   429: 'Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window',
-  503: 'The document is not available yet',
+  503: 'Not available: the OpenAPI document is not ready, or the suggestion queue is full',
 };
 
 export const PUBLIC_RESPONSES: Record<string, PublicResponseSpecT> = {
@@ -36,4 +36,5 @@ export const PUBLIC_RESPONSES: Record<string, PublicResponseSpecT> = {
   PublicDictionaryController_random: { type: 'PublicWordV1ResT', errors: [400, 404, 429] },
   PublicDictionaryController_meta: { type: 'PublicMetaV1ResT', errors: [429] },
   PublicOpenApiController_openapi: { type: null, errors: [429, 503] },
+  PublicSuggestionsController_create: { type: 'PublicSuggestionCreatedV1ResT', errors: [400, 404, 429, 503] },
 };

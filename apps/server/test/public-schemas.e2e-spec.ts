@@ -210,7 +210,8 @@ describe('public API responses match their OpenAPI schemas (e2e, issue #305)', (
   it('describes every public operation with a success and an error schema', () => {
     for (const operationId of Object.keys(PUBLIC_RESPONSES)) {
       const { responses } = findOperation(operationId);
-      expect(Object.keys(responses)).toEqual(expect.arrayContaining(['200']));
+      // one 2xx per operation: 200 for the reads, 201 for the suggestion intake
+      expect(Object.keys(responses).filter((status) => status.startsWith('2'))).toHaveLength(1);
     }
   });
 
@@ -263,5 +264,19 @@ describe('public API responses match their OpenAPI schemas (e2e, issue #305)', (
     const meta = await request(server()).get('/api/v1/meta').expect(200);
     validate('PublicDictionaryController_meta', 200, meta.body);
     validate('PublicOpenApiController_openapi', 200, document);
+  });
+
+  it('the suggestion intake (issue #327)', async () => {
+    const created = await request(server())
+      .post('/api/v1/suggestions')
+      .send({ headword: 'run', message: 'The definition reads oddly — schema round-trip check.' })
+      .expect(201);
+    validate('PublicSuggestionsController_create', 201, created.body);
+
+    const missing = await request(server())
+      .post('/api/v1/suggestions')
+      .send({ headword: 'zzz-no-such-word', message: 'A report about a word that does not exist.' })
+      .expect(404);
+    validate('PublicSuggestionsController_create', 404, missing.body);
   });
 });

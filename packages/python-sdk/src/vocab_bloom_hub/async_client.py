@@ -113,6 +113,25 @@ class AsyncVocabBloomClient:
         document: dict[str, Any] = self._core.finish_get_raw(prepared, response)
         return document
 
+    async def suggest(
+        self,
+        headword: str,
+        *,
+        message: str | None = None,
+        word_id: int | None = None,
+        kind: str | Enum | None = None,
+        edits: Iterable[Mapping[str, Any]] | None = None,
+    ) -> m.SuggestionCreatedResponse:
+        """Files reader feedback into the instance's moderation queue (issue #327)."""
+        body = {
+            "headword": headword,
+            "message": message,
+            "word_id": word_id,
+            "kind": kind,
+            "edits": [dict(edit) for edit in edits] if edits is not None else None,
+        }
+        return await self._post("/suggestions", body, m.SuggestionCreatedResponse)
+
     async def _get(self, path: str, params: Mapping[str, Any] | None, model: type[ModelT]) -> ModelT:
         prepared = self._core.prepare_get(path, params)
         response = await self._send("GET", prepared.url, headers=prepared.headers)

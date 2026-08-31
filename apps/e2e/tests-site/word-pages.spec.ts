@@ -37,4 +37,32 @@ test.describe('word pages', () => {
     expect(response.status()).toBe(307);
     expect(response.headers()['location']).toMatch(/\/en\/word\/.+$/);
   });
+
+  test('the edit mode of the report form files a form proposal (issue #327)', async ({ page }) => {
+    await page.goto('/en/word/abandon');
+
+    // one entry point: the report button, then the edit-the-entry mode
+    await page.getByRole('button', { name: 'Report a mistake' }).click();
+    const form = page.getByRole('form', { name: 'Report a mistake' });
+    await form.getByRole('button', { name: 'Edit the entry' }).click();
+
+    // the full word form opens prefilled; only the changed values are sent
+    await form.getByLabel('Description').fill('to leave somebody or something behind for good');
+    await form.getByRole('button', { name: 'Suggest the changes' }).click();
+
+    await expect(page.getByText('Thank you — the proposal is in the moderation queue.')).toBeVisible();
+  });
+
+  test('the report form files a suggestion into the instance queue (issue #327)', async ({ page }) => {
+    await page.goto('/en/word/run');
+
+    await page.getByRole('button', { name: 'Report a mistake' }).click();
+    const form = page.getByRole('form', { name: 'Report a mistake' });
+    await form
+      .getByRole('textbox')
+      .fill('The definition of "to move fast" misses that it is on foot — e2e report.');
+    await form.getByRole('button', { name: 'Send the report' }).click();
+
+    await expect(page.getByText('Thank you — the report is in the moderation queue.')).toBeVisible();
+  });
 });

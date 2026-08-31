@@ -19,6 +19,12 @@ def client(server_url: str) -> VocabBloomClient:
     return VocabBloomClient(server_url, cache=True)
 
 
+def test_suggest_files_a_report(client: VocabBloomClient) -> None:
+    created = client.suggest("run", message="The example sentence sounds unnatural - SDK live test.")
+    assert created.data.id > 0
+    assert created.data.status == "new"
+
+
 def test_search_flat_and_detailed(client: VocabBloomClient) -> None:
     flat = client.search("run")
     assert (flat.meta.fuzzy, flat.meta.short_term, flat.meta.count) == (False, False, len(flat.data))

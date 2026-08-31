@@ -8,6 +8,7 @@ import { EnMeaningTranslation } from '../modules/EnModule/entities/en_meaning_tr
 import { EnShortTranslation } from '../modules/EnModule/entities/en_short_translation.entity';
 import { Settings } from '../modules/SettingsModule/entities/settings.entity';
 import { AuditLog } from '../modules/AuditModule/entities/audit_log.entity';
+import { Suggestion } from '../modules/SuggestionsModule/entities/suggestion.entity';
 import { getDbPoolConfig } from '../core/utils/db-pool';
 import { migrations } from './migrations';
 
@@ -19,6 +20,7 @@ export const DB_ENTITIES = [
   EnShortTranslation,
   Settings,
   AuditLog,
+  Suggestion,
 ];
 
 // checkIsPostgres() is locked at the first call (entity import), so the

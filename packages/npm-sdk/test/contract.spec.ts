@@ -19,6 +19,7 @@ const METHOD_BY_OPERATION: Record<string, keyof VocabBloomClient> = {
   PublicDictionaryController_random: 'random',
   PublicDictionaryController_meta: 'meta',
   PublicOpenApiController_openapi: 'openapi',
+  PublicSuggestionsController_create: 'suggest',
 };
 
 describe('SDK coverage of the public contract (issue #275)', () => {

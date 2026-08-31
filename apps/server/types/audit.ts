@@ -24,6 +24,7 @@ export enum AuditEntityTypeE {
   short_translation = 'short_translation',
   setting = 'setting',
   dictionary = 'dictionary',
+  suggestion = 'suggestion',
 }
 
 /** Only the fields that changed: `{ field: { before, after } }` */

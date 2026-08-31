@@ -24,6 +24,7 @@ import { getMetricsPath, isMetricsEnabled } from './modules/MetricsModule/metric
 import { HEALTH_PATH, READY_PATH } from './modules/HealthModule/health.controller';
 import { getShutdownTimeout } from './core/utils/shutdown';
 import { getDbPoolConfig } from './core/utils/db-pool';
+import { parseSuggestionsRateLimit } from './modules/SuggestionsModule/constants';
 import { isAutoImportEnabled } from './modules/EnModule/modules/EnImportDictionary/dictionaryBootstrap.service';
 import {
   assertPublicApiConfig,
@@ -73,6 +74,7 @@ async function bootstrap() {
     getShutdownTimeout();
     // Fails here, before Nest is created, instead of inside buildTypeOrmOptions
     getDbPoolConfig();
+    parseSuggestionsRateLimit(process.env.SUGGESTIONS_RATE_LIMIT);
   } catch (error) {
     if (error instanceof ConfigurationError) {
       logger.error(error.message);

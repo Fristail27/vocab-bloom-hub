@@ -5,3 +5,4 @@ export * from './dictionary_types';
 export * from './errors';
 export * from './health';
 export * from './public';
+export * from './suggestions';

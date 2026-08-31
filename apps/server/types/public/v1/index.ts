@@ -137,6 +137,18 @@ export type PublicMetaV1T = {
 };
 export type PublicMetaV1ResT = PublicItemResT<PublicMetaV1T>;
 
+// ------------------------------------------------------ suggestions (#327)
+
+// Answer of POST /api/v1/suggestions: the stored report. The endpoint has a
+// strict rate limit of its own (a few reports per hour per client) and stops
+// accepting once too many reports are waiting for the admin.
+export type PublicSuggestionCreatedV1T = {
+  /** @asType integer */
+  id: number;
+  status: string;
+};
+export type PublicSuggestionCreatedV1ResT = PublicItemResT<PublicSuggestionCreatedV1T>;
+
 export type PublicApiErrorT = ErrorResT & {
   /** @asType integer */
   statusCode: number;

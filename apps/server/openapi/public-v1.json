@@ -1,6 +1,79 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/api/v1/suggestions": {
+      "post": {
+        "description": "Files a report for the instance admin to review: what is wrong with a headword (optionally one specific entry of it) and, ideally, what would be right. The headword must exist in the dictionary. Strictly rate-limited; once too many reports are waiting for the admin the endpoint answers 503 until the queue is worked down.",
+        "operationId": "PublicSuggestionsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSuggestionV1ReqDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSuggestionCreatedV1ResT"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nothing matches",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Not available: the OpenAPI document is not ready, or the suggestion queue is full",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Report a mistake in the dictionary data",
+        "tags": [
+          "Public API v1"
+        ]
+      }
+    },
     "/api/v1/search": {
       "post": {
         "description": "Tiers in relevance order: exact, phrasal, starts-with, phrases, ends-with, contains. When none matches, a trigram similarity tier answers typos (`meta.fuzzy: true`, `similarity` on every item; Postgres instances only). A term shorter than 3 characters searches the exact and prefix tiers only (`meta.short_term: true`).",
@@ -871,7 +944,7 @@
             }
           },
           "503": {
-            "description": "The document is not available yet",
+            "description": "Not available: the OpenAPI document is not ready, or the suggestion queue is full",
             "content": {
               "application/json": {
                 "schema": {
@@ -903,6 +976,68 @@
   "servers": [],
   "components": {
     "schemas": {
+      "SuggestionEditV1DTO": {
+        "type": "object",
+        "properties": {
+          "target_type": {
+            "type": "string",
+            "enum": [
+              "word",
+              "meaning",
+              "meaning_translation",
+              "short_translation"
+            ]
+          },
+          "target_id": {
+            "type": "number",
+            "description": "Id of the targeted row, from the word answers"
+          },
+          "changes": {
+            "type": "object",
+            "description": "The proposed field values, e.g. { \"definition\": \"…\" }. The accepted fields depend on target_type; unknown fields, empty values and values equal to the current ones are rejected"
+          }
+        },
+        "required": [
+          "target_type",
+          "target_id",
+          "changes"
+        ]
+      },
+      "CreateSuggestionV1ReqDTO": {
+        "type": "object",
+        "properties": {
+          "headword": {
+            "type": "string",
+            "description": "The headword the report is about; must exist in the dictionary"
+          },
+          "word_id": {
+            "type": "object",
+            "description": "Id of the entry (part of speech) the report points at, from the word answers"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "report",
+              "edit"
+            ],
+            "default": "report"
+          },
+          "message": {
+            "type": "object",
+            "description": "What is wrong and, ideally, what would be right. Required for a report; an optional comment on an edit"
+          },
+          "edits": {
+            "description": "Edit flow: every touched target of the word form with its proposed values",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SuggestionEditV1DTO"
+            }
+          }
+        },
+        "required": [
+          "headword"
+        ]
+      },
       "SearchV1ReqDTO": {
         "type": "object",
         "properties": {
@@ -2103,6 +2238,32 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/PublicMetaV1T"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "PublicSuggestionCreatedV1T": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ]
+      },
+      "PublicSuggestionCreatedV1ResT": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PublicSuggestionCreatedV1T"
           }
         },
         "required": [

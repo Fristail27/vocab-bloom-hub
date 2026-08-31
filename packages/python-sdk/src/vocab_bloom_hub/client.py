@@ -150,6 +150,33 @@ class VocabBloomClient:
         document: dict[str, Any] = self._core.finish_get_raw(prepared, response)
         return document
 
+    # -------------------------------------------------------- suggestions
+
+    def suggest(
+        self,
+        headword: str,
+        *,
+        message: str | None = None,
+        word_id: int | None = None,
+        kind: str | Enum | None = None,
+        edits: Iterable[Mapping[str, Any]] | None = None,
+    ) -> m.SuggestionCreatedResponse:
+        """Files reader feedback into the instance's moderation queue (issue #327).
+
+        A free-text report by default; ``kind="edit"`` with ``edits`` — a list
+        of ``{"target_type", "target_id", "changes"}`` items covering every
+        touched piece of the word form — proposes concrete values the admin
+        can apply in one click. Strictly rate-limited per client.
+        """
+        body = {
+            "headword": headword,
+            "message": message,
+            "word_id": word_id,
+            "kind": kind,
+            "edits": [dict(edit) for edit in edits] if edits is not None else None,
+        }
+        return self._post("/suggestions", body, m.SuggestionCreatedResponse)
+
     # ------------------------------------------------------------- pandas
 
     def words_dataframe(self, **options: Unpack[ListOptions]) -> pandas.DataFrame:

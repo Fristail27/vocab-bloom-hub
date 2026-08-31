@@ -1142,6 +1142,32 @@
       "data"
     ]
   },
+  "PublicSuggestionCreatedV1T": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "integer"
+      },
+      "status": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "id",
+      "status"
+    ]
+  },
+  "PublicSuggestionCreatedV1ResT": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "$ref": "#/components/schemas/PublicSuggestionCreatedV1T"
+      }
+    },
+    "required": [
+      "data"
+    ]
+  },
   "PublicApiErrorT": {
     "type": "object",
     "properties": {
