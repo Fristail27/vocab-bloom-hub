@@ -6,6 +6,7 @@ import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server
 
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
+import { siteUrl } from '@/core/site';
 import { isLocale, routing } from '@/i18n/routing';
 import { LocaleParamsP } from '@/types/common';
 
@@ -18,9 +19,20 @@ export const generateMetadata = async ({ params }: LocaleParamsP): Promise<Metad
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'meta' });
 
+  // the social card defaults (issue #332): pages refine the og title and
+  // description; the image comes from opengraph-image.tsx next to this file
   return {
+    metadataBase: new URL(siteUrl()),
     title: { default: t('title'), template: `%s · ${t('title')}` },
     description: t('description'),
+    openGraph: {
+      type: 'website',
+      siteName: t('title'),
+      title: t('title'),
+      description: t('description'),
+      locale,
+    },
+    twitter: { card: 'summary_large_image' },
   };
 };
 

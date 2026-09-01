@@ -139,7 +139,7 @@ that only needs the dictionary and the admin UI never starts it. To have it:
 ```dotenv
 COMPOSE_PROFILES=db,site
 # SITE_PORT=3020                               # the host port
-# NEXT_PUBLIC_SITE_URL=https://vocabbloom.example  # its public origin, for sitemap.xml
+# NEXT_PUBLIC_SITE_URL=https://vocabbloom.example  # its public origin, for sitemap.xml and the social cards
 ```
 
 `docker compose up -d` then pulls the third image and the site answers on

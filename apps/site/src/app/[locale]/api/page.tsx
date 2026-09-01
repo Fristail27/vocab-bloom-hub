@@ -5,6 +5,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { listEndpoints, PUBLIC_SPEC_FILE, schemaAnchor } from '@/content/openapi';
 import { loadPublicSpec } from '@/content/openapi.load';
 import { REPO_BLOB_URL } from '@/content/repo';
+import { pageMeta } from '@/core/site';
 import { Link } from '@/i18n/navigation';
 import { LocaleParamsP } from '@/types/common';
 
@@ -19,7 +20,7 @@ export const generateMetadata = async ({ params }: LocaleParamsP): Promise<Metad
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'api' });
 
-  return { title: t('title'), description: t('intro') };
+  return pageMeta(t('title'), t('intro'));
 };
 
 export default async function ApiReferencePage({ params }: LocaleParamsP) {
