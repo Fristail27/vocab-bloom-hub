@@ -60,7 +60,7 @@ for await (const word of client.iterateWords({ word_level: ['A1', 'A2'], with_me
 | `meta()`                         | `GET /meta`                        | `MetaResponse`             |
 | `openapi()`                      | `GET /openapi.json`                | the OpenAPI 3 document     |
 
-Every method resolves to the `{ data, meta }` envelope the API answers with and takes an optional last argument `{ signal, headers }`. The request and response types (`Word`, `Meaning`, `SearchRequest`, `ListWordsQuery`, …) are exported, and so are the raw generated `paths` / `components` / `operations` for anything not aliased. The contract itself — tiers, filters, cursor pagination, caching — is documented in the server's [`docs/api.md`](https://github.com/Fristail27/vocab-bloom-hub/blob/main/docs/api.md).
+Every method resolves to the `{ data, meta }` envelope the API answers with and takes an optional last argument `{ signal, headers, timeoutMs }`. The request and response types (`Word`, `Meaning`, `SearchRequest`, `ListWordsQuery`, …) are exported, and so are the raw generated `paths` / `components` / `operations` for anything not aliased. The contract itself — tiers, filters, cursor pagination, caching — is documented in the server's [`docs/api.md`](https://github.com/Fristail27/vocab-bloom-hub/blob/main/docs/api.md).
 
 ### Options
 
@@ -70,19 +70,22 @@ new VocabBloomClient({
   headers: { 'X-App': 'my-app' }, // sent with every request
   cache: true, // ETag revalidation (see below); or your own ResponseCache
   fetch: myFetch, // a custom fetch (instrumentation, polyfills, tests)
+  timeoutMs: 10_000, // fail a hung request with NetworkError; null disables (the default is 10 s)
 });
 ```
+
+`timeoutMs` can also be passed per call and combines with your `signal` — whichever fires first aborts the request.
 
 ### Errors
 
 Failed requests throw:
 
-| Class             | When                                   | Fields                                         |
-| ----------------- | -------------------------------------- | ---------------------------------------------- |
-| `NotFoundError`   | 404                                    | `status`, `code` (`word_doesnt_found`), `body` |
-| `RateLimitError`  | 429 — the public rate limit            | `retryAfter` (seconds, from `Retry-After`)     |
-| `NetworkError`    | no answer: DNS, connection, TLS, abort | `status: 0`, `code: 'network_error'`, `cause`  |
-| `VocabBloomError` | everything else                        | `status`, `code`, `body`                       |
+| Class             | When                                            | Fields                                         |
+| ----------------- | ----------------------------------------------- | ---------------------------------------------- |
+| `NotFoundError`   | 404                                             | `status`, `code` (`word_doesnt_found`), `body` |
+| `RateLimitError`  | 429 — the public rate limit                     | `retryAfter` (seconds, from `Retry-After`)     |
+| `NetworkError`    | no answer: DNS, connection, TLS, abort, timeout | `status: 0`, `code: 'network_error'`, `cause`  |
+| `VocabBloomError` | everything else                                 | `status`, `code`, `body`                       |
 
 `code` is the machine-readable error of the API (`invalid_cursor`, `too_many_requests`, …), or `http_error` when the answer was not JSON (a proxy page, for instance).
 

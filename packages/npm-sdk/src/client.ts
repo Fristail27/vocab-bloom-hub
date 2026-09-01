@@ -24,6 +24,9 @@ export const PUBLIC_API_PREFIX = '/api/v1';
 
 export type FetchLike = (input: string, init: RequestInit) => Promise<Response>;
 
+/** A request without an answer fails after this long unless overridden (issue #352) */
+export const DEFAULT_TIMEOUT_MS = 10_000;
+
 export type ClientOptions = {
   /** Origin of the instance, e.g. `https://dict.example.com`; the client appends `/api/v1` */
   baseUrl: string;
@@ -36,11 +39,19 @@ export type ClientOptions = {
    * store. Off by default — a repeated read then always carries a payload.
    */
   cache?: boolean | ResponseCache;
+  /**
+   * Milliseconds before a request without an answer fails with
+   * `NetworkError` (the Python client has the same 10 s default);
+   * `null` disables the timeout entirely.
+   */
+  timeoutMs?: number | null;
 };
 
 export type RequestOptions = {
   signal?: AbortSignal;
   headers?: Record<string, string>;
+  /** Overrides the client's `timeoutMs` for this call; `null` disables it */
+  timeoutMs?: number | null;
 };
 
 // No regular expression: `/\/+$/` backtracks quadratically on a long run of
@@ -54,6 +65,20 @@ const trimTrailingSlashes = (value: string): string => {
 type QueryValueT = string | number | boolean | null | undefined;
 type QueryT = Record<string, QueryValueT | readonly QueryValueT[]>;
 
+// The caller's signal joined with the timeout's; by hand when AbortSignal.any
+// is missing (engines allow Node 20.0, `any` landed in 20.3)
+const withTimeout = (signal: AbortSignal | undefined, timeoutMs: number | null): AbortSignal | undefined => {
+  if (timeoutMs === null) return signal;
+  const timeout = AbortSignal.timeout(timeoutMs);
+  if (!signal) return timeout;
+  if (typeof AbortSignal.any === 'function') return AbortSignal.any([signal, timeout]);
+  const controller = new AbortController();
+  if (signal.aborted) controller.abort(signal.reason);
+  signal.addEventListener('abort', () => controller.abort(signal.reason), { once: true });
+  timeout.addEventListener('abort', () => controller.abort(timeout.reason), { once: true });
+  return controller.signal;
+};
+
 /**
  * Typed client of the public read-only API. Every method is one endpoint and
  * resolves to the `{ data, meta }` envelope the API answers with; failures
@@ -65,6 +90,7 @@ export class VocabBloomClient {
   private readonly fetchImpl: FetchLike;
   private readonly headers: Record<string, string>;
   private readonly cache: ResponseCache | null;
+  private readonly timeoutMs: number | null;
 
   constructor(options: ClientOptions) {
     this.baseUrl = trimTrailingSlashes(options.baseUrl) + PUBLIC_API_PREFIX;
@@ -77,6 +103,7 @@ export class VocabBloomClient {
     this.fetchImpl = fetchImpl;
     this.headers = { Accept: 'application/json', ...options.headers };
     this.cache = options.cache === true ? new MemoryCache() : options.cache || null;
+    this.timeoutMs = options.timeoutMs === undefined ? DEFAULT_TIMEOUT_MS : options.timeoutMs;
   }
 
   // ------------------------------------------------------------- search
@@ -197,7 +224,7 @@ export class VocabBloomClient {
       // revalidation and keeps undici's hands off
       headers['Cache-Control'] ??= 'max-age=0';
     }
-    const response = await this.send(url, { method: 'GET', headers, signal: options?.signal });
+    const response = await this.send(url, { method: 'GET', headers }, options);
     if (response.status === 304 && cached) return cached.body as T;
     if (!response.ok) throw await errorFromResponse(response);
     const body = (await response.json()) as T;
@@ -207,20 +234,28 @@ export class VocabBloomClient {
   }
 
   private async post<T>(path: string, body: object, options?: RequestOptions): Promise<T> {
-    const response = await this.send(this.url(path), {
-      method: 'POST',
-      headers: { ...this.headers, 'Content-Type': 'application/json', ...options?.headers },
-      body: JSON.stringify(body),
-      signal: options?.signal,
-    });
+    const response = await this.send(
+      this.url(path),
+      {
+        method: 'POST',
+        headers: { ...this.headers, 'Content-Type': 'application/json', ...options?.headers },
+        body: JSON.stringify(body),
+      },
+      options,
+    );
     if (!response.ok) throw await errorFromResponse(response);
     return (await response.json()) as T;
   }
 
-  private async send(url: string, init: RequestInit): Promise<Response> {
+  private async send(url: string, init: RequestInit, options?: RequestOptions): Promise<Response> {
+    const timeoutMs = options?.timeoutMs === undefined ? this.timeoutMs : options.timeoutMs;
     try {
-      return await this.fetchImpl(url, init);
+      return await this.fetchImpl(url, { ...init, signal: withTimeout(options?.signal, timeoutMs) });
     } catch (cause) {
+      // the timeout rejects with a DOMException, which is not an Error subclass
+      if ((cause as { name?: string } | null)?.name === 'TimeoutError') {
+        throw new NetworkError(`Request to ${url} timed out after ${timeoutMs} ms`, cause);
+      }
       throw new NetworkError(
         `Request to ${url} failed: ${cause instanceof Error ? cause.message : String(cause)}`,
         cause,
