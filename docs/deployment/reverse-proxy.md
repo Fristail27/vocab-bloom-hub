@@ -33,6 +33,12 @@ replaces the header, and a client could then forge its address and dodge the lim
 variable unset when no proxy is in front — the server then ignores `X-Forwarded-*` entirely. The
 setting is logged at startup (`Trust proxy: 1 — client addresses are read from X-Forwarded-For`).
 
+Requests that reach the API through the frontend's or the website's own `/api/*` forwarding
+route (the no-reverse-proxy setup) never carry a client-supplied `X-Forwarded-For`: the route
+drops the client's forwarding claims — it cannot verify them — and the server attributes that
+traffic to the Next.js process itself, whatever `TRUST_PROXY` says. Per-client rate limiting
+needs the reverse proxy in front of the API, as configured below.
+
 ## What the proxy must do
 
 - Pass `Host`, `X-Forwarded-For` and `X-Forwarded-Proto` to both apps (Caddy does by default,

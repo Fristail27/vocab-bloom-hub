@@ -1,8 +1,26 @@
 /**
  * @jest-environment node
  */
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { NextRequest } from 'next/server';
 import { apiTarget, forwardToApi } from '../apiProxy';
+
+// The site ships a copy of this module (its build cannot import across
+// workspaces); everything below the header comment must stay identical so a
+// fix in one copy cannot silently miss the other (issue #346)
+describe('the site copy of apiProxy', () => {
+  const belowHeader = (file: string) => {
+    const source = readFileSync(file, 'utf8');
+    return source.slice(source.indexOf('*/') + 2);
+  };
+
+  it('is identical to this module below the header comment', () => {
+    const here = path.resolve(__dirname, '../apiProxy.ts');
+    const site = path.resolve(__dirname, '../../../../site/src/core/apiProxy.ts');
+    expect(belowHeader(site)).toBe(belowHeader(here));
+  });
+});
 
 describe('/api/* forwarded to the server (issue #316)', () => {
   const fetchMock = jest.fn<Promise<Response>, [string, RequestInit]>();
@@ -72,5 +90,30 @@ describe('/api/* forwarded to the server (issue #316)', () => {
     const res = await forwardToApi(req, ['en', 'dictionary', 'export']);
     expect(res.headers.get('cache-control')).toBe('no-store, no-transform');
     expect(fetchMock.mock.calls[0][1].body).toBeUndefined();
+  });
+
+  it('drops the client forwarding claims so a spoofed address cannot reach the server (issue #346)', async () => {
+    fetchMock.mockResolvedValue(new Response('{}', { status: 200 }));
+    const req = new NextRequest('http://localhost:3000/api/v1/words/run', {
+      headers: {
+        'x-forwarded-for': '1.2.3.4',
+        'x-real-ip': '1.2.3.4',
+        forwarded: 'for=1.2.3.4',
+        'x-forwarded-port': '99',
+        'x-forwarded-proto': 'https',
+        host: 'localhost:3000',
+      },
+    });
+
+    await forwardToApi(req, ['v1', 'words', 'run']);
+
+    const sent = fetchMock.mock.calls[0][1].headers as Headers;
+    expect(sent.get('x-forwarded-for')).toBeNull();
+    expect(sent.get('x-real-ip')).toBeNull();
+    expect(sent.get('forwarded')).toBeNull();
+    expect(sent.get('x-forwarded-port')).toBeNull();
+    // this hop's own truth, not the client's claim
+    expect(sent.get('x-forwarded-proto')).toBe('http');
+    expect(sent.get('x-forwarded-host')).toBe('localhost:3000');
   });
 });
