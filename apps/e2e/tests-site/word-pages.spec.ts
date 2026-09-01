@@ -53,6 +53,19 @@ test.describe('word pages', () => {
     await expect(page.getByText('Thank you — the proposal is in the moderation queue.')).toBeVisible();
   });
 
+  test('a too-short text report shows a validation message instead of doing nothing (issue #351)', async ({
+    page,
+  }) => {
+    await page.goto('/en/word/run');
+
+    await page.getByRole('button', { name: 'Report a mistake' }).click();
+    const form = page.getByRole('form', { name: 'Report a mistake' });
+    await form.getByRole('textbox').fill('too short');
+    await form.getByRole('button', { name: 'Send the report' }).click();
+
+    await expect(page.getByText('Please describe the mistake in at least 10 characters.')).toBeVisible();
+  });
+
   test('the report form files a suggestion into the instance queue (issue #327)', async ({ page }) => {
     await page.goto('/en/word/run');
 

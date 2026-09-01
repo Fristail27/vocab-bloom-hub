@@ -162,6 +162,7 @@ export default {
     report_rate_limited: 'Too many reports from this device — try again later.',
     report_queue_full: 'The queue is full right now — try again once the owner has worked through it.',
     report_error: 'The report did not reach the dictionary — try again in a minute.',
+    report_too_short: 'Please describe the mistake in at least {min} characters.',
     report_mode: 'What to send',
     report_mode_text: 'Describe in words',
     report_mode_edit: 'Edit the entry',
