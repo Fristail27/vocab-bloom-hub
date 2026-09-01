@@ -134,6 +134,47 @@ describe('VocabBloomClient without a server (issue #275)', () => {
     expect(calls.every((c) => new URL(c.url).searchParams.get('word_level') === 'A1')).toBe(true);
   });
 
+  // a fetch that never answers on its own and rejects when its signal aborts,
+  // the way undici does — the only path a timeout can take
+  const hangingFetch = () => {
+    const signals: Array<AbortSignal | undefined> = [];
+    const fetch = (_url: string, init: RequestInit) => {
+      const signal = init.signal ?? undefined;
+      signals.push(signal);
+      return new Promise<Response>((_, reject) => {
+        signal?.addEventListener('abort', () => reject(signal.reason), { once: true });
+      });
+    };
+    return { fetch, signals };
+  };
+
+  it('fails a hung request with NetworkError after timeoutMs (issue #352)', async () => {
+    const { fetch } = hangingFetch();
+    const client = new VocabBloomClient({ baseUrl: 'http://localhost', fetch });
+    await expect(client.word('run', { timeoutMs: 25 })).rejects.toThrow(/timed out after 25 ms/);
+    await expect(client.search({ search: 'run' }, { timeoutMs: 25 })).rejects.toThrow(NetworkError);
+  });
+
+  it('arms the default timeout, and timeoutMs: null disables it', async () => {
+    const { fetch, signals } = hangingFetch();
+    const withDefault = new VocabBloomClient({ baseUrl: 'http://localhost', fetch });
+    void withDefault.word('run').catch(() => undefined);
+    expect(signals[0]).toBeInstanceOf(AbortSignal);
+
+    const disabled = new VocabBloomClient({ baseUrl: 'http://localhost', fetch, timeoutMs: null });
+    void disabled.word('run').catch(() => undefined);
+    expect(signals[1]).toBeUndefined();
+  });
+
+  it('keeps the caller signal working alongside the timeout', async () => {
+    const { fetch } = hangingFetch();
+    const client = new VocabBloomClient({ baseUrl: 'http://localhost', fetch });
+    const controller = new AbortController();
+    const pending = client.word('run', { signal: controller.signal, timeoutMs: 10_000 });
+    controller.abort(new Error('caller aborted'));
+    await expect(pending).rejects.toThrow(/caller aborted/);
+  });
+
   it('evicts the least recently used entry beyond maxEntries', () => {
     const cache = new MemoryCache(2);
     cache.set('a', { etag: '1', body: 1 });
