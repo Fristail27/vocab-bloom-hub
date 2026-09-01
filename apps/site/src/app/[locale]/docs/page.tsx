@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 import { DOC_PAGES, DOC_SECTIONS, docTitle } from '@/content/registry';
+import { pageMeta } from '@/core/site';
 import { Link } from '@/i18n/navigation';
 import { LocaleParamsP } from '@/types/common';
 
@@ -12,7 +13,7 @@ export const generateMetadata = async ({ params }: LocaleParamsP): Promise<Metad
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'docs' });
 
-  return { title: t('title'), description: t('intro') };
+  return pageMeta(t('title'), t('intro'));
 };
 
 export default async function DocsIndexPage({ params }: LocaleParamsP) {

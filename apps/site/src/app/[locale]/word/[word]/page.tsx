@@ -8,6 +8,7 @@ import { Pronounce } from '@/components/Pronounce';
 import { ReportMistake } from '@/components/ReportMistake';
 import { WordSearch } from '@/components/WordSearch';
 import { fetchHeadword } from '@/core/dictionary';
+import { pageMeta } from '@/core/site';
 import { Link } from '@/i18n/navigation';
 import { LocaleParamsP } from '@/types/common';
 
@@ -34,10 +35,10 @@ export const generateMetadata = async ({ params }: WordPageP): Promise<Metadata>
   const definition = first?.meanings[0]?.definition;
   const translations = first?.short_translations.map((item) => item.description).join(', ');
 
-  return {
-    title: t('page_title', { word: headword.result.meta.word }),
-    description: [definition, translations].filter(Boolean).join(' — ') || t('page_description', { word }),
-  };
+  return pageMeta(
+    t('page_title', { word: headword.result.meta.word }),
+    [definition, translations].filter(Boolean).join(' — ') || t('page_description', { word }),
+  );
 };
 
 // the data writes transcriptions as `/rʌn/` or bare; shown once between slashes
