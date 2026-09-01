@@ -14,6 +14,19 @@ const dashboardLinks = [
 ];
 
 test.describe('dashboard', () => {
+  test('the admin shell: noindex, a nav landmark and client-side menu navigation (issue #348)', async ({
+    page,
+  }) => {
+    await page.goto('/en');
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
+
+    const nav = page.getByRole('navigation', { name: 'Menu' });
+    await nav.getByRole('link', { name: 'History' }).click();
+    await page.waitForURL('**/en/history');
+    // soft navigation, and the open page is marked for assistive tech
+    await expect(nav.getByRole('link', { name: 'History' })).toHaveAttribute('aria-current', 'page');
+  });
+
   for (const link of dashboardLinks) {
     test(`link "${link.name}" opens a real page`, async ({ page }) => {
       await page.goto('/en');

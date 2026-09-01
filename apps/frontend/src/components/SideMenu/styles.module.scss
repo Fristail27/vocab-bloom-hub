@@ -30,10 +30,23 @@
       flex-direction: column;
       gap: 4px;
 
+      // plain next/link anchors styled like antd links (Typography.Link
+      // forced a full document navigation, see the component)
       .linkItem {
         display: flex;
         align-items: center;
         gap: 4px;
+        color: var(--ant-color-link);
+        text-decoration: none;
+        transition: color 0.2s;
+
+        &:hover {
+          color: var(--ant-color-link-hover, var(--ant-color-primary));
+        }
+
+        &[aria-current='page'] {
+          font-weight: 600;
+        }
       }
     }
   }
