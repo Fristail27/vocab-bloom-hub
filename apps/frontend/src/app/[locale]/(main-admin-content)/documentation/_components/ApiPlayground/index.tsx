@@ -23,6 +23,8 @@ const POST_RUNNERS: Partial<Record<ApiEndpointKeyE, (body: ParamValuesT) => Prom
   [ApiEndpointKeyE.search]: (body) => EnApi.publicSearch(body as unknown as SearchReqT),
   [ApiEndpointKeyE.search_detailed]: (body) =>
     EnApi.publicSearchDetailed(body as unknown as SearchDetailedReqT),
+  // files a real report into this instance's moderation queue (issue #349)
+  [ApiEndpointKeyE.suggestions]: (body) => EnApi.publicPost('/v1/suggestions', body),
 };
 
 const runRequest = (endpoint: ApiEndpointDocT, body: ParamValuesT): Promise<unknown> => {
