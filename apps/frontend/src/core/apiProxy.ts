@@ -41,7 +41,17 @@ export const forwardToApi = async (req: NextRequest, path: string[]): Promise<Re
   req.headers.forEach((value, name) => {
     if (!HOP_BY_HOP.has(name.toLowerCase())) headers.set(name, value);
   });
-  // the server reads the client's scheme and address from these (TRUST_PROXY)
+  // The client's forwarding claims are untrusted: with TRUST_PROXY set on the
+  // server a spoofed X-Forwarded-For would become the client address — the
+  // rate-limit key and the log attribution (issue #346). This handler cannot
+  // learn the real peer either (Next fills the header from the socket only
+  // when the client sent none, so the values are indistinguishable), so the
+  // claims are dropped and the server attributes the traffic to this process,
+  // exactly as it does without TRUST_PROXY.
+  for (const name of ['x-forwarded-for', 'x-forwarded-port', 'x-real-ip', 'forwarded']) {
+    headers.delete(name);
+  }
+  // what this hop actually knows: the host the client asked and the scheme
   headers.set('x-forwarded-host', req.headers.get('host') ?? '');
   headers.set('x-forwarded-proto', req.nextUrl.protocol.replace(':', ''));
 

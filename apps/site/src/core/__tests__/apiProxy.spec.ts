@@ -73,4 +73,29 @@ describe('/api/* forwarded to the server (issue #316)', () => {
     expect(res.headers.get('cache-control')).toBe('no-store, no-transform');
     expect(fetchMock.mock.calls[0][1].body).toBeUndefined();
   });
+
+  it('drops the client forwarding claims so a spoofed address cannot reach the server (issue #346)', async () => {
+    fetchMock.mockResolvedValue(new Response('{}', { status: 200 }));
+    const req = new NextRequest('http://localhost:3000/api/v1/words/run', {
+      headers: {
+        'x-forwarded-for': '1.2.3.4',
+        'x-real-ip': '1.2.3.4',
+        forwarded: 'for=1.2.3.4',
+        'x-forwarded-port': '99',
+        'x-forwarded-proto': 'https',
+        host: 'localhost:3000',
+      },
+    });
+
+    await forwardToApi(req, ['v1', 'words', 'run']);
+
+    const sent = fetchMock.mock.calls[0][1].headers as Headers;
+    expect(sent.get('x-forwarded-for')).toBeNull();
+    expect(sent.get('x-real-ip')).toBeNull();
+    expect(sent.get('forwarded')).toBeNull();
+    expect(sent.get('x-forwarded-port')).toBeNull();
+    // this hop's own truth, not the client's claim
+    expect(sent.get('x-forwarded-proto')).toBe('http');
+    expect(sent.get('x-forwarded-host')).toBe('localhost:3000');
+  });
 });
