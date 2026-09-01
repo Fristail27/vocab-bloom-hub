@@ -8,7 +8,7 @@ import { Toc } from '@/components/Toc';
 import { renderMarkdown } from '@/content/markdown';
 import { DOC_PAGES, docFile, docTitle, findDocBySlug } from '@/content/registry';
 import { readRepoFile, REPO_BLOB_URL } from '@/content/repo';
-import { pageMeta } from '@/core/site';
+import { localeAlternates, pageMeta } from '@/core/site';
 import { routing } from '@/i18n/routing';
 import { InterfaceLanguageEnum, LocaleParamsP } from '@/types/common';
 
@@ -26,7 +26,9 @@ export const generateMetadata = async ({ params }: DocPageP): Promise<Metadata> 
   const { locale, slug } = await params;
   const page = findDocBySlug(slug.join('/'));
 
-  return page ? pageMeta(docTitle(page, locale)) : {};
+  return page
+    ? { ...pageMeta(docTitle(page, locale)), alternates: localeAlternates(locale, `/docs/${page.slug}`) }
+    : {};
 };
 
 export default async function DocPage({ params }: DocPageP) {

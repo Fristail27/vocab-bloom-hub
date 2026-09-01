@@ -17,3 +17,13 @@ export const pageMeta = (title: string, description?: string): Metadata => ({
   description,
   openGraph: { title, description },
 });
+
+/**
+ * Canonical + hreflang for one route (issue #350): `path` is the route
+ * without the locale prefix (`'/docs'`, `''` for the home page). Relative
+ * URLs — the layout's `metadataBase` makes them absolute.
+ */
+export const localeAlternates = (locale: string, path: string): Metadata['alternates'] => ({
+  canonical: `/${locale}${path}`,
+  languages: { en: `/en${path}`, ru: `/ru${path}`, 'x-default': `/en${path}` },
+});
