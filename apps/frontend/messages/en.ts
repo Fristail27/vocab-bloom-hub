@@ -57,7 +57,26 @@ export default {
     statistics: 'Statistics',
     suggestions: 'Suggestions',
     history: 'History',
+    settings: 'Settings',
     documentation: 'Documentation',
+  },
+  settings_page: {
+    intro:
+      'Key-value settings of this instance. Fields marked as system are maintained by the app: version is the running build, en_dataset_version records the imported dataset — deleting the latter makes the next import treat the dictionary as never imported.',
+    col_field: 'Field',
+    col_value: 'Value',
+    col_actions: 'Actions',
+    system_tag: 'system',
+    field_placeholder: 'field name',
+    value_placeholder: 'value',
+    action_add: 'Add',
+    action_edit: 'Edit',
+    action_delete: 'Delete',
+    edit_title: 'Edit "{field}"',
+    delete_confirm: 'Delete the field "{field}"?',
+    added: 'Field added',
+    updated: 'Field updated',
+    deleted: 'Field deleted',
   },
   suggestions: {
     intro:
