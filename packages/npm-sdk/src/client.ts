@@ -10,6 +10,8 @@ import type {
   MetaResponse,
   SearchRequest,
   SearchResponse,
+  SuggestionCreatedResponse,
+  SuggestionRequest,
   TranslationsQuery,
   TranslationsResponse,
   Word,
@@ -155,6 +157,18 @@ export class VocabBloomClient {
   /** The OpenAPI 3 document of the instance */
   openapi(options?: RequestOptions): Promise<Record<string, unknown>> {
     return this.get('/openapi.json', undefined, options);
+  }
+
+  // -------------------------------------------------------- suggestions
+
+  /**
+   * Files reader feedback into the instance's moderation queue (issue #327):
+   * a free-text report, or a structured edit (`kind: 'edit'`) the admin can
+   * apply in one click. Strictly rate-limited per client; answers 404 for a
+   * headword the dictionary does not have and 503 once the queue is full.
+   */
+  suggest(request: SuggestionRequest, options?: RequestOptions): Promise<SuggestionCreatedResponse> {
+    return this.post('/suggestions', request, options);
   }
 
   // ----------------------------------------------------------- plumbing

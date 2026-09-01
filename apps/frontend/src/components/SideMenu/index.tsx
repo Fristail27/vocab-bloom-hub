@@ -26,6 +26,7 @@ export const SideMenu = () => {
               {t('managing')}
             </Link>
             <Link href={`/${locale}/statistics`}>{t('statistics')}</Link>
+            <Link href={`/${locale}/suggestions`}>{t('suggestions')}</Link>
             <Link href={`/${locale}/history`}>{t('history')}</Link>
             <Link href={`/${locale}/documentation`}>{t('documentation')}</Link>
           </div>

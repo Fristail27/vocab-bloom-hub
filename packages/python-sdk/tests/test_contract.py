@@ -21,6 +21,7 @@ METHOD_BY_OPERATION = {
     "PublicDictionaryController_random": "random",
     "PublicDictionaryController_meta": "meta",
     "PublicOpenApiController_openapi": "openapi",
+    "PublicSuggestionsController_create": "suggest",
 }
 
 

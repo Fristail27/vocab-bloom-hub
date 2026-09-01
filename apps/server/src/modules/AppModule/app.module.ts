@@ -8,6 +8,7 @@ import { AuthModule } from '../AuthModule/auth.module';
 import { EnModule } from '../EnModule/en.module';
 import { SettingsModule } from '../SettingsModule/settings.module';
 import { PublicApiModule } from '../PublicApiModule/public-api.module';
+import { SuggestionsModule } from '../SuggestionsModule/suggestions.module';
 import { apiSurfaceMiddleware } from '../../core/middleware/api-surface.middleware';
 import { buildTypeOrmOptions } from '../../db/typeorm-options';
 import { HealthModule } from '../HealthModule/health.module';
@@ -27,6 +28,8 @@ import { getLoggerParams } from '../../core/logging/logger';
     EnModule,
     SettingsModule,
     PublicApiModule,
+    // reader feedback on the dictionary data (issue #327)
+    SuggestionsModule,
     MetricsModule,
     // the import slot and its status, read by HealthModule and written by EnModule (issue #268)
     ImportStatusModule,

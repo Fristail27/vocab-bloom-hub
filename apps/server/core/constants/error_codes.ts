@@ -23,6 +23,13 @@ export enum ErrorCodes {
   setting_field_already_exists = 'setting_field_already_exists',
   unknown_error = 'unknown_error',
   too_many_requests = 'too_many_requests',
+  // reader feedback on the dictionary data (issue #327)
+  suggestion_doesnt_found = 'suggestion_doesnt_found',
+  suggestion_queue_full = 'suggestion_queue_full',
+  // the proposed changes are malformed: unknown field, wrong type, nothing changed
+  suggestion_invalid = 'suggestion_invalid',
+  // apply on a report, or on a suggestion that already took a verdict
+  suggestion_not_applicable = 'suggestion_not_applicable',
   // public list paging (issue #272)
   invalid_cursor = 'invalid_cursor',
   // the public OpenAPI document was not attached to the application (issue #273)

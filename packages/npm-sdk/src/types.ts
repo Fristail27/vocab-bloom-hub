@@ -38,6 +38,7 @@ export type ListWordsQuery = NonNullable<operations['PublicWordsController_list'
 export type TranslationsQuery = NonNullable<
   operations['PublicWordsController_translations']['parameters']['query']
 >;
+export type SuggestionRequest = Schemas['CreateSuggestionV1ReqDTO'];
 
 // ------------------------------------------------------------- responses
 export type SearchResponse = Schemas['PublicSearchV1ResT'];
@@ -49,3 +50,4 @@ export type TranslationsResponse = Schemas['PublicHeadwordTranslationsV1ResT'];
 export type FormsResponse = Schemas['PublicHeadwordFormsV1ResT'];
 export type WordsResponse = Schemas['PublicWordsV1ResT'];
 export type MetaResponse = Schemas['PublicMetaV1ResT'];
+export type SuggestionCreatedResponse = Schemas['PublicSuggestionCreatedV1ResT'];

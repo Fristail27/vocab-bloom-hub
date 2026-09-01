@@ -52,10 +52,33 @@ Every successful answer is an envelope: the payload under `data`, paging and cou
 | `GET`  | `/api/v1/words`                     | filters, `cursor?`, `limit?`, `with_meanings?`, `with_translations?`                           | `{ data: EnWordT[], meta: { limit, has_more, next_cursor } }`              |
 | `GET`  | `/api/v1/random`                    | filters                                                                                        | `{ data: EnWordT }`                                                        |
 | `GET`  | `/api/v1/meta`                      | —                                                                                              | `{ data: { api_version, app_version, dataset_version, license, counts } }` |
+| `POST` | `/api/v1/suggestions`               | `{ headword, word_id?, message }`                                                              | `201 { data: { id, status } }`                                             |
 
 Every endpoint and its parameters are also described on the in-app _Documentation_ pages,
 which run live requests against the current database. The machine-readable contract is the
 [OpenAPI document](#openapi-document).
+
+`POST /api/v1/suggestions` is the one write of the public surface (issue #327): a reader of the
+website's word pages files feedback into the instance's moderation queue (the admin
+_Suggestions_ page). Two kinds share the endpoint:
+
+- **`kind: "report"`** (the default) — a free-text `message` about a headword; `word_id`
+  optionally names the entry from a word answer.
+- **`kind: "edit"`** — the reader edits the word form as a whole; the proposal the admin can
+  apply in one click travels as `edits`, a list of `{ target_type, target_id, changes }` items
+  covering every touched piece: `target_type` is `word` | `meaning` | `meaning_translation` |
+  `short_translation`, `target_id` comes from the word answers, `changes` holds the proposed
+  field values (`description` / `transcription` for a word, `title` / `definition` for a
+  meaning or its translation, `description` for a short translation). The server snapshots the
+  current values into before/after diffs at file time; unknown fields, empty values, targets of
+  another headword and a proposal that changes nothing are rejected. Applying walks every item
+  through the same edit services the admin UI uses, so the changes are audited and flag the
+  entry `user_modified` (#328).
+
+The headword must exist in the dictionary. The endpoint has a rate limit of its own —
+`SUGGESTIONS_RATE_LIMIT`, default `5/3600` (five reports per hour per client), separate from
+the shared `/api/v1` budget — and answers `503 suggestion_queue_full` once 500 reports are
+waiting for the admin. See [`data.md`](./data.md#reporting-errors).
 
 ```bash
 curl -X POST 'http://localhost:3010/api/v1/search/detailed' \

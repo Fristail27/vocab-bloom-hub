@@ -6,6 +6,8 @@ import { AddWordFilterIndexes1788300000000 } from './1788300000000-AddWordFilter
 import { AddEntryWordTrigramIndex1788400000000 } from './1788400000000-AddEntryWordTrigramIndex';
 import { AddAuditLog1788500000000 } from './1788500000000-AddAuditLog';
 import { AddEntryUserModifiedFlag1788600000000 } from './1788600000000-AddEntryUserModifiedFlag';
+import { AddSuggestions1788700000000 } from './1788700000000-AddSuggestions';
+import { AddSuggestionEditPayload1788800000000 } from './1788800000000-AddSuggestionEditPayload';
 
 // Every migration class must be listed here: both the CLI DataSource and the
 // runtime TypeORM options read this array. An explicit list (instead of a
@@ -19,4 +21,6 @@ export const migrations = [
   AddEntryWordTrigramIndex1788400000000,
   AddAuditLog1788500000000,
   AddEntryUserModifiedFlag1788600000000,
+  AddSuggestions1788700000000,
+  AddSuggestionEditPayload1788800000000,
 ];

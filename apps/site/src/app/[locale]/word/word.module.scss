@@ -61,10 +61,21 @@
   }
 }
 
+// the entries count on the left, "Report a mistake" on the right (#327);
+// the expanded form wraps onto its own full-width line
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 0 24px;
+}
+
 .meta {
   color: var(--muted);
   font-size: 0.9rem;
-  margin: 0 0 24px;
+  margin: 0;
 }
 
 .entry {

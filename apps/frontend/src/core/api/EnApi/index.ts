@@ -25,7 +25,13 @@ import {
   EditMeaningTranslationResT,
   EditPhrasalBaseReqT,
   EditPhrasalBaseResT,
+  ApplySuggestionResT,
+  DeleteSuggestionResT,
+  ListSuggestionsQueryT,
+  ListSuggestionsResT,
   ResetEntryUserModifiedResT,
+  SuggestionStatusE,
+  UpdateSuggestionStatusResT,
   EditShortTranslationReqT,
   EditShortTranslationResT,
   EditWordFormReqT,
@@ -133,6 +139,28 @@ export class EnApi extends AbstractBaseApi {
 
   static async editPhrasalBase(body: EditPhrasalBaseReqT): Promise<EditPhrasalBaseResT> {
     return this.patch<EditPhrasalBaseResT>(`${this.baseURL}/en/phrasal-base`, body);
+  }
+
+  // The moderation queue of reader reports (issue #327)
+  static async getSuggestions(query: ListSuggestionsQueryT): Promise<ListSuggestionsResT> {
+    return this.get<ListSuggestionsResT>(`${this.baseURL}/en/suggestions`, { query: { ...query } });
+  }
+
+  static async updateSuggestionStatus(
+    id: number,
+    status: SuggestionStatusE,
+  ): Promise<UpdateSuggestionStatusResT> {
+    return this.patch<UpdateSuggestionStatusResT>(`${this.baseURL}/en/suggestions/${id}`, { status });
+  }
+
+  static async deleteSuggestion(id: number): Promise<DeleteSuggestionResT> {
+    return this.delete<DeleteSuggestionResT>(`${this.baseURL}/en/suggestions/${id}`);
+  }
+
+  // One-click accept of an edit suggestion: the stored values go through the
+  // normal edit flow on the server (audited, flags the entry user_modified)
+  static async applySuggestion(id: number): Promise<ApplySuggestionResT> {
+    return this.post<ApplySuggestionResT>(`${this.baseURL}/en/suggestions/${id}/apply`, {});
   }
 
   // Clears the entry's user-modified flag (issue #328): the next dictionary

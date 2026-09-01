@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+  '/api/v1/suggestions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Report a mistake in the dictionary data
+     * @description Files a report for the instance admin to review: what is wrong with a headword (optionally one specific entry of it) and, ideally, what would be right. The headword must exist in the dictionary. Strictly rate-limited; once too many reports are waiting for the admin the endpoint answers 503 until the queue is worked down.
+     */
+    post: operations['PublicSuggestionsController_create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/search': {
     parameters: {
       query?: never;
@@ -201,6 +221,29 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    SuggestionEditV1DTO: {
+      /** @enum {string} */
+      target_type: 'word' | 'meaning' | 'meaning_translation' | 'short_translation';
+      /** @description Id of the targeted row, from the word answers */
+      target_id: number;
+      /** @description The proposed field values, e.g. { "definition": "…" }. The accepted fields depend on target_type; unknown fields, empty values and values equal to the current ones are rejected */
+      changes: Record<string, never>;
+    };
+    CreateSuggestionV1ReqDTO: {
+      /** @description The headword the report is about; must exist in the dictionary */
+      headword: string;
+      /** @description Id of the entry (part of speech) the report points at, from the word answers */
+      word_id?: Record<string, never>;
+      /**
+       * @default report
+       * @enum {string}
+       */
+      kind: 'report' | 'edit';
+      /** @description What is wrong and, ideally, what would be right. Required for a report; an optional comment on an edit */
+      message?: Record<string, never>;
+      /** @description Edit flow: every touched target of the word form with its proposed values */
+      edits?: components['schemas']['SuggestionEditV1DTO'][];
+    };
     SearchV1ReqDTO: {
       search: string;
       /**
@@ -522,6 +565,13 @@ export interface components {
     PublicMetaV1ResT: {
       data: components['schemas']['PublicMetaV1T'];
     };
+    PublicSuggestionCreatedV1T: {
+      id: number;
+      status: string;
+    };
+    PublicSuggestionCreatedV1ResT: {
+      data: components['schemas']['PublicSuggestionCreatedV1T'];
+    };
     PublicApiErrorT: {
       statusCode: number;
       message: string;
@@ -536,6 +586,66 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  PublicSuggestionsController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateSuggestionV1ReqDTO'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicSuggestionCreatedV1ResT'];
+        };
+      };
+      /** @description Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+      /** @description Nothing matches */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+      /** @description Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+      /** @description Not available: the OpenAPI document is not ready, or the suggestion queue is full */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+    };
+  };
   PublicSearchController_search: {
     parameters: {
       query?: never;
@@ -1101,7 +1211,7 @@ export interface operations {
           'application/json': components['schemas']['PublicApiErrorT'];
         };
       };
-      /** @description The document is not available yet */
+      /** @description Not available: the OpenAPI document is not ready, or the suggestion queue is full */
       503: {
         headers: {
           [name: string]: unknown;

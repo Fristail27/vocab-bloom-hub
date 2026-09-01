@@ -9,6 +9,42 @@ from pydantic import BaseModel, Field
 from typing import Any
 
 
+class TargetType(Enum):
+    word = "word"
+    meaning = "meaning"
+    meaning_translation = "meaning_translation"
+    short_translation = "short_translation"
+
+
+class SuggestionEditV1DTO(BaseModel):
+    target_type: TargetType
+    target_id: float = Field(..., description="Id of the targeted row, from the word answers")
+    changes: dict[str, Any] = Field(
+        ...,
+        description='The proposed field values, e.g. { "definition": "…" }. The accepted fields depend on target_type; unknown fields, empty values and values equal to the current ones are rejected',
+    )
+
+
+class Kind(Enum):
+    report = "report"
+    edit = "edit"
+
+
+class CreateSuggestionV1ReqDTO(BaseModel):
+    headword: str = Field(..., description="The headword the report is about; must exist in the dictionary")
+    word_id: dict[str, Any] | None = Field(
+        None, description="Id of the entry (part of speech) the report points at, from the word answers"
+    )
+    kind: Kind = "report"
+    message: dict[str, Any] | None = Field(
+        None,
+        description="What is wrong and, ideally, what would be right. Required for a report; an optional comment on an edit",
+    )
+    edits: list[SuggestionEditV1DTO] | None = Field(
+        None, description="Edit flow: every touched target of the word form with its proposed values"
+    )
+
+
 class Type(Enum):
     """
     Restrict the answer to one entry type
@@ -274,6 +310,15 @@ class PublicMetaV1T(BaseModel):
 
 class PublicMetaV1ResT(BaseModel):
     data: PublicMetaV1T
+
+
+class PublicSuggestionCreatedV1T(BaseModel):
+    id: int
+    status: str
+
+
+class PublicSuggestionCreatedV1ResT(BaseModel):
+    data: PublicSuggestionCreatedV1T
 
 
 class PublicApiErrorT(BaseModel):

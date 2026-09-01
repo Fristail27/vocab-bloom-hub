@@ -5,6 +5,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import type { EnMeaningT, EnWordT } from 'server/types';
 
 import { Pronounce } from '@/components/Pronounce';
+import { ReportMistake } from '@/components/ReportMistake';
 import { WordSearch } from '@/components/WordSearch';
 import { fetchHeadword } from '@/core/dictionary';
 import { Link } from '@/i18n/navigation';
@@ -181,7 +182,32 @@ export default async function WordPage({ params }: WordPageP) {
         <Pronounce word={meta.word} />
         {transcription && <span className={styles.transcription}>{ipa(transcription)}</span>}
       </div>
-      <p className={styles.meta}>{t('entries', { count: meta.count })}</p>
+      <div className={styles.metaRow}>
+        <p className={styles.meta}>{t('entries', { count: meta.count })}</p>
+        <ReportMistake
+          headword={meta.word}
+          entries={data.map((entry) => ({
+            id: entry.id,
+            part_of_speech: entry.part_of_speech,
+            description: entry.description ?? '',
+            transcription: entry.transcription ?? '',
+            meanings: entry.meanings.map((meaning) => ({
+              id: meaning.id,
+              title: meaning.title ?? '',
+              definition: meaning.definition ?? '',
+              translations: meaning.translations.map((translation) => ({
+                id: translation.id,
+                title: translation.title ?? '',
+                definition: translation.definition ?? '',
+              })),
+            })),
+            short_translations: entry.short_translations.map((item) => ({
+              id: item.id,
+              description: item.description ?? '',
+            })),
+          }))}
+        />
+      </div>
       {data.map((entry) => (
         <Entry key={entry.id} entry={entry} labels={labels} />
       ))}

@@ -42,6 +42,7 @@ TranslationsResponse = _g.PublicHeadwordTranslationsV1ResT
 FormsResponse = _g.PublicHeadwordFormsV1ResT
 WordsResponse = _g.PublicWordsV1ResT
 MetaResponse = _g.PublicMetaV1ResT
+SuggestionCreatedResponse = _g.PublicSuggestionCreatedV1ResT
 
 __all__ = [
     "ApiError",
@@ -63,6 +64,7 @@ __all__ = [
     "SearchResponse",
     "SearchWord",
     "ShortTranslation",
+    "SuggestionCreatedResponse",
     "TranslationsResponse",
     "VerbTransitivity",
     "Word",

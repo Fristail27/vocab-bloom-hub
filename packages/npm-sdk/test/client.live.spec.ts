@@ -161,6 +161,15 @@ describe('VocabBloomClient against the running server (issue #275)', () => {
     expect(Object.keys(document.paths as object)).toContain('/api/v1/words/{word}');
   });
 
+  it('files a suggestion into the moderation queue (issue #327)', async () => {
+    const report = await client.suggest({
+      headword: 'run',
+      message: 'The example sentence sounds unnatural — SDK live test.',
+    });
+    expect(report.data.id).toBeGreaterThan(0);
+    expect(report.data.status).toBe('new');
+  });
+
   it('turns API errors into typed exceptions and revalidates through the ETag cache', async () => {
     await expect(client.word('nonexistent')).rejects.toBeInstanceOf(NotFoundError);
     await expect(client.random({ word_level: ['B2'] })).rejects.toMatchObject({

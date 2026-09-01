@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../AuditModule/audit.module';
 import { AuditController } from '../AuditModule/audit.controller';
+import { SuggestionsModule } from '../SuggestionsModule/suggestions.module';
+import { SuggestionsController } from '../SuggestionsModule/suggestions.controller';
+import { SuggestionApplyService } from '../SuggestionsModule/suggestion-apply.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SettingsModule } from '../SettingsModule/settings.module';
 import { EnController } from './en.controller';
@@ -33,6 +36,8 @@ import { EnAdminListsService } from './modules/EnAdminLists/enAdminLists.service
     // so EnModule stays self-contained for the tests that boot it alone
     ImportStatusModule,
     AuditModule,
+    // provides SuggestionsService for the moderation controller below (issue #327)
+    SuggestionsModule,
     TypeOrmModule.forFeature([EnEntry, EnWord, EnMeaning, EnMeaningTranslation, EnShortTranslation]),
     // the import service records the dataset version of the last import
     SettingsModule,
@@ -43,8 +48,10 @@ import { EnAdminListsService } from './modules/EnAdminLists/enAdminLists.service
     // and /api/en/meaning-translations are swallowed by the GET /api/en/:id route
     EnStatisticsController,
     EnAdminListsController,
-    // the journal's route must also be matched before GET /api/en/:id
+    // the journal's and the moderation queue's routes must also be matched
+    // before GET /api/en/:id
     AuditController,
+    SuggestionsController,
     EnController,
     EnShortTranslationController,
     EnMeaningTranslationController,
@@ -62,6 +69,9 @@ import { EnAdminListsService } from './modules/EnAdminLists/enAdminLists.service
     EnSearchService,
     EnStatisticsService,
     EnAdminListsService,
+    // one-click accept of an edit suggestion (issue #327): needs the edit
+    // services above, so it lives in this module's context
+    SuggestionApplyService,
   ],
   // the public API reuses the search service and the statistics counters
   exports: [EnService, EnSearchService, EnStatisticsService],
