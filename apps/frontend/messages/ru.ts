@@ -57,7 +57,26 @@ export default {
     statistics: 'Статистика',
     suggestions: 'Жалобы',
     history: 'История',
+    settings: 'Настройки',
     documentation: 'Документация',
+  },
+  settings_page: {
+    intro:
+      'Настройки этого инстанса в виде «поле — значение». Поля с пометкой system ведёт само приложение: version — запущенная сборка, en_dataset_version — версия импортированного датасета; если удалить последнее, следующий импорт посчитает словарь ещё не импортированным.',
+    col_field: 'Поле',
+    col_value: 'Значение',
+    col_actions: 'Действия',
+    system_tag: 'system',
+    field_placeholder: 'имя поля',
+    value_placeholder: 'значение',
+    action_add: 'Добавить',
+    action_edit: 'Изменить',
+    action_delete: 'Удалить',
+    edit_title: 'Изменить «{field}»',
+    delete_confirm: 'Удалить поле «{field}»?',
+    added: 'Поле добавлено',
+    updated: 'Поле обновлено',
+    deleted: 'Поле удалено',
   },
   suggestions: {
     intro:

@@ -60,7 +60,6 @@ import {
   ListWordsQueryT,
   ListWordsResT,
   SearchDetailedReqT,
-  SearchDetailedResT,
   SearchReqT,
   SearchResT,
 } from 'server/types';
@@ -78,8 +77,11 @@ export class EnApi extends AbstractBaseApi {
     return this.post<AddResT>(`${this.baseURL}/en/add/word`, data);
   }
 
+  // Reads through the public prefix (the /api/en/search aliases are
+  // deprecated) and unwraps the v1 envelope for the admin components
   static async search(search: string): Promise<SearchResT> {
-    return this.searchByFilters({ search, limit: 100 });
+    const res = await this.publicSearch({ search, limit: 100 });
+    return 'error' in res ? res : res.data;
   }
 
   // Mirrors the raw endpoint contract: every filter the DTO accepts is passed through as is
@@ -95,18 +97,6 @@ export class EnApi extends AbstractBaseApi {
   /** Any GET read of the public prefix, e.g. `/v1/words/run` (the documentation playground) */
   static async publicGet<T>(path: string, query?: ApiQueryT): Promise<T | ErrorResT> {
     return this.get<T>(`${this.baseURL}${path}`, { query });
-  }
-
-  // The admin UI reads through the public prefix too (the /api/en/search
-  // aliases are deprecated) and unwraps the envelope for its components
-  static async searchByFilters(body: SearchReqT): Promise<SearchResT> {
-    const res = await this.publicSearch(body);
-    return 'error' in res ? res : res.data;
-  }
-
-  static async searchDetailed(body: SearchDetailedReqT): Promise<SearchDetailedResT> {
-    const res = await this.publicSearchDetailed(body);
-    return 'error' in res ? res : { items: res.data, ...res.meta };
   }
 
   // Admin listings with filters and pagination (bulk-request page, issue #249)

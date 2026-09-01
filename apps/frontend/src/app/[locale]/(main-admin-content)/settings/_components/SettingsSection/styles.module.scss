@@ -1,0 +1,36 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.addForm {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.addField {
+  max-width: 260px;
+}
+
+.addValue {
+  max-width: 360px;
+}
+
+.fieldName {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.value {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}

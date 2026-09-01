@@ -20,6 +20,7 @@ export class SettingsApi extends AbstractBaseApi {
     return this.patch<AddSettingResT>(`${this.baseURL}/settings/update`, { field, value });
   }
   static async deleteField(field: string): Promise<AddSettingResT> {
-    return this.delete<AddSettingResT>(`${this.baseURL}/settings/delete/${field}`);
+    // the server route is by-field/:fieldName, same as getField (issue #347)
+    return this.delete<AddSettingResT>(`${this.baseURL}/settings/by-field/${encodeURIComponent(field)}`);
   }
 }
