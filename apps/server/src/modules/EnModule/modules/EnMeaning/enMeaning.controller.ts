@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { EnMeaningService } from './enMeaning.service';
 import { AdminGuard } from '../../../AuthModule/guards/admin.guard';
@@ -25,7 +25,7 @@ export class EnMeaningController {
 
   @UseGuards(AdminGuard)
   @Delete('meaning/:id')
-  async deleteMeaning(@Param('id') id: string): Promise<DeleteMeaningResT> {
-    return this.enMeaningService.deleteMeaning(+id);
+  async deleteMeaning(@Param('id', ParseIntPipe) id: number): Promise<DeleteMeaningResT> {
+    return this.enMeaningService.deleteMeaning(id);
   }
 }

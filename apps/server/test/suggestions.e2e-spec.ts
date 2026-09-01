@@ -224,6 +224,14 @@ describe('Suggestions: the public intake and the moderation queue (e2e, issue #3
       expect(audit.diff).toEqual({ status: { before: 'new', after: 'resolved' } });
     });
 
+    it('rejects a non-numeric id as 400 (issue #345)', async () => {
+      await request(server())
+        .patch('/api/en/suggestions/abc')
+        .set(auth)
+        .send({ status: SuggestionStatusE.resolved })
+        .expect(400);
+    });
+
     it('deletes a report and 404s what is gone', async () => {
       const { body } = await request(server()).get('/api/en/suggestions').set(auth);
       const id = body.items[0].id as number;

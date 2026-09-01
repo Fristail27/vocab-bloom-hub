@@ -104,11 +104,11 @@ describe('EnController (issue #87)', () => {
     });
   });
 
-  describe('id params are converted from string to number', () => {
+  describe('id params arrive as numbers (ParseIntPipe converts them, issue #345)', () => {
     it('deleteWord', async () => {
       mockEnService.deleteWord.mockResolvedValue({ success: true });
 
-      await expect(controller.deleteWord('5')).resolves.toEqual({ success: true });
+      await expect(controller.deleteWord(5)).resolves.toEqual({ success: true });
       expect(mockEnService.deleteWord).toHaveBeenCalledWith(5);
     });
 
@@ -116,7 +116,7 @@ describe('EnController (issue #87)', () => {
       mockEnService.editWord.mockResolvedValue({ success: true });
       const body = { description: 'to move fast' };
 
-      await controller.editWord('7', body);
+      await controller.editWord(7, body);
 
       expect(mockEnService.editWord).toHaveBeenCalledWith(7, body);
     });
@@ -124,7 +124,7 @@ describe('EnController (issue #87)', () => {
     it('getWordById', async () => {
       mockEnService.getWordById.mockResolvedValue({ id: 3, word: 'run' } as never);
 
-      await controller.getWordById('3');
+      await controller.getWordById(3);
 
       expect(mockEnService.getWordById).toHaveBeenCalledWith(3);
     });

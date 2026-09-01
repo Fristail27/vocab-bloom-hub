@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import {
   ApplySuggestionResT,
@@ -25,8 +36,8 @@ export class SuggestionsController {
   // the normal edit flow (validated, audited, flags the entry user_modified)
   @UseGuards(AdminGuard)
   @Post(':id/apply')
-  async apply(@Param('id') id: string): Promise<ApplySuggestionResT> {
-    return this.suggestionApplyService.apply(+id);
+  async apply(@Param('id', ParseIntPipe) id: number): Promise<ApplySuggestionResT> {
+    return this.suggestionApplyService.apply(id);
   }
 
   @UseGuards(AdminGuard)
@@ -38,15 +49,15 @@ export class SuggestionsController {
   @UseGuards(AdminGuard)
   @Patch(':id')
   async updateStatus(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() body: UpdateSuggestionStatusReqDTO,
   ): Promise<UpdateSuggestionStatusResT> {
-    return this.suggestionsService.updateStatus(+id, body.status);
+    return this.suggestionsService.updateStatus(id, body.status);
   }
 
   @UseGuards(AdminGuard)
   @Delete(':id')
-  async delete(@Param('id') id: string): Promise<DeleteSuggestionResT> {
-    return this.suggestionsService.delete(+id);
+  async delete(@Param('id', ParseIntPipe) id: number): Promise<DeleteSuggestionResT> {
+    return this.suggestionsService.delete(id);
   }
 }

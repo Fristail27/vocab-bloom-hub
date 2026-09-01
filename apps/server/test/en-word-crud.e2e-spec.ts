@@ -195,6 +195,12 @@ describe('En word add/edit routes (e2e, issue #87)', () => {
         .expect(400);
     });
 
+    it('rejects a non-numeric id as 400 instead of a driver error (issue #345)', async () => {
+      await request(server()).get('/api/en/abc').set(auth).expect(400);
+      await request(server()).patch('/api/en/common-info/abc').set(auth).send({ description: 'x' }).expect(400);
+      await request(server()).delete('/api/en/abc').set(auth).expect(400);
+    });
+
     it('edits a word form through PATCH /api/en/word-form', async () => {
       const wordRes = await request(server()).get(`/api/en/${wordId}`).set(auth).expect(200);
       const formId = wordRes.body.forms[0].id;

@@ -899,6 +899,15 @@ export interface operations {
           'application/json': components['schemas']['PublicHeadwordV1ResT'];
         };
       };
+      /** @description Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
       /** @description Nothing matches */
       404: {
         headers: {
@@ -938,6 +947,15 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['PublicHeadwordMeaningsV1ResT'];
+        };
+      };
+      /** @description Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
         };
       };
       /** @description Nothing matches */
@@ -1032,6 +1050,15 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['PublicHeadwordFormsV1ResT'];
+        };
+      };
+      /** @description Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
         };
       };
       /** @description Nothing matches */

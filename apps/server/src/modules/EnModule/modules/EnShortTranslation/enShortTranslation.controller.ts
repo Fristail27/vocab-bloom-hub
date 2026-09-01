@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { EnShortTranslationService } from './enShortTranslation.service';
 import { AdminGuard } from '../../../AuthModule/guards/admin.guard';
@@ -23,8 +23,8 @@ export class EnShortTranslationController {
 
   @UseGuards(AdminGuard)
   @Delete('short-translation/:id')
-  async deleteShortTranslation(@Param('id') id: string): Promise<DeleteShortTranslationResT> {
-    return this.enShortTranslationService.deleteShortTranslation(+id);
+  async deleteShortTranslation(@Param('id', ParseIntPipe) id: number): Promise<DeleteShortTranslationResT> {
+    return this.enShortTranslationService.deleteShortTranslation(id);
   }
 
   @UseGuards(AdminGuard)
