@@ -1,10 +1,24 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsBoolean, IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { AvailableTranslationLanguagesE, EnEntryTypesE } from '../../../../../../types';
+import { SEARCH_TERM_MAX_LENGTH } from './SearchReq.dto';
 
 export class SearchDetailedReqDTO {
-  @ApiProperty()
+  @ApiProperty({ minLength: 1, maxLength: SEARCH_TERM_MAX_LENGTH })
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(SEARCH_TERM_MAX_LENGTH)
   search!: string;
 
   @ApiPropertyOptional({ enum: EnEntryTypesE, description: 'Restrict the answer to one entry type' })

@@ -15,11 +15,13 @@ import {
 import { PublicApiThrottlerGuard } from '../../core/guards/public-api-throttler.guard';
 import { PublicCacheInterceptor } from './public-cache.interceptor';
 import { PUBLIC_API_PREFIX, PUBLIC_API_THROTTLE } from '../../core/utils/public-api';
+import { HEADWORD_MAX_LENGTH, HeadwordParamPipe } from './utils/headword-param.pipe';
 
 const HEADWORD_PARAM = {
   name: 'word',
   description:
     'Headword spelling, case-insensitive (spaces URL-encoded for phrases). An inflected form resolves to its base entry',
+  schema: { type: 'string', minLength: 1, maxLength: HEADWORD_MAX_LENGTH },
 };
 
 /** Public reads of dictionary entries (issue #272): by headword, by id, and the filtered list */
@@ -52,14 +54,14 @@ export class PublicWordsController {
   @ApiOperation({ summary: 'All entries of a headword: parts of speech, forms, meanings, translations, links' })
   @ApiParam(HEADWORD_PARAM)
   @Get(':word')
-  async byHeadword(@Param('word') word: string): Promise<PublicHeadwordV1ResT> {
+  async byHeadword(@Param('word', HeadwordParamPipe) word: string): Promise<PublicHeadwordV1ResT> {
     return this.publicWordsService.getByHeadword(word);
   }
 
   @ApiOperation({ summary: 'The meanings of a headword across its entries' })
   @ApiParam(HEADWORD_PARAM)
   @Get(':word/meanings')
-  async meanings(@Param('word') word: string): Promise<PublicHeadwordMeaningsV1ResT> {
+  async meanings(@Param('word', HeadwordParamPipe) word: string): Promise<PublicHeadwordMeaningsV1ResT> {
     return this.publicWordsService.getMeaningsByHeadword(word);
   }
 
@@ -67,7 +69,7 @@ export class PublicWordsController {
   @ApiParam(HEADWORD_PARAM)
   @Get(':word/translations')
   async translations(
-    @Param('word') word: string,
+    @Param('word', HeadwordParamPipe) word: string,
     @Query() query: HeadwordTranslationsV1QueryDTO,
   ): Promise<PublicHeadwordTranslationsV1ResT> {
     return this.publicWordsService.getTranslationsByHeadword(word, query.language);
@@ -76,7 +78,7 @@ export class PublicWordsController {
   @ApiOperation({ summary: 'The inflected forms of a headword across its entries' })
   @ApiParam(HEADWORD_PARAM)
   @Get(':word/forms')
-  async forms(@Param('word') word: string): Promise<PublicHeadwordFormsV1ResT> {
+  async forms(@Param('word', HeadwordParamPipe) word: string): Promise<PublicHeadwordFormsV1ResT> {
     return this.publicWordsService.getFormsByHeadword(word);
   }
 }

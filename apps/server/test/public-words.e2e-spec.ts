@@ -206,6 +206,16 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
       expectPublicError(res.body, 404, 'word_doesnt_found');
       await request(server()).get('/api/v1/words/%20').expect(404);
     });
+
+    it('rejects a headword longer than the column instead of running the lookup (issue #345)', async () => {
+      const oversized = 'x'.repeat(129);
+      const res = await request(server()).get(`/api/v1/words/${oversized}`).expect(400);
+      expectPublicError(res.body, 400);
+      expect(res.body.message).toContain('128');
+      await request(server()).get(`/api/v1/words/${oversized}/meanings`).expect(400);
+      await request(server()).get(`/api/v1/words/${oversized}/translations`).expect(400);
+      await request(server()).get(`/api/v1/words/${oversized}/forms`).expect(400);
+    });
   });
 
   describe('GET /api/v1/words/{word}/meanings, /translations, /forms', () => {

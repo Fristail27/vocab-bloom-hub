@@ -100,6 +100,19 @@ describe('public API /api/v1 (e2e, issue #271)', () => {
     expect(detailed.body.data[0].meanings).toEqual([expect.objectContaining({ title: 'to shine unsteadily' })]);
   });
 
+  it('rejects an empty and an oversized search term (issue #345)', async () => {
+    await request(server()).post('/api/v1/search').send({ search: '' }).expect(400);
+    const long = await request(server())
+      .post('/api/v1/search')
+      .send({ search: 'x'.repeat(257) })
+      .expect(400);
+    expect(long.body).toEqual({ statusCode: 400, message: expect.stringContaining('256'), error: true });
+    await request(server())
+      .post('/api/v1/search/detailed')
+      .send({ search: 'x'.repeat(257) })
+      .expect(400);
+  });
+
   it('reports every error under the prefix in the ErrorResT shape', async () => {
     // validation
     const bad = await request(server()).post('/api/v1/search').send({ search: 'x', limit: 'many' }).expect(400);

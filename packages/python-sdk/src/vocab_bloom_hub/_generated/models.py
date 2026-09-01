@@ -56,7 +56,7 @@ class Type(Enum):
 
 
 class SearchV1ReqDTO(BaseModel):
-    search: str
+    search: str = Field(..., max_length=256, min_length=1)
     type: Type | None = Field(None, description="Restrict the answer to one entry type")
     limit: int = Field(10, ge=1, le=100)
 
@@ -66,7 +66,7 @@ class TranslationLanguage(Enum):
 
 
 class SearchDetailedV1ReqDTO(BaseModel):
-    search: str
+    search: str = Field(..., max_length=256, min_length=1)
     type: Type | None = Field(None, description="Restrict the answer to one entry type")
     limit: int = Field(10, ge=1, le=20)
     page: int = Field(1, ge=1, le=20)

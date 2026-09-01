@@ -49,10 +49,10 @@ describe('word sub-resource controllers (issue #87)', () => {
       expect(mockService.editMeaning).toHaveBeenCalledWith(body);
     });
 
-    it('deleteMeaning converts the id param to a number', async () => {
+    it('deleteMeaning passes the id through (ParseIntPipe converts it, issue #345)', async () => {
       mockService.deleteMeaning.mockResolvedValue({ success: true });
 
-      await expect(controller.deleteMeaning('5')).resolves.toEqual({ success: true });
+      await expect(controller.deleteMeaning(5)).resolves.toEqual({ success: true });
       expect(mockService.deleteMeaning).toHaveBeenCalledWith(5);
     });
   });
@@ -94,10 +94,10 @@ describe('word sub-resource controllers (issue #87)', () => {
       expect(mockService.editMeaningTranslation).toHaveBeenCalledWith(body);
     });
 
-    it('deleteMeaningTranslation converts the id param to a number', async () => {
+    it('deleteMeaningTranslation passes the id through (ParseIntPipe converts it, issue #345)', async () => {
       mockService.deleteMeaningTranslation.mockResolvedValue({ success: true });
 
-      await expect(controller.deleteMeaningTranslation('7')).resolves.toEqual({ success: true });
+      await expect(controller.deleteMeaningTranslation(7)).resolves.toEqual({ success: true });
       expect(mockService.deleteMeaningTranslation).toHaveBeenCalledWith(7);
     });
   });
@@ -136,10 +136,10 @@ describe('word sub-resource controllers (issue #87)', () => {
       expect(mockService.editShortTranslation).toHaveBeenCalledWith(body);
     });
 
-    it('deleteShortTranslation converts the id param to a number', async () => {
+    it('deleteShortTranslation passes the id through (ParseIntPipe converts it, issue #345)', async () => {
       mockService.deleteShortTranslation.mockResolvedValue({ success: true });
 
-      await expect(controller.deleteShortTranslation('9')).resolves.toEqual({ success: true });
+      await expect(controller.deleteShortTranslation(9)).resolves.toEqual({ success: true });
       expect(mockService.deleteShortTranslation).toHaveBeenCalledWith(9);
     });
   });

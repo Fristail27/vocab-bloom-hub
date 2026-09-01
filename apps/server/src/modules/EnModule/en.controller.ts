@@ -5,6 +5,7 @@ import {
   Get,
   InternalServerErrorException,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -58,17 +59,17 @@ export class EnController {
 
   @UseGuards(AdminGuard)
   @Delete(':id')
-  async deleteWord(@Param('id') id: string): Promise<DeleteResT> {
-    return this.enService.deleteWord(+id);
+  async deleteWord(@Param('id', ParseIntPipe) id: number): Promise<DeleteResT> {
+    return this.enService.deleteWord(id);
   }
 
   @UseGuards(AdminGuard)
   @Patch('common-info/:id')
   async editWord(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() body: EditCommonInfoOfWordReqDTO,
   ): Promise<EditCommonInfoOfWordResT> {
-    return this.enService.editWord(+id, body);
+    return this.enService.editWord(id, body);
   }
 
   @UseGuards(AdminGuard)
@@ -79,8 +80,8 @@ export class EnController {
 
   @UseGuards(AdminGuard)
   @Get(':id')
-  async getWordById(@Param('id') id: string): Promise<GetWordByIdResT> {
-    return this.enService.getWordById(+id);
+  async getWordById(@Param('id', ParseIntPipe) id: number): Promise<GetWordByIdResT> {
+    return this.enService.getWordById(id);
   }
 
   // Clears the user-modified flag of an entry (issue #328): the next
