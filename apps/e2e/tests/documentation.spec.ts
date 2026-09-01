@@ -46,6 +46,29 @@ test.describe('documentation', () => {
     await expect(page.getByRole('cell', { name: 'has_more' })).toBeVisible();
   });
 
+  test('the suggestions endpoint page files a real report from the playground (issue #349)', async ({
+    page,
+    request,
+  }) => {
+    await seedWord(request, 'murmur');
+
+    await page.goto('/en/documentation');
+    await expect(page.getByRole('link', { name: 'Report a mistake' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'OpenAPI document' })).toBeVisible();
+
+    await page.goto('/en/documentation/suggestions');
+    await expect(page.getByText('/api/v1/suggestions', { exact: true })).toBeVisible();
+    // its own bucket, not the shared prefix budget
+    await expect(page.getByText(/5 requests/)).toBeVisible();
+
+    const textboxes = page.getByRole('textbox');
+    await textboxes.nth(0).fill('murmur');
+    await textboxes.nth(1).fill('The definition reads oddly — documentation playground e2e.');
+    await page.getByRole('button', { name: 'Send request' }).click();
+
+    await expect(page.getByText('"status": "new"')).toBeVisible();
+  });
+
   test('unknown endpoint slug renders the not found page', async ({ page }) => {
     await page.goto('/en/documentation/nope');
 

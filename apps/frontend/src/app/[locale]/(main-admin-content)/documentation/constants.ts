@@ -22,6 +22,8 @@ export enum ApiEndpointKeyE {
   words = 'words',
   random = 'random',
   meta = 'meta',
+  suggestions = 'suggestions',
+  openapi = 'openapi',
 }
 
 export enum ParamControlE {
@@ -280,6 +282,36 @@ export const DOCUMENTED_ENDPOINTS: ApiEndpointDocT[] = [
     path: '/api/v1/meta',
     clientPath: '/v1/meta',
     responseType: 'PublicMetaV1ResT',
+    params: [],
+  },
+  {
+    key: ApiEndpointKeyE.suggestions,
+    slug: 'suggestions',
+    method: 'POST',
+    path: '/api/v1/suggestions',
+    clientPath: '/v1/suggestions',
+    responseType: 'PublicSuggestionCreatedV1ResT',
+    // SUGGESTIONS_RATE_LIMIT on the server; its own bucket, not the shared one
+    throttle: { limit: 5, seconds: 3600 },
+    params: [
+      { name: 'headword', type: 'string', control: ParamControlE.text, required: true },
+      {
+        name: 'message',
+        type: 'string',
+        control: ParamControlE.text,
+        required: true,
+        constraints: '10–2000 characters',
+      },
+      { name: 'word_id', type: 'number', control: ParamControlE.number, required: false, min: 1 },
+    ],
+  },
+  {
+    key: ApiEndpointKeyE.openapi,
+    slug: 'openapi',
+    method: 'GET',
+    path: '/api/v1/openapi.json',
+    clientPath: '/v1/openapi.json',
+    responseType: 'OpenAPI 3 document',
     params: [],
   },
 ];

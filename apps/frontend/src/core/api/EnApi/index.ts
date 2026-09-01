@@ -99,6 +99,11 @@ export class EnApi extends AbstractBaseApi {
     return this.get<T>(`${this.baseURL}${path}`, { query });
   }
 
+  /** Any POST of the public prefix, e.g. `/v1/suggestions` (the documentation playground) */
+  static async publicPost<T>(path: string, body: object): Promise<T | ErrorResT> {
+    return this.post<T>(`${this.baseURL}${path}`, body);
+  }
+
   // Admin listings with filters and pagination (bulk-request page, issue #249)
   static async listWords(query: ListWordsQueryT): Promise<ListWordsResT> {
     return this.get<ListWordsResT>(`${this.baseURL}/en/words`, { query: { ...query } });

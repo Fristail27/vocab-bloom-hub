@@ -160,18 +160,8 @@ describe('DOCUMENTED_ENDPOINTS', () => {
   });
 
   it('описывает все публичные методы v1 с уникальными сегментами (issue #272)', () => {
-    expect(DOCUMENTED_ENDPOINTS.map(({ path }) => path)).toEqual([
-      '/api/v1/search',
-      '/api/v1/search/detailed',
-      '/api/v1/words/{word}',
-      '/api/v1/words/{word}/meanings',
-      '/api/v1/words/{word}/translations',
-      '/api/v1/words/{word}/forms',
-      '/api/v1/words/id/{id}',
-      '/api/v1/words',
-      '/api/v1/random',
-      '/api/v1/meta',
-    ]);
+    // the full operation list is checked against the committed OpenAPI spec
+    // in contract.spec.ts (issue #349); here only the internal consistency
     const slugs = DOCUMENTED_ENDPOINTS.map(({ slug }) => slug);
     expect(new Set(slugs).size).toBe(slugs.length);
     // every {placeholder} of a path is a documented path param

@@ -510,6 +510,15 @@ export default {
       'One random entry matching the same filters as the list (base forms unless form_of_word is given); 404 when nothing matches. The draw is an index lookup, cheap even on a 300k-row dictionary.',
     desc_meta:
       'What the instance serves: the API and application versions, the version of the dataset the dictionary was imported from, the data license and the counts of entries, words, phrases, forms, meanings and translations.',
+    endpoint_suggestions: 'Report a mistake',
+    desc_suggestions:
+      'Files a reader report on a dictionary entry into this instance\u2019s moderation queue (the Suggestions page). The default kind, report, needs a message; the website\u2019s edit form additionally files kind: edit with an edits array of before/after changes — that payload is not built here. Strictly rate-limited per client; the queue refuses past 500 open reports (503).',
+    endpoint_openapi: 'OpenAPI document',
+    desc_openapi:
+      'The machine-readable OpenAPI 3 description of this public API — the same committed contract the SDKs and the website\u2019s reference are generated from. Point a code generator or an API client at it.',
+    param_desc_headword: 'Headword the report is about, case-insensitive; 404 when unknown',
+    param_desc_message: 'What is wrong and, ideally, what would be right',
+    param_desc_word_id: 'Id of one entry of the headword, when the report concerns a specific part of speech',
     param_desc_word: 'Headword spelling, case-insensitive; spaces are allowed for phrases',
     param_desc_id: 'Numeric id of the entry',
     param_desc_cursor: 'meta.next_cursor of the previous page; omit for the first page',
