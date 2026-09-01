@@ -8,7 +8,7 @@ import { Pronounce } from '@/components/Pronounce';
 import { ReportMistake } from '@/components/ReportMistake';
 import { WordSearch } from '@/components/WordSearch';
 import { fetchHeadword } from '@/core/dictionary';
-import { pageMeta } from '@/core/site';
+import { localeAlternates, pageMeta, siteUrl } from '@/core/site';
 import { Link } from '@/i18n/navigation';
 import { LocaleParamsP } from '@/types/common';
 
@@ -35,10 +35,13 @@ export const generateMetadata = async ({ params }: WordPageP): Promise<Metadata>
   const definition = first?.meanings[0]?.definition;
   const translations = first?.short_translations.map((item) => item.description).join(', ');
 
-  return pageMeta(
-    t('page_title', { word: headword.result.meta.word }),
-    [definition, translations].filter(Boolean).join(' — ') || t('page_description', { word }),
-  );
+  return {
+    ...pageMeta(
+      t('page_title', { word: headword.result.meta.word }),
+      [definition, translations].filter(Boolean).join(' — ') || t('page_description', { word }),
+    ),
+    alternates: localeAlternates(locale, `/word/${encodeURIComponent(word)}`),
+  };
 };
 
 // the data writes transcriptions as `/rʌn/` or bare; shown once between slashes
@@ -176,8 +179,18 @@ export default async function WordPage({ params }: WordPageP) {
   };
   const transcription = data.find((entry) => entry.transcription)?.transcription;
 
+  // structured data for search engines (issue #350): one DefinedTerm per page
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'DefinedTerm',
+    name: meta.word,
+    description: data[0]?.meanings[0]?.definition || data[0]?.description || undefined,
+    url: `${siteUrl()}/${locale}/word/${encodeURIComponent(meta.word)}`,
+  };
+
   return (
     <div className={`container ${styles.page}`}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className={styles.headword}>
         <h1>{meta.word}</h1>
         <Pronounce word={meta.word} />

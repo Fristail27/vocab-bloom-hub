@@ -6,7 +6,7 @@ import { Playground } from '@/components/Playground';
 import { listEndpoints } from '@/content/openapi';
 import { loadPublicSpec } from '@/content/openapi.load';
 import { playgroundEndpoint } from '@/content/playground';
-import { pageMeta } from '@/core/site';
+import { localeAlternates, pageMeta } from '@/core/site';
 import { Link } from '@/i18n/navigation';
 import { LocaleParamsP } from '@/types/common';
 
@@ -16,7 +16,7 @@ export const generateMetadata = async ({ params }: LocaleParamsP): Promise<Metad
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'playground' });
 
-  return pageMeta(t('title'), t('intro'));
+  return { ...pageMeta(t('title'), t('intro')), alternates: localeAlternates(locale, '/playground') };
 };
 
 export default async function PlaygroundPage({ params }: LocaleParamsP) {

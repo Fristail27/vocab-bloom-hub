@@ -1,10 +1,12 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 import { Markdown } from '@/components/Markdown';
 import { INSTALL_SNIPPET, NODE_SNIPPET, PYTHON_SNIPPET, readRoadmap } from '@/content/home';
 import { renderMarkdown } from '@/content/markdown';
 import { REPO_URL } from '@/content/repo';
+import { localeAlternates } from '@/core/site';
 import { Link } from '@/i18n/navigation';
 import { LocaleParamsP } from '@/types/common';
 
@@ -13,6 +15,14 @@ import styles from './home.module.scss';
 const FEATURES = ['api', 'sdk', 'admin', 'data', 'ops', 'search'] as const;
 
 const fence = (lang: string, code: string) => `\`\`\`${lang}\n${code}\n\`\`\``;
+
+// title and description come from the layout; only the canonical/hreflang
+// pair is the home page's own (issue #350)
+export const generateMetadata = async ({ params }: LocaleParamsP): Promise<Metadata> => {
+  const { locale } = await params;
+
+  return { alternates: localeAlternates(locale, '') };
+};
 
 export default async function HomePage({ params }: LocaleParamsP) {
   const { locale } = await params;
