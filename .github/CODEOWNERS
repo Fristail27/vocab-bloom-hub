@@ -7,8 +7,15 @@
 # Frontend
 /apps/frontend/ @Fristail27
 
-# Common
-/packages/shared-types/ @Fristail27
+# Website
+/apps/site/ @Fristail27
+
+# Browser end-to-end tests
+/apps/e2e/ @Fristail27
+
+# SDKs
+/packages/npm-sdk/ @Fristail27
+/packages/python-sdk/ @Fristail27
 
 # GitHub workflows
 /.github/ @Fristail27

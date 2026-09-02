@@ -144,6 +144,13 @@ export const DOC_PAGES: DocPageT[] = [
     title: 'Contributing',
     titleRu: 'Участие в разработке',
   },
+  {
+    slug: 'security',
+    file: 'SECURITY.md',
+    section: DocSectionE.project,
+    title: 'Security policy',
+    titleRu: 'Политика безопасности',
+  },
 ];
 
 export const DOC_SECTIONS: DocSectionE[] = Object.values(DocSectionE);
