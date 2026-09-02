@@ -13,14 +13,16 @@ jest.mock('node:os', () => {
 
 import { mkdtemp, mkdir, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { createWriteStream, existsSync } from 'node:fs';
+import { Readable, Writable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as yazl from 'yazl';
 
 import { ErrorCodes } from '../../../../../../../core/constants/error_codes';
-import { DATASET_FILE_NAMES, MANIFEST_FILE_NAME } from '../../constants';
+import { DATASET_FILE_NAMES, MANIFEST_FILE_NAME, MAX_DATASET_FILE_BYTES } from '../../constants';
 import { DirectoryDatasetSource, validateDatasetDir } from '../directorySource';
-import { extractDatasetZip, openZipDatasetSource } from '../zipSource';
+import { decompressedByteCap, extractDatasetZip, openZipDatasetSource } from '../zipSource';
 import { getImportDir, listImportDir, openImportDirSource, resolveImportPath } from '../importDir';
 import { parseManifest } from '../../utils/parseManifest';
 
@@ -241,6 +243,24 @@ describe('dataset sources (issue #269)', () => {
       await rejectsWith(openZipDatasetSource(noData, logger), ErrorCodes.dataset_invalid);
 
       expect(await extracted()).toEqual(tmpBefore);
+    });
+  });
+
+  describe('decompressedByteCap', () => {
+    const devNull = () => new Writable({ write: (_chunk, _encoding, done) => done() });
+
+    it('errors when the real stream expands past the cap, whatever the header claimed (issue #355)', async () => {
+      // one shared chunk yielded repeatedly: 2 GiB of counting, no 2 GiB buffer
+      const chunk = Buffer.alloc(8 * 1024 * 1024);
+      async function* pastTheCap() {
+        for (let sent = 0; sent <= MAX_DATASET_FILE_BYTES; sent += chunk.length) yield chunk;
+      }
+
+      await expect(
+        pipeline(Readable.from(pastTheCap()), decompressedByteCap('bomb.jsonl'), devNull()),
+      ).rejects.toThrow('expands past the size cap');
+      // an honest stream passes through untouched
+      await pipeline(Readable.from([Buffer.from('fine')]), decompressedByteCap('ok.jsonl'), devNull());
     });
   });
 

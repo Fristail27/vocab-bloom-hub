@@ -61,7 +61,6 @@
     "@nestjs/common": "^11.2.3",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.28",
-    "@nestjs/microservices": "^11.1.29",
     "@nestjs/platform-express": "^11.1.29",
     "@nestjs/swagger": "^11.4.7",
     "@nestjs/throttler": "^6.5.0",

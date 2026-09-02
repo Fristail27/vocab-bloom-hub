@@ -192,4 +192,9 @@ async function bootstrap() {
       `admin API: ${surfaces.adminApi ? 'enabled' : 'disabled (ADMIN_API_ENABLED=false)'}`,
   );
 }
-bootstrap();
+bootstrap().catch((error: unknown) => {
+  // a failure past the guarded config block (a migration error, EADDRINUSE)
+  // used to die as a raw unhandled rejection instead of a log line
+  new Logger('Bootstrap').fatal(error instanceof Error ? (error.stack ?? error.message) : String(error));
+  process.exit(1);
+});
