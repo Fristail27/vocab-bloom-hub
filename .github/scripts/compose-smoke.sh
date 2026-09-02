@@ -5,7 +5,7 @@
 # follows the request scheme, so a proxy with TLS gets a secure one).
 #
 # Needs ADMIN_USERNAME / ADMIN_PASSWORD (read from .env when not exported)
-# and curl + openssl. Ports: SERVER_PORT / FRONT_PORT / SITE_PORT (defaults
+# and curl + openssl + python3 (the PBKDF2 of the login hash). Ports: SERVER_PORT / FRONT_PORT / SITE_PORT (defaults
 # 3010 / 3000 / 3020); the website checks run when the `site` profile is on.
 set -euo pipefail
 
@@ -47,8 +47,12 @@ wait_for 60 "login page ($FRONT_URL/en/login = 200)" test "$(http_status "$FRONT
 [ "$(http_status -L "$FRONT_URL/")" = 200 ] || fail "/ does not reach the login page"
 
 # --- admin login over plain http: a one-time HMAC proof (docs/authentication.md)
-sha256() { printf '%s' "$1" | openssl dgst -sha256 -r | cut -d' ' -f1; }
-login_hash="$(sha256 "$(sha256 "$ADMIN_USERNAME")$(sha256 "$ADMIN_PASSWORD")$(sha256 "$ADMIN_USERNAME$ADMIN_PASSWORD")")"
+# mirrors hashLoginString (apps/server/core/utils/crypto): PBKDF2-SHA256,
+# 600k iterations, deterministic per-user salt (issue #344)
+pbkdf2() {
+  python3 -c 'import hashlib, sys; print(hashlib.pbkdf2_hmac("sha256", sys.argv[1].encode(), sys.argv[2].encode(), 600000).hex())' "$1" "$2"
+}
+login_hash="$(pbkdf2 "$ADMIN_PASSWORD" "vocab-bloom-hub-login:$ADMIN_USERNAME")"
 salt="$(openssl rand -hex 16)"
 slot=$(( $(date +%s) / 60 ))
 proof="$(printf '%s' "$slot:$salt" | openssl dgst -sha256 -mac HMAC -macopt "key:$login_hash" -r | cut -d' ' -f1)"
