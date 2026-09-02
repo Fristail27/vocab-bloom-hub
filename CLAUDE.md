@@ -32,14 +32,15 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build  
 docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d   # + local Prometheus & Grafana with a provisioned dashboard; enables the server metrics (docs/observability.md)
                                           # images are published by .github/workflows/docker.yml: main → `main` + `sha-…`, tags v* → semver + latest
 
-yarn test           # all tests (root jest config with projects: server + frontend)
+yarn test           # all tests (root jest config with projects: server + frontend + site + sdk)
 yarn jest path/to/file.spec.ts            # single test file
-yarn jest --selectProjects server         # only server tests (or: frontend)
+yarn jest --selectProjects server         # only server tests (or: frontend, site, sdk)
 yarn workspace server test:e2e            # server e2e tests (supertest, in-memory sqlite)
 
 yarn e2e            # browser e2e: prod frontend build + Playwright (boots API :3011, frontend :3001)
 yarn e2e:ui         # the same with the Playwright UI
-yarn workspace e2e test                   # rerun without rebuilding the frontend
+yarn e2e:site       # browser e2e of the website (boots API :3012, site :3021); e2e:site:ui for the UI
+yarn workspace e2e test                   # rerun without rebuilding the frontend (test:site for the site suite)
 
 yarn workspace server openapi:generate    # rewrite apps/server/openapi/public-v1.json (committed) + admin.json (ignored)
 yarn workspace server openapi:check       # fail if the committed public spec is stale (CI runs it)
@@ -90,7 +91,7 @@ For a pre-existing database whose tables were created by the old `synchronize`, 
 
 ### Server: domain modules with sub-controller/service pairs
 
-Modules live in `apps/server/src/modules/` (AppModule is the root; AuthModule, EnModule, SettingsModule, SuggestionsModule). The pattern inside a domain module like `EnModule`:
+Modules live in `apps/server/src/modules/` (AppModule is the root; AuthModule, EnModule, SettingsModule, SuggestionsModule, PublicApiModule, AuditModule, HealthModule, MetricsModule). The pattern inside a domain module like `EnModule`:
 
 - `entities/` — TypeORM entities (EnEntry, EnWord, EnMeaning, EnMeaningTranslation, EnShortTranslation), registered both in the module's `forFeature` and in AppModule's `forRootAsync`.
 - `modules/<Feature>/` — feature folders (EnSearch, EnImportDictionary, EnMeaning, ...) each holding a controller + service (+ dto/, utils/). These are **not** separate Nest modules; their controllers/providers are registered in the parent `en.module.ts`.

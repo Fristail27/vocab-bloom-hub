@@ -7,7 +7,7 @@ Postgres included). Either way a reverse proxy with TLS goes in front.
 | Page                                           | What it covers                                                                                      |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | this page                                      | Building and starting the two processes, probes, graceful stop, process managers                    |
-| [`docker.md`](./docker.md)                     | The two images, `docker-compose.yml` with Postgres, build arguments, upgrading containers           |
+| [`docker.md`](./docker.md)                     | The three images, `docker-compose.yml` with Postgres, build arguments, upgrading containers         |
 | [`examples/`](./examples/)                     | systemd units for both processes and a PM2 process file                                             |
 | [`reverse-proxy.md`](./reverse-proxy.md)       | TLS, routing both apps on one host, keeping the admin API private (Caddy / nginx), `TRUST_PROXY`    |
 | [`../operations.md`](../operations.md)         | Day two: what to back up, database backup vs dictionary export, upgrading and rolling back, sizing  |
@@ -78,10 +78,10 @@ The server answers two probes under `/api`, so the proxy configs route them like
 path; they need no login, are not rate-limited, ignore the `PUBLIC_API_ENABLED` /
 `ADMIN_API_ENABLED` switches and are never cached:
 
-| Probe             | Answers                                                                                                                                                                                    | Use it for                                                                               |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| `GET /api/health` | `200 { "status": "ok", "version": "…" }` as long as the process serves HTTP                                                                                                                | liveness: restart the process when it stops answering                                    |
-| `GET /api/ready`  | `200 { "status": "ok" }` once migrations ran and the database answers (`SELECT 1`, 2 s budget); otherwise `503 { "status": "error", "reason": "database_unreachable" \| "shutting_down" }` | readiness: route traffic only while it is `200`; it turns `503` the moment a stop begins |
+| Probe             | Answers                                                                                                                                                                                                                      | Use it for                                                                               |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `GET /api/health` | `200 { "status": "ok", "version": "…" }` as long as the process serves HTTP                                                                                                                                                  | liveness: restart the process when it stops answering                                    |
+| `GET /api/ready`  | `200 { "status": "ok" }` once migrations ran and the database answers (`SELECT 1`, 2 s budget); otherwise `503 { "status": "error", "reason": "database_unreachable" \| "shutting_down" \| "importing" \| "import_failed" }` | readiness: route traffic only while it is `200`; it turns `503` the moment a stop begins |
 
 A `503` with `database_unreachable` means the process is up but Postgres is not: restarting the
 server does not help, the database does. The frontend has no probe of its own; `GET /en/login`

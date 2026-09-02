@@ -45,20 +45,21 @@ for await (const word of client.iterateWords({ word_level: ['A1', 'A2'], with_me
 
 ## API
 
-| Method                           | Endpoint                           | Answer                     |
-| -------------------------------- | ---------------------------------- | -------------------------- |
-| `search(request)`                | `POST /search`                     | `SearchResponse`           |
-| `searchDetailed(request)`        | `POST /search/detailed`            | `DetailedSearchResponse`   |
-| `word(headword)`                 | `GET /words/{word}`                | `HeadwordResponse`         |
-| `wordById(id)`                   | `GET /words/id/{id}`               | `WordResponse`             |
-| `meanings(headword)`             | `GET /words/{word}/meanings`       | `MeaningsResponse`         |
-| `translations(headword, query?)` | `GET /words/{word}/translations`   | `TranslationsResponse`     |
-| `forms(headword)`                | `GET /words/{word}/forms`          | `FormsResponse`            |
-| `words(query?)`                  | `GET /words`                       | `WordsResponse` (one page) |
-| `iterateWords(query?)`           | `GET /words`, following the cursor | `AsyncGenerator<Word>`     |
-| `random(filters?)`               | `GET /random`                      | `WordResponse`             |
-| `meta()`                         | `GET /meta`                        | `MetaResponse`             |
-| `openapi()`                      | `GET /openapi.json`                | the OpenAPI 3 document     |
+| Method                           | Endpoint                           | Answer                                                                                                         |
+| -------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `search(request)`                | `POST /search`                     | `SearchResponse`                                                                                               |
+| `searchDetailed(request)`        | `POST /search/detailed`            | `DetailedSearchResponse`                                                                                       |
+| `word(headword)`                 | `GET /words/{word}`                | `HeadwordResponse`                                                                                             |
+| `wordById(id)`                   | `GET /words/id/{id}`               | `WordResponse`                                                                                                 |
+| `meanings(headword)`             | `GET /words/{word}/meanings`       | `MeaningsResponse`                                                                                             |
+| `translations(headword, query?)` | `GET /words/{word}/translations`   | `TranslationsResponse`                                                                                         |
+| `forms(headword)`                | `GET /words/{word}/forms`          | `FormsResponse`                                                                                                |
+| `words(query?)`                  | `GET /words`                       | `WordsResponse` (one page)                                                                                     |
+| `iterateWords(query?)`           | `GET /words`, following the cursor | `AsyncGenerator<Word>`                                                                                         |
+| `random(filters?)`               | `GET /random`                      | `WordResponse`                                                                                                 |
+| `meta()`                         | `GET /meta`                        | `MetaResponse`                                                                                                 |
+| `openapi()`                      | `GET /openapi.json`                | the OpenAPI 3 document                                                                                         |
+| `suggest(request)`               | `POST /suggestions`                | `SuggestionCreatedResponse` — files a reader report (or an edit proposal) into the instance's moderation queue |
 
 Every method resolves to the `{ data, meta }` envelope the API answers with and takes an optional last argument `{ signal, headers, timeoutMs }`. The request and response types (`Word`, `Meaning`, `SearchRequest`, `ListWordsQuery`, …) are exported, and so are the raw generated `paths` / `components` / `operations` for anything not aliased. The contract itself — tiers, filters, cursor pagination, caching — is documented in the server's [`docs/api.md`](https://github.com/Fristail27/vocab-bloom-hub/blob/main/docs/api.md).
 
@@ -86,6 +87,8 @@ Failed requests throw:
 | `RateLimitError`  | 429 — the public rate limit                     | `retryAfter` (seconds, from `Retry-After`)     |
 | `NetworkError`    | no answer: DNS, connection, TLS, abort, timeout | `status: 0`, `code: 'network_error'`, `cause`  |
 | `VocabBloomError` | everything else                                 | `status`, `code`, `body`                       |
+
+The client never retries on its own: a `RateLimitError` carries `retryAfter` (seconds) and backoff is the caller's decision.
 
 `code` is the machine-readable error of the API (`invalid_cursor`, `too_many_requests`, …), or `http_error` when the answer was not JSON (a proxy page, for instance).
 

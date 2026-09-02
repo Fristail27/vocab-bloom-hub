@@ -56,21 +56,22 @@ async with AsyncVocabBloomClient("https://dict.example.com") as client:
 
 ## API
 
-| Method                                      | Endpoint                           | Answer                        |
-| ------------------------------------------- | ---------------------------------- | ----------------------------- |
-| `search(search, *, type, limit)`            | `POST /search`                     | `SearchResponse`              |
-| `search_detailed(search, *, ...)`           | `POST /search/detailed`            | `DetailedSearchResponse`      |
-| `word(headword)`                            | `GET /words/{word}`                | `HeadwordResponse`            |
-| `word_by_id(id)`                            | `GET /words/id/{id}`               | `WordResponse`                |
-| `meanings(headword)`                        | `GET /words/{word}/meanings`       | `MeaningsResponse`            |
-| `translations(headword, *, language)`       | `GET /words/{word}/translations`   | `TranslationsResponse`        |
-| `forms(headword)`                           | `GET /words/{word}/forms`          | `FormsResponse`               |
-| `words(**filters, cursor, limit, with_...)` | `GET /words`                       | `WordsResponse` (one page)    |
-| `iter_words(**filters, ...)`                | `GET /words`, following the cursor | `Iterator[Word]`              |
-| `random(**filters)`                         | `GET /random`                      | `WordResponse`                |
-| `meta()`                                    | `GET /meta`                        | `MetaResponse`                |
-| `openapi()`                                 | `GET /openapi.json`                | `dict` — the OpenAPI document |
-| `words_dataframe(**filters, ...)`           | `GET /words`, every page           | `pandas.DataFrame`            |
+| Method                                      | Endpoint                           | Answer                                                                                                         |
+| ------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `search(search, *, type, limit)`            | `POST /search`                     | `SearchResponse`                                                                                               |
+| `search_detailed(search, *, ...)`           | `POST /search/detailed`            | `DetailedSearchResponse`                                                                                       |
+| `word(headword)`                            | `GET /words/{word}`                | `HeadwordResponse`                                                                                             |
+| `word_by_id(id)`                            | `GET /words/id/{id}`               | `WordResponse`                                                                                                 |
+| `meanings(headword)`                        | `GET /words/{word}/meanings`       | `MeaningsResponse`                                                                                             |
+| `translations(headword, *, language)`       | `GET /words/{word}/translations`   | `TranslationsResponse`                                                                                         |
+| `forms(headword)`                           | `GET /words/{word}/forms`          | `FormsResponse`                                                                                                |
+| `words(**filters, cursor, limit, with_...)` | `GET /words`                       | `WordsResponse` (one page)                                                                                     |
+| `iter_words(**filters, ...)`                | `GET /words`, following the cursor | `Iterator[Word]`                                                                                               |
+| `random(**filters)`                         | `GET /random`                      | `WordResponse`                                                                                                 |
+| `meta()`                                    | `GET /meta`                        | `MetaResponse`                                                                                                 |
+| `openapi()`                                 | `GET /openapi.json`                | `dict` — the OpenAPI document                                                                                  |
+| `suggest(headword, ...)`                    | `POST /suggestions`                | `SuggestionCreatedResponse` — files a reader report (or an edit proposal) into the instance's moderation queue |
+| `words_dataframe(**filters, ...)`           | `GET /words`, every page           | `pandas.DataFrame`                                                                                             |
 
 Every response is the `{ data, meta }` envelope the API answers with, as a pydantic model. Filters (`part_of_speech`, `word_level`, `language_register`, `category`, `area_variant`, `form_of_word`) take lists of strings or of the exported enums (`PartOfSpeech`, `WordLevel`, ...); values of one filter are OR-ed, different filters are AND-ed. The contract itself — tiers, filters, cursor pagination, caching — is documented in the server's [`docs/api.md`](https://github.com/Fristail27/vocab-bloom-hub/blob/main/docs/api.md).
 
@@ -98,6 +99,8 @@ Use the client as a context manager (`with` / `async with`) to close the connect
 | `VocabBloomError` | everything else                          | `status`, `code`, `body`                       |
 
 `code` is the machine-readable error of the API (`invalid_cursor`, `too_many_requests`, ...), or `http_error` when the answer was not JSON (a proxy page, for instance).
+
+The client never retries on its own: a `RateLimitError` carries `retry_after` (seconds) and backoff is the caller's decision.
 
 ### ETag cache
 

@@ -12,12 +12,12 @@ project website — and a `docker-compose.yml` that adds Postgres (issues #316, 
 All three are published to the GitHub Container Registry by `.github/workflows/docker.yml` for
 `linux/amd64` and `linux/arm64`:
 
-| Tag             | Built from                                | Use it for                                                      |
-| --------------- | ----------------------------------------- | --------------------------------------------------------------- |
-| `1.2.3`, `1.2`  | the release tag `v1.2.3`                  | production — pin `1.2` to get patch releases, `1.2.3` to freeze |
-| `latest`        | the newest stable release                 | trying it out; moves with every stable release                  |
-| `0.1.0-alpha.1` | a prerelease tag `v0.1.0-alpha.1`         | exactly that prerelease; no `latest`, no floating tag           |
-| `main`, `sha-…` | every push to `main` (development builds) | following development; not a release — may break between pushes |
+| Tag                 | Built from                                                    | Use it for                                                      |
+| ------------------- | ------------------------------------------------------------- | --------------------------------------------------------------- |
+| `1.2.3`, `1.2`, `1` | the release tag `v1.2.3` (the bare major tag starts at `1.x`) | production — pin `1.2` to get patch releases, `1.2.3` to freeze |
+| `latest`            | the newest stable release                                     | trying it out; moves with every stable release                  |
+| `0.1.0-alpha.1`     | a prerelease tag `v0.1.0-alpha.1`                             | exactly that prerelease; no `latest`, no floating tag           |
+| `main`, `sha-…`     | every push to `main` (development builds)                     | following development; not a release — may break between pushes |
 
 Until the first release (#307) only `main` and `sha-…` exist, and `docker-compose.yml` defaults
 to `main`.
@@ -226,7 +226,8 @@ _Change visibility_) — until then `docker compose up` needs `docker login ghcr
   `postgres-data` volume, not in the images: `docker compose down` keeps it, `docker compose down -v`
   deletes it.
 - **Migrations as an explicit step** (instead of on start):
-  `docker compose run --rm server node node_modules/typeorm/cli.js migration:run -d dist/src/db/data-source.js`
+  `docker compose run --rm server node ../../node_modules/typeorm/cli.js migration:run -d dist/src/db/data-source.js`
+  (the image's workdir is `/app/apps/server` while the hoisted `node_modules` live in `/app`)
   — the same migrations the server would apply on start.
 - **Datasets from a folder**: drop an exported archive into `./imports` on the host; the import
   page lists it ([`../offline-import.md`](../offline-import.md)).

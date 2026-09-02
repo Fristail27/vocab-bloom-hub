@@ -139,8 +139,12 @@ If you have questions, feel free to open an Issue or start a Discussion.
 ├── apps
 │   ├── frontend    # Next.js admin UI
 │   ├── server      # NestJS API + shared types/constants for the frontend
-│   └── e2e         # Playwright browser tests
-├── docs            # environment, authentication, migrations, README.ru.md
+│   ├── site        # Next.js project website (docs, API reference, playground, word pages)
+│   └── e2e         # Playwright browser tests (admin UI and website suites)
+├── packages
+│   ├── npm-sdk     # @vocab-bloom-hub/client, the Node.js SDK of the public API
+│   └── python-sdk  # vocab-bloom-hub, the Python SDK (uv, httpx, pydantic)
+├── docs            # deployment, operations, observability, performance, environment, API, authentication, migrations, offline import, data, README.ru.md
 ├── eslint          # shared ESLint config pieces
 ├── package.json    # Root workspace configuration
 ├── tsconfig.base.json
