@@ -38,12 +38,25 @@ Node — the frontend and the server can never disagree on how a proof is comput
 ### The credentials hash
 
 ```
-loginHash  = sha256(sha256(username) + sha256(password) + sha256(username + password))
-secretHash = sha256(sha256(username) + sha256(loginHash) + sha256(username + loginHash))
+loginHash  = PBKDF2-SHA256(password: password,  salt: "vocab-bloom-hub-login:" + username, 600 000 iterations)
+secretHash = PBKDF2-SHA256(password: loginHash, salt: "vocab-bloom-hub-login:" + username, 600 000 iterations)
 ```
 
 `loginHash` is the client-side secret used to key login proofs. `secretHash + loginHash` is the JWT
-signing secret. Both are derived on demand from the env credentials and are never stored or sent.
+signing secret. Both are derived on demand from the env credentials and are never stored or sent;
+the derivation is memoized, so the slow path runs once per process.
+
+The derivation is deliberately slow (issue #344): a leaked admin JWT lets its holder test password
+guesses offline against the signature, and PBKDF2 at 600k iterations prices one guess at a fraction
+of a second instead of the nanoseconds a raw hash would cost. The salt is deterministic on purpose —
+the browser and the server must derive the same value without exchanging anything. WebCrypto's
+PBKDF2 is the strongest KDF both runtimes share.
+
+There is deliberately no password-strength enforcement and no separate signing secret — one admin,
+one pair of env values. The flip side: **the derivation is only as strong as `ADMIN_PASSWORD`**, so
+use a long random secret (a password-manager string, not a word) on any instance reachable by
+others. Because the frontend computes the same derivation, upgrade the server and frontend
+builds together across a change of this scheme, and expect one re-login.
 
 ## Login: the proof exchange
 
