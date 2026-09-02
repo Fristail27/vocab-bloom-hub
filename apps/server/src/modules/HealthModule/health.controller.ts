@@ -35,7 +35,8 @@ export class HealthController {
   })
   @ApiOkResponse({ description: '`{ status: "ok" }` — the instance can take traffic' })
   @ApiServiceUnavailableResponse({
-    description: '`{ status: "error", reason: "database_unreachable" | "shutting_down" }`',
+    description:
+      '`{ status: "error", reason: "database_unreachable" | "shutting_down" | "importing" | "import_failed" }`',
   })
   async ready(@Res({ passthrough: true }) res: Response): Promise<ReadyResT> {
     const result = await this.healthService.ready();

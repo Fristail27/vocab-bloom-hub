@@ -67,7 +67,7 @@ It is inspired by WordNet-like structures and aims to provide:
 - 🔎 Fast lexical search
 - 🔗 Word relations graph (synonyms, antonyms, hypernyms, etc.)
 - 📊 Linguistic datasets and tooling
-- 🧠 Future SDKs for Python and Node.js
+- 🧠 SDKs for Python and Node.js
 
 ---
 
@@ -118,7 +118,7 @@ The project is in **early development** (`0.x`). The English dictionary, the adm
 │   └── e2e/        → Playwright browser tests that boot both apps against an isolated SQLite database
 ├── packages/npm-sdk → @vocab-bloom-hub/client, the Node.js / TypeScript SDK of the public API
 ├── packages/python-sdk → vocab-bloom-hub, the Python SDK of the public API (uv, httpx, pydantic)
-├── docs/           → In-depth documentation (deployment, operations, environment, authentication, migrations, data) and the Russian README
+├── docs/           → In-depth documentation (deployment, operations, observability, performance, environment, API, authentication, migrations, offline import, data) and the Russian README
 ├── eslint/         → Shared ESLint config pieces (base / next / nest)
 ├── .github/        → CI workflows, issue/PR templates, Dependabot, CODEOWNERS
 ├── .env            → Single environment file used by both apps (not committed)
@@ -176,10 +176,12 @@ All commands run from the repository root.
 | ------------------------------------ | ---------------------------------------------------------------------------------------------------- |
 | `yarn dev`                           | Run the API, the admin UI and the website together (with watch)                                      |
 | `yarn server:dev` / `yarn front:dev` | Run only the API (port `SERVER_PORT`, default 3010) or only the UI (port `FRONT_PORT`, default 3000) |
-| `yarn test`                          | All unit tests (server + frontend)                                                                   |
+| `yarn site:dev` / `yarn start:site`  | The website: dev server / production build start (port `SITE_PORT`, default 3020)                    |
+| `yarn test`                          | All unit tests (server, frontend, site, npm SDK)                                                     |
 | `yarn jest --selectProjects server`  | Only server tests (or `frontend`)                                                                    |
 | `yarn workspace server test:e2e`     | Server e2e tests (Supertest against an in-memory SQLite)                                             |
 | `yarn e2e` / `yarn e2e:ui`           | Browser e2e: production frontend build + Playwright (API :3011, UI :3001)                            |
+| `yarn e2e:site`                      | Browser e2e of the website (API :3012, site :3021)                                                   |
 | `yarn lint` / `yarn lint:fix`        | ESLint                                                                                               |
 | `yarn format` / `yarn format:check`  | Prettier                                                                                             |
 | `yarn check`                         | `lint` + `format:check` — run before opening a PR                                                    |
@@ -232,7 +234,7 @@ Full guide: [`docs/deployment/`](docs/deployment/README.md) → [`reverse-proxy.
 
 ## 📚 Documentation
 
-- [`docs/deployment/`](docs/deployment/README.md) — production build and start, probes, graceful stop, systemd / PM2; [`docker.md`](docs/deployment/docker.md): the two images and `docker compose` with Postgres; [`reverse-proxy.md`](docs/deployment/reverse-proxy.md): TLS, Caddy / nginx configs, exposure profiles, keeping the admin API private
+- [`docs/deployment/`](docs/deployment/README.md) — production build and start, probes, graceful stop, systemd / PM2; [`docker.md`](docs/deployment/docker.md): the three images and `docker compose` with Postgres; [`reverse-proxy.md`](docs/deployment/reverse-proxy.md): TLS, Caddy / nginx configs, exposure profiles, keeping the admin API private
 - [`docs/operations.md`](docs/operations.md) — operating an instance: what holds state and what to back up, database backup vs dictionary export, upgrading and rolling back, dataset updates vs code updates, sizing
 - [`docs/environment.md`](docs/environment.md) — every environment variable, driver selection, startup checks
 - [`docs/authentication.md`](docs/authentication.md) — how the single-admin login, login proof and JWT cookie work
@@ -254,9 +256,7 @@ Planned directions, in no particular order (see the [issues](https://github.com/
 - Semantic search and a semantic network on top of the dictionary (next major version)
 - Word relations graph beyond synonyms and antonyms: hypernyms/hyponyms, collocations
 - More source languages besides English, and translations into languages other than Russian
-- Public read-only API and SDKs for Node.js (`npm-sdk`) and Python (`python-sdk`)
 - Published linguistic datasets built from the dictionary
-- Docker images and a one-command deployment
 
 ---
 

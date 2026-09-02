@@ -4,10 +4,10 @@ TypeORM migrations manage the **Postgres** schema. The SQLite dev fallback does 
 migrations at all — it stays on `synchronize`, so entity changes reshape `dev.sqlite`
 automatically.
 
-| Mode                                | Schema management                                 | `synchronize` |
-| ----------------------------------- | ------------------------------------------------- | ------------- |
-| Postgres (`DATABASE_URL` set)       | Migrations, applied automatically on server start | off           |
-| SQLite fallback (no `DATABASE_URL`) | Auto-DDL from entities, dev only                  | on            |
+| Mode                                           | Schema management                                 | `synchronize` |
+| ---------------------------------------------- | ------------------------------------------------- | ------------- |
+| Postgres (`DATABASE_URL` set)                  | Migrations, applied automatically on server start | off           |
+| SQLite (no `DATABASE_URL`, or a `sqlite:` one) | Auto-DDL from entities, dev only                  | on            |
 
 All the relevant code lives in `apps/server/src/db/`:
 

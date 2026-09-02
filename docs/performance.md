@@ -30,7 +30,7 @@ with a SQLite `DATABASE_URL` is a startup error, as before.
 
 ## What was slow and what changed
 
-The [benchmark](#the-benchmark) with `--explain` found five problems; each is fixed by a
+The [benchmark](#the-benchmark) with `--explain` found seven problems; each is fixed by a
 change that the [query-plan guard](#the-query-plan-guard) keeps in place.
 
 1. **Loading an entry multiplied its rows.** `find()` with nested relations joins everything
@@ -113,7 +113,7 @@ yarn workspace server test:postgres      # needs a postgres:// DATABASE_URL with
 and explains every statement they issue: with sequential scans discouraged the planner
 picks an index path whenever one exists, so a `Seq Scan` on `en_entries`, `en_words`,
 `en_meanings` or the translation and link tables means **no index can serve that query** —
-on the full dictionary and on the empty database of CI alike. The `query-plans` job of
+on the full dictionary and on the empty database of CI alike. The `postgres-only tests` job of
 `check-pull-request` runs it against a fresh Postgres service after `migration:run`, so a
 query change that loses its index fails the pull request. The only statements skipped on purpose are the `Last-Modified` lookups (see above); the same job runs the trigram search suite (`test/fuzzy-search.pg-spec.ts`).
 

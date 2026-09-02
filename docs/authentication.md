@@ -19,18 +19,18 @@ Key properties of the design:
 
 ## Building blocks
 
-| Piece                                                                | Location                                                   |
-| -------------------------------------------------------------------- | ---------------------------------------------------------- |
-| Credentials hash (`hashLoginString`)                                 | `apps/server/core/utils/crypto/hashLoginString`            |
-| HMAC helper (`hmacSha256`)                                           | `apps/server/core/utils/crypto/hmacSha256`                 |
-| Login proof utils (`createLoginProof`, `hashLoginProof`, time slots) | `apps/server/core/utils/crypto/loginProof`                 |
-| JWT create/validate (`jsonwebtoken`)                                 | `apps/server/core/utils/auth`                              |
-| Auth endpoints                                                       | `apps/server/src/modules/AuthModule/auth.controller.ts`    |
-| Login/replay logic                                                   | `apps/server/src/modules/AuthModule/auth.service.ts`       |
-| Route protection (`AdminGuard`)                                      | `apps/server/src/modules/AuthModule/guards/admin.guard.ts` |
-| Token extraction (header or cookie)                                  | `apps/server/src/core/utils/get-bearer-from-request.ts`    |
-| Browser API client                                                   | `apps/frontend/src/core/api/AuthApi`                       |
-| SSR API client (forwards the cookie)                                 | `apps/frontend/src/core/api/AbstractBaseApi/ServerApi.ts`  |
+| Piece                                                                | Location                                                      |
+| -------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Credentials hash (`hashLoginString`)                                 | `apps/server/core/utils/crypto/hashLoginString`               |
+| HMAC helper (`hmacSha256`)                                           | `apps/server/core/utils/crypto/hmacSha256`                    |
+| Login proof utils (`createLoginProof`, `hashLoginProof`, time slots) | `apps/server/core/utils/crypto/loginProof`                    |
+| JWT create/validate (`jsonwebtoken`)                                 | `apps/server/core/utils/auth`                                 |
+| Auth endpoints                                                       | `apps/server/src/modules/AuthModule/auth.controller.ts`       |
+| Login/replay logic                                                   | `apps/server/src/modules/AuthModule/auth.service.ts`          |
+| Route protection (`AdminGuard`)                                      | `apps/server/src/modules/AuthModule/guards/admin.guard.ts`    |
+| Token extraction (header or cookie)                                  | `apps/server/src/core/utils/get-bearer-from-request.ts`       |
+| Browser API client                                                   | `apps/frontend/src/core/api/AuthApi`                          |
+| SSR API client (forwards the cookie)                                 | `apps/frontend/src/core/api/AbstractBaseApi/ServerWrapper.ts` |
 
 All crypto helpers are built on `crypto.subtle`, so the **same code** runs in the browser and in
 Node — the frontend and the server can never disagree on how a proof is computed.
@@ -170,7 +170,7 @@ sequenceDiagram
 
 ## Environment variables involved
 
-| Variable                           | Role                                                  |
-| ---------------------------------- | ----------------------------------------------------- |
-| `ADMIN_USERNAME`, `ADMIN_PASSWORD` | The only credentials; everything is derived from them |
-| `NODE_ENV`                         | `production` switches the cookie to `secure`          |
+| Variable                           | Role                                                                                                                                               |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ADMIN_USERNAME`, `ADMIN_PASSWORD` | The only credentials; everything is derived from them                                                                                              |
+| `NODE_ENV`                         | `production` warns when the login is served over plain http; the `secure` cookie flag itself follows the request scheme (`req.secure`, issue #316) |

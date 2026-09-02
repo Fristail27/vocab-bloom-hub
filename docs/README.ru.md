@@ -67,7 +67,7 @@
 - 🔎 Быстрый лексический поиск
 - 🔗 Граф связей между словами (синонимы, антонимы, гиперонимы и т. д.)
 - 📊 Лингвистические датасеты и инструменты
-- 🧠 В перспективе — SDK для Python и Node.js
+- 🧠 SDK для Python и Node.js
 
 ---
 
@@ -87,6 +87,7 @@
 - **Node.js / TypeScript SDK** для публичного API — [`@vocab-bloom-hub/client`](../packages/npm-sdk/README.md): типизированные методы по эндпоинтам, итерация по курсору, типизированные ошибки, ETag-кэш; типы генерируются из закоммиченного OpenAPI-документа (публикация в npm — после альфы, #308).
 - **Python SDK** — [`vocab-bloom-hub`](../packages/python-sdk/README.md): sync + async клиенты, pydantic-модели из того же спека, `words_dataframe()` для ноутбуков (публикация в PyPI — после альфы, #310).
 - **Импорт / экспорт словаря** в виде NDJSON-датасетов (`POST /api/en/dictionary/import`, `GET /api/en/dictionary/export`) — весь словарь можно версионировать, передавать и переносить между окружениями, в том числе офлайн: из загруженного архива или папки на сервере (см. [`offline-import.md`](offline-import.md)).
+- **Веб-сайт** — [`apps/site`](../apps/site): документация, отрендеренная из этого репозитория, справочник публичного API из OpenAPI-документа, живой playground и страницы слов поверх работающего экземпляра; профиль `site` в `docker-compose.yml`.
 - **Поиск** по словам, значениям и переводам.
 - **PostgreSQL** в production с миграциями TypeORM, применяемыми при старте, и **SQLite** без настройки для локальной разработки и тестов.
 - **Общие типы API** — фронтенд импортирует типы запросов/ответов и коды ошибок напрямую из workspace `server`, поэтому приложения не расходятся.
@@ -117,7 +118,7 @@
 │   └── e2e/        → Браузерные тесты Playwright: поднимают оба приложения на изолированной SQLite-базе
 ├── packages/npm-sdk → @vocab-bloom-hub/client, Node.js / TypeScript SDK публичного API
 ├── packages/python-sdk → vocab-bloom-hub, Python SDK публичного API (uv, httpx, pydantic)
-├── docs/           → Подробная документация (деплой, эксплуатация, окружение, аутентификация, миграции, данные) и этот README на русском
+├── docs/           → Подробная документация (деплой, эксплуатация, наблюдаемость, производительность, окружение, API, аутентификация, миграции, офлайн-импорт, данные) и этот README на русском
 ├── eslint/         → Общие части конфигурации ESLint (base / next / nest)
 ├── .github/        → CI-воркфлоу, шаблоны issue/PR, Dependabot, CODEOWNERS
 ├── .env            → Единый файл окружения для обоих приложений (не коммитится)
@@ -175,10 +176,12 @@ yarn dev
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------- |
 | `yarn dev`                           | Запуск API, админ-панели и сайта вместе (в режиме watch)                                                |
 | `yarn server:dev` / `yarn front:dev` | Только API (порт `SERVER_PORT`, по умолчанию 3010) или только UI (порт `FRONT_PORT`, по умолчанию 3000) |
-| `yarn test`                          | Все unit-тесты (сервер + фронтенд)                                                                      |
+| `yarn site:dev` / `yarn start:site`  | Сайт: dev-сервер / запуск production-сборки (порт `SITE_PORT`, по умолчанию 3020)                       |
+| `yarn test`                          | Все unit-тесты (сервер, фронтенд, сайт, npm SDK)                                                        |
 | `yarn jest --selectProjects server`  | Только серверные тесты (или `frontend`)                                                                 |
 | `yarn workspace server test:e2e`     | Серверные e2e-тесты (Supertest на SQLite в памяти)                                                      |
 | `yarn e2e` / `yarn e2e:ui`           | Браузерные e2e: production-сборка фронтенда + Playwright (API :3011, UI :3001)                          |
+| `yarn e2e:site`                      | Браузерные e2e сайта (API :3012, сайт :3021)                                                            |
 | `yarn lint` / `yarn lint:fix`        | ESLint                                                                                                  |
 | `yarn format` / `yarn format:check`  | Prettier                                                                                                |
 | `yarn check`                         | `lint` + `format:check` — запускайте перед открытием PR                                                 |
@@ -231,7 +234,7 @@ DATABASE_URL=postgres://... yarn workspace server migration:run      # такж�
 
 ## 📚 Документация
 
-- [`deployment/`](deployment/README.md) — сборка и запуск в production, пробы, аккуратная остановка, systemd / PM2; [`docker.md`](deployment/docker.md): два образа и `docker compose` с Postgres; [`reverse-proxy.md`](deployment/reverse-proxy.md): TLS, конфиги Caddy / nginx, профили экспозиции, приватная админка
+- [`deployment/`](deployment/README.md) — сборка и запуск в production, пробы, аккуратная остановка, systemd / PM2; [`docker.md`](deployment/docker.md): три образа и `docker compose` с Postgres; [`reverse-proxy.md`](deployment/reverse-proxy.md): TLS, конфиги Caddy / nginx, профили экспозиции, приватная админка
 - [`operations.md`](operations.md) — эксплуатация инстанса: где хранится состояние и что бэкапить, бэкап базы vs экспорт словаря, обновление и откат, обновление датасета vs обновление кода, размер базы
 - [`environment.md`](environment.md) — все переменные окружения, выбор драйвера БД, проверки при старте
 - [`authentication.md`](authentication.md) — как устроены вход единственного администратора, login proof и JWT-cookie
@@ -255,9 +258,7 @@ DATABASE_URL=postgres://... yarn workspace server migration:run      # такж�
 - Семантический поиск и семантическая сеть поверх словаря (следующая мажорная версия)
 - Граф связей между словами помимо синонимов и антонимов: гиперонимы/гипонимы, коллокации
 - Другие исходные языки помимо английского и переводы на языки, отличные от русского
-- Публичный read-only API и SDK для Node.js (`npm-sdk`) и Python (`python-sdk`)
 - Публикация лингвистических датасетов, собранных из словаря
-- Docker-образы и деплой одной командой
 
 ---
 

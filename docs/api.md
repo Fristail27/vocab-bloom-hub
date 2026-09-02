@@ -52,7 +52,7 @@ Every successful answer is an envelope: the payload under `data`, paging and cou
 | `GET`  | `/api/v1/words`                     | filters, `cursor?`, `limit?`, `with_meanings?`, `with_translations?`                           | `{ data: EnWordT[], meta: { limit, has_more, next_cursor } }`              |
 | `GET`  | `/api/v1/random`                    | filters                                                                                        | `{ data: EnWordT }`                                                        |
 | `GET`  | `/api/v1/meta`                      | —                                                                                              | `{ data: { api_version, app_version, dataset_version, license, counts } }` |
-| `POST` | `/api/v1/suggestions`               | `{ headword, word_id?, message }`                                                              | `201 { data: { id, status } }`                                             |
+| `POST` | `/api/v1/suggestions`               | `{ headword, word_id?, message?, kind?, edits? }`                                              | `201 { data: { id, status } }`                                             |
 
 Every endpoint and its parameters are also described on the in-app _Documentation_ pages,
 which run live requests against the current database. The machine-readable contract is the
