@@ -478,7 +478,7 @@ export default {
   },
   documentation: {
     intro:
-      'The public read-only API under /api/v1: no authorization, every response in a { data, meta } envelope, errors as { statusCode, message, error: true }, every response carries X-API-Version. Every page describes the request filters and lets you run a real request against the current database.',
+      "The public read-only API under /api/v1: no authorization, every response in a '{ data, meta }' envelope, errors as '{ statusCode, message, error: true }', every response carries X-API-Version. Every page describes the request filters and lets you run a real request against the current database.",
     public_endpoints: 'Public endpoints',
     endpoint_search: 'Basic search',
     endpoint_search_detailed: 'Detailed search',
