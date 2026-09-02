@@ -46,7 +46,11 @@ const renderSection = (props: React.ComponentProps<typeof ImportDictionarySectio
 describe('ImportDictionarySection', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (EnApi.getImportSources as jest.Mock).mockResolvedValue({ import_dir_configured: false, files: [] });
+    (EnApi.getImportSources as jest.Mock).mockResolvedValue({
+      import_dir_configured: false,
+      files: [],
+      revisions: [],
+    });
     (EnApi.getImportStatus as jest.Mock).mockResolvedValue({ running: false });
   });
 
@@ -64,6 +68,29 @@ describe('ImportDictionarySection', () => {
     expect(EnApi.importDictionary).toHaveBeenCalledWith({}, expect.any(Function), expect.any(Function));
     expect(screen.queryByText('start_importing')).not.toBeInTheDocument();
     expect(screen.queryByText('retry_importing')).not.toBeInTheDocument();
+  });
+
+  it('a chosen dataset revision pins the HuggingFace import (issue #322)', async () => {
+    (EnApi.getImportSources as jest.Mock).mockResolvedValue({
+      import_dir_configured: false,
+      files: [],
+      revisions: ['v0.2.0', 'v0.1.0'],
+    });
+    mockImportStreaming(completedChunks);
+
+    renderSection();
+    // the select renders once the tags arrive; pick a pinned version
+    const select = await screen.findByRole('combobox');
+    fireEvent.mouseDown(select);
+    fireEvent.click(await screen.findByText('v0.1.0'));
+
+    fireEvent.click(screen.getByText('start_importing'));
+    await screen.findByText('100.00%');
+    expect(EnApi.importDictionary).toHaveBeenCalledWith(
+      { source: { kind: 'huggingface', revision: 'v0.1.0' } },
+      expect.any(Function),
+      expect.any(Function),
+    );
   });
 
   it('показывает версии из пропсов и подсказку об актуальной версии', () => {

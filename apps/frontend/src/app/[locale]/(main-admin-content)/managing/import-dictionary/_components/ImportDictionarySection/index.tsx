@@ -7,6 +7,7 @@ import { ImportDictionaryChunkT, ImportSourceFileT, ImportSourceKindE } from 'se
 import { EnDictionaryImportPhasesE } from 'server/src/modules/EnModule/modules/EnImportDictionary/constants';
 import { ErrorCodes } from 'server/core/constants/error_codes';
 import { EnApi } from '@/core/api/EnApi';
+import { Select } from '@/core/ui/Select';
 import { useImportStatus } from '@/components/AutoImportBanner/useImportStatus';
 import { formatTime, getDownloadProgressStr } from './utils';
 import { ImportStatusE } from './constants';
@@ -48,6 +49,9 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
   const [sourceTab, setSourceTab] = React.useState<ImportSourceTabE>(ImportSourceTabE.huggingface);
   const [archive, setArchive] = React.useState<File | null>(null);
   const [serverFiles, setServerFiles] = React.useState<ImportSourceFileT[]>([]);
+  // version tags of the published dataset (issue #322); '' = the moving main
+  const [revisions, setRevisions] = React.useState<string[]>([]);
+  const [revision, setRevision] = React.useState('');
   const [importDirConfigured, setImportDirConfigured] = React.useState(false);
   const [serverPath, setServerPath] = React.useState<string | undefined>(undefined);
   const [slotFiles, setSlotFiles] = React.useState<SlotFilesT>({});
@@ -83,6 +87,7 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
       if (cancelled || 'error' in res) return;
       setImportDirConfigured(res.import_dir_configured);
       setServerFiles(res.files);
+      setRevisions(res.revisions ?? []);
     })();
     return () => {
       cancelled = true;
@@ -174,7 +179,10 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
         {
           ...(sourceTab === ImportSourceTabE.archive && serverPath
             ? { source: { kind: ImportSourceKindE.file, path: serverPath } }
-            : {}),
+            : fromHuggingFace && revision
+              ? // a chosen version tag pins the HF import to that revision (issue #322)
+                { source: { kind: ImportSourceKindE.huggingface, revision } }
+              : {}),
           ...(update ? { update: true } : {}),
         },
         handleChunk,
@@ -222,6 +230,18 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
                 <Text strong>
                   {t('latest_version')}: {latestVersion || '—'}
                 </Text>
+                {revisions.length > 0 && (
+                  <Select<string>
+                    label={t('revision')}
+                    value={revision}
+                    disabled={inProgress}
+                    onChange={(value) => setRevision(value)}
+                    options={[
+                      { value: '', label: t('revision_latest') },
+                      ...revisions.map((tag) => ({ value: tag, label: tag })),
+                    ]}
+                  />
+                )}
                 {updateAvailable && !inProgress && <Text type="warning">{t('update_available')}</Text>}
               </div>
             ),

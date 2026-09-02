@@ -149,6 +149,8 @@ export default {
   import_dictionary: {
     your_version: 'Your Version',
     latest_version: 'Latest Version',
+    revision: 'Dataset version',
+    revision_latest: 'main (latest)',
     start_importing: 'Start importing',
     start_exporting: 'Start exporting',
     en_saving_0: 'Saving records...',

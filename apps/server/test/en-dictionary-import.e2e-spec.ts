@@ -42,6 +42,10 @@ describe('dictionary import sources (e2e, issue #269)', () => {
     auth.Authorization = `Bearer ${createJwt({ role: 'admin' }, secretHash + hashByEnv)}`;
     importDir = await mkdtemp(path.join(os.tmpdir(), 'vocab-bloom-e2e-import-'));
 
+    // the sources endpoint asks the HF refs API for the dataset's version
+    // tags (issue #322) — a test never talks to the network
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('unreachable', { status: 503 }));
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
@@ -81,7 +85,7 @@ describe('dictionary import sources (e2e, issue #269)', () => {
       .get('/api/en/dictionary/import/sources')
       .set(auth)
       .expect(200)
-      .expect({ import_dir_configured: false, files: [] });
+      .expect({ import_dir_configured: false, files: [], revisions: [] });
     await request(server())
       .post('/api/en/dictionary/import')
       .set(auth)
@@ -97,7 +101,7 @@ describe('dictionary import sources (e2e, issue #269)', () => {
       .get('/api/en/dictionary/import/sources')
       .set(auth)
       .expect(200)
-      .expect({ import_dir_configured: true, files: [] });
+      .expect({ import_dir_configured: true, files: [], revisions: [] });
     // the file source needs a path; unknown kinds fail validation
     await request(server())
       .post('/api/en/dictionary/import')

@@ -33,8 +33,16 @@ export const DATASET_KNOWN_FILE_NAMES: readonly string[] = [
   MANIFEST_FILE_NAME,
 ];
 
-export const DATASET_BASE_URL =
-  'https://huggingface.co/datasets/Fristail27/vocab-bloom-hub-en/resolve/main/data';
+export const DATASET_REPO = 'Fristail27/vocab-bloom-hub-en';
+export const DATASET_DEFAULT_REVISION = 'main';
+
+// A revision is a git ref of the HF dataset repo (issue #322): a version tag
+// like `v0.1.0`, a branch, or a commit sha; `main` is the moving latest
+export const datasetBaseUrl = (revision: string = DATASET_DEFAULT_REVISION): string =>
+  `https://huggingface.co/datasets/${DATASET_REPO}/resolve/${encodeURIComponent(revision)}/data`;
+
+// Lists the repo's git refs — the version tags the import can pin
+export const DATASET_REFS_URL = `https://huggingface.co/api/datasets/${DATASET_REPO}/refs`;
 
 // Uploaded archives are limited to keep a mistaken upload from filling the
 // disk; the published dataset zips are a few tens of megabytes
