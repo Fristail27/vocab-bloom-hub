@@ -56,7 +56,10 @@ is officially representing the project.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the project maintainers.
+reported to the project maintainer, [@Fristail27](https://github.com/Fristail27) —
+via a direct message on GitHub, or through
+[GitHub's report content form](https://github.com/contact/report-content) when
+contacting the maintainer directly is not appropriate.
 
 All complaints will be reviewed and investigated promptly and fairly.
 
