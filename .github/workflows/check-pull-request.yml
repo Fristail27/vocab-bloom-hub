@@ -7,6 +7,16 @@ on:
     branches:
       - main
 
+# a force-push cancels the superseded run instead of burning its 8 jobs to
+# the end; pushes to main always run to completion (issue #354)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# the jobs only read the checkout; nothing here writes to the repo or GHCR
+permissions:
+  contents: read
+
 jobs:
   lint:
     name: lint

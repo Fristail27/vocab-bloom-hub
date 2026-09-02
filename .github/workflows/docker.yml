@@ -23,6 +23,16 @@ on:
       - .github/workflows/docker.yml
   workflow_dispatch:
 
+# a superseded pull-request build is cancelled; a main or tag publish always
+# runs to completion (issue #354)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# the default for every job; build and merge elevate packages: write themselves
+permissions:
+  contents: read
+
 env:
   REGISTRY: ghcr.io
   # GHCR wants lowercase names; the owner is lowercased below

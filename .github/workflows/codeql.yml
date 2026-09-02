@@ -8,9 +8,16 @@ on:
   schedule:
     - cron: '0 3 * * 1'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
 jobs:
   analyze:
-    name: Analyze
+    name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
 
     permissions:
@@ -21,32 +28,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ['javascript']
+        # javascript covers TypeScript; python is the published SDK (issue #354)
+        language: ['javascript', 'python']
 
     steps:
-      # 1. Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-
-      - name: Enable Corepack
-        run: corepack enable
-
-      - name: Force Yarn 4.15.0
-        run: |
-          corepack prepare yarn@4.15.0 --activate
-          yarn -v
-          which yarn
-
-      - name: Remove possible Yarn 1 cache conflict
-        run: corepack yarn cache clean || true
-
-      - name: Install dependencies
-        run: corepack yarn install --immutable
+      # the same Node/Yarn setup as every other job — the workflow used to
+      # hand-roll it with a hardcoded Yarn version that drifted off the
+      # packageManager pin (issue #354); python needs no dependencies
+      - name: Setup workspace
+        if: matrix.language == 'javascript'
+        uses: ./.github/actions/setup
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4.37.8
@@ -54,10 +48,12 @@ jobs:
           languages: ${{ matrix.language }}
 
       - name: Build frontend
+        if: matrix.language == 'javascript'
         run: yarn workspace frontend build
         continue-on-error: true
 
       - name: Build backend
+        if: matrix.language == 'javascript'
         run: yarn workspace server build
         continue-on-error: true
 
