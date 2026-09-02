@@ -2135,49 +2135,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/microservices@npm:^11.1.29":
-  version: 11.1.29
-  resolution: "@nestjs/microservices@npm:11.1.29"
-  dependencies:
-    iterare: "npm:1.2.1"
-    tslib: "npm:2.8.1"
-  peerDependencies:
-    "@grpc/grpc-js": "*"
-    "@nestjs/common": ^11.0.0
-    "@nestjs/core": ^11.0.0
-    "@nestjs/websockets": ^11.0.0
-    amqp-connection-manager: "*"
-    amqplib: "*"
-    cache-manager: "*"
-    ioredis: "*"
-    kafkajs: "*"
-    mqtt: "*"
-    nats: "*"
-    reflect-metadata: ^0.1.12 || ^0.2.0
-    rxjs: ^7.1.0
-  peerDependenciesMeta:
-    "@grpc/grpc-js":
-      optional: true
-    "@nestjs/websockets":
-      optional: true
-    amqp-connection-manager:
-      optional: true
-    amqplib:
-      optional: true
-    cache-manager:
-      optional: true
-    ioredis:
-      optional: true
-    kafkajs:
-      optional: true
-    mqtt:
-      optional: true
-    nats:
-      optional: true
-  checksum: 10c0/e5b61bc118006a273ff71e3c42b56f936e408056379783166a3c4565114d99680a2f680528f6dc3fdaededaa84af8d93fa85c09f1ea41115b6ce908b04236f2a
-  languageName: node
-  linkType: hard
-
 "@nestjs/platform-express@npm:^11.1.29":
   version: 11.1.29
   resolution: "@nestjs/platform-express@npm:11.1.29"
@@ -12025,7 +11982,6 @@ __metadata:
     "@nestjs/common": "npm:^11.2.3"
     "@nestjs/config": "npm:^4.0.2"
     "@nestjs/core": "npm:^11.1.28"
-    "@nestjs/microservices": "npm:^11.1.29"
     "@nestjs/platform-express": "npm:^11.1.29"
     "@nestjs/schematics": "npm:^11.0.0"
     "@nestjs/swagger": "npm:^11.4.7"

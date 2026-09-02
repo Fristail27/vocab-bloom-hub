@@ -108,6 +108,14 @@ therefore: back up, ship the new build, restart both processes, watch `/api/read
 without a pause; zero-downtime needs two server instances behind the proxy, taken out of
 rotation by their readiness probe in turn — a topology this guide does not cover.
 
+More generally, the server is designed to run as **one instance per database**: the public
+rate-limit buckets, the login replay protection and the pending export downloads live in
+process memory, so replicas would each keep their own. Multiple replicas behind one
+load balancer will work but weaken the rate limits (each replica counts separately) and
+break export downloads that land on the wrong replica. Scale the database and the proxy
+first; a shared rate-limit store is a change worth an issue if a real multi-replica need
+appears.
+
 ## Process managers
 
 Ready-to-adapt files in [`examples/`](./examples/):

@@ -2,6 +2,7 @@ import { BadRequestException, Logger } from '@nestjs/common';
 import * as yauzl from 'yauzl';
 import { createWriteStream } from 'node:fs';
 import { mkdir, rm } from 'node:fs/promises';
+import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { randomUUID } from 'node:crypto';
 import * as path from 'node:path';
@@ -24,6 +25,21 @@ const openEntryStream = (zip: yauzl.ZipFile, entry: yauzl.Entry): Promise<NodeJS
 // Entries operating systems add to archives ("__MACOSX/...", ".DS_Store")
 const isJunkEntry = (name: string): boolean =>
   name.startsWith('__MACOSX/') || path.basename(name) === '.DS_Store' || path.basename(name).startsWith('._');
+
+// entry.uncompressedSize is archive metadata, i.e. attacker-supplied: the
+// real decompressed stream is counted too, so an archive declaring 1 KB and
+// expanding past the cap cannot fill the disk (issue #355)
+export const decompressedByteCap = (name: string): Transform => {
+  let total = 0;
+
+  return new Transform({
+    transform(chunk: Buffer, _encoding, done) {
+      total += chunk.length;
+      if (total > MAX_DATASET_FILE_BYTES) done(new Error(`"${name}" expands past the size cap`));
+      else done(null, chunk);
+    },
+  });
+};
 
 /**
  * Extracts the dataset files of an archive into a fresh temporary directory.
@@ -69,7 +85,7 @@ export const extractDatasetZip = async (zipPath: string, logger: Logger): Promis
           if (entry.uncompressedSize > MAX_DATASET_FILE_BYTES) reject(`"${name}" is too large`);
 
           const stream = await openEntryStream(zip, entry);
-          await pipeline(stream, createWriteStream(path.join(outDir, baseName)));
+          await pipeline(stream, decompressedByteCap(name), createWriteStream(path.join(outDir, baseName)));
           zip.readEntry();
         })().catch(rejectExtraction);
       });
