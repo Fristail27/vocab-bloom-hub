@@ -8,7 +8,7 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import { DatasetManifestT, ImportDictionaryChunkT } from '../../../../../../types';
 import { ErrorCodes } from '../../../../../../core/constants/error_codes';
-import { DATASET_BASE_URL, EnDictionaryImportPhasesE, MANIFEST_FILE_NAME } from '../constants';
+import { DATASET_REFS_URL, datasetBaseUrl, EnDictionaryImportPhasesE, MANIFEST_FILE_NAME } from '../constants';
 import { parseManifest } from '../utils/parseManifest';
 import type { ImportProgressSink } from '../progress';
 import { AcquiredFileT, DatasetSource } from './types';
@@ -28,9 +28,12 @@ export const getImportTmpDir = (): string => {
 };
 
 /** Fetches manifest.json from the published dataset; null when unreachable or malformed */
-export const fetchPublishedManifest = async (logger: Logger): Promise<DatasetManifestT | null> => {
+export const fetchPublishedManifest = async (
+  logger: Logger,
+  revision?: string,
+): Promise<DatasetManifestT | null> => {
   try {
-    const response = await fetch(`${DATASET_BASE_URL}/${MANIFEST_FILE_NAME}`, {
+    const response = await fetch(`${datasetBaseUrl(revision)}/${MANIFEST_FILE_NAME}`, {
       signal: AbortSignal.timeout(MANIFEST_TIMEOUT_MS),
     });
     if (!response.ok) {
@@ -50,6 +53,31 @@ export const fetchPublishedManifest = async (logger: Logger): Promise<DatasetMan
   }
 };
 
+/**
+ * The version tags of the dataset repo (issue #322): each published revision
+ * is tagged with its manifest.version, so the tags are the pinnable versions.
+ * Newest first (HF answers oldest first); [] when the refs API is unreachable.
+ */
+export const fetchDatasetRevisions = async (logger: Logger): Promise<string[]> => {
+  try {
+    const response = await fetch(DATASET_REFS_URL, { signal: AbortSignal.timeout(MANIFEST_TIMEOUT_MS) });
+    if (!response.ok) {
+      logger.warn(`Dataset refs request failed: HTTP ${response.status}`);
+      return [];
+    }
+    const refs = (await response.json()) as { tags?: Array<{ name?: unknown }> };
+    return (refs.tags ?? [])
+      .map((tag) => tag.name)
+      .filter((name): name is string => typeof name === 'string' && name.length > 0)
+      .reverse();
+  } catch (error) {
+    logger.warn(
+      `Failed to list the dataset revisions: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return [];
+  }
+};
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** An HTTP 4xx: the file is not there, another attempt would not change that */
@@ -64,11 +92,17 @@ export class HuggingFaceDatasetSource implements DatasetSource {
 
   constructor(
     private readonly logger: Logger,
-    private readonly options: { attempts?: number; inactivityTimeoutMs?: number; retryDelayMs?: number } = {},
+    private readonly options: {
+      attempts?: number;
+      inactivityTimeoutMs?: number;
+      retryDelayMs?: number;
+      // a git ref of the dataset repo; undefined imports the moving `main`
+      revision?: string;
+    } = {},
   ) {}
 
   readManifest(): Promise<DatasetManifestT | null> {
-    return fetchPublishedManifest(this.logger);
+    return fetchPublishedManifest(this.logger, this.options.revision);
   }
 
   async acquireFile(fileName: string, progress: ImportProgressSink): Promise<AcquiredFileT> {
@@ -116,7 +150,9 @@ export class HuggingFaceDatasetSource implements DatasetSource {
 
     armWatchdog();
     try {
-      const response = await fetch(`${DATASET_BASE_URL}/${fileName}`, { signal: controller.signal });
+      const response = await fetch(`${datasetBaseUrl(this.options.revision)}/${fileName}`, {
+        signal: controller.signal,
+      });
       if (!response.ok || !response.body) {
         const message = `HTTP ${response.status}`;
         throw response.status >= 400 && response.status < 500

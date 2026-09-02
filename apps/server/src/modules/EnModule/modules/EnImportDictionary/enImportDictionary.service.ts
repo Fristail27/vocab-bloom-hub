@@ -74,6 +74,7 @@ import { mapPhraseFromSetToDB } from './utils/mapPhraseFromSetToDB';
 import { PendingExport, PendingWordLinkT } from './types';
 import {
   DatasetSource,
+  fetchDatasetRevisions,
   fetchPublishedManifest,
   getImportDir,
   HuggingFaceDatasetSource,
@@ -141,6 +142,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
   }
 
   private manifestCache: { manifest: DatasetManifestT; fetchedAt: number } | null = null;
+  private revisionsCache: { revisions: string[]; fetchedAt: number } | null = null;
 
   constructor(
     @InjectRepository(EnWord)
@@ -780,7 +782,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
    */
   private async openSource(source: ImportDictionarySourceDTO | undefined): Promise<DatasetSource> {
     if (!source || source.kind === ImportSourceKindE.huggingface) {
-      return new HuggingFaceDatasetSource(this.logger);
+      return new HuggingFaceDatasetSource(this.logger, { revision: source?.revision });
     }
     if (source.kind === ImportSourceKindE.file) {
       return openImportDirSource(source.path ?? '', this.logger);
@@ -788,15 +790,32 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     throw new BadRequestException(ErrorCodes.dataset_file_not_found);
   }
 
-  /** What the "from file" tab of the import page can offer: server-side datasets */
+  /** What the import page can offer: server-side datasets and the published revisions */
   async getImportSources(): Promise<ImportSourcesT> {
-    return { import_dir_configured: getImportDir() !== null, files: await listImportDir() };
+    return {
+      import_dir_configured: getImportDir() !== null,
+      files: await listImportDir(),
+      revisions: await this.getRevisions(),
+    };
+  }
+
+  /** The dataset repo's version tags, briefly cached like the manifest (issue #322) */
+  private async getRevisions(): Promise<string[]> {
+    if (this.revisionsCache && Date.now() - this.revisionsCache.fetchedAt < MANIFEST_CACHE_TTL_MS) {
+      return this.revisionsCache.revisions;
+    }
+    const revisions = await fetchDatasetRevisions(this.logger);
+    // an unreachable refs API is not cached: the next request retries
+    if (revisions.length > 0) this.revisionsCache = { revisions, fetchedAt: Date.now() };
+    return revisions;
   }
 
   async importDictionary(body: ImportDictionaryReq, res: Response): Promise<void> {
     const source = await this.openSource(body.source);
     const sourceLabel =
-      body.source?.kind === ImportSourceKindE.file ? `file "${body.source.path}"` : 'HuggingFace';
+      body.source?.kind === ImportSourceKindE.file
+        ? `file "${body.source.path}"`
+        : `HuggingFace${body.source?.revision ? ` @ ${body.source.revision}` : ''}`;
     const label = body.update ? `${sourceLabel} (update)` : sourceLabel;
     await this.importFrom(source, label, new HttpImportProgressSink(res), ImportTriggerE.manual, {
       update: body.update === true,

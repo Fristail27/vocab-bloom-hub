@@ -149,6 +149,8 @@ export default {
   import_dictionary: {
     your_version: 'Ваша Версия',
     latest_version: 'Последняя версия',
+    revision: 'Версия датасета',
+    revision_latest: 'main (последняя)',
     start_importing: 'Начать загрузку',
     start_exporting: 'Начать сохранение',
     en_saving_0: 'Идет добавление записей...',

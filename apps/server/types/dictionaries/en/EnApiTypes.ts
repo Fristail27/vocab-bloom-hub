@@ -233,6 +233,9 @@ export type ImportSourcesT = {
   // false when DICTIONARY_IMPORT_DIR is unset: the UI offers uploads only
   import_dir_configured: boolean;
   files: ImportSourceFileT[];
+  // version tags of the published dataset repo, newest first (issue #322);
+  // [] when the HF refs API is unreachable
+  revisions: string[];
 };
 export type GetImportSourcesResT = ImportSourcesT | ErrorResT;
 export type GetImportStatusResT = ImportStatusT | ErrorResT;

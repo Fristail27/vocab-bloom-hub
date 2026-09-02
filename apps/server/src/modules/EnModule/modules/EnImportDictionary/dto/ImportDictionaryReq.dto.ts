@@ -6,6 +6,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
   ValidateIf,
   ValidateNested,
@@ -25,6 +26,18 @@ export class ImportDictionarySourceDTO {
   @IsNotEmpty()
   @MaxLength(1024)
   path?: string | undefined;
+
+  // A git ref of the published dataset repo (issue #322): a version tag,
+  // a branch or a commit sha; only the HuggingFace source reads it, and
+  // without it the moving `main` is imported
+  @ApiProperty({ required: false })
+  @ValidateIf((o: ImportDictionarySourceDTO) => o.kind === ImportSourceKindE.huggingface)
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(128)
+  @Matches(/^[A-Za-z0-9._/-]+$/)
+  revision?: string | undefined;
 }
 
 // Without a source the published HuggingFace dataset is imported; the

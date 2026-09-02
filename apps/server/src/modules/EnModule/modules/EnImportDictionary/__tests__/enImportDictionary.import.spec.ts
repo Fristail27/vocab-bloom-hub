@@ -918,15 +918,26 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
       await writeDataset(path.join(root, 'dataset'));
       await zipDataset(path.join(root, 'export.zip'));
 
+      // the revisions come from the HF refs API — never from the network in a test
+      jest
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValue(new Response(JSON.stringify({ tags: [{ name: 'v0.1.0' }] }), { status: 200 }));
+
       const sources = await service.getImportSources();
       expect(sources.import_dir_configured).toBe(true);
+      expect(sources.revisions).toEqual(['v0.1.0']);
       expect(sources.files.map((f) => [f.path, f.kind])).toEqual([
         ['dataset', 'directory'],
         ['export.zip', 'zip'],
       ]);
 
       delete process.env.DICTIONARY_IMPORT_DIR;
-      await expect(service.getImportSources()).resolves.toEqual({ import_dir_configured: false, files: [] });
+      await expect(service.getImportSources()).resolves.toEqual({
+        import_dir_configured: false,
+        files: [],
+        // served from the cache: the refs API is not asked again within the TTL
+        revisions: ['v0.1.0'],
+      });
       process.env.DICTIONARY_IMPORT_DIR = root;
     });
   });

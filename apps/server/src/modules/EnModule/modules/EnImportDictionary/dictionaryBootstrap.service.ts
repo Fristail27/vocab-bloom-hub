@@ -106,6 +106,12 @@ export class DictionaryBootstrapService implements OnApplicationBootstrap, OnMod
         label: `file "${newest.path}"`,
       };
     }
-    return { source: new HuggingFaceDatasetSource(this.logger), label: 'HuggingFace' };
+    // DICTIONARY_DATASET_VERSION pins the first-start import to one revision
+    // of the dataset repo (a version tag, issue #322); unset means `main`
+    const revision = (process.env.DICTIONARY_DATASET_VERSION ?? '').trim() || undefined;
+    return {
+      source: new HuggingFaceDatasetSource(this.logger, { revision }),
+      label: `HuggingFace${revision ? ` @ ${revision}` : ''}`,
+    };
   }
 }
