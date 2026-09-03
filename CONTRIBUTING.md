@@ -128,6 +128,39 @@ Please describe:
 By participating in this project, you agree to follow the
 [Code of Conduct](./CODE_OF_CONDUCT.md).
 
+## Releasing
+
+One version covers the whole monorepo; the dataset keeps its own (`manifest.version`). The
+full plan of the first release lives in
+[#307](https://github.com/Fristail27/vocab-bloom-hub/issues/307); the repeatable part:
+
+1. **The release PR.** Bump the version everywhere with the only tool allowed to touch it —
+   `node scripts/bump-version.mjs <version>` (six files; a CI test keeps them equal) — and
+   curate the new `CHANGELOG.md` entry. Merge on green CI.
+2. **The tag — the whole release.** On the merged `main`:
+   `git tag -a v<version> -m "..." && git push origin v<version>`.
+   The one push does everything: publishes the three Docker images with that version
+   (`docker.yml`; a prerelease tag never gets `latest`) and runs
+   `.github/workflows/release.yml`, which verifies the tag matches the version, publishes
+   `@vocab-bloom-hub/client` to npm and `vocab-bloom-hub` to PyPI via OIDC trusted
+   publishing — no tokens — and creates the GitHub Release with generated notes
+   (categories in `.github/release.yml`; a hyphen in the tag marks it a prerelease).
+   The **first npm publish is manual** (`npm publish` from `packages/npm-sdk`; npm attaches a
+   trusted publisher only to an existing package — configure it right after, workflow
+   `release.yml`, environment `npm`, then re-run the failed npm job). PyPI's pending
+   publisher covers the first publish.
+3. **After the tag**: export the dictionary (the manifest carries the next dataset version),
+   upload the revision to HuggingFace and git-tag it there with that version; update
+   `VBH_TAG` in `.env.example` / `docs/deployment/docker.md` and the install sections of the
+   READMEs.
+
+PyPI normalizes pre-release suffixes per PEP 440 (`0.1.0-alpha.1` is served as `0.1.0a1`) —
+cosmetic only, the sources keep the semver spelling. Re-run `uv lock` in
+`packages/python-sdk` after a bump so `uv.lock` follows.
+
+The tag push is the point of no return: the npm/PyPI publishes cannot be undone — a bad
+release ships a fixed next version instead. Everything before the push is free to redo.
+
 ## Questions
 
 If you have questions, feel free to open an Issue or start a Discussion.

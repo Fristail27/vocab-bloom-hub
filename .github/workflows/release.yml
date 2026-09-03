@@ -1,0 +1,121 @@
+name: release
+
+# The whole release rides on one tag push (issues #308, #310, #374): the same
+# push builds the Docker images (docker.yml) while this workflow verifies the
+# tag against the version, publishes the npm and PyPI packages and creates the
+# GitHub Release with generated notes. The Release is created here, not the
+# other way around: a Release made by a workflow's GITHUB_TOKEN would never
+# trigger another workflow. The flow is documented in CONTRIBUTING.md#releasing.
+#
+# The publish jobs authenticate with OIDC trusted publishing — no tokens in
+# Secrets. The very first npm publish is manual (npm attaches a trusted
+# publisher only to an existing package); PyPI's pending publisher covers the
+# first one.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    name: tag matches the version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # the six version fields are kept equal by CI (version-sync.spec.ts);
+      # here the tag itself is checked against them before anything publishes
+      - name: Release tag equals the package version
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::release tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+
+  npm:
+    name: publish @vocab-bloom-hub/client to npm
+    needs: guard
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup
+
+      - name: Generated types are up to date
+        run: yarn workspace @vocab-bloom-hub/client generate:check
+
+      - name: Tests
+        run: yarn jest --selectProjects sdk
+
+      - name: Build
+        run: yarn workspace @vocab-bloom-hub/client build
+
+      # OIDC trusted publishing: npm >= 11.5 exchanges the workflow identity
+      # for the publish right, provenance included, no token involved
+      - name: Publish
+        working-directory: packages/npm-sdk
+        run: npm publish
+
+  pypi:
+    name: publish vocab-bloom-hub to PyPI
+    needs: guard
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Generated models are up to date
+        working-directory: packages/python-sdk
+        run: |
+          uv sync
+          uv run python scripts/generate_models.py --check
+
+      - name: Build
+        working-directory: packages/python-sdk
+        run: uv build
+
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: packages/python-sdk/dist
+
+  github-release:
+    name: create the GitHub Release
+    # only the guard: the Release (the notes) must appear even when a publish
+    # job fails — expected once, on the very first npm publish (see the header)
+    needs: guard
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # categories of the generated notes live in .github/release.yml;
+      # a hyphen in the tag (v0.1.0-alpha.1) marks the Release a prerelease
+      - name: Create the Release with generated notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=''
+          case "$GITHUB_REF_NAME" in *-*) prerelease='--prerelease' ;; esac
+          gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes $prerelease

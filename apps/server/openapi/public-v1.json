@@ -1002,7 +1002,7 @@
   "info": {
     "title": "VocabBloom Public API",
     "description": "Read-only dictionary API under /api/v1 (contract version 1): no authentication, every answer in a { data, meta } envelope, errors as { statusCode, message, error: true }, X-API-Version on every response. Successful GET answers carry ETag, Last-Modified and Cache-Control. See docs/api.md in the repository.",
-    "version": "0.0.1",
+    "version": "0.1.0-alpha.1",
     "contact": {}
   },
   "tags": [

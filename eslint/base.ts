@@ -10,7 +10,7 @@ export default [
   ...tseslint.configs.recommended,
 
   {
-    files: ['**/*.{js,ts,tsx}'],
+    files: ['**/*.{js,mjs,ts,tsx}'],
 
     languageOptions: {
       globals: {
