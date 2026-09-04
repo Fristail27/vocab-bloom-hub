@@ -2324,11 +2324,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nestjs/common@npm:^11.2.3":
-  version: 11.2.3
-  resolution: "@nestjs/common@npm:11.2.3"
+"@nestjs/common@npm:^12.0.1":
+  version: 12.0.1
+  resolution: "@nestjs/common@npm:12.0.1"
   dependencies:
-    file-type: "npm:21.3.4"
+    "@standard-schema/spec": "npm:1.1.0"
+    file-type: "npm:22.0.2"
     iterare: "npm:1.2.1"
     load-esm: "npm:1.0.3"
     tslib: "npm:2.8.1"
@@ -2343,7 +2344,7 @@ __metadata:
       optional: true
     class-validator:
       optional: true
-  checksum: 10c0/b8712fc715645ba541d437e9adb1f826c52714105c47dc735fafe787785129f2bbe5b852525299b2803e8e38eab0e3740a2fd88ddbefb36a7dadddf87b968936
+  checksum: 10c0/5a4c18372b0ebc4974e3e1032fa3e860702a28621e49d04634af7664752f5d71ae5794e97cf0efc9b6a48ba8886a077dc4f340bea4f323d3109ae84060d3952b
   languageName: node
   linkType: hard
 
@@ -3851,6 +3852,13 @@ __metadata:
   version: 1.2.5
   resolution: "@sqltools/formatter@npm:1.2.5"
   checksum: 10c0/4b4fa62b8cd4880784b71cc5edd4a13da04fda0a915c14282765a8ec1a900a495e69b322704413e2052d221b5646d9fb0e20e87911f9a8f438f33180eecb11a4
+  languageName: node
+  linkType: hard
+
+"@standard-schema/spec@npm:1.1.0":
+  version: 1.1.0
+  resolution: "@standard-schema/spec@npm:1.1.0"
+  checksum: 10c0/d90f55acde4b2deb983529c87e8025fa693de1a5e8b49ecc6eb84d1fd96328add0e03d7d551442156c7432fd78165b2c26ff561b970a9a881f046abb78d6a526
   languageName: node
   linkType: hard
 
@@ -7507,15 +7515,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"file-type@npm:21.3.4":
-  version: 21.3.4
-  resolution: "file-type@npm:21.3.4"
+"file-type@npm:22.0.2":
+  version: 22.0.2
+  resolution: "file-type@npm:22.0.2"
   dependencies:
     "@tokenizer/inflate": "npm:^0.4.1"
-    strtok3: "npm:^10.3.4"
-    token-types: "npm:^6.1.1"
-    uint8array-extras: "npm:^1.4.0"
-  checksum: 10c0/6f15e7538c5d73f9308d2e897365d253a6647a6751bb1b0d85c78aebc02b8976afb7c6c9b3759687a064b1b3d60246e5504746b8f11e38b0d5a1b339087e00d2
+    strtok3: "npm:^10.3.5"
+    token-types: "npm:^6.1.2"
+    uint8array-extras: "npm:^1.5.0"
+  checksum: 10c0/1ad23ecb6afd60ea59046b213ac834c51ab0706e185c9509c5a2adce290db05cc4672b197390268a145ea489d489768e10cfd7df802da2b492a45a0aa0231be8
   languageName: node
   linkType: hard
 
@@ -12472,7 +12480,7 @@ __metadata:
   resolution: "server@workspace:apps/server"
   dependencies:
     "@nestjs/cli": "npm:^11.0.24"
-    "@nestjs/common": "npm:^11.2.3"
+    "@nestjs/common": "npm:^12.0.1"
     "@nestjs/config": "npm:^4.0.2"
     "@nestjs/core": "npm:^11.1.28"
     "@nestjs/platform-express": "npm:^11.1.29"
@@ -13208,7 +13216,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"strtok3@npm:^10.3.4":
+"strtok3@npm:^10.3.5":
   version: 10.3.5
   resolution: "strtok3@npm:10.3.5"
   dependencies:
@@ -13572,7 +13580,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"token-types@npm:^6.1.1":
+"token-types@npm:^6.1.1, token-types@npm:^6.1.2":
   version: 6.1.2
   resolution: "token-types@npm:6.1.2"
   dependencies:
@@ -14098,7 +14106,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uint8array-extras@npm:^1.4.0":
+"uint8array-extras@npm:^1.5.0":
   version: 1.5.0
   resolution: "uint8array-extras@npm:1.5.0"
   checksum: 10c0/0e74641ac7dadb02eadefc1ccdadba6010e007757bda824960de3c72bbe2b04e6d3af75648441f412148c4103261d54fcb60be45a2863beb76643a55fddba3bd
