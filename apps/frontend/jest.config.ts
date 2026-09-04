@@ -16,8 +16,6 @@ export default {
   },
   testEnvironment: 'jsdom', // ← для React компонентов
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
-  // @formatjs ships ESM-only; the parity spec parses every message as ICU
-  transformIgnorePatterns: ['/node_modules/(?!@formatjs/)'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1', // алиас Next.js
     // @ant-design/icons requires the ESM build of colors from CJS; point it to the CJS build
