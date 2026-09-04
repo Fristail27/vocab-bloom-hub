@@ -2,13 +2,15 @@
 
 ## Supported versions
 
-The project has not shipped a versioned release yet. Security fixes land on `main` and in the
-`main`-tagged Docker images (`ghcr.io/fristail27/vocab-bloom-hub-*`). Once releases start, this
-table will name the supported lines.
+The project is on its first release line, the `0.1.0` alphas. Security fixes land on `main`
+and ship in the next release — there are no backports: the supported release is the **latest
+one** (Docker images on GHCR, `@vocab-bloom-hub/client` on npm, `vocab-bloom-hub` on PyPI).
 
-| Version                       | Supported |
-| ----------------------------- | --------- |
-| `main` (images tagged `main`) | ✅        |
+| Version                                                                                         | Supported |
+| ----------------------------------------------------------------------------------------------- | --------- |
+| the latest release (see the [releases](https://github.com/Fristail27/vocab-bloom-hub/releases)) | ✅        |
+| `main` (images tagged `main`)                                                                   | ✅        |
+| older releases                                                                                  | ❌        |
 
 ## Reporting a vulnerability
 

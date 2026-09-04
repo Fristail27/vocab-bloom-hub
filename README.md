@@ -17,6 +17,8 @@
   <a href="https://github.com/Fristail27/vocab-bloom-hub/actions/workflows/codeql.yml"><img src="https://github.com/Fristail27/vocab-bloom-hub/actions/workflows/codeql.yml/badge.svg?branch=main" alt="CodeQL" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/Fristail27/vocab-bloom-hub" alt="License: MIT" /></a>
   <a href="DATA_LICENSE.md"><img src="https://img.shields.io/badge/data-CC%20BY%204.0-lightgrey" alt="Data: CC BY 4.0" /></a>
+  <a href="https://www.npmjs.com/package/@vocab-bloom-hub/client"><img src="https://img.shields.io/npm/v/%40vocab-bloom-hub%2Fclient/alpha?logo=npm&label=npm" alt="npm: @vocab-bloom-hub/client" /></a>
+  <a href="https://pypi.org/project/vocab-bloom-hub/"><img src="https://img.shields.io/pypi/v/vocab-bloom-hub?logo=pypi&logoColor=white" alt="PyPI: vocab-bloom-hub" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/commits/main"><img src="https://img.shields.io/github/last-commit/Fristail27/vocab-bloom-hub" alt="Last commit" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/issues"><img src="https://img.shields.io/github/issues/Fristail27/vocab-bloom-hub" alt="Open issues" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/pulls"><img src="https://img.shields.io/github/issues-pr/Fristail27/vocab-bloom-hub" alt="Open pull requests" /></a>
@@ -73,7 +75,7 @@ It is inspired by WordNet-like structures and aims to provide:
 
 ## 🚧 Project status
 
-The project is in **early development** (`0.x`). The English dictionary, the admin UI and the import/export pipeline are usable today, but the API contract may still change between releases without a deprecation period. Follow the [issues](https://github.com/Fristail27/vocab-bloom-hub/issues) and [pull requests](https://github.com/Fristail27/vocab-bloom-hub/pulls) to see what is being worked on.
+The project is in **early development** (`0.x`). The first alpha is [released](https://github.com/Fristail27/vocab-bloom-hub/releases): Docker images on GHCR, the SDKs on npm and PyPI, the dataset tagged on HuggingFace. The English dictionary, the admin UI and the import/export pipeline are usable today, but the API contract may still change between releases without a deprecation period. Follow the [issues](https://github.com/Fristail27/vocab-bloom-hub/issues) and [pull requests](https://github.com/Fristail27/vocab-bloom-hub/pulls) to see what is being worked on.
 
 ---
 
@@ -84,8 +86,8 @@ The project is in **early development** (`0.x`). The English dictionary, the adm
   - _Statistics_ — an overview of the dictionary contents;
   - _Documentation_ — in-app reference for the data model.
 - **REST API** documented with Swagger/OpenAPI: a public read-only, versioned prefix `/api/v1` for consuming applications (no login, rate-limited) and an admin API protected by a single admin login (httpOnly JWT cookie or Bearer token) — see [`docs/api.md`](docs/api.md).
-- **Node.js / TypeScript SDK** for the public API — [`@vocab-bloom-hub/client`](packages/npm-sdk/README.md): typed methods per endpoint, cursor iteration, typed errors, ETag cache; types generated from the committed OpenAPI document (npm publishing follows the alpha, #308).
-- **Python SDK** — [`vocab-bloom-hub`](packages/python-sdk/README.md): sync + async clients, pydantic models from the same spec, `words_dataframe()` for notebooks (PyPI publishing follows the alpha, #310).
+- **Node.js / TypeScript SDK** for the public API — [`@vocab-bloom-hub/client`](packages/npm-sdk/README.md): typed methods per endpoint, cursor iteration, typed errors, ETag cache; types generated from the committed OpenAPI document — `npm install @vocab-bloom-hub/client`.
+- **Python SDK** — [`vocab-bloom-hub`](packages/python-sdk/README.md): sync + async clients, pydantic models from the same spec, `words_dataframe()` for notebooks — `pip install --pre vocab-bloom-hub`.
 - **Dictionary import / export** as NDJSON datasets (`POST /api/en/dictionary/import`, `GET /api/en/dictionary/export`), so the whole dictionary can be versioned, shared or moved between environments — including offline, from an uploaded archive or a folder on the server (see [`docs/offline-import.md`](docs/offline-import.md)).
 - **Website** — [`apps/site`](apps/site): the documentation rendered from this repository, the public API reference from the OpenAPI document, a live playground and word pages over a running instance; the `site` profile of `docker-compose.yml`.
 - **Search** across words, meanings and translations.
@@ -220,7 +222,7 @@ Full reference with defaults and startup validation rules: [`docs/environment.md
 
 Two supported shapes, both behind a reverse proxy that terminates TLS and routes `/api/*` to the server and everything else to the frontend (the admin cookie is `secure` whenever the login came over https).
 
-**Docker** — download `docker-compose.yml` and `.env.example` (as `.env`, set the passwords), `docker compose up -d`: Postgres, the API and the admin UI from the published images `ghcr.io/fristail27/vocab-bloom-hub-server` / `-frontend` (`main` = development builds, semver tags from the first release), published on localhost; the dictionary loads itself on the first start (`DICTIONARY_AUTO_IMPORT`, `/api/ready` reports the progress). Guide: [`docs/deployment/docker.md`](docs/deployment/docker.md).
+**Docker** — download `docker-compose.yml` and `.env.example` (as `.env`, set the passwords), `docker compose up -d`: Postgres, the API and the admin UI from the published images `ghcr.io/fristail27/vocab-bloom-hub-server` / `-frontend` (`main` = development builds, or pin a release: `VBH_TAG=0.1.0-alpha.3`), published on localhost; the dictionary loads itself on the first start (`DICTIONARY_AUTO_IMPORT`, `/api/ready` reports the progress). Guide: [`docs/deployment/docker.md`](docs/deployment/docker.md).
 
 **Native Node.js:**
 

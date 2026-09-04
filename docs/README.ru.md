@@ -17,6 +17,8 @@
   <a href="https://github.com/Fristail27/vocab-bloom-hub/actions/workflows/codeql.yml"><img src="https://github.com/Fristail27/vocab-bloom-hub/actions/workflows/codeql.yml/badge.svg?branch=main" alt="CodeQL" /></a>
   <a href="../LICENSE"><img src="https://img.shields.io/github/license/Fristail27/vocab-bloom-hub" alt="Лицензия: MIT" /></a>
   <a href="../DATA_LICENSE.md"><img src="https://img.shields.io/badge/data-CC%20BY%204.0-lightgrey" alt="Данные: CC BY 4.0" /></a>
+  <a href="https://www.npmjs.com/package/@vocab-bloom-hub/client"><img src="https://img.shields.io/npm/v/%40vocab-bloom-hub%2Fclient/alpha?logo=npm&label=npm" alt="npm: @vocab-bloom-hub/client" /></a>
+  <a href="https://pypi.org/project/vocab-bloom-hub/"><img src="https://img.shields.io/pypi/v/vocab-bloom-hub?logo=pypi&logoColor=white" alt="PyPI: vocab-bloom-hub" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/commits/main"><img src="https://img.shields.io/github/last-commit/Fristail27/vocab-bloom-hub" alt="Последний коммит" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/issues"><img src="https://img.shields.io/github/issues/Fristail27/vocab-bloom-hub" alt="Открытые issues" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/pulls"><img src="https://img.shields.io/github/issues-pr/Fristail27/vocab-bloom-hub" alt="Открытые pull requests" /></a>
@@ -73,7 +75,7 @@
 
 ## 🚧 Статус проекта
 
-Проект находится на **ранней стадии разработки** (`0.x`). Английский словарь, админ-панель и импорт/экспорт уже пригодны к использованию, но контракт API может меняться между релизами без периода устаревания. Следите за [issues](https://github.com/Fristail27/vocab-bloom-hub/issues) и [pull requests](https://github.com/Fristail27/vocab-bloom-hub/pulls), чтобы видеть, над чем идёт работа.
+Проект находится на **ранней стадии разработки** (`0.x`). Первая альфа [выпущена](https://github.com/Fristail27/vocab-bloom-hub/releases): Docker-образы на GHCR, SDK в npm и PyPI, датасет с тегом на HuggingFace. Английский словарь, админ-панель и импорт/экспорт уже пригодны к использованию, но контракт API может меняться между релизами без периода устаревания. Следите за [issues](https://github.com/Fristail27/vocab-bloom-hub/issues) и [pull requests](https://github.com/Fristail27/vocab-bloom-hub/pulls), чтобы видеть, над чем идёт работа.
 
 ---
 
@@ -84,8 +86,8 @@
   - _Statistics_ — сводка по содержимому словаря;
   - _Documentation_ — встроенный справочник по модели данных.
 - **REST API** с документацией Swagger/OpenAPI: публичный read-only версионированный префикс `/api/v1` для приложений-потребителей (без логина, с лимитом запросов) и админский API, защищённый единственным админским логином (httpOnly JWT-cookie или Bearer-токен) — см. [`api.md`](api.md).
-- **Node.js / TypeScript SDK** для публичного API — [`@vocab-bloom-hub/client`](../packages/npm-sdk/README.md): типизированные методы по эндпоинтам, итерация по курсору, типизированные ошибки, ETag-кэш; типы генерируются из закоммиченного OpenAPI-документа (публикация в npm — после альфы, #308).
-- **Python SDK** — [`vocab-bloom-hub`](../packages/python-sdk/README.md): sync + async клиенты, pydantic-модели из того же спека, `words_dataframe()` для ноутбуков (публикация в PyPI — после альфы, #310).
+- **Node.js / TypeScript SDK** для публичного API — [`@vocab-bloom-hub/client`](../packages/npm-sdk/README.md): типизированные методы по эндпоинтам, итерация по курсору, типизированные ошибки, ETag-кэш; типы генерируются из закоммиченного OpenAPI-документа — `npm install @vocab-bloom-hub/client`.
+- **Python SDK** — [`vocab-bloom-hub`](../packages/python-sdk/README.md): sync + async клиенты, pydantic-модели из того же спека, `words_dataframe()` для ноутбуков — `pip install --pre vocab-bloom-hub`.
 - **Импорт / экспорт словаря** в виде NDJSON-датасетов (`POST /api/en/dictionary/import`, `GET /api/en/dictionary/export`) — весь словарь можно версионировать, передавать и переносить между окружениями, в том числе офлайн: из загруженного архива или папки на сервере (см. [`offline-import.md`](offline-import.md)).
 - **Веб-сайт** — [`apps/site`](../apps/site): документация, отрендеренная из этого репозитория, справочник публичного API из OpenAPI-документа, живой playground и страницы слов поверх работающего экземпляра; профиль `site` в `docker-compose.yml`.
 - **Поиск** по словам, значениям и переводам.
@@ -220,7 +222,7 @@ DATABASE_URL=postgres://... yarn workspace server migration:run      # такж�
 
 Два поддерживаемых варианта, оба за reverse proxy, который терминирует TLS и направляет `/api/*` на сервер, а всё остальное — на фронтенд (auth-cookie помечена `secure`, когда вход выполнен по https).
 
-**Docker** — скачать `docker-compose.yml` и `.env.example` (как `.env`, задать пароли), `docker compose up -d`: Postgres, API и админка из опубликованных образов `ghcr.io/fristail27/vocab-bloom-hub-server` / `-frontend` (`main` — dev-сборки, semver-теги с первого релиза), опубликованы на localhost; словарь загружается сам при первом старте (`DICTIONARY_AUTO_IMPORT`, прогресс виден в `/api/ready`). Руководство: [`deployment/docker.md`](deployment/docker.md).
+**Docker** — скачать `docker-compose.yml` и `.env.example` (как `.env`, задать пароли), `docker compose up -d`: Postgres, API и админка из опубликованных образов `ghcr.io/fristail27/vocab-bloom-hub-server` / `-frontend` (`main` — dev-сборки, или закрепите релиз: `VBH_TAG=0.1.0-alpha.3`), опубликованы на localhost; словарь загружается сам при первом старте (`DICTIONARY_AUTO_IMPORT`, прогресс виден в `/api/ready`). Руководство: [`deployment/docker.md`](deployment/docker.md).
 
 **Нативный Node.js:**
 
