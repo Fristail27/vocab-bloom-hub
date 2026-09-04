@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "0.0.1",
+  "version": "0.1.0-alpha.1",
   "private": true,
   "license": "MIT",
   "description": "Web interface for Vocab Bloom Hub — a modern vocabulary and linguistics platform built with Next.js. Provides dictionary search, word exploration, semantic relations, and language learning tools.",

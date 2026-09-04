@@ -1,6 +1,6 @@
 {
   "name": "site",
-  "version": "0.0.1",
+  "version": "0.1.0-alpha.1",
   "private": true,
   "license": "MIT",
   "description": "Public website of Vocab Bloom Hub — documentation, the public API reference, SDK guides, a live playground and word pages, served next to a running instance (Next.js).",
