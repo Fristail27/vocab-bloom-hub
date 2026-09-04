@@ -30,7 +30,7 @@ No checkout needed — the compose file and the environment template are enough:
 mkdir vocab-bloom-hub && cd vocab-bloom-hub
 curl -fsSLO https://raw.githubusercontent.com/Fristail27/vocab-bloom-hub/main/docker-compose.yml
 curl -fsSL  https://raw.githubusercontent.com/Fristail27/vocab-bloom-hub/main/.env.example -o .env
-# edit .env: ADMIN_PASSWORD, POSTGRES_PASSWORD (and VBH_TAG to pin a version)
+# edit .env: ADMIN_PASSWORD, POSTGRES_PASSWORD (and VBH_TAG to pin a release, e.g. 0.1.0-alpha.2)
 docker compose up -d               # pulls the images, starts Postgres, the API, the UI
 curl -s localhost:3010/api/ready   # {"status":"ok"} once migrations ran
 ```
