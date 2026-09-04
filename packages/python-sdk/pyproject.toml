@@ -1,6 +1,6 @@
 [project]
 name = "vocab-bloom-hub"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 description = "Typed Python client for the Vocab Bloom Hub public dictionary API (/api/v1): sync and async, pydantic models, cursor iteration, ETag cache."
 readme = "README.md"
 license = "MIT"

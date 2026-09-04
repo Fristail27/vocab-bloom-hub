@@ -5,7 +5,18 @@ the admin UI, the website and both SDKs; the published dataset keeps its own ver
 (`manifest.version`), bumped at the next export after a release. Entries are curated from the
 generated release notes; the full commit history lives in git.
 
-## v0.1.0-alpha.1 — unreleased
+## v0.1.0-alpha.2 — unreleased
+
+The first release straight through the automated pipeline; fixes what the live run of
+v0.1.0-alpha.1 surfaced.
+
+- **Release pipeline**: npm prereleases publish under their channel dist-tag (`alpha`,
+  `beta`, …) — npm refuses a bare `npm publish` of a prerelease, so the automated job
+  failed on the first live run.
+- **SDK READMEs**: the real install commands (`npm install @vocab-bloom-hub/client`,
+  `pip install --pre vocab-bloom-hub`) now that both packages are on their registries.
+
+## v0.1.0-alpha.1 — 2026-09-04
 
 The first tagged release: a self-hosted dictionary instance a stranger can install from the
 README, load with the published dataset and query through the public API and the admin UI.
