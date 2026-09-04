@@ -63,10 +63,18 @@ jobs:
         run: yarn workspace @vocab-bloom-hub/client build
 
       # OIDC trusted publishing: npm >= 11.5 exchanges the workflow identity
-      # for the publish right, provenance included, no token involved
+      # for the publish right, provenance included, no token involved.
+      # npm refuses a bare publish of a prerelease — the dist-tag must be
+      # named, and an alpha must never take `latest`: the channel comes from
+      # the git tag (v0.1.0-alpha.1 → alpha, a stable tag → latest)
       - name: Publish
         working-directory: packages/npm-sdk
-        run: npm publish
+        run: |
+          case "$GITHUB_REF_NAME" in
+            *-*) channel="${GITHUB_REF_NAME#*-}"; channel="${channel%%.*}" ;;
+            *) channel=latest ;;
+          esac
+          npm publish --tag "$channel"
 
   pypi:
     name: publish vocab-bloom-hub to PyPI

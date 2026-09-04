@@ -145,7 +145,9 @@ full plan of the first release lives in
    `@vocab-bloom-hub/client` to npm and `vocab-bloom-hub` to PyPI via OIDC trusted
    publishing — no tokens — and creates the GitHub Release with generated notes
    (categories in `.github/release.yml`; a hyphen in the tag marks it a prerelease).
-   The **first npm publish is manual** (`npm publish` from `packages/npm-sdk`; npm attaches a
+   A prerelease publishes to npm under its channel dist-tag (`alpha`, `beta`, …), never
+   `latest` — npm refuses a bare `npm publish` of a prerelease version.
+   The **first npm publish is manual** (`npm publish --tag <channel>` from `packages/npm-sdk`; npm attaches a
    trusted publisher only to an existing package — configure it right after, workflow
    `release.yml`, environment `npm`, then re-run the failed npm job). PyPI's pending
    publisher covers the first publish.
