@@ -222,7 +222,7 @@ Full reference with defaults and startup validation rules: [`docs/environment.md
 
 Two supported shapes, both behind a reverse proxy that terminates TLS and routes `/api/*` to the server and everything else to the frontend (the admin cookie is `secure` whenever the login came over https).
 
-**Docker** — download `docker-compose.yml` and `.env.example` (as `.env`, set the passwords), `docker compose up -d`: Postgres, the API and the admin UI from the published images `ghcr.io/fristail27/vocab-bloom-hub-server` / `-frontend` (`main` = development builds, or pin a release: `VBH_TAG=0.1.0-alpha.2`), published on localhost; the dictionary loads itself on the first start (`DICTIONARY_AUTO_IMPORT`, `/api/ready` reports the progress). Guide: [`docs/deployment/docker.md`](docs/deployment/docker.md).
+**Docker** — download `docker-compose.yml` and `.env.example` (as `.env`, set the passwords), `docker compose up -d`: Postgres, the API and the admin UI from the published images `ghcr.io/fristail27/vocab-bloom-hub-server` / `-frontend` (`main` = development builds, or pin a release: `VBH_TAG=0.1.0-alpha.3`), published on localhost; the dictionary loads itself on the first start (`DICTIONARY_AUTO_IMPORT`, `/api/ready` reports the progress). Guide: [`docs/deployment/docker.md`](docs/deployment/docker.md).
 
 **Native Node.js:**
 

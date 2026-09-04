@@ -5,7 +5,19 @@ the admin UI, the website and both SDKs; the published dataset keeps its own ver
 (`manifest.version`), bumped at the next export after a release. Entries are curated from the
 generated release notes; the full commit history lives in git.
 
-## v0.1.0-alpha.2 — unreleased
+## v0.1.0-alpha.3 — unreleased
+
+The documentation catches up with the shipped alpha.
+
+- **READMEs** (both languages): the first alpha is out — real install commands
+  (`npm install @vocab-bloom-hub/client`, `pip install --pre vocab-bloom-hub`), npm and
+  PyPI version badges, pinning a release via `VBH_TAG` in the deployment section.
+- **`.env.example` / `docs/deployment/docker.md`**: `VBH_TAG` examples recommend pinning
+  the release; `latest` is marked as arriving with the first stable release.
+- **`SECURITY.md`**: the supported-versions table names the latest release instead of
+  "no releases yet".
+
+## v0.1.0-alpha.2 — 2026-09-04
 
 The first release straight through the automated pipeline; fixes what the live run of
 v0.1.0-alpha.1 surfaced.

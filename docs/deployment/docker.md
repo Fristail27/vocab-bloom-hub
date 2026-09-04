@@ -19,8 +19,8 @@ All three are published to the GitHub Container Registry by `.github/workflows/d
 | `0.1.0-alpha.1`     | a prerelease tag `v0.1.0-alpha.1`                             | exactly that prerelease; no `latest`, no floating tag           |
 | `main`, `sha-…`     | every push to `main` (development builds)                     | following development; not a release — may break between pushes |
 
-Until the first release (#307) only `main` and `sha-…` exist, and `docker-compose.yml` defaults
-to `main`.
+`docker-compose.yml` defaults to `main`; production pins a release through `VBH_TAG` in `.env`
+(`latest` appears with the first stable release — a prerelease never takes it).
 
 ## Quick start
 
@@ -30,7 +30,7 @@ No checkout needed — the compose file and the environment template are enough:
 mkdir vocab-bloom-hub && cd vocab-bloom-hub
 curl -fsSLO https://raw.githubusercontent.com/Fristail27/vocab-bloom-hub/main/docker-compose.yml
 curl -fsSL  https://raw.githubusercontent.com/Fristail27/vocab-bloom-hub/main/.env.example -o .env
-# edit .env: ADMIN_PASSWORD, POSTGRES_PASSWORD (and VBH_TAG to pin a release, e.g. 0.1.0-alpha.2)
+# edit .env: ADMIN_PASSWORD, POSTGRES_PASSWORD (and VBH_TAG to pin a release, e.g. 0.1.0-alpha.3)
 docker compose up -d               # pulls the images, starts Postgres, the API, the UI
 curl -s localhost:3010/api/ready   # {"status":"ok"} once migrations ran
 ```
