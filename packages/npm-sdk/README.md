@@ -8,14 +8,13 @@ Typed client for the public read-only API of a [Vocab Bloom Hub](https://github.
 
 ## Install
 
-The package is not on npm yet (it follows the first alpha release, [#308](https://github.com/Fristail27/vocab-bloom-hub/issues/308)). Until then install it from the repository:
-
 ```bash
-# from a checkout of the monorepo
-yarn workspace @vocab-bloom-hub/client build
-yarn workspace @vocab-bloom-hub/client pack --out /tmp/vocab-bloom-hub-client.tgz
-npm install /tmp/vocab-bloom-hub-client.tgz
+npm install @vocab-bloom-hub/client
 ```
+
+Prereleases publish under the `alpha` dist-tag — pin the channel with
+`npm install @vocab-bloom-hub/client@alpha` (while no stable release exists,
+`latest` points at the newest alpha too).
 
 ## Quick start
 

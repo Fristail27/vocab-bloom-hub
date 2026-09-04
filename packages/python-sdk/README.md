@@ -9,13 +9,15 @@ Typed Python client for the public read-only API of a [Vocab Bloom Hub](https://
 
 ## Install
 
-Not on PyPI yet — it follows the first alpha release ([#310](https://github.com/Fristail27/vocab-bloom-hub/issues/310)). Until then install from the repository:
-
 ```bash
-pip install "git+https://github.com/Fristail27/vocab-bloom-hub#subdirectory=packages/python-sdk"
+pip install --pre vocab-bloom-hub
 # with pandas support
-pip install "vocab-bloom-hub[pandas] @ git+https://github.com/Fristail27/vocab-bloom-hub#subdirectory=packages/python-sdk"
+pip install --pre "vocab-bloom-hub[pandas]"
 ```
+
+`--pre` is needed while only prereleases exist (`0.1.0a1`, PEP 440 for
+`0.1.0-alpha.1`) — pip skips them by default; from the first stable release a
+plain `pip install vocab-bloom-hub` works.
 
 ## Quick start
 
