@@ -26,6 +26,7 @@
 !/apps/frontend/.yarn/releases
 !/apps/frontend/.yarn/versions
 /apps/server/node_modules
+/apps/site/node_modules
 /node_modules
 
 # next.js
