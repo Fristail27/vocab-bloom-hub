@@ -4,6 +4,9 @@
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "setupFiles": ["<rootDir>/setup-e2e.ts"],
+  "moduleNameMapper": {
+    "^nestjs-pino/PinoLogger$": "<rootDir>/../../../node_modules/nestjs-pino/dist/PinoLogger.js"
+  },
   "transform": {
     "^.+\\.(t|j)s$": [
       "ts-jest",
