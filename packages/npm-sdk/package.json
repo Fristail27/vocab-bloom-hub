@@ -1,6 +1,6 @@
 {
   "name": "@vocab-bloom-hub/client",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "description": "Typed Node.js / browser client for the Vocab Bloom Hub public dictionary API (/api/v1).",
   "license": "MIT",
   "homepage": "https://github.com/Fristail27/vocab-bloom-hub/tree/main/packages/npm-sdk#readme",
