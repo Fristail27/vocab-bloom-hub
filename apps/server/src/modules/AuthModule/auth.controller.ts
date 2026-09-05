@@ -2,9 +2,10 @@ import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 
-import type { CheckTokenResBody, LoginResBody } from '../../../types';
+import type { CheckTokenResBody, LoginResBody, LogoutResBody } from '../../../types';
 import { AuthService } from './auth.service';
 import { LoginReqDTO } from './dto/LoginReq.dto';
+import { AdminGuard } from './guards/admin.guard';
 import { AppThrottlerGuard } from '../../core/guards/app-throttler.guard';
 import { getBearerFromRequest } from '../../core/utils/get-bearer-from-request';
 
@@ -39,5 +40,14 @@ export class AuthController {
       this.authService.setTokenToCookie(newToken, res, req);
     }
     return { isValid };
+  }
+
+  /** Drops the httpOnly bearer cookie — the browser cannot clear it itself (issue #398) */
+  @UseGuards(AdminGuard)
+  @Post('logout')
+  logout(@Req() req: Request, @Res({ passthrough: true }) res: Response): LogoutResBody {
+    this.authService.clearTokenCookie(res, req);
+
+    return { success: true };
   }
 }

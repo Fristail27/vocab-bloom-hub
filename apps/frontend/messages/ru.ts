@@ -59,6 +59,7 @@ export default {
     history: 'История',
     settings: 'Настройки',
     documentation: 'Документация',
+    logout: 'Выйти',
   },
   settings_page: {
     intro:

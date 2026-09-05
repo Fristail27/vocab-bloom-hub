@@ -1,10 +1,13 @@
 'use client';
 
+import React from 'react';
 import Link from 'next/link';
-import { useParams, usePathname } from 'next/navigation';
+import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Typography } from 'antd';
+import { App, Button, Typography } from 'antd';
+import { LogoutOutlined } from '@ant-design/icons';
 import { DictionarySwitcher } from '@/components/DictionarySwitcher';
+import { AuthApi } from '@/core/api/AuthApi';
 import { Icon } from '@/core/ui/Icon';
 import { IconNamesT } from '@/core/ui/icons/types';
 import styles from './styles.module.scss';
@@ -26,8 +29,29 @@ const MENU_ICONS: Partial<Record<string, IconNamesT>> = { '': 'home', managing: 
 
 export const SideMenu = () => {
   const t = useTranslations('menu');
+  const tErr = useTranslations('errors');
   const { locale } = useParams();
   const pathname = usePathname();
+  const router = useRouter();
+  const { message } = App.useApp();
+  const [loggingOut, setLoggingOut] = React.useState(false);
+
+  // the token lives in an httpOnly cookie only the server can drop (issue #398)
+  const onLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      const res = await AuthApi.logout();
+      if ('error' in res) {
+        message.error(tErr(res.message));
+        return;
+      }
+      router.push(`/${String(locale)}/login`);
+      router.refresh();
+    } finally {
+      setLoggingOut(false);
+    }
+  };
 
   // client-side navigation (issue #348): antd links reloaded the document,
   // re-running the whole RSC layout (checkToken + getSettings) per click
@@ -57,7 +81,12 @@ export const SideMenu = () => {
             })}
           </nav>
         </div>
-        <DictionarySwitcher />
+        <div className={styles.bottomPart}>
+          <DictionarySwitcher />
+          <Button icon={<LogoutOutlined />} onClick={() => void onLogout()} loading={loggingOut} block>
+            {t('logout')}
+          </Button>
+        </div>
       </div>
     </div>
   );

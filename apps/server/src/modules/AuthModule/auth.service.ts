@@ -67,6 +67,11 @@ export class AuthService {
     }
   }
 
+  /** Logout (issue #398): the clear must repeat the set's attributes to match the cookie */
+  clearTokenCookie(res: Response, req: Request) {
+    res.clearCookie('bearer', { httpOnly: true, secure: req.secure, sameSite: 'lax' });
+  }
+
   async createJwtToken(): Promise<string> {
     const username = process.env.ADMIN_USERNAME as string;
     const { loginHash, secretHash } = await this.getLoginHash();

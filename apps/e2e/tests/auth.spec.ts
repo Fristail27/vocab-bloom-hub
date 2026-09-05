@@ -36,4 +36,23 @@ test.describe('authentication', () => {
     await page.waitForURL('**/en');
     await expect(page.getByRole('heading', { name: 'Main' })).toBeVisible();
   });
+
+  test('logs out: the cookie is dropped and protected pages redirect to login (issue #398)', async ({
+    page,
+  }) => {
+    await page.goto('/en/login');
+    await page.locator('#username').fill(E2E_USERNAME);
+    await page.locator('#password').fill(E2E_PASSWORD);
+    await page.getByRole('button', { name: 'Sign In' }).click();
+    await page.waitForURL('**/en');
+
+    await page.getByRole('button', { name: 'Log out' }).click();
+    await page.waitForURL('**/en/login');
+
+    const cookies = await page.context().cookies();
+    expect(cookies.find((cookie) => cookie.name === 'bearer')).toBeUndefined();
+
+    await page.goto('/en/managing');
+    await page.waitForURL('**/en/login');
+  });
 });

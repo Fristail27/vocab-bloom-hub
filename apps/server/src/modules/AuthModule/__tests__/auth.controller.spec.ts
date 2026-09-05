@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { Test, TestingModule } from '@nestjs/testing';
+import { GUARDS_METADATA } from '@nestjs/common/constants';
 import type { Request, Response } from 'express';
 
 import { AuthController } from '../auth.controller';
 import { AuthService } from '../auth.service';
+import { AdminGuard } from '../guards/admin.guard';
 import { AppThrottlerGuard } from '../../../core/guards/app-throttler.guard';
 
 describe('AuthController', () => {
@@ -13,12 +15,13 @@ describe('AuthController', () => {
 
   // Мок всего сервиса
   const mockAuthService: jest.Mocked<
-    Pick<AuthService, 'login' | 'checkToken' | 'createJwtToken' | 'setTokenToCookie'>
+    Pick<AuthService, 'login' | 'checkToken' | 'createJwtToken' | 'setTokenToCookie' | 'clearTokenCookie'>
   > = {
     login: jest.fn(),
     checkToken: jest.fn(),
     createJwtToken: jest.fn(),
     setTokenToCookie: jest.fn(),
+    clearTokenCookie: jest.fn(),
   };
 
   // Хелперы для моков req/res
@@ -138,6 +141,25 @@ describe('AuthController', () => {
 
       // сервис должен получить чистый токен без "Bearer "
       expect(mockAuthService.checkToken).toHaveBeenCalledWith(FAKE_TOKEN);
+    });
+  });
+
+  // ─── POST /logout ─────────────────────────────────────────────────────────
+
+  describe('logout (issue #398)', () => {
+    it('clears the bearer cookie and reports success', () => {
+      const req = makeReq(`Bearer ${FAKE_TOKEN}`) as Request;
+      const res = makeRes();
+
+      const result = controller.logout(req, res);
+
+      expect(result).toEqual({ success: true });
+      expect(mockAuthService.clearTokenCookie).toHaveBeenCalledWith(res, req);
+    });
+
+    it('is admin-only', () => {
+      const guards: unknown[] = Reflect.getMetadata(GUARDS_METADATA, controller.logout) ?? [];
+      expect(guards).toContain(AdminGuard);
     });
   });
 });
