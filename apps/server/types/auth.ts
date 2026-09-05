@@ -10,3 +10,5 @@ export type LoginReqBody = LoginReqDTO;
 export type LoginResBody = { token: string } | ErrorResT;
 
 export type CheckTokenResBody = { isValid: boolean };
+
+export type LogoutResBody = { success: boolean };
