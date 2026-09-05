@@ -113,7 +113,7 @@ describe('EnAdminListsService (issue #249)', () => {
     meaningsRep = ds.getRepository(EnMeaning);
     meaningTranslationsRep = ds.getRepository(EnMeaningTranslation);
     shortTranslationsRep = ds.getRepository(EnShortTranslation);
-    service = new EnAdminListsService(wordsRep, meaningsRep, meaningTranslationsRep);
+    service = new EnAdminListsService(wordsRep, meaningsRep, meaningTranslationsRep, shortTranslationsRep);
 
     const run = await seed({
       word: 'run',
@@ -383,6 +383,45 @@ describe('EnAdminListsService (issue #249)', () => {
       expect(await translations({ search: 'abandon' })).toEqual([]);
       expect(await translations({ part_of_speech: [EnPartOfSpeechE.noun] })).toEqual([]);
       expect(await translations({ language: [AvailableTranslationLanguagesE.ru] })).toHaveLength(2);
+    });
+  });
+
+  describe('listShortTranslations', () => {
+    const shortTranslations = async (query: Parameters<EnAdminListsService['listShortTranslations']>[0]) =>
+      (await service.listShortTranslations(query)).items.map((i) => `${i.word}:${i.description}`);
+
+    it('lists short translations with their word, in word order', async () => {
+      const res = await service.listShortTranslations({ page: 1, limit: 50 });
+
+      expect(res.items.map((i) => `${i.word}:${i.description}`)).toEqual([
+        'in the long run:t0',
+        'in the long run:t1',
+        'run:t0',
+      ]);
+      expect(res).toMatchObject({ page: 1, limit: 50, total: 3, has_more: false });
+      expect(res.items[2]).toMatchObject({
+        word: 'run',
+        part_of_speech: EnPartOfSpeechE.verb,
+        language: AvailableTranslationLanguagesE.ru,
+        description: 't0',
+        variants_of_words: [],
+      });
+      expect(typeof res.items[2].id).toBe('number');
+      expect(typeof res.items[2].word_id).toBe('number');
+    });
+
+    it('paginates and filters by word prefix, part of speech and language', async () => {
+      const first = await service.listShortTranslations({ page: 1, limit: 2 });
+      expect(first.items.map((i) => i.description)).toEqual(['t0', 't1']);
+      expect(first).toMatchObject({ total: 3, has_more: true });
+
+      expect(await shortTranslations({ search: 'RU' })).toEqual(['run:t0']);
+      expect(await shortTranslations({ search: 'abandon' })).toEqual([]);
+      expect(await shortTranslations({ part_of_speech: [EnPartOfSpeechE.phrase] })).toEqual([
+        'in the long run:t0',
+        'in the long run:t1',
+      ]);
+      expect(await shortTranslations({ language: [AvailableTranslationLanguagesE.ru] })).toHaveLength(3);
     });
   });
 });

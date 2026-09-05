@@ -5,6 +5,7 @@ import { ArgumentMetadata, BadRequestException, ValidationPipe } from '@nestjs/c
 import { LIST_WORDS_MAX_LIMIT, ListWordsQueryDTO } from '../dto/ListWordsQuery.dto';
 import { ListMeaningsQueryDTO } from '../dto/ListMeaningsQuery.dto';
 import { ListMeaningTranslationsQueryDTO } from '../dto/ListMeaningTranslationsQuery.dto';
+import { ListShortTranslationsQueryDTO } from '../dto/ListShortTranslationsQuery.dto';
 import { LIST_MAX_LIMIT } from '../dto/PaginationQuery.dto';
 import {
   AvailableTranslationLanguagesE,
@@ -133,5 +134,27 @@ describe('ListMeaningTranslationsQueryDTO (issue #249)', () => {
     await expect(validateTranslations({ language: 'xx' })).rejects.toThrow(BadRequestException);
     await expect(validateTranslations({ has_translations: 'true' })).rejects.toThrow(BadRequestException);
     await expect(validateTranslations({ is_obsolete: 'true' })).rejects.toThrow(BadRequestException);
+  });
+});
+
+describe('ListShortTranslationsQueryDTO (issue #411)', () => {
+  const validateShortTranslations = validateAs(ListShortTranslationsQueryDTO);
+
+  it('parses the short translation filters with the shared pagination', async () => {
+    await expect(validateShortTranslations({})).resolves.toMatchObject({ page: 1, limit: 50 });
+    await expect(
+      validateShortTranslations({ search: 'ru', part_of_speech: ['noun', 'verb'], language: 'ru', page: '2' }),
+    ).resolves.toMatchObject({
+      search: 'ru',
+      part_of_speech: [EnPartOfSpeechE.noun, EnPartOfSpeechE.verb],
+      language: [AvailableTranslationLanguagesE.ru],
+      page: 2,
+    });
+  });
+
+  it('rejects unknown keys and languages', async () => {
+    await expect(validateShortTranslations({ language: 'xx' })).rejects.toThrow(BadRequestException);
+    await expect(validateShortTranslations({ has_meanings: 'true' })).rejects.toThrow(BadRequestException);
+    await expect(validateShortTranslations({ search: 'a'.repeat(129) })).rejects.toThrow(BadRequestException);
   });
 });

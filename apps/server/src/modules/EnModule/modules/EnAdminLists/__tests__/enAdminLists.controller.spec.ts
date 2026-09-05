@@ -11,6 +11,7 @@ import {
   EnMeaningsListT,
   EnMeaningTranslationsListT,
   EnPartOfSpeechE,
+  EnShortTranslationsListT,
   EnWordsListT,
   WordLevelE,
 } from '../../../../../../types';
@@ -18,11 +19,15 @@ import {
 describe('EnAdminListsController (issue #249)', () => {
   let controller: EnAdminListsController;
   const mockService: jest.Mocked<
-    Pick<EnAdminListsService, 'listWords' | 'listMeanings' | 'listMeaningTranslations'>
+    Pick<
+      EnAdminListsService,
+      'listWords' | 'listMeanings' | 'listMeaningTranslations' | 'listShortTranslations'
+    >
   > = {
     listWords: jest.fn(),
     listMeanings: jest.fn(),
     listMeaningTranslations: jest.fn(),
+    listShortTranslations: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -64,8 +69,22 @@ describe('EnAdminListsController (issue #249)', () => {
     expect(mockService.listMeaningTranslations).toHaveBeenCalledWith(query);
   });
 
+  it('delegates the short translations query', async () => {
+    const result: EnShortTranslationsListT = { items: [], page: 1, limit: 50, total: 0, has_more: false };
+    mockService.listShortTranslations.mockResolvedValue(result);
+    const query = { language: [AvailableTranslationLanguagesE.ru], search: 'ru' };
+
+    await expect(controller.listShortTranslations(query)).resolves.toBe(result);
+    expect(mockService.listShortTranslations).toHaveBeenCalledWith(query);
+  });
+
   it('protects every listing with the AdminGuard', () => {
-    for (const handler of [controller.listWords, controller.listMeanings, controller.listMeaningTranslations]) {
+    for (const handler of [
+      controller.listWords,
+      controller.listMeanings,
+      controller.listMeaningTranslations,
+      controller.listShortTranslations,
+    ]) {
       const guards: unknown[] = Reflect.getMetadata(GUARDS_METADATA, handler) ?? [];
       expect(guards).toContain(AdminGuard);
     }

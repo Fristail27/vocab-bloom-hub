@@ -10,6 +10,8 @@ import {
   EnMeaningsListT,
   EnMeaningTranslationListItemT,
   EnMeaningTranslationsListT,
+  EnShortTranslationListItemT,
+  EnShortTranslationsListT,
   EnWordListItemT,
   EnWordsListT,
   EnWordFormsE,
@@ -18,6 +20,7 @@ import {
 import { ListWordsQueryDTO } from './dto/ListWordsQuery.dto';
 import { ListMeaningsQueryDTO } from './dto/ListMeaningsQuery.dto';
 import { ListMeaningTranslationsQueryDTO } from './dto/ListMeaningTranslationsQuery.dto';
+import { ListShortTranslationsQueryDTO } from './dto/ListShortTranslationsQuery.dto';
 import { LIST_DEFAULT_LIMIT, PaginationQueryDTO } from './dto/PaginationQuery.dto';
 import { escapeLike } from '../EnSearch/utils/escapeLike';
 import { bytewise } from '../../utils/bytewise';
@@ -32,9 +35,9 @@ const toCount = (value: unknown): number => Number(value) || 0;
 
 /**
  * Paginated admin listings behind the bulk-request page: base-form words,
- * meanings and meaning translations, each filterable by its own columns and
- * ordered by word → part of speech → id so pages stay stable while a run walks
- * through them.
+ * meanings, meaning translations and short translations, each filterable by
+ * its own columns and ordered by word → part of speech → id so pages stay
+ * stable while a run walks through them.
  */
 @Injectable()
 export class EnAdminListsService {
@@ -45,6 +48,8 @@ export class EnAdminListsService {
     private readonly enMeaningsRep: Repository<EnMeaning>,
     @InjectRepository(EnMeaningTranslation)
     private readonly enMeaningTranslationsRep: Repository<EnMeaningTranslation>,
+    @InjectRepository(EnShortTranslation)
+    private readonly enShortTranslationsRep: Repository<EnShortTranslation>,
   ) {}
 
   private pageOf(query: PaginationQueryDTO): PageT {
@@ -345,6 +350,52 @@ export class EnAdminListsService {
 
     return this.paginated(
       rows.map((row) => this.mapMeaningTranslation(row)),
+      page,
+      total,
+    );
+  }
+
+  // --------------------------------------------------------- short translations
+
+  private mapShortTranslation(row: EnShortTranslation): EnShortTranslationListItemT {
+    return {
+      id: row.id,
+      word_id: row.word.id,
+      word: row.word.word.word,
+      part_of_speech: row.word.part_of_speech,
+      language: row.language,
+      description: row.description,
+      variants_of_words: row.variants_of_words ?? [],
+    };
+  }
+
+  /** Short translations with the word they belong to */
+  async listShortTranslations(query: ListShortTranslationsQueryDTO): Promise<EnShortTranslationsListT> {
+    const page = this.pageOf(query);
+
+    const qb = this.enShortTranslationsRep
+      .createQueryBuilder('st')
+      .innerJoinAndSelect('st.word', 'w')
+      .innerJoinAndSelect('w.word', 'entry');
+    this.applyWordFilters(qb, query);
+    if (query.language?.length) {
+      qb.andWhere('st.language IN (:...languages)', { languages: query.language });
+    }
+
+    const total = await qb.clone().getCount();
+
+    const rows = await qb
+      .orderBy('entry.word', 'ASC')
+      .addOrderBy('w.part_of_speech', 'ASC')
+      .addOrderBy('w.id', 'ASC')
+      .addOrderBy('st.language', 'ASC')
+      .addOrderBy('st.id', 'ASC')
+      .offset((page.page - 1) * page.limit)
+      .limit(page.limit)
+      .getMany();
+
+    return this.paginated(
+      rows.map((row) => this.mapShortTranslation(row)),
       page,
       total,
     );
