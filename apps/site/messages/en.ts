@@ -186,6 +186,11 @@ export default {
     discussions: 'Discussions',
     made_by: 'Vocab Bloom Hub by Alexey Ryzhov',
   },
+  error: {
+    title: 'Something went wrong',
+    text: 'The page failed to render. Try again — if it keeps happening, the API may be unavailable.',
+    retry: 'Try again',
+  },
   not_found: {
     title: 'Page not found',
     text: 'There is nothing at this address.',
