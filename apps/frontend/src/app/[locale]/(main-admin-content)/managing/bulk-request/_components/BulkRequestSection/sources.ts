@@ -1,9 +1,19 @@
-import { EnMeaningTranslationListItemT, ErrorResT, PaginatedListT } from 'server/types';
+import {
+  EnMeaningTranslationListItemT,
+  EnShortTranslationListItemT,
+  ErrorResT,
+  PaginatedListT,
+} from 'server/types';
 import { EnApi } from '@/core/api/EnApi';
 import { BulkItemT, RunIdentityT, SourceKindE, SourceStateT } from './types';
 import { TemplateVarsT } from './utils/renderTemplate';
 
-export const SOURCE_KINDS = [SourceKindE.words, SourceKindE.meanings, SourceKindE.translations] as const;
+export const SOURCE_KINDS = [
+  SourceKindE.words,
+  SourceKindE.meanings,
+  SourceKindE.translations,
+  SourceKindE.short_translations,
+] as const;
 
 /**
  * Placeholders available in the prompt template per source table: the word
@@ -48,6 +58,7 @@ export const SOURCE_PLACEHOLDERS: Record<SourceKindE, readonly string[]> = {
     'meaning_title',
     'meaning_definition',
   ],
+  [SourceKindE.short_translations]: ['word', 'part_of_speech', 'language', 'description', 'variants_of_words'],
 };
 
 export const emptySource = (kind: SourceKindE): SourceStateT => ({ kind, filter: {} });
@@ -65,6 +76,8 @@ export const listRecords = (
       return EnApi.listMeanings({ ...source.filter, page, limit });
     case SourceKindE.translations:
       return EnApi.listMeaningTranslations({ ...source.filter, page, limit });
+    case SourceKindE.short_translations:
+      return EnApi.listShortTranslations({ ...source.filter, page, limit });
   }
 };
 
@@ -91,12 +104,23 @@ export const toIdentity = (kind: SourceKindE, item: BulkItemT): RunIdentityT => 
         language: translation.language,
       };
     }
+    case SourceKindE.short_translations: {
+      const shortTranslation = item as EnShortTranslationListItemT;
+      return {
+        ...base,
+        short_translation_id: shortTranslation.id,
+        language: shortTranslation.language,
+      };
+    }
   }
 };
 
 /** Short human-readable name of a row for the failures table */
-export const toLabel = (kind: SourceKindE, item: BulkItemT): string =>
-  kind === SourceKindE.words ? item.word : 'title' in item ? item.title : item.word;
+export const toLabel = (kind: SourceKindE, item: BulkItemT): string => {
+  if (kind === SourceKindE.words) return item.word;
+  if (kind === SourceKindE.short_translations) return (item as EnShortTranslationListItemT).description;
+  return 'title' in item ? item.title : item.word;
+};
 
 /** How many filter fields are set: shown on the collapsed filters panel */
 export const countActiveFilters = (source: SourceStateT): number =>

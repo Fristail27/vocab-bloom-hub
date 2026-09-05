@@ -20,6 +20,7 @@ import { SearchDetailedReqDTO } from '../../../src/modules/EnModule/modules/EnSe
 import { ListWordsQueryDTO } from '../../../src/modules/EnModule/modules/EnAdminLists/dto/ListWordsQuery.dto';
 import { ListMeaningsQueryDTO } from '../../../src/modules/EnModule/modules/EnAdminLists/dto/ListMeaningsQuery.dto';
 import { ListMeaningTranslationsQueryDTO } from '../../../src/modules/EnModule/modules/EnAdminLists/dto/ListMeaningTranslationsQuery.dto';
+import { ListShortTranslationsQueryDTO } from '../../../src/modules/EnModule/modules/EnAdminLists/dto/ListShortTranslationsQuery.dto';
 import { EnDictionaryImportPhasesE } from '../../../src/modules/EnModule/modules/EnImportDictionary/constants';
 
 export type CheckWordResT = { hasWord: boolean; id?: number } | ErrorResT;
@@ -45,7 +46,8 @@ export type SearchDetailedItemsT = {
 };
 export type SearchDetailedResT = SearchDetailedItemsT | ErrorResT;
 
-// Admin listings (GET /api/en/words, /meanings, /meaning-translations) used by the bulk-request page
+// Admin listings (GET /api/en/words, /meanings, /meaning-translations, /short-translations)
+// used by the bulk-request page
 export type PaginatedListT<T> = {
   items: T[];
   page: number;
@@ -115,6 +117,20 @@ export type EnMeaningTranslationListItemT = {
 };
 export type EnMeaningTranslationsListT = PaginatedListT<EnMeaningTranslationListItemT>;
 export type ListMeaningTranslationsResT = EnMeaningTranslationsListT | ErrorResT;
+
+export type ListShortTranslationsQueryT = ListShortTranslationsQueryDTO;
+// a short translation next to the word it belongs to
+export type EnShortTranslationListItemT = {
+  id: number;
+  word_id: number;
+  word: string;
+  part_of_speech: EnPartOfSpeechE;
+  language: AvailableTranslationLanguagesE;
+  description: string;
+  variants_of_words: string[];
+};
+export type EnShortTranslationsListT = PaginatedListT<EnShortTranslationListItemT>;
+export type ListShortTranslationsResT = EnShortTranslationsListT | ErrorResT;
 export type DeleteResT = { success: boolean } | ErrorResT;
 export type AddWordFormResT = { success: boolean; id: number } | ErrorResT;
 export type AddWordFormReqT = AddWordFormReqDTO;

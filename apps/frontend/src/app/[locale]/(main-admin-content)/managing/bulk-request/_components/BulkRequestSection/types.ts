@@ -1,9 +1,11 @@
 import {
   EnMeaningListItemT,
   EnMeaningTranslationListItemT,
+  EnShortTranslationListItemT,
   EnWordListItemT,
   ListMeaningsQueryT,
   ListMeaningTranslationsQueryT,
+  ListShortTranslationsQueryT,
   ListWordsQueryT,
 } from 'server/types';
 
@@ -12,19 +14,23 @@ export enum SourceKindE {
   words = 'words',
   meanings = 'meanings',
   translations = 'translations',
+  short_translations = 'short_translations',
 }
 
-export type BulkItemT = EnWordListItemT | EnMeaningListItemT | EnMeaningTranslationListItemT;
+export type BulkItemT =
+  EnWordListItemT | EnMeaningListItemT | EnMeaningTranslationListItemT | EnShortTranslationListItemT;
 
 export type WordsFilterT = Omit<ListWordsQueryT, 'page' | 'limit'>;
 export type MeaningsFilterT = Omit<ListMeaningsQueryT, 'page' | 'limit'>;
 export type TranslationsFilterT = Omit<ListMeaningTranslationsQueryT, 'page' | 'limit'>;
+export type ShortTranslationsFilterT = Omit<ListShortTranslationsQueryT, 'page' | 'limit'>;
 
 /** The chosen table together with the filter applied to it */
 export type SourceStateT =
   | { kind: SourceKindE.words; filter: WordsFilterT }
   | { kind: SourceKindE.meanings; filter: MeaningsFilterT }
-  | { kind: SourceKindE.translations; filter: TranslationsFilterT };
+  | { kind: SourceKindE.translations; filter: TranslationsFilterT }
+  | { kind: SourceKindE.short_translations; filter: ShortTranslationsFilterT };
 
 export enum AuthHeaderModeE {
   bearer = 'bearer',

@@ -5,7 +5,13 @@ import { EnAdminListsService } from './enAdminLists.service';
 import { ListWordsQueryDTO } from './dto/ListWordsQuery.dto';
 import { ListMeaningsQueryDTO } from './dto/ListMeaningsQuery.dto';
 import { ListMeaningTranslationsQueryDTO } from './dto/ListMeaningTranslationsQuery.dto';
-import { EnMeaningsListT, EnMeaningTranslationsListT, EnWordsListT } from '../../../../../types';
+import { ListShortTranslationsQueryDTO } from './dto/ListShortTranslationsQuery.dto';
+import {
+  EnMeaningsListT,
+  EnMeaningTranslationsListT,
+  EnShortTranslationsListT,
+  EnWordsListT,
+} from '../../../../../types';
 
 /**
  * Admin-only paginated listings behind the bulk-request page. Registered
@@ -34,5 +40,13 @@ export class EnAdminListsController {
     @Query() query: ListMeaningTranslationsQueryDTO,
   ): Promise<EnMeaningTranslationsListT> {
     return this.enAdminListsService.listMeaningTranslations(query);
+  }
+
+  @UseGuards(AdminGuard)
+  @Get('short-translations')
+  async listShortTranslations(
+    @Query() query: ListShortTranslationsQueryDTO,
+  ): Promise<EnShortTranslationsListT> {
+    return this.enAdminListsService.listShortTranslations(query);
   }
 }

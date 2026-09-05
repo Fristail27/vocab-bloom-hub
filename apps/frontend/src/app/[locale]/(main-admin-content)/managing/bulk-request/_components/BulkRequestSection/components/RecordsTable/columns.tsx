@@ -1,7 +1,12 @@
 import React from 'react';
 import { Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { EnMeaningListItemT, EnMeaningTranslationListItemT, EnWordListItemT } from 'server/types';
+import {
+  EnMeaningListItemT,
+  EnMeaningTranslationListItemT,
+  EnShortTranslationListItemT,
+  EnWordListItemT,
+} from 'server/types';
 import { BulkItemT, SourceKindE } from '../../types';
 
 const { Text } = Typography;
@@ -15,6 +20,7 @@ const dash = (v?: string | null) => v || '—';
 const asWord = (row: BulkItemT) => row as EnWordListItemT;
 const asMeaning = (row: BulkItemT) => row as EnMeaningListItemT;
 const asTranslation = (row: BulkItemT) => row as EnMeaningTranslationListItemT;
+const asShortTranslation = (row: BulkItemT) => row as EnShortTranslationListItemT;
 
 const identityColumns = (t: TranslateT): ColumnsType<BulkItemT> => [
   { title: t('col_word'), dataIndex: 'word', key: 'word', render: (w: string) => <Text strong>{w}</Text> },
@@ -103,6 +109,23 @@ const translationColumns = (t: TranslateT): ColumnsType<BulkItemT> => [
   },
 ];
 
+const shortTranslationColumns = (t: TranslateT): ColumnsType<BulkItemT> => [
+  ...identityColumns(t),
+  { title: t('col_language'), key: 'language', render: (_, row) => asShortTranslation(row).language },
+  {
+    title: t('col_description'),
+    key: 'description',
+    ellipsis: true,
+    render: (_, row) => asShortTranslation(row).description,
+  },
+  {
+    title: t('col_variants'),
+    key: 'variants_of_words',
+    ellipsis: true,
+    render: (_, row) => dash(asShortTranslation(row).variants_of_words.join(', ')),
+  },
+];
+
 export const columnsFor = (kind: SourceKindE, t: TranslateT): ColumnsType<BulkItemT> => {
   switch (kind) {
     case SourceKindE.words:
@@ -111,5 +134,7 @@ export const columnsFor = (kind: SourceKindE, t: TranslateT): ColumnsType<BulkIt
       return meaningColumns(t);
     case SourceKindE.translations:
       return translationColumns(t);
+    case SourceKindE.short_translations:
+      return shortTranslationColumns(t);
   }
 };

@@ -23,6 +23,7 @@ import {
   EnMeaningsListT,
   EnMeaningTranslationsListT,
   EnPartOfSpeechE,
+  EnShortTranslationsListT,
   EnWordFormsE,
   EnWordsListT,
 } from '../types';
@@ -53,6 +54,7 @@ const makeWord = (
   word: string,
   part_of_speech: EnPartOfSpeechE,
   meanings: ReturnType<typeof makeMeaning>[] = [],
+  short_translations: string[] = [],
 ) => ({
   word,
   part_of_speech,
@@ -60,10 +62,14 @@ const makeWord = (
   generated: part_of_speech === EnPartOfSpeechE.verb,
   forms: [],
   meanings,
-  short_translations: [],
+  short_translations: short_translations.map((description) => ({
+    language: AvailableTranslationLanguagesE.ru,
+    description,
+    variants_of_words: [],
+  })),
 });
 
-describe('admin listings GET /api/en/words, /meanings, /meaning-translations (e2e, issue #249)', () => {
+describe('admin listings GET /api/en/words, /meanings, /meaning-translations, /short-translations (e2e, issues #249, #411)', () => {
   let app: INestApplication<App>;
   const auth = { Authorization: '' };
   const server = () => app.getHttpServer();
@@ -100,7 +106,12 @@ describe('admin listings GET /api/en/words, /meanings, /meaning-translations (e2
       .post('/api/en/add/word')
       .set(auth)
       .send(
-        makeWord('run', EnPartOfSpeechE.verb, [makeMeaning('move fast', true), makeMeaning('manage', false)]),
+        makeWord(
+          'run',
+          EnPartOfSpeechE.verb,
+          [makeMeaning('move fast', true), makeMeaning('manage', false)],
+          ['бежать'],
+        ),
       )
       .expect(201);
     await request(server())
@@ -192,5 +203,33 @@ describe('admin listings GET /api/en/words, /meanings, /meaning-translations (e2
     expect(body).toMatchObject({ total: 1, has_more: false });
 
     await request(server()).get('/api/en/meaning-translations').set(auth).query({ language: 'xx' }).expect(400);
+  });
+
+  it('lists short translations with their word, admin-only and not swallowed by GET /api/en/:id', async () => {
+    await request(server()).get('/api/en/short-translations').expect(401);
+
+    const res = await request(server())
+      .get('/api/en/short-translations')
+      .set(auth)
+      .query('language=ru&search=ru')
+      .expect(200);
+    const body = res.body as EnShortTranslationsListT;
+
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0]).toMatchObject({
+      word: 'run',
+      part_of_speech: 'verb',
+      language: 'ru',
+      description: 'бежать',
+      variants_of_words: [],
+    });
+    expect(body).toMatchObject({ total: 1, has_more: false });
+
+    await request(server()).get('/api/en/short-translations').set(auth).query({ language: 'xx' }).expect(400);
+    await request(server())
+      .get('/api/en/short-translations')
+      .set(auth)
+      .query({ has_meanings: 'true' })
+      .expect(400);
   });
 });
