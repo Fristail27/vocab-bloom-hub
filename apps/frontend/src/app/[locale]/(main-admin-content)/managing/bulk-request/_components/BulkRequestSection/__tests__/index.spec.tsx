@@ -7,6 +7,7 @@ import {
   EnMeaningListItemT,
   EnMeaningTranslationListItemT,
   EnPartOfSpeechE,
+  EnShortTranslationListItemT,
   EnWordListItemT,
   PaginatedListT,
 } from 'server/types';
@@ -18,7 +19,12 @@ jest.mock('next-intl', () => ({
 }));
 
 jest.mock('@/core/api/EnApi', () => ({
-  EnApi: { listWords: jest.fn(), listMeanings: jest.fn(), listMeaningTranslations: jest.fn() },
+  EnApi: {
+    listWords: jest.fn(),
+    listMeanings: jest.fn(),
+    listMeaningTranslations: jest.fn(),
+    listShortTranslations: jest.fn(),
+  },
 }));
 
 import { EnApi } from '@/core/api/EnApi';
@@ -76,6 +82,16 @@ const makeTranslation = (id: number, word: string, title: string): EnMeaningTran
   variants_of_words: [],
 });
 
+const makeShortTranslation = (id: number, word: string, description: string): EnShortTranslationListItemT => ({
+  id,
+  word_id: id + 300,
+  word,
+  part_of_speech: EnPartOfSpeechE.verb,
+  language: AvailableTranslationLanguagesE.ru,
+  description,
+  variants_of_words: [],
+});
+
 const page = <T,>(items: T[], total = items.length): PaginatedListT<T> => ({
   items,
   page: 1,
@@ -126,6 +142,7 @@ describe('BulkRequestSection', () => {
   const words = [makeItem(1, 'abandon'), makeItem(2, 'abate'), makeItem(3, 'abide')];
   const meanings = [makeMeaning(11, 'abandon', 'leave'), makeMeaning(12, 'abandon', 'stop')];
   const translations = [makeTranslation(21, 'abandon', 'покидать')];
+  const shortTranslations = [makeShortTranslation(31, 'abandon', 'покидать (кратко)')];
   let fetchMock: jest.Mock;
   let saveBlobSpy: jest.SpyInstance;
 
@@ -134,6 +151,7 @@ describe('BulkRequestSection', () => {
     (EnApi.listWords as jest.Mock).mockResolvedValue(page(words));
     (EnApi.listMeanings as jest.Mock).mockResolvedValue(page(meanings));
     (EnApi.listMeaningTranslations as jest.Mock).mockResolvedValue(page(translations));
+    (EnApi.listShortTranslations as jest.Mock).mockResolvedValue(page(shortTranslations));
     fetchMock = jest.fn();
     global.fetch = fetchMock as unknown as typeof fetch;
     saveBlobSpy = jest.spyOn(AbstractBaseApi, 'saveBlobAsFile').mockImplementation(() => {});
@@ -356,6 +374,39 @@ describe('BulkRequestSection', () => {
       part_of_speech: 'verb',
       meaning_id: 121,
       translation_id: 21,
+      language: 'ru',
+      is_correct: true,
+    });
+  });
+
+  it('runs over short translations with the description in the prompt and ids in the lines', async () => {
+    fetchMock.mockImplementation(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as { messages: { role: string; content: string }[] };
+      expect(body.messages[1].content).toContain('"ru"');
+      expect(body.messages[1].content).toContain('"покидать (кратко)"');
+      return fakeResponse(200, JSON.stringify({ choices: [{ message: { content: '{"is_correct": true}' } }] }));
+    });
+
+    renderSection();
+    fireEvent.click(screen.getByTestId('bulk-source-short_translations'));
+    await waitFor(() => expect(EnApi.listShortTranslations).toHaveBeenCalledWith({ page: 1, limit: 50 }));
+    // the untouched prompt follows the table and the placeholders list the short translation columns
+    expect((screen.getByTestId('bulk-prompt') as HTMLTextAreaElement).value).toContain('short translation');
+    expect(screen.getByTestId('bulk-placeholders').textContent).toContain('{{description}}');
+    fireEvent.click(screen.getByTestId('bulk-next'));
+    await screen.findByText('покидать (кратко)');
+    fireEvent.click(screen.getByText('scope_filtered:1'));
+    fireEvent.click(screen.getByTestId('bulk-start'));
+
+    await screen.findByTestId('bulk-download-results');
+    // the filtered scope was collected through the short translations endpoint
+    expect(EnApi.listShortTranslations).toHaveBeenCalledWith({ page: 1, limit: 200 });
+    fireEvent.click(screen.getByTestId('bulk-download-results'));
+    const text = await blobText(saveBlobSpy.mock.calls[0][0] as Blob);
+    expect(JSON.parse(text.trim())).toEqual({
+      word: 'abandon',
+      part_of_speech: 'verb',
+      short_translation_id: 31,
       language: 'ru',
       is_correct: true,
     });

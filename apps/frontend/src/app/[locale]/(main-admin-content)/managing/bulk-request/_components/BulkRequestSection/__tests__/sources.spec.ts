@@ -4,12 +4,18 @@ import {
   EnMeaningListItemT,
   EnMeaningTranslationListItemT,
   EnPartOfSpeechE,
+  EnShortTranslationListItemT,
   EnWordListItemT,
   WordLevelE,
 } from 'server/types';
 
 jest.mock('@/core/api/EnApi', () => ({
-  EnApi: { listWords: jest.fn(), listMeanings: jest.fn(), listMeaningTranslations: jest.fn() },
+  EnApi: {
+    listWords: jest.fn(),
+    listMeanings: jest.fn(),
+    listMeaningTranslations: jest.fn(),
+    listShortTranslations: jest.fn(),
+  },
 }));
 
 import { EnApi } from '@/core/api/EnApi';
@@ -75,6 +81,16 @@ const translation: EnMeaningTranslationListItemT = {
   variants_of_words: ['сдаться'],
 };
 
+const shortTranslation: EnShortTranslationListItemT = {
+  id: 1000,
+  word_id: 1,
+  word: 'give up',
+  part_of_speech: EnPartOfSpeechE.verb,
+  language: AvailableTranslationLanguagesE.ru,
+  description: 'сдаваться',
+  variants_of_words: ['сдаться'],
+};
+
 describe('sources', () => {
   it('exposes exactly the placeholders of each table as template variables', () => {
     expect(Object.keys(toTemplateVars(SourceKindE.words, word))).toEqual(
@@ -114,6 +130,14 @@ describe('sources', () => {
       meaning_title: 'stop trying',
       meaning_definition: 'to stop doing something',
     });
+    // the word identity plus the short translation columns
+    expect(toTemplateVars(SourceKindE.short_translations, shortTranslation)).toEqual({
+      word: 'give up',
+      part_of_speech: 'verb',
+      language: 'ru',
+      description: 'сдаваться',
+      variants_of_words: ['сдаться'],
+    });
   });
 
   it('opens every output line with the ids needed to trace the row', () => {
@@ -130,12 +154,19 @@ describe('sources', () => {
       translation_id: 100,
       language: 'ru',
     });
+    expect(toIdentity(SourceKindE.short_translations, shortTranslation)).toEqual({
+      word: 'give up',
+      part_of_speech: 'verb',
+      short_translation_id: 1000,
+      language: 'ru',
+    });
   });
 
-  it('labels rows by word or by title', () => {
+  it('labels rows by word, title or description', () => {
     expect(toLabel(SourceKindE.words, word)).toBe('give up');
     expect(toLabel(SourceKindE.meanings, meaning)).toBe('stop trying');
     expect(toLabel(SourceKindE.translations, translation)).toBe('сдаваться');
+    expect(toLabel(SourceKindE.short_translations, shortTranslation)).toBe('сдаваться');
   });
 
   it('lists each table through its own endpoint with the filter and the page', async () => {
@@ -147,6 +178,17 @@ describe('sources', () => {
 
     await listRecords(emptySource(SourceKindE.translations), 1, 50);
     expect(EnApi.listMeaningTranslations).toHaveBeenCalledWith({ page: 1, limit: 50 });
+
+    await listRecords(
+      { kind: SourceKindE.short_translations, filter: { language: [AvailableTranslationLanguagesE.ru] } },
+      1,
+      50,
+    );
+    expect(EnApi.listShortTranslations).toHaveBeenCalledWith({
+      language: [AvailableTranslationLanguagesE.ru],
+      page: 1,
+      limit: 50,
+    });
   });
 
   it('counts the filters that are set', () => {

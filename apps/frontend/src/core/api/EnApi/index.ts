@@ -57,6 +57,8 @@ import {
   ListMeaningsResT,
   ListMeaningTranslationsQueryT,
   ListMeaningTranslationsResT,
+  ListShortTranslationsQueryT,
+  ListShortTranslationsResT,
   ListWordsQueryT,
   ListWordsResT,
   SearchDetailedReqT,
@@ -117,6 +119,12 @@ export class EnApi extends AbstractBaseApi {
     query: ListMeaningTranslationsQueryT,
   ): Promise<ListMeaningTranslationsResT> {
     return this.get<ListMeaningTranslationsResT>(`${this.baseURL}/en/meaning-translations`, {
+      query: { ...query },
+    });
+  }
+
+  static async listShortTranslations(query: ListShortTranslationsQueryT): Promise<ListShortTranslationsResT> {
+    return this.get<ListShortTranslationsResT>(`${this.baseURL}/en/short-translations`, {
       query: { ...query },
     });
   }

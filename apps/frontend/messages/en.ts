@@ -206,7 +206,7 @@ export default {
   bulk_request: {
     title: 'Bulk request',
     intro:
-      'Walks the selected rows of a dictionary table (words, meanings or meaning translations) in the browser, sends one request per row to the URL below and collects the mapped answers into a jsonl file. Nothing is written to the dictionary and the API key never leaves this page.',
+      'Walks the selected rows of a dictionary table (words, meanings, meaning translations or short translations) in the browser, sends one request per row to the URL below and collects the mapped answers into a jsonl file. Nothing is written to the dictionary and the API key never leaves this page.',
     step_request: 'Request and response',
     step_records: 'Rows and run',
     next: 'Next',
@@ -217,6 +217,7 @@ export default {
     source_words: 'Words',
     source_meanings: 'Meanings',
     source_translations: 'Meaning translations',
+    source_short_translations: 'Short translations',
     filters_panel: 'Filters',
     filters_panel_active: 'Filters ({count} active)',
     table_panel: 'Table ({count} matching the filter)',
@@ -285,6 +286,7 @@ export default {
     col_meaning: 'Meaning',
     col_language: 'Language',
     col_variants: 'Variants',
+    col_description: 'Translation',
     col_record: 'Row',
     selected_count: 'Selected: {count}',
     clear_selection: 'Clear selection',

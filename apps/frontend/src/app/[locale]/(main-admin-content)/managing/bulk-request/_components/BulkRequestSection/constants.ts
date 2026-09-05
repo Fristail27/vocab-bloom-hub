@@ -30,6 +30,10 @@ export const DEFAULT_PROMPT_TEMPLATES: Record<SourceKindE, string> = {
     '"{{meaning_title}}" ({{meaning_definition}}): title "{{title}}", definition "{{definition}}". ' +
     'Answer in the form {"is_correct": true, "title": "...", "definition": "...", "comment": "..."}, ' +
     'repeating the current title and definition when they are correct and giving better ones otherwise.',
+  [SourceKindE.short_translations]:
+    'Check the short translation into "{{language}}" of the English {{part_of_speech}} "{{word}}": ' +
+    '"{{description}}". Answer in the form {"is_correct": true, "description": "...", "comment": "..."}, ' +
+    'repeating the current description when it is correct and giving a better one otherwise.',
 };
 
 // Chat-completions body: a fixed system message sets the JSON-only contract,
