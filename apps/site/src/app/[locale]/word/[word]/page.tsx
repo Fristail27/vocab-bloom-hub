@@ -29,6 +29,8 @@ export const generateMetadata = async ({ params }: WordPageP): Promise<Metadata>
   const { locale, word } = await headwordOf(params);
   const t = await getTranslations({ locale, namespace: 'word' });
   const headword = await fetchHeadword(word);
+  // the API being down must not get thin placeholder pages indexed (issue #399)
+  if (headword.kind === 'unavailable') return { title: word, robots: { index: false } };
   if (headword.kind !== 'found') return { title: word };
 
   const first = headword.result.data[0];
@@ -49,16 +51,37 @@ const ipa = (value: string): string => `/${value.replace(/^[/[]|[/\]]$/g, '')}/`
 
 const WordLink = ({ word }: { word: string }) => <Link href={`/word/${encodeURIComponent(word)}`}>{word}</Link>;
 
-const Meaning = ({
-  meaning,
-  labels,
-}: {
-  meaning: EnMeaningT;
-  labels: { synonyms: string; antonyms: string };
-}) => (
+type TranslateT = Awaited<ReturnType<typeof getTranslations>>;
+
+const humanize = (value: string): string => value.replace(/_/g, ' ');
+
+// the grammar flags of an entry as short localized phrases (issue #399)
+const grammarOf = (entry: EnWordT, t: TranslateT): string[] =>
+  [
+    entry.noun___uncountable && t('uncountable'),
+    entry.noun___always_plural && t('always_plural'),
+    entry.noun___irregular_plural && t('irregular_plural'),
+    entry.noun___is_proper && t('proper_noun'),
+    entry.verb___is_irregular && t('irregular_verb'),
+    entry.verb___transitivity && t(`transitivity_${entry.verb___transitivity}`),
+    entry.verb___phrasal_object_pattern && t(`phrasal_${entry.verb___phrasal_object_pattern}`),
+  ].filter((item): item is string => Boolean(item));
+
+const Meaning = ({ meaning, t }: { meaning: EnMeaningT; t: TranslateT }) => (
   <li>
     {meaning.title && <span className={styles.meaningTitle}>{meaning.title}</span>}
     {meaning.meaning_level && <span className={styles.tag}> {meaning.meaning_level}</span>}
+    {meaning.language_register && <span className={styles.tag}> {meaning.language_register}</span>}
+    {String(meaning.area_variant) !== 'common' && (
+      <span className={styles.tag}> {humanize(String(meaning.area_variant))}</span>
+    )}
+    {meaning.categories?.map((category) => (
+      <span key={category} className={styles.tag}>
+        {' '}
+        {humanize(category)}
+      </span>
+    ))}
+    {meaning.is_obsolete && <span className={styles.tag}> {t('obsolete')}</span>}
     <p className={styles.definition}>{meaning.definition}</p>
     {meaning.examples.length > 0 && (
       <ul className={styles.examplesList}>
@@ -78,7 +101,7 @@ const Meaning = ({
     )}
     {meaning.synonyms.length > 0 && (
       <p className={styles.relations}>
-        {labels.synonyms}:{' '}
+        {t('synonyms')}:{' '}
         {meaning.synonyms.map((word) => (
           <WordLink key={word} word={word} />
         ))}
@@ -86,7 +109,7 @@ const Meaning = ({
     )}
     {meaning.antonyms.length > 0 && (
       <p className={styles.relations}>
-        {labels.antonyms}:{' '}
+        {t('antonyms')}:{' '}
         {meaning.antonyms.map((word) => (
           <WordLink key={word} word={word} />
         ))}
@@ -95,64 +118,82 @@ const Meaning = ({
   </li>
 );
 
-const Entry = ({ entry, labels }: { entry: EnWordT; labels: Record<string, string> }) => (
-  <section className={styles.entry}>
-    <div className={styles.entryHead}>
-      <h2>{entry.part_of_speech.replace(/_/g, ' ')}</h2>
-      {entry.word_level && <span className={styles.tag}>{entry.word_level}</span>}
-      {entry.language_register && <span className={styles.tag}>{entry.language_register}</span>}
-      {entry.area_variant && <span className={styles.tag}>{entry.area_variant}</span>}
-      {entry.form_of_word !== 'base_form' && (
-        <span className={styles.tag}>{String(entry.form_of_word).replace(/_/g, ' ')}</span>
-      )}
-      {entry.transcription && <span className={styles.transcription}>{ipa(entry.transcription)}</span>}
-    </div>
-    {entry.description && <p className={styles.description}>{entry.description}</p>}
-    {entry.short_translations.length > 0 && (
-      <p className={styles.short}>
-        {entry.short_translations.map((item) => (
-          <span key={item.id} lang={item.language}>
-            {item.description}
+const Entry = ({ entry, t }: { entry: EnWordT; t: TranslateT }) => {
+  const grammar = grammarOf(entry, t);
+
+  return (
+    <section className={styles.entry}>
+      <div className={styles.entryHead}>
+        <h2>{entry.part_of_speech.replace(/_/g, ' ')}</h2>
+        {entry.word_level && <span className={styles.tag}>{entry.word_level}</span>}
+        {entry.language_register && <span className={styles.tag}>{entry.language_register}</span>}
+        {entry.area_variant && <span className={styles.tag}>{entry.area_variant}</span>}
+        {entry.form_of_word !== 'base_form' && (
+          <span className={styles.tag}>{String(entry.form_of_word).replace(/_/g, ' ')}</span>
+        )}
+        {entry.categories?.map((category) => (
+          <span key={category} className={styles.tag}>
+            {humanize(category)}
           </span>
         ))}
-      </p>
-    )}
-    {entry.meanings.length > 0 && (
-      <ol className={styles.meanings}>
-        {entry.meanings.map((meaning) => (
-          <Meaning
-            key={meaning.id}
-            meaning={meaning}
-            labels={{ synonyms: labels.synonyms, antonyms: labels.antonyms }}
-          />
-        ))}
-      </ol>
-    )}
-    {entry.forms.length > 0 && (
-      <ul className={styles.forms}>
-        {entry.forms.map((form) => (
-          <li key={form.id}>
-            {form.word} <Pronounce word={form.word} small />{' '}
-            <small>{String(form.form_of_word).replace(/_/g, ' ')}</small>
-          </li>
-        ))}
-      </ul>
-    )}
-    {entry.base_form && (
-      <p className={styles.relations}>
-        {labels.base_form}: <WordLink word={entry.base_form.word} />
-      </p>
-    )}
-    {entry.phrasal_variants && entry.phrasal_variants.length > 0 && (
-      <p className={styles.relations}>
-        {labels.phrasal}:{' '}
-        {entry.phrasal_variants.map((word) => (
-          <WordLink key={word} word={word} />
-        ))}
-      </p>
-    )}
-  </section>
-);
+        {entry.is_abbreviation && <span className={styles.tag}>{t('abbreviation')}</span>}
+        {entry.is_obsolete && <span className={styles.tag}>{t('obsolete')}</span>}
+        {entry.transcription && <span className={styles.transcription}>{ipa(entry.transcription)}</span>}
+      </div>
+      {grammar.length > 0 && <p className={styles.grammar}>{grammar.join(' · ')}</p>}
+      {entry.pattern && entry.pattern.length > 0 && (
+        <p className={styles.grammar}>
+          {t('patterns')}: <code>{entry.pattern.join(' · ')}</code>
+        </p>
+      )}
+      {entry.description && <p className={styles.description}>{entry.description}</p>}
+      {entry.short_translations.length > 0 && (
+        <p className={styles.short}>
+          {entry.short_translations.map((item) => (
+            <span key={item.id} lang={item.language}>
+              {item.description}
+            </span>
+          ))}
+        </p>
+      )}
+      {entry.meanings.length > 0 && (
+        <ol className={styles.meanings}>
+          {entry.meanings.map((meaning) => (
+            <Meaning key={meaning.id} meaning={meaning} t={t} />
+          ))}
+        </ol>
+      )}
+      {entry.forms.length > 0 && (
+        <ul className={styles.forms}>
+          {entry.forms.map((form) => (
+            <li key={form.id}>
+              {form.word} <Pronounce word={form.word} small />{' '}
+              <small>{String(form.form_of_word).replace(/_/g, ' ')}</small>
+            </li>
+          ))}
+        </ul>
+      )}
+      {entry.base_form && (
+        <p className={styles.relations}>
+          {t('base_form')}: <WordLink word={entry.base_form.word} />
+        </p>
+      )}
+      {entry.base_phrasal && (
+        <p className={styles.relations}>
+          {t('base_phrasal')}: <WordLink word={entry.base_phrasal} />
+        </p>
+      )}
+      {entry.phrasal_variants && entry.phrasal_variants.length > 0 && (
+        <p className={styles.relations}>
+          {t('phrasal_variants')}:{' '}
+          {entry.phrasal_variants.map((word) => (
+            <WordLink key={word} word={word} />
+          ))}
+        </p>
+      )}
+    </section>
+  );
+};
 
 export default async function WordPage({ params }: WordPageP) {
   const { locale, word } = await headwordOf(params);
@@ -171,12 +212,6 @@ export default async function WordPage({ params }: WordPageP) {
   }
 
   const { data, meta } = headword.result;
-  const labels = {
-    synonyms: t('synonyms'),
-    antonyms: t('antonyms'),
-    base_form: t('base_form'),
-    phrasal: t('phrasal_variants'),
-  };
   const transcription = data.find((entry) => entry.transcription)?.transcription;
 
   // structured data for search engines (issue #350): one DefinedTerm per page
@@ -223,7 +258,7 @@ export default async function WordPage({ params }: WordPageP) {
         />
       </div>
       {data.map((entry) => (
-        <Entry key={entry.id} entry={entry} labels={labels} />
+        <Entry key={entry.id} entry={entry} t={t} />
       ))}
       <div className={styles.footer}>
         <p>

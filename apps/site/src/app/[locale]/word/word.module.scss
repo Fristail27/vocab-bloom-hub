@@ -111,6 +111,17 @@
   color: var(--muted);
 }
 
+// the grammar flags / patterns line of an entry (issue #399)
+.grammar {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
+
+  code {
+    font-size: 0.85rem;
+  }
+}
+
 .short {
   margin: 0 0 14px;
   font-size: 1.05rem;
