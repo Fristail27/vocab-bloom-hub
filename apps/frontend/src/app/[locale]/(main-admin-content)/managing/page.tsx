@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
+import Link from 'next/link';
 import { Breadcrumb, Button } from 'antd';
 import { Title } from '@/core/ui/Title';
 import { CommonPageP } from '@/types/common';
@@ -21,19 +22,20 @@ export default async function ManagingPage({ params }: CommonPageP) {
     <div className={styles.mainPage}>
       <Title level={2}>{t('managing')}</Title>
       <Breadcrumb items={breadCrumbs} />
+      {/* client-side navigation (issues #348, #405): an antd href button reloads the document */}
       <div className={styles.headerBtns}>
-        <Button type="primary" href={`/${locale}/managing/import-dictionary`}>
-          {manageT('import_dictionary')}
-        </Button>
-        <Button type="primary" href={`/${locale}/managing/export-dictionary`}>
-          {manageT('export_dictionary')}
-        </Button>
-        <Button type="primary" href={`/${locale}/managing/add-word`}>
-          {manageT('add_word')}
-        </Button>
-        <Button type="primary" href={`/${locale}/managing/bulk-request`}>
-          {manageT('bulk_request')}
-        </Button>
+        <Link href={`/${locale}/managing/import-dictionary`}>
+          <Button type="primary">{manageT('import_dictionary')}</Button>
+        </Link>
+        <Link href={`/${locale}/managing/export-dictionary`}>
+          <Button type="primary">{manageT('export_dictionary')}</Button>
+        </Link>
+        <Link href={`/${locale}/managing/add-word`}>
+          <Button type="primary">{manageT('add_word')}</Button>
+        </Link>
+        <Link href={`/${locale}/managing/bulk-request`}>
+          <Button type="primary">{manageT('bulk_request')}</Button>
+        </Link>
       </div>
       {/* SearchModule reads the query string, which needs a Suspense boundary */}
       <Suspense fallback={null}>
