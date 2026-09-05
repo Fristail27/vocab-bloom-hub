@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { App, Button, Popover, Tag, Typography } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
@@ -18,6 +19,7 @@ export const FoundWord: React.FC<FoundWordP> = ({ w, onDeleted }) => {
   const locale = useLocale();
   const tErr = useTranslations('errors');
   const t = useTranslations('en_managing_words');
+  const manageT = useTranslations('managing');
   const { message } = App.useApp();
   const [deleting, setDeleting] = React.useState(false);
 
@@ -61,9 +63,12 @@ export const FoundWord: React.FC<FoundWordP> = ({ w, onDeleted }) => {
       </div>
 
       <div className={styles.buttons}>
-        <Button type="primary" href={`/${locale}/managing/edit-word/${w.id}`}>
-          <EditOutlined />
-        </Button>
+        {/* client-side navigation (issues #348, #405): an antd href button reloads the document */}
+        <Link href={`/${locale}/managing/edit-word/${w.id}`} aria-label={manageT('edit_word')}>
+          <Button type="primary">
+            <EditOutlined />
+          </Button>
+        </Link>
         <Popover
           content={<DeletePopoverContent onDelete={onDelete} deleting={deleting} />}
           title={w.word}
