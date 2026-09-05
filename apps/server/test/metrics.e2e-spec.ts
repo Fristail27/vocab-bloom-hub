@@ -94,10 +94,14 @@ describe('Prometheus metrics (e2e, issue #281)', () => {
     expect(res.headers['cache-control']).toBe('no-store');
     const text = res.text;
 
-    // default process metrics and the build info
+    // default process metrics and the build info; the database label follows
+    // the driver the suite runs on (Postgres in CI's postgres job, issue #400)
+    const database = process.env.DATABASE_URL?.startsWith('postgres') ? 'postgres' : 'sqlite';
+    expect(text).toMatch(
+      new RegExp(`^vbh_build_info\\{version="\\d+\\.\\d+\\.\\d+[^"]*",database="${database}"\\} 1$`, 'm'),
+    );
     expect(text).toMatch(/^process_cpu_seconds_total /m);
     expect(text).toMatch(/^nodejs_eventloop_lag_seconds /m);
-    expect(text).toMatch(/^vbh_build_info\{version="\d+\.\d+\.\d+[^"]*",database="sqlite"\} 1$/m);
 
     // HTTP series by route template: the headword read twice (200 + 404), the miss as "unmatched"
     expect(text).toMatch(
