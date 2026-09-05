@@ -131,8 +131,9 @@ jobs:
 
     # The suites that need Postgres: the query-plan guard of the public reads
     # (issue #279: with sequential scans disabled, every statement of a hot
-    # endpoint must find an index even on an empty database) and the trigram
-    # search (#278: pg_trgm, created by its migration)
+    # endpoint must find an index even on an empty database), the trigram
+    # search (#278: pg_trgm, created by its migration), and the full server
+    # e2e suite on the production database (#400)
     services:
       postgres:
         image: postgres:16
@@ -163,8 +164,20 @@ jobs:
       - name: Apply migrations
         run: yarn workspace server migration:run
 
+      # The newest migration must also come back down cleanly (issue #400)
+      - name: Migration revert smoke (down one, up again)
+        run: yarn workspace server migration:revert && yarn workspace server migration:run
+
       - name: Postgres-only tests (query plans, trigram search)
         run: yarn workspace server test:postgres
+
+      # The whole e2e suite on the database operators actually run (issue
+      # #400): setup-e2e.ts gives every jest worker its own database derived
+      # from this URL and resets its schema per spec file
+      - name: Server e2e suite on Postgres
+        run: yarn workspace server test:e2e
+        env:
+          E2E_DATABASE_URL: postgresql://vocab:vocab@localhost:5432/vocab_bloom
 
   production-start:
     name: production build and start

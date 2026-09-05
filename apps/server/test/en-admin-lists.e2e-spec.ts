@@ -1,7 +1,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import { AuditLog } from '../src/modules/AuditModule/entities/audit_log.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { buildTypeOrmOptions } from '../src/db/typeorm-options';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import configuration from '../configuration';
@@ -9,12 +9,6 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 
 import { EnModule } from '../src/modules/EnModule/en.module';
-import { EnEntry } from '../src/modules/EnModule/entities/en_entry.entity';
-import { EnWord } from '../src/modules/EnModule/entities/en_word.entity';
-import { EnMeaning } from '../src/modules/EnModule/entities/en_meaning.entity';
-import { EnMeaningTranslation } from '../src/modules/EnModule/entities/en_meaning_translation.entity';
-import { EnShortTranslation } from '../src/modules/EnModule/entities/en_short_translation.entity';
-import { Settings } from '../src/modules/SettingsModule/entities/settings.entity';
 import { hashLoginString } from '../core/utils/crypto';
 import { createJwt } from '../core/utils/auth';
 import {
@@ -85,15 +79,7 @@ describe('admin listings GET /api/en/words, /meanings, /meaning-translations, /s
       imports: [
         ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
         ThrottlerModule.forRoot({ throttlers: [{ ttl: 60_000, limit: 100 }] }),
-        TypeOrmModule.forRoot({
-          type: 'better-sqlite3',
-          database: ':memory:',
-          entities: [EnEntry, EnWord, EnMeaning, EnMeaningTranslation, EnShortTranslation, Settings, AuditLog],
-          synchronize: true,
-          prepareDatabase: (db) => {
-            db.pragma('foreign_keys = ON');
-          },
-        }),
+        TypeOrmModule.forRoot(buildTypeOrmOptions()),
         EnModule,
       ],
     }).compile();
