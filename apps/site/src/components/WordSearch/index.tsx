@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { EnSearchWordT, PublicSearchV1ResT } from 'server/types';
 
@@ -15,16 +15,22 @@ type StateT =
   | { kind: 'results'; items: EnSearchWordT[]; fuzzy: boolean }
   | { kind: 'error' };
 
+// the search term travels in ?q= so a search can be shared and reloaded
+// (issue #399); replaceState keeps the URL in sync without history spam
+const syncUrl = (query: string) => {
+  const url = new URL(window.location.href);
+  if (query) url.searchParams.set('q', query);
+  else url.searchParams.delete('q');
+  window.history.replaceState(null, '', url);
+};
+
 /** A search box over POST /api/v1/search; every hit links to its word page */
 export const WordSearch = ({ initialTerm = '' }: { initialTerm?: string }) => {
   const t = useTranslations('word');
   const [term, setTerm] = useState(initialTerm);
   const [state, setState] = useState<StateT>({ kind: 'idle' });
 
-  const search = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const query = term.trim();
-    if (!query) return;
+  const runSearch = async (query: string) => {
     setState({ kind: 'loading' });
     try {
       const res = await fetch(`${browserApiBase()}/v1/search`, {
@@ -38,6 +44,24 @@ export const WordSearch = ({ initialTerm = '' }: { initialTerm?: string }) => {
     } catch {
       setState({ kind: 'error' });
     }
+  };
+
+  // an opened link with ?q= restores the search (read client-side: the page
+  // may be statically prerendered, so the query string only exists here)
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search).get('q')?.trim();
+    if (!query) return;
+    setTerm(query);
+    void runSearch(query);
+    // runs once on mount by design
+  }, []);
+
+  const search = (event: React.FormEvent) => {
+    event.preventDefault();
+    const query = term.trim();
+    if (!query) return;
+    syncUrl(query);
+    void runSearch(query);
   };
 
   return (

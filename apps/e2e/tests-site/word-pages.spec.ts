@@ -22,6 +22,15 @@ test.describe('word pages', () => {
     await search.getByRole('searchbox').fill('run');
     await search.getByRole('button', { name: 'Search' }).click();
     await expect(page.getByRole('link', { name: 'run', exact: true }).first()).toBeVisible();
+    // the term lands in the URL so the search can be shared (issue #399)
+    await expect(page).toHaveURL(/\?q=run$/);
+  });
+
+  test('opening a ?q= link restores the search (issue #399)', async ({ page }) => {
+    await page.goto('/en/word?q=sprint');
+
+    await expect(page.getByRole('searchbox')).toHaveValue('sprint');
+    await expect(page.getByRole('link', { name: 'sprint', exact: true }).first()).toBeVisible();
   });
 
   test('a missing headword answers 404', async ({ page }) => {
