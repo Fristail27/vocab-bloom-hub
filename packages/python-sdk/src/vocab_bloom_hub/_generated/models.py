@@ -188,51 +188,20 @@ class PublicSearchDetailedV1MetaT(BaseModel):
     short_term: bool
 
 
-class Language(Enum):
+class AvailableTranslationLanguagesE(Enum):
     ru = "ru"
-
-
-class EnMeaningTranslationT(BaseModel):
-    id: int
-    language: Language
-    title: str
-    definition: str
-    variants_of_words: list[str]
 
 
 class EnShortTranslationT(BaseModel):
     id: int
     description: str
-    language: Language
+    language: AvailableTranslationLanguagesE
     variants_of_words: list[str]
 
 
 class PublicHeadwordV1MetaT(BaseModel):
     word: str
     count: int
-
-
-class PublicMeaningV1T(BaseModel):
-    word_id: int
-    part_of_speech: EnPartOfSpeechE
-    translations: list[EnMeaningTranslationT]
-    synonyms: list[str]
-    antonyms: list[str]
-    id: int
-    categories: list[CategoryE] | None = None
-    meaning_level: WordLevelE | None = None
-    area_variant: EnAreaVariantsE
-    language_register: LanguageRegisterE | None = None
-    sort_order: int
-    title: str
-    definition: str
-    is_obsolete: bool
-    examples: list[str]
-
-
-class PublicHeadwordMeaningsV1ResT(BaseModel):
-    data: list[PublicMeaningV1T]
-    meta: PublicHeadwordV1MetaT
 
 
 class PublicWordFormV1T(BaseModel):
@@ -256,7 +225,7 @@ class PublicShortTranslationV1T(BaseModel):
     part_of_speech: EnPartOfSpeechE
     id: int
     description: str
-    language: Language
+    language: AvailableTranslationLanguagesE
     variants_of_words: list[str]
 
 
@@ -265,7 +234,7 @@ class PublicMeaningTranslationV1T(BaseModel):
     word_id: int
     part_of_speech: EnPartOfSpeechE
     id: int
-    language: Language
+    language: AvailableTranslationLanguagesE
     title: str
     definition: str
     variants_of_words: list[str]
@@ -298,18 +267,9 @@ class PublicDatasetCountsV1T(BaseModel):
     short_translations: int
 
 
-class PublicMetaV1T(BaseModel):
-    api_version: str
-    app_version: str
-    dataset_version: str | None = Field(...)
-    license: str
-    license_url: str
-    attribution: str
-    counts: PublicDatasetCountsV1T
-
-
-class PublicMetaV1ResT(BaseModel):
-    data: PublicMetaV1T
+class PublicAvailableLanguagesV1T(BaseModel):
+    source: list[str]
+    translations: list[AvailableTranslationLanguagesE]
 
 
 class PublicSuggestionCreatedV1T(BaseModel):
@@ -360,7 +320,17 @@ class EnSearchWordT(BaseModel):
     user_modified: bool | None = None
 
 
-class EnMeaningT(BaseModel):
+class EnMeaningTranslationT(BaseModel):
+    id: int
+    language: AvailableTranslationLanguagesE
+    title: str
+    definition: str
+    variants_of_words: list[str]
+
+
+class PublicMeaningV1T(BaseModel):
+    word_id: int
+    part_of_speech: EnPartOfSpeechE
     translations: list[EnMeaningTranslationT]
     synonyms: list[str]
     antonyms: list[str]
@@ -376,9 +346,45 @@ class EnMeaningT(BaseModel):
     examples: list[str]
 
 
+class PublicHeadwordMeaningsV1ResT(BaseModel):
+    data: list[PublicMeaningV1T]
+    meta: PublicHeadwordV1MetaT
+
+
+class PublicMetaV1T(BaseModel):
+    api_version: str
+    app_version: str
+    dataset_version: str | None = Field(...)
+    license: str
+    license_url: str
+    attribution: str
+    counts: PublicDatasetCountsV1T
+    available_languages: PublicAvailableLanguagesV1T
+
+
+class PublicMetaV1ResT(BaseModel):
+    data: PublicMetaV1T
+
+
 class PublicSearchV1ResT(BaseModel):
     data: list[EnSearchWordT]
     meta: PublicSearchV1MetaT
+
+
+class EnMeaningT(BaseModel):
+    translations: list[EnMeaningTranslationT]
+    synonyms: list[str]
+    antonyms: list[str]
+    id: int
+    categories: list[CategoryE] | None = None
+    meaning_level: WordLevelE | None = None
+    area_variant: EnAreaVariantsE
+    language_register: LanguageRegisterE | None = None
+    sort_order: int
+    title: str
+    definition: str
+    is_obsolete: bool
+    examples: list[str]
 
 
 class EnWordT(BaseModel):

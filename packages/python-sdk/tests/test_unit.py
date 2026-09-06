@@ -134,6 +134,7 @@ def test_etag_cache_revalidates_and_answers_304_from_it() -> None:
                     "short_translations",
                 ]
             },
+            "available_languages": {"source": ["en"], "translations": ["ru"]},
         }
     }
     seen: list[httpx.Request] = []

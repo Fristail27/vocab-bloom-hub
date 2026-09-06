@@ -447,17 +447,17 @@ export interface components {
     };
     EnMeaningTranslationT: {
       id: number;
-      /** @enum {string} */
-      language: 'ru';
+      language: components['schemas']['AvailableTranslationLanguagesE'];
       title: string;
       definition: string;
       variants_of_words: string[];
     };
+    /** @enum {string} */
+    AvailableTranslationLanguagesE: 'ru';
     EnShortTranslationT: {
       id: number;
       description: string;
-      /** @enum {string} */
-      language: 'ru';
+      language: components['schemas']['AvailableTranslationLanguagesE'];
       variants_of_words: string[];
     };
     PublicWordV1ResT: {
@@ -511,8 +511,7 @@ export interface components {
       part_of_speech: components['schemas']['EnPartOfSpeechE'];
       id: number;
       description: string;
-      /** @enum {string} */
-      language: 'ru';
+      language: components['schemas']['AvailableTranslationLanguagesE'];
       variants_of_words: string[];
     };
     PublicMeaningTranslationV1T: {
@@ -520,8 +519,7 @@ export interface components {
       word_id: number;
       part_of_speech: components['schemas']['EnPartOfSpeechE'];
       id: number;
-      /** @enum {string} */
-      language: 'ru';
+      language: components['schemas']['AvailableTranslationLanguagesE'];
       title: string;
       definition: string;
       variants_of_words: string[];
@@ -561,6 +559,11 @@ export interface components {
       license_url: string;
       attribution: string;
       counts: components['schemas']['PublicDatasetCountsV1T'];
+      available_languages: components['schemas']['PublicAvailableLanguagesV1T'];
+    };
+    PublicAvailableLanguagesV1T: {
+      source: string[];
+      translations: components['schemas']['AvailableTranslationLanguagesE'][];
     };
     PublicMetaV1ResT: {
       data: components['schemas']['PublicMetaV1T'];

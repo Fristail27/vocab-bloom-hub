@@ -154,7 +154,12 @@ describe('VocabBloomClient against the running server (issue #275)', () => {
     expect(random.data.word).toBe('run');
 
     const meta = await client.meta();
-    expect(meta.data).toMatchObject({ api_version: '1', license: 'CC-BY-4.0', counts: { words: 3 } });
+    expect(meta.data).toMatchObject({
+      api_version: '1',
+      license: 'CC-BY-4.0',
+      counts: { words: 3 },
+      available_languages: { source: ['en'], translations: ['ru'] },
+    });
 
     const document = await client.openapi();
     expect(document.openapi).toMatch(/^3\./);

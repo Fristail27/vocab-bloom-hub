@@ -20,6 +20,7 @@ MeaningTranslation = _g.PublicMeaningTranslationV1T
 HeadwordTranslations = _g.PublicHeadwordTranslationsV1T
 Meta = _g.PublicMetaV1T
 DatasetCounts = _g.PublicDatasetCountsV1T
+AvailableLanguages = _g.PublicAvailableLanguagesV1T
 ApiError = _g.PublicApiErrorT
 
 # ----------------------------------------------------------------- enums
@@ -31,6 +32,7 @@ AreaVariant = _g.EnAreaVariantsE
 WordFormKind = _g.EnWordFormsE
 VerbTransitivity = _g.EnVerbTransitivityE
 PhrasalObjectPattern = _g.EnPhrasalObjectPatternE
+TranslationLanguage = _g.AvailableTranslationLanguagesE
 
 # ------------------------------------------------------------- responses
 SearchResponse = _g.PublicSearchV1ResT
@@ -47,6 +49,7 @@ SuggestionCreatedResponse = _g.PublicSuggestionCreatedV1ResT
 __all__ = [
     "ApiError",
     "AreaVariant",
+    "AvailableLanguages",
     "Category",
     "DatasetCounts",
     "DetailedSearchResponse",
@@ -65,6 +68,7 @@ __all__ = [
     "SearchWord",
     "ShortTranslation",
     "SuggestionCreatedResponse",
+    "TranslationLanguage",
     "TranslationsResponse",
     "VerbTransitivity",
     "Word",
