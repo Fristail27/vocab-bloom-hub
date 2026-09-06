@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { App, Skeleton } from 'antd';
 import { useTranslations } from 'next-intl';
-import { EnSearchWordT } from 'server/types';
+import { PublicSearchWordV1T } from 'server/types';
 import { Input } from '@/core/ui/Input';
 import { EnApi } from '@/core/api/EnApi';
 import { useDebounced } from '@/core/hooks';
@@ -18,7 +18,7 @@ export const SearchModule: React.FC = () => {
   // `?search=` deep-links into the search (synonym tags link here); the input stays editable
   const searchParams = useSearchParams();
   const [searchValue, setSearchValue] = useState<string>(searchParams.get('search') ?? '');
-  const [words, setWords] = useState<EnSearchWordT[]>([]);
+  const [words, setWords] = useState<PublicSearchWordV1T[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const debouncedValue = useDebounced(searchValue, 400);
 

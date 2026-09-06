@@ -7,8 +7,7 @@ import { SearchReqDTO } from './dto/SearchReq.dto';
 import { SearchDetailedReqDTO } from './dto/SearchDetailedReq.dto';
 import { EnEntryTypesE, SearchDetailedItemsT, SearchItemsT } from '../../../../../types';
 import { checkIsPostgres } from '../../../../../configuration';
-import { mapSearchResults } from './utils/mapSearchResults';
-import { mapDetailedSearchResults } from './utils/mapDetailedSearchResults';
+import { toPublicSearchWord, toPublicWord } from '../../../PublicApiModule/utils/projection';
 import { escapeLike } from './utils/escapeLike';
 import { bytewise } from '../../utils/bytewise';
 import { RELATION_LOAD_STRATEGY } from '../../utils/wordRelations';
@@ -352,7 +351,7 @@ export class EnSearchService {
     const { ids, similarity, fuzzy, short_term, tier } = await this.collectOrderedIds(search, type, limit);
     this.metrics?.searchAnswered(tier, short_term);
     const words = await this.findWordsByIdsOrdered(ids, { word: true, forms: { word: true } });
-    return { items: mapSearchResults(words, similarity), fuzzy, short_term };
+    return { items: words.map((w) => toPublicSearchWord(w, similarity?.get(w.id))), fuzzy, short_term };
   }
 
   async searchDetailed({
@@ -384,12 +383,14 @@ export class EnSearchService {
 
     const words = await this.findWordsByIdsOrdered(pageIds, relations);
     return {
-      items: mapDetailedSearchResults(words, {
-        with_meanings,
-        with_translations,
-        translation_languages,
-        similarity,
-      }),
+      items: words.map((w) =>
+        toPublicWord(w, {
+          with_meanings,
+          with_translations,
+          translation_languages,
+          similarity: similarity?.get(w.id),
+        }),
+      ),
       page,
       limit,
       has_more: ids.length > page * limit,

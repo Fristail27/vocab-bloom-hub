@@ -7,6 +7,15 @@ generated release notes; the full commit history lives in git.
 
 ## v0.2.0-beta.1 — unreleased
 
+- **Breaking (prerelease window): the public `/api/v1` word items are an explicit projection**
+  (issue #392) instead of the database entity. The fields are enumerated in
+  `types/public/v1` and mapped by name; the editorial state of the instance —
+  `generated`, `generated_by_model`, `version`, `user_modified` — and the never-populated
+  `base_form` are gone from the public answers (the admin API keeps them). Nullable columns
+  answer `null` rather than being absent. In the OpenAPI document and both SDKs the word
+  schemas are `PublicWordV1T` / `PublicSearchWordV1T` (previously `EnWordT` / `EnSearchWordT`);
+  the SDKs' `Word` and `SearchWord` aliases follow.
+
 - **Removed** the deprecated `POST /api/en/search` and `POST /api/en/search/detailed` aliases
   (issue #395). They answered with the pre-envelope bodies and a `Deprecation: true` header
   through the alpha; the beta is the removal window the notice promised. Use

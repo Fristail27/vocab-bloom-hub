@@ -116,8 +116,4 @@ export type EnWordT = Omit<
   user_modified?: boolean | undefined;
 };
 
-// Base search results carry no meanings/translations — use the detailed search
-// endpoint (or GET /en/:id) when that data is needed
-export type EnSearchWordT = Omit<EnWordT, 'meanings' | 'short_translations'>;
-
 export const CustomVersionDictionaryOfWord = 'custom_version';

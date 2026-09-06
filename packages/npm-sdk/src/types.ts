@@ -9,8 +9,8 @@ import type { components, operations } from './generated/openapi';
 type Schemas = components['schemas'];
 
 // ------------------------------------------------------------- entities
-export type Word = Schemas['EnWordT'];
-export type SearchWord = Schemas['EnSearchWordT'];
+export type Word = Schemas['PublicWordV1T'];
+export type SearchWord = Schemas['PublicSearchWordV1T'];
 export type Meaning = Schemas['PublicMeaningV1T'];
 export type WordForm = Schemas['PublicWordFormV1T'];
 export type ShortTranslation = Schemas['PublicShortTranslationV1T'];

@@ -95,41 +95,6 @@ class PublicSearchV1MetaT(BaseModel):
     short_term: bool
 
 
-class WordLevelE(Enum):
-    A1 = "A1"
-    A2 = "A2"
-    B1 = "B1"
-    B2 = "B2"
-    C1 = "C1"
-    C2 = "C2"
-
-
-class EnAreaVariantsE(Enum):
-    common = "common"
-    british = "british"
-    american = "american"
-    australian = "australian"
-
-
-class CategoryE(Enum):
-    scientific = "scientific"
-    technical = "technical"
-    medical = "medical"
-    legal = "legal"
-    business = "business"
-    IT = "IT"
-    art = "art"
-    political = "political"
-    sport = "sport"
-    culinary = "culinary"
-
-
-class LanguageRegisterE(Enum):
-    formal = "formal"
-    informal = "informal"
-    slang = "slang"
-
-
 class EnPartOfSpeechE(Enum):
     noun = "noun"
     verb = "verb"
@@ -168,6 +133,41 @@ class EnWordFormsE(Enum):
     multiplicative = "multiplicative"
 
 
+class WordLevelE(Enum):
+    A1 = "A1"
+    A2 = "A2"
+    B1 = "B1"
+    B2 = "B2"
+    C1 = "C1"
+    C2 = "C2"
+
+
+class EnAreaVariantsE(Enum):
+    common = "common"
+    british = "british"
+    american = "american"
+    australian = "australian"
+
+
+class CategoryE(Enum):
+    scientific = "scientific"
+    technical = "technical"
+    medical = "medical"
+    legal = "legal"
+    business = "business"
+    IT = "IT"
+    art = "art"
+    political = "political"
+    sport = "sport"
+    culinary = "culinary"
+
+
+class LanguageRegisterE(Enum):
+    formal = "formal"
+    informal = "informal"
+    slang = "slang"
+
+
 class EnVerbTransitivityE(Enum):
     transitive = "transitive"
     intransitive = "intransitive"
@@ -181,13 +181,12 @@ class EnPhrasalObjectPatternE(Enum):
     separable_pronoun_only = "separable_pronoun_only"
 
 
-class EnWordFormT(BaseModel):
-    word: str
-    area_variant: EnAreaVariantsE
+class PublicWordV1FormT(BaseModel):
     id: int
-    transcription: str | None = None
+    word: str
     form_of_word: EnWordFormsE
-    is_obsolete: bool | None = None
+    area_variant: EnAreaVariantsE
+    transcription: str | None = Field(...)
 
 
 class PublicSearchDetailedV1MetaT(BaseModel):
@@ -202,10 +201,10 @@ class AvailableTranslationLanguagesE(Enum):
     ru = "ru"
 
 
-class EnShortTranslationT(BaseModel):
+class PublicWordV1ShortTranslationT(BaseModel):
     id: int
-    description: str
     language: AvailableTranslationLanguagesE
+    description: str
     variants_of_words: list[str]
 
 
@@ -217,12 +216,11 @@ class PublicHeadwordV1MetaT(BaseModel):
 class PublicWordFormV1T(BaseModel):
     word_id: int
     part_of_speech: EnPartOfSpeechE
-    word: str
-    area_variant: EnAreaVariantsE
     id: int
-    transcription: str | None = None
+    word: str
     form_of_word: EnWordFormsE
-    is_obsolete: bool | None = None
+    area_variant: EnAreaVariantsE
+    transcription: str | None = Field(...)
 
 
 class PublicHeadwordFormsV1ResT(BaseModel):
@@ -234,8 +232,8 @@ class PublicShortTranslationV1T(BaseModel):
     word_id: int
     part_of_speech: EnPartOfSpeechE
     id: int
-    description: str
     language: AvailableTranslationLanguagesE
+    description: str
     variants_of_words: list[str]
 
 
@@ -302,40 +300,34 @@ class PublicApiErrorT(BaseModel):
     error: bool
 
 
-class EnSearchWordT(BaseModel):
+class PublicSearchWordV1T(BaseModel):
     id: int
-    generated: bool | None = None
-    generated_by_model: str | None = None
-    is_obsolete: bool | None = None
-    is_abbreviation: bool | None = None
-    word_level: WordLevelE | None = None
-    area_variant: EnAreaVariantsE | None = None
-    categories: list[CategoryE] | None = None
-    language_register: LanguageRegisterE | None = None
+    word: str
     part_of_speech: EnPartOfSpeechE
     form_of_word: EnWordFormsE
-    description: str | None = None
-    transcription: str | None = None
-    pattern: list[str] | None = None
-    noun___irregular_plural: bool | None = None
-    noun___uncountable: bool | None = None
-    noun___is_proper: bool | None = None
-    noun___always_plural: bool | None = None
-    verb___is_irregular: bool | None = None
-    verb___transitivity: EnVerbTransitivityE | None = None
-    verb___is_phrasal: bool | None = None
-    verb___phrasal_object_pattern: EnPhrasalObjectPatternE | None = None
-    version: str
-    word: str
-    forms: list[EnWordFormT]
-    phrasal_variants: list[str] | None = None
-    base_phrasal: str | None = None
-    base_form: dict[str, Any] | None = None
+    is_obsolete: bool
+    is_abbreviation: bool
+    word_level: WordLevelE | None = Field(...)
+    area_variant: EnAreaVariantsE | None = Field(...)
+    categories: list[CategoryE]
+    language_register: LanguageRegisterE | None = Field(...)
+    description: str | None = Field(...)
+    transcription: str | None = Field(...)
+    pattern: list[str] | None = Field(...)
+    noun___irregular_plural: bool | None = Field(...)
+    noun___uncountable: bool | None = Field(...)
+    noun___is_proper: bool | None = Field(...)
+    noun___always_plural: bool | None = Field(...)
+    verb___is_irregular: bool | None = Field(...)
+    verb___transitivity: EnVerbTransitivityE | None = Field(...)
+    verb___is_phrasal: bool | None = Field(...)
+    verb___phrasal_object_pattern: EnPhrasalObjectPatternE | None = Field(...)
+    base_phrasal: str | None = Field(...)
+    forms: list[PublicWordV1FormT]
     similarity: float | None = None
-    user_modified: bool | None = None
 
 
-class EnMeaningTranslationT(BaseModel):
+class PublicWordV1MeaningTranslationT(BaseModel):
     id: int
     language: AvailableTranslationLanguagesE
     title: str
@@ -346,19 +338,19 @@ class EnMeaningTranslationT(BaseModel):
 class PublicMeaningV1T(BaseModel):
     word_id: int
     part_of_speech: EnPartOfSpeechE
-    translations: list[EnMeaningTranslationT]
-    synonyms: list[str]
-    antonyms: list[str]
     id: int
-    categories: list[CategoryE] | None = None
-    meaning_level: WordLevelE | None = None
-    area_variant: EnAreaVariantsE
-    language_register: LanguageRegisterE | None = None
     sort_order: int
     title: str
     definition: str
     is_obsolete: bool
     examples: list[str]
+    categories: list[CategoryE]
+    meaning_level: WordLevelE | None = Field(...)
+    area_variant: EnAreaVariantsE
+    language_register: LanguageRegisterE | None = Field(...)
+    translations: list[PublicWordV1MeaningTranslationT]
+    synonyms: list[str]
+    antonyms: list[str]
 
 
 class PublicHeadwordMeaningsV1ResT(BaseModel):
@@ -382,74 +374,69 @@ class PublicMetaV1ResT(BaseModel):
 
 
 class PublicSearchV1ResT(BaseModel):
-    data: list[EnSearchWordT]
+    data: list[PublicSearchWordV1T]
     meta: PublicSearchV1MetaT
 
 
-class EnMeaningT(BaseModel):
-    translations: list[EnMeaningTranslationT]
-    synonyms: list[str]
-    antonyms: list[str]
+class PublicWordV1MeaningT(BaseModel):
     id: int
-    categories: list[CategoryE] | None = None
-    meaning_level: WordLevelE | None = None
-    area_variant: EnAreaVariantsE
-    language_register: LanguageRegisterE | None = None
     sort_order: int
     title: str
     definition: str
     is_obsolete: bool
     examples: list[str]
+    categories: list[CategoryE]
+    meaning_level: WordLevelE | None = Field(...)
+    area_variant: EnAreaVariantsE
+    language_register: LanguageRegisterE | None = Field(...)
+    translations: list[PublicWordV1MeaningTranslationT]
+    synonyms: list[str]
+    antonyms: list[str]
 
 
-class EnWordT(BaseModel):
-    word: str
-    meanings: list[EnMeaningT]
-    short_translations: list[EnShortTranslationT]
-    forms: list[EnWordFormT]
+class PublicWordV1T(BaseModel):
+    meanings: list[PublicWordV1MeaningT]
+    short_translations: list[PublicWordV1ShortTranslationT]
     phrasal_variants: list[str] | None = None
-    base_phrasal: str | None = None
-    base_form: dict[str, Any] | None = None
-    similarity: float | None = None
-    user_modified: bool | None = None
     id: int
-    generated: bool | None = None
-    generated_by_model: str | None = None
-    is_obsolete: bool | None = None
-    is_abbreviation: bool | None = None
-    word_level: WordLevelE | None = None
-    area_variant: EnAreaVariantsE | None = None
-    categories: list[CategoryE] | None = None
-    language_register: LanguageRegisterE | None = None
+    word: str
     part_of_speech: EnPartOfSpeechE
     form_of_word: EnWordFormsE
-    description: str | None = None
-    transcription: str | None = None
-    pattern: list[str] | None = None
-    noun___irregular_plural: bool | None = None
-    noun___uncountable: bool | None = None
-    noun___is_proper: bool | None = None
-    noun___always_plural: bool | None = None
-    verb___is_irregular: bool | None = None
-    verb___transitivity: EnVerbTransitivityE | None = None
-    verb___is_phrasal: bool | None = None
-    verb___phrasal_object_pattern: EnPhrasalObjectPatternE | None = None
-    version: str
+    is_obsolete: bool
+    is_abbreviation: bool
+    word_level: WordLevelE | None = Field(...)
+    area_variant: EnAreaVariantsE | None = Field(...)
+    categories: list[CategoryE]
+    language_register: LanguageRegisterE | None = Field(...)
+    description: str | None = Field(...)
+    transcription: str | None = Field(...)
+    pattern: list[str] | None = Field(...)
+    noun___irregular_plural: bool | None = Field(...)
+    noun___uncountable: bool | None = Field(...)
+    noun___is_proper: bool | None = Field(...)
+    noun___always_plural: bool | None = Field(...)
+    verb___is_irregular: bool | None = Field(...)
+    verb___transitivity: EnVerbTransitivityE | None = Field(...)
+    verb___is_phrasal: bool | None = Field(...)
+    verb___phrasal_object_pattern: EnPhrasalObjectPatternE | None = Field(...)
+    base_phrasal: str | None = Field(...)
+    forms: list[PublicWordV1FormT]
+    similarity: float | None = None
 
 
 class PublicWordV1ResT(BaseModel):
-    data: EnWordT
+    data: PublicWordV1T
 
 
 class PublicHeadwordV1ResT(BaseModel):
-    data: list[EnWordT]
+    data: list[PublicWordV1T]
     meta: PublicHeadwordV1MetaT
 
 
 class PublicWordsBatchItemV1T(BaseModel):
     word: str
     count: int
-    entries: list[EnWordT]
+    entries: list[PublicWordV1T]
 
 
 class PublicWordsBatchV1ResT(BaseModel):
@@ -458,10 +445,10 @@ class PublicWordsBatchV1ResT(BaseModel):
 
 
 class PublicWordsV1ResT(BaseModel):
-    data: list[EnWordT]
+    data: list[PublicWordV1T]
     meta: PublicWordsV1MetaT
 
 
 class PublicSearchDetailedV1ResT(BaseModel):
-    data: list[EnWordT]
+    data: list[PublicWordV1T]
     meta: PublicSearchDetailedV1MetaT

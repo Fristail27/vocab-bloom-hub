@@ -182,8 +182,20 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
         expect.objectContaining({ language: 'ru', title: 'бежать', variants_of_words: ['бежать'] }),
       ]);
       expect(verb.short_translations).toEqual([expect.objectContaining({ description: 'бежать' })]);
-      // the contract omits the timestamps and the owner relations everywhere
-      expect(verb).not.toHaveProperty('createdAt');
+      // the contract omits the timestamps, the owner relations and the
+      // instance's editorial state everywhere (issue #392)
+      for (const internal of [
+        'createdAt',
+        'generated',
+        'generated_by_model',
+        'version',
+        'user_modified',
+        'base_form',
+      ]) {
+        expect(verb).not.toHaveProperty(internal);
+      }
+      expect(verb.phrasal_variants).toEqual([]);
+      expect(verb.base_phrasal).toBeNull();
       expect(verb.meanings[0].translations[0]).not.toHaveProperty('createdAt');
       expect(verb.short_translations[0]).not.toHaveProperty('createdAt');
       expect(verb.short_translations[0]).not.toHaveProperty('word');

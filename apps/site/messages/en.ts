@@ -158,7 +158,6 @@ export default {
     base_phrasal: 'Base verb',
     synonyms: 'Synonyms',
     antonyms: 'Antonyms',
-    base_form: 'Base form',
     phrasal_variants: 'Phrasal variants',
     unavailable: 'The dictionary is not reachable right now — try again in a minute.',
     from_api: 'This page is',

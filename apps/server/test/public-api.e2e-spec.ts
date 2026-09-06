@@ -84,6 +84,17 @@ describe('public API /api/v1 (e2e, issue #271)', () => {
     expect(res.headers['x-api-version']).toBe('1');
     expect(res.body.meta).toEqual({ count: 1, fuzzy: false, short_term: false });
     expect(res.body.data).toEqual([expect.objectContaining({ word: 'flicker' })]);
+    // the flat item is the public projection (issue #392): no editorial state, no joins
+    for (const internal of [
+      'generated',
+      'generated_by_model',
+      'version',
+      'user_modified',
+      'meanings',
+      'phrasal_variants',
+    ]) {
+      expect(res.body.data[0]).not.toHaveProperty(internal);
+    }
 
     const detailed = await request(server())
       .post('/api/v1/search/detailed')

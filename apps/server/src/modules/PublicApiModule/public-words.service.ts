@@ -2,17 +2,14 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsRelations, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { EnWord } from '../EnModule/entities/en_word.entity';
-import { EnService } from '../EnModule/en.service';
 import { FULL_WORD_RELATIONS, RELATION_LOAD_STRATEGY } from '../EnModule/utils/wordRelations';
 import { bytewise } from '../EnModule/utils/bytewise';
-import { prepareWordFromDB } from '../EnModule/utils/prepareWordFromDB';
-import { mapDetailedSearchResults } from '../EnModule/modules/EnSearch/utils/mapDetailedSearchResults';
+import { toPublicWord } from './utils/projection';
 import { ErrorCodes } from '../../../core/constants/error_codes';
 import { checkIsPostgres } from '../../../configuration';
 import {
   AvailableTranslationLanguagesE,
   EnWordFormsE,
-  EnWordT,
   PublicHeadwordFormsV1ResT,
   PublicHeadwordMeaningsV1ResT,
   PublicHeadwordTranslationsV1ResT,
@@ -20,6 +17,7 @@ import {
   PublicWordsBatchItemV1T,
   PublicWordsBatchV1ResT,
   PublicWordsV1ResT,
+  PublicWordV1T,
 } from '../../../types';
 import { WordFiltersV1QueryDTO } from './dto/WordFiltersV1Query.dto';
 import { ListWordsV1QueryDTO, PUBLIC_LIST_DEFAULT_LIMIT } from './dto/ListWordsV1Query.dto';
@@ -36,7 +34,6 @@ export class PublicWordsService {
   constructor(
     @InjectRepository(EnWord)
     private readonly enWordsRep: Repository<EnWord>,
-    private readonly enService: EnService,
   ) {}
 
   // ------------------------------------------------------------ headword
@@ -92,7 +89,8 @@ export class PublicWordsService {
     return row;
   }
 
-  private async loadFull(ids: number[]): Promise<EnWordT[]> {
+  // Every relation of the contract, projected by name (issue #392)
+  private async loadFull(ids: number[]): Promise<PublicWordV1T[]> {
     if (ids.length === 0) return [];
     const rows = await this.enWordsRep.find({
       where: { id: In(ids) },
@@ -103,7 +101,9 @@ export class PublicWordsService {
     return ids
       .map((id) => byId.get(id))
       .filter((row): row is EnWord => row !== undefined)
-      .map(prepareWordFromDB);
+      .map((row) =>
+        toPublicWord(row, { with_meanings: true, with_translations: true, with_phrasal_variants: true }),
+      );
   }
 
   private normalizeHeadword(raw: string): string {
@@ -138,7 +138,9 @@ export class PublicWordsService {
         not_found.push(word);
         continue;
       }
-      const found = ids.map((id) => entryById.get(id)).filter((entry): entry is EnWordT => entry !== undefined);
+      const found = ids
+        .map((id) => entryById.get(id))
+        .filter((entry): entry is PublicWordV1T => entry !== undefined);
       data.push({ word, count: found.length, entries: found });
     }
     return { data, meta: { count: data.length, not_found } };
@@ -193,8 +195,12 @@ export class PublicWordsService {
 
   // ------------------------------------------------------------------ id
 
-  async getById(id: number): Promise<EnWordT> {
-    return this.enService.getWordById(id);
+  async getById(id: number): Promise<PublicWordV1T> {
+    const [entry] = await this.loadFull([id]);
+    if (!entry) {
+      throw new NotFoundException(ErrorCodes.word_doesnt_found);
+    }
+    return entry;
   }
 
   // ---------------------------------------------------------------- list
@@ -241,7 +247,7 @@ export class PublicWordsService {
     return qb;
   }
 
-  private async loadPage(ids: number[], query: ListWordsV1QueryDTO): Promise<EnWordT[]> {
+  private async loadPage(ids: number[], query: ListWordsV1QueryDTO): Promise<PublicWordV1T[]> {
     if (ids.length === 0) return [];
     const with_meanings = query.with_meanings ?? false;
     const with_translations = query.with_translations ?? false;
@@ -254,8 +260,10 @@ export class PublicWordsService {
       relationLoadStrategy: RELATION_LOAD_STRATEGY,
     });
     const byId = new Map(rows.map((row) => [row.id, this.sortRelations(row)]));
-    const ordered = ids.map((id) => byId.get(id)).filter((row): row is EnWord => row !== undefined);
-    return mapDetailedSearchResults(ordered, { with_meanings, with_translations });
+    return ids
+      .map((id) => byId.get(id))
+      .filter((row): row is EnWord => row !== undefined)
+      .map((row) => toPublicWord(row, { with_meanings, with_translations }));
   }
 
   // The headword column of en_words ordered by its bytes (backed by
@@ -333,7 +341,7 @@ export class PublicWordsService {
    * gap in the ids are drawn slightly more often; for a "word of the day"
    * that bias does not matter.
    */
-  async getRandom(filters: WordFiltersV1QueryDTO): Promise<EnWordT> {
+  async getRandom(filters: WordFiltersV1QueryDTO): Promise<PublicWordV1T> {
     const bounds = await this.enWordsRep
       .createQueryBuilder('w')
       .select('MIN(w.id)', 'min')

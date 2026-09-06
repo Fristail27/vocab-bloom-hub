@@ -3,14 +3,14 @@ import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { App, Button, Popover, Tag, Typography } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { EnSearchWordT } from 'server/types';
+import { PublicSearchWordV1T } from 'server/types';
 import { DeletePopoverContent } from '../DeletePopoverContent';
 import { EnApi } from '@/core/api/EnApi';
 import styles from './styles.module.scss';
 
 type FoundWordP = {
-  w: EnSearchWordT;
-  onDeleted: (id: EnSearchWordT['id']) => void;
+  w: PublicSearchWordV1T;
+  onDeleted: (id: PublicSearchWordV1T['id']) => void;
 };
 
 const { Text } = Typography;

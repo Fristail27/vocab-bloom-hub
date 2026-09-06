@@ -1,5 +1,6 @@
 import { ErrorResT } from '../../errors';
-import { EnAreaVariantsE, EnPartOfSpeechE, EnSearchWordT, EnWordT } from '.';
+import { EnAreaVariantsE, EnPartOfSpeechE, EnWordT } from '.';
+import type { PublicSearchWordV1T, PublicWordV1T } from '../../public/v1';
 import type { AvailableTranslationLanguagesE, CategoryE, LanguageRegisterE, WordLevelE } from '../index';
 import { AddWordReqDTO } from '../../../src/modules/EnModule/dto/AddWordReq.dto';
 import { CheckWordQueryDTO } from '../../../src/modules/EnModule/dto/CheckWordQuery.dto';
@@ -29,15 +30,16 @@ export type CheckWordQueryT = CheckWordQueryDTO;
 export type AddWordReqT = AddWordReqDTO;
 export type AddResT = AddWordReqT | ErrorResT;
 export type SearchReqT = SearchReqDTO;
-export type SearchResT = EnSearchWordT[] | ErrorResT;
+// The admin UI searches through the public prefix, so it sees the public projection (issue #392)
+export type SearchResT = PublicSearchWordV1T[] | ErrorResT;
 // `fuzzy`: the exact tiers found nothing and the items come from the trigram
 // similarity tier (Postgres only, issue #278); each item then carries `similarity`.
 // `short_term`: the term is shorter than 3 characters and only the exact and
 // prefix tiers ran (issue #292)
-export type SearchItemsT = { items: EnSearchWordT[]; fuzzy: boolean; short_term: boolean };
+export type SearchItemsT = { items: PublicSearchWordV1T[]; fuzzy: boolean; short_term: boolean };
 export type SearchDetailedReqT = SearchDetailedReqDTO;
 export type SearchDetailedItemsT = {
-  items: EnWordT[];
+  items: PublicWordV1T[];
   page: number;
   limit: number;
   has_more: boolean;

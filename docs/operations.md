@@ -116,7 +116,8 @@ are replaced as one unit). The flag is what update mode consults: flagged entrie
 content, everything else follows the dataset. It is visible:
 
 - on the word card in the admin UI (the _Modified by you_ tag) and in every word answer of the
-  API (`user_modified`);
+  admin API (`user_modified` on `GET /api/en/{id}`; the public `/api/v1` projection does not
+  carry editorial state, issue #392);
 - in the _History_ page — the edit that set it is an audit row like any other.
 
 _Return to the official version_ on the word card (or `PATCH
