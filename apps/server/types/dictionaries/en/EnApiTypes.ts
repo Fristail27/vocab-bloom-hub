@@ -224,6 +224,10 @@ export type DatasetManifestT = {
   // before #259 / #266 respectively)
   synonym_links?: number | undefined;
   antonym_links?: number | undefined;
+  // translation rows per language across all files (issue #410): what a
+  // consumer can expect for each member of AvailableTranslationLanguagesE
+  // in this revision; absent in datasets published before
+  translations?: Record<string, { meaning_translations: number; short_translations: number }> | undefined;
   // terms of the data (issue #270): the SPDX identifier of the license and
   // a sufficient attribution line; absent in datasets published before
   license?: string | undefined;

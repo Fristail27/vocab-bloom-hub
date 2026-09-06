@@ -24,6 +24,7 @@ import {
   PublicWordsBatchV1ResT,
   PublicWordsV1ResT,
   PublicWordV1ResT,
+  PublicWordV1T,
   WordLevelE,
 } from '../types';
 import { encodeWordCursor } from '../src/modules/PublicApiModule/utils/cursor';
@@ -38,6 +39,11 @@ const ruTranslation = (title: string) => ({
   title,
   definition: `${title} (definition)`,
   variants_of_words: [title],
+});
+// a second language (issue #410): the pipeline must treat it as data
+const esTranslation = (title: string) => ({
+  ...ruTranslation(title),
+  language: AvailableTranslationLanguagesE.es,
 });
 
 const makeMeaning = (
@@ -117,10 +123,14 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
       meanings: [
         // sort_order says "manage" comes second even though it is inserted first
         makeMeaning('to manage', 2, { translations: [ruTranslation('управлять')] }),
-        makeMeaning('to move fast', 1, { translations: [ruTranslation('бежать')], synonyms: ['sprint'] }),
+        makeMeaning('to move fast', 1, {
+          translations: [ruTranslation('бежать'), esTranslation('correr')],
+          synonyms: ['sprint'],
+        }),
       ],
       short_translations: [
         { language: AvailableTranslationLanguagesE.ru, description: 'бежать', variants_of_words: ['бежать'] },
+        { language: AvailableTranslationLanguagesE.es, description: 'correr', variants_of_words: ['correr'] },
       ],
     });
     ids.runNoun = await addWord({
@@ -189,8 +199,12 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
       expect(verb.meanings[0].antonyms).toEqual([]);
       expect(verb.meanings[0].translations).toEqual([
         expect.objectContaining({ language: 'ru', title: 'бежать', variants_of_words: ['бежать'] }),
+        expect.objectContaining({ language: 'es', title: 'correr' }),
       ]);
-      expect(verb.short_translations).toEqual([expect.objectContaining({ description: 'бежать' })]);
+      expect(verb.short_translations).toEqual([
+        expect.objectContaining({ description: 'бежать', language: 'ru' }),
+        expect.objectContaining({ description: 'correr', language: 'es' }),
+      ]);
       // the contract omits the timestamps, the owner relations and the
       // instance's editorial state everywhere (issue #392)
       for (const internal of [
@@ -310,7 +324,10 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
       ]);
       expect(body.data[1]).toMatchObject({
         synonyms: ['sprint'],
-        translations: [expect.objectContaining({ title: 'бежать' })],
+        translations: [
+          expect.objectContaining({ title: 'бежать' }),
+          expect.objectContaining({ title: 'correr' }),
+        ],
       });
     });
 
@@ -334,16 +351,36 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
       expect(body.meta).toEqual({ word: 'run', count: 2 });
       expect(body.data.short_translations).toEqual([
         expect.objectContaining({ description: 'бежать', word_id: ids.runVerb, part_of_speech: 'verb' }),
+        expect.objectContaining({ description: 'correr', language: 'es' }),
       ]);
-      expect(body.data.meaning_translations.map((t) => t.title)).toEqual(['бежать', 'управлять']);
+      expect(body.data.meaning_translations.map((t) => t.title)).toEqual(['бежать', 'correr', 'управлять']);
       expect(body.data.meaning_translations[0]).toMatchObject({
         word_id: ids.runVerb,
         meaning_id: expect.any(Number),
         language: 'ru',
       });
 
+      // one language, or several as a repeated key (issue #410)
       const ru = await request(server()).get('/api/v1/words/run/translations?language=ru').expect(200);
       expect((ru.body as PublicHeadwordTranslationsV1ResT).data.meaning_translations).toHaveLength(2);
+      expect((ru.body as PublicHeadwordTranslationsV1ResT).data.short_translations).toHaveLength(1);
+      const es = await request(server()).get('/api/v1/words/run/translations?language=es').expect(200);
+      const esBody = es.body as PublicHeadwordTranslationsV1ResT;
+      expect(esBody.data.meaning_translations.map((t) => [t.title, t.language])).toEqual([['correr', 'es']]);
+      expect(esBody.data.short_translations.map((t) => t.description)).toEqual(['correr']);
+      const both = await request(server())
+        .get('/api/v1/words/run/translations?language=ru&language=es')
+        .expect(200);
+      expect((both.body as PublicHeadwordTranslationsV1ResT).data.meaning_translations).toHaveLength(3);
+      // the detailed search filters the joined translations the same way
+      const detailed = await request(server())
+        .get(
+          '/api/v1/search/detailed?search=run&with_meanings=true&with_translations=true&translation_languages=es',
+        )
+        .expect(200);
+      const found = (detailed.body.data as PublicWordV1T[]).find((w) => w.id === ids.runVerb)!;
+      expect(found.meanings.flatMap((m) => m.translations.map((t) => t.language))).toEqual(['es']);
+      expect(found.short_translations.map((t) => t.language)).toEqual(['es']);
 
       const bad = await request(server()).get('/api/v1/words/run/translations?language=xx').expect(400);
       expectPublicError(bad.body, 400);
@@ -491,8 +528,8 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
       const body = await list('?with_meanings=true&with_translations=true&part_of_speech=verb&word_level=A1');
       expect(keys(body)).toEqual(['run:verb']);
       expect(body.data[0].meanings.map((m) => m.title)).toEqual(['to move fast', 'to manage']);
-      expect(body.data[0].meanings[0].translations).toEqual([expect.objectContaining({ title: 'бежать' })]);
-      expect(body.data[0].short_translations).toEqual([expect.objectContaining({ description: 'бежать' })]);
+      expect(body.data[0].meanings[0].translations.map((t) => t.title)).toEqual(['бежать', 'correr']);
+      expect(body.data[0].short_translations.map((t) => t.description)).toEqual(['бежать', 'correr']);
       expect(body.data[0].short_translations[0]).not.toHaveProperty('createdAt');
     });
 
@@ -567,11 +604,11 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
           grammar_patterns: 0,
           word_forms: 2,
           meanings: 6,
-          meaning_translations: 2,
-          short_translations: 1,
+          meaning_translations: 3,
+          short_translations: 2,
         },
-        // issue #394: the language dimension of the instance
-        available_languages: { source: ['en'], translations: ['ru'] },
+        // issue #394: the language dimension of the instance; #410 added Spanish
+        available_languages: { source: ['en'], translations: ['ru', 'es'] },
       });
     });
 

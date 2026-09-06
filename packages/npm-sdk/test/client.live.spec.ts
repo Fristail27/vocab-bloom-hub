@@ -175,7 +175,7 @@ describe('VocabBloomClient against the running server (issue #275)', () => {
       api_version: '1',
       license: 'CC-BY-4.0',
       counts: { words: 3 },
-      available_languages: { source: ['en'], translations: ['ru'] },
+      available_languages: { source: ['en'], translations: ['ru', 'es'] },
     });
 
     const document = await client.openapi();

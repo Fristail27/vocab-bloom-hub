@@ -7,6 +7,14 @@ generated release notes; the full commit history lives in git.
 
 ## v0.2.0-beta.1 — unreleased
 
+- **Spanish (`es`) as a translation language** (issue #410): `AvailableTranslationLanguagesE`
+  gains `es`, a migration widens both Postgres enum types, the admin offers it wherever a
+  translation is added (flag and label), the public filters (`?language=`,
+  `translation_languages`) and `available_languages` carry it, the website labels
+  translations by language when an entry mixes them, and the export manifest counts
+  translation rows per language (`translations`). The data itself follows in a later dataset
+  revision.
+
 - **Website / docs**: Russian versions of the deployment, environment-variables and API pages
   (`docs/*.ru.md`, rendered under `/ru/docs`), and the release notes as a page of the site
   (`/docs/changelog`, this file) — issue #404.
