@@ -62,7 +62,7 @@ describe('AbstractBaseApi', () => {
     it('сериализует body в JSON и шлёт куки', async () => {
       fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) });
 
-      await AbstractBaseApi.post(`${BASE}/en/search`, { search: 'run', limit: 100 });
+      await AbstractBaseApi.post(`${BASE}/v1/search`, { search: 'run', limit: 100 });
 
       const [, init] = fetchMock.mock.calls[0];
       expect(init.method).toBe('POST');

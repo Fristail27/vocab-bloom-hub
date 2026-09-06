@@ -5,6 +5,14 @@ the admin UI, the website and both SDKs; the published dataset keeps its own ver
 (`manifest.version`), bumped at the next export after a release. Entries are curated from the
 generated release notes; the full commit history lives in git.
 
+## v0.2.0-beta.1 — unreleased
+
+- **Removed** the deprecated `POST /api/en/search` and `POST /api/en/search/detailed` aliases
+  (issue #395). They answered with the pre-envelope bodies and a `Deprecation: true` header
+  through the alpha; the beta is the removal window the notice promised. Use
+  `POST /api/v1/search` and `POST /api/v1/search/detailed` — the admin UI, the website and
+  both SDKs already do.
+
 ## v0.1.0-alpha.3 — unreleased
 
 The documentation catches up with the shipped alpha.

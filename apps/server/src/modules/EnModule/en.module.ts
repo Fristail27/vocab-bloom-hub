@@ -23,7 +23,6 @@ import { EnImportDictionaryService } from './modules/EnImportDictionary/enImport
 import { EnImportDictionaryController } from './modules/EnImportDictionary/enImportDictionary.controller';
 import { DictionaryBootstrapService } from './modules/EnImportDictionary/dictionaryBootstrap.service';
 import { ImportStatusModule } from './modules/EnImportDictionary/importStatus.module';
-import { EnSearchController } from './modules/EnSearch/enSearch.controller';
 import { EnSearchService } from './modules/EnSearch/enSearch.service';
 import { EnStatisticsController } from './modules/EnStatistics/enStatistics.controller';
 import { EnStatisticsService } from './modules/EnStatistics/enStatistics.service';
@@ -57,7 +56,6 @@ import { EnAdminListsService } from './modules/EnAdminLists/enAdminLists.service
     EnMeaningTranslationController,
     EnMeaningController,
     EnImportDictionaryController,
-    EnSearchController,
   ],
   providers: [
     EnService,

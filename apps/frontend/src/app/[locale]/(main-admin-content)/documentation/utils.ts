@@ -83,11 +83,9 @@ const isWordLike = (value: unknown): value is ResponseWordT =>
   typeof (value as { word?: unknown }).word === 'string';
 
 // Word lists (the search and list endpoints, a headword's entries or forms)
-// and single entries (`{ data: EnWordT }`) have a table representation; a
-// bare list (the deprecated aliases) is accepted too. Anything else has none
+// and single entries (`{ data: EnWordT }`) have a table representation.
+// Anything else has none
 export const extractWords = (response: unknown): ResponseWordT[] | null => {
-  if (Array.isArray(response)) return response as ResponseWordT[];
-
   const data = (response as Partial<PublicListResT<unknown, unknown>> | null)?.data;
 
   if (Array.isArray(data)) return data.every(isWordLike) ? data : null;

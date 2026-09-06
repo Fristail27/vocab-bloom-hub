@@ -44,7 +44,6 @@ export type SearchDetailedItemsT = {
   fuzzy: boolean;
   short_term: boolean;
 };
-export type SearchDetailedResT = SearchDetailedItemsT | ErrorResT;
 
 // Admin listings (GET /api/en/words, /meanings, /meaning-translations, /short-translations)
 // used by the bulk-request page

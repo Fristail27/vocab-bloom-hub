@@ -87,12 +87,12 @@ describe('EnSearchService tier categorization (issue #187)', () => {
     return { runVerb, runNoun };
   };
 
-  const words = (res: Awaited<ReturnType<EnSearchService['search']>>) => res.map((w) => w.word);
+  const words = (res: Awaited<ReturnType<EnSearchService['searchFlat']>>['items']) => res.map((w) => w.word);
 
   it('returns tiers in relevance order: exact, phrasal, starts-with, phrases, ends-with, any', async () => {
     await seedRunDataset();
 
-    const res = await service.search({ search: 'run', type: undefined, limit: 20 });
+    const { items: res } = await service.searchFlat({ search: 'run', type: undefined, limit: 20 });
     const names = words(res);
 
     // exact matches (both parts of speech of "run") come first
@@ -115,7 +115,7 @@ describe('EnSearchService tier categorization (issue #187)', () => {
   it('resolves a search by word form to the base word and its phrasal variants', async () => {
     await seedRunDataset();
 
-    const res = await service.search({ search: 'running', type: undefined, limit: 3 });
+    const { items: res } = await service.searchFlat({ search: 'running', type: undefined, limit: 3 });
     const names = words(res);
 
     expect(names[0]).toBe('run');
@@ -125,7 +125,7 @@ describe('EnSearchService tier categorization (issue #187)', () => {
   it('spends the limit on higher tiers first', async () => {
     await seedRunDataset();
 
-    const res = await service.search({ search: 'run', type: undefined, limit: 3 });
+    const { items: res } = await service.searchFlat({ search: 'run', type: undefined, limit: 3 });
 
     expect(words(res).sort()).toEqual(['run', 'run', 'run out']);
   });
@@ -133,7 +133,7 @@ describe('EnSearchService tier categorization (issue #187)', () => {
   it('with type=word skips phrase tiers entirely', async () => {
     await seedRunDataset();
 
-    const res = await service.search({ search: 'run', type: EnEntryTypesE.word, limit: 20 });
+    const { items: res } = await service.searchFlat({ search: 'run', type: EnEntryTypesE.word, limit: 20 });
     const names = words(res);
 
     expect(names).toContain('runner');
@@ -146,7 +146,7 @@ describe('EnSearchService tier categorization (issue #187)', () => {
   it('with type=phrase returns only phrases matched on word boundaries', async () => {
     await seedRunDataset();
 
-    const res = await service.search({ search: 'long', type: EnEntryTypesE.phrase, limit: 20 });
+    const { items: res } = await service.searchFlat({ search: 'long', type: EnEntryTypesE.phrase, limit: 20 });
 
     expect(words(res)).toEqual(['in the long run']);
   });
@@ -155,7 +155,11 @@ describe('EnSearchService tier categorization (issue #187)', () => {
     await seedRunDataset();
     await addWord(await addEntry('let it run', EnEntryTypesE.grammar_pattern), EnPartOfSpeechE.grammar_pattern);
 
-    const res = await service.search({ search: 'let', type: EnEntryTypesE.grammar_pattern, limit: 20 });
+    const { items: res } = await service.searchFlat({
+      search: 'let',
+      type: EnEntryTypesE.grammar_pattern,
+      limit: 20,
+    });
 
     expect(words(res)).toEqual(['let it run']);
   });
@@ -163,7 +167,7 @@ describe('EnSearchService tier categorization (issue #187)', () => {
   it('normalizes the search term (trim + lowercase)', async () => {
     await seedRunDataset();
 
-    const res = await service.search({ search: '  RUN  ', type: undefined, limit: 2 });
+    const { items: res } = await service.searchFlat({ search: '  RUN  ', type: undefined, limit: 2 });
 
     expect(words(res)).toEqual(['run', 'run']);
   });
@@ -173,8 +177,8 @@ describe('EnSearchService tier categorization (issue #187)', () => {
     await addWord(await addEntry('abbbc'), EnPartOfSpeechE.noun);
 
     // "_" and "%" must be treated literally, not as LIKE wildcards
-    expect(await service.search({ search: 'a_c', type: undefined, limit: 10 })).toEqual([]);
-    expect(await service.search({ search: 'a%c', type: undefined, limit: 10 })).toEqual([]);
+    expect((await service.searchFlat({ search: 'a_c', type: undefined, limit: 10 })).items).toEqual([]);
+    expect((await service.searchFlat({ search: 'a%c', type: undefined, limit: 10 })).items).toEqual([]);
   });
 
   describe('short terms (issue #292)', () => {
@@ -213,8 +217,12 @@ describe('EnSearchService tier categorization (issue #187)', () => {
         base_form: it,
       });
 
-      expect(words(await service.search({ search: 'it', type: undefined, limit: 10 }))).toEqual(['it']);
-      expect(words(await service.search({ search: 'its', type: undefined, limit: 10 }))[0]).toBe('it');
+      expect(words((await service.searchFlat({ search: 'it', type: undefined, limit: 10 })).items)).toEqual([
+        'it',
+      ]);
+      expect(words((await service.searchFlat({ search: 'its', type: undefined, limit: 10 })).items)[0]).toBe(
+        'it',
+      );
       // the exact tier answers whatever the type (as in the full flow); the
       // prefix tier only runs for words, so "abandon" stays out
       const phrases = await service.searchFlat({ search: 'a', type: EnEntryTypesE.phrase, limit: 10 });
@@ -246,7 +254,7 @@ describe('EnSearchService tier categorization (issue #187)', () => {
   it('returns an empty list when nothing matches', async () => {
     await seedRunDataset();
 
-    expect(await service.search({ search: 'zzz', type: undefined, limit: 10 })).toEqual([]);
+    expect((await service.searchFlat({ search: 'zzz', type: undefined, limit: 10 })).items).toEqual([]);
   });
 
   describe('searchDetailed (issue #170)', () => {
