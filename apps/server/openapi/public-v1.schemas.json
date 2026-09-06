@@ -621,10 +621,7 @@
         "type": "integer"
       },
       "language": {
-        "type": "string",
-        "enum": [
-          "ru"
-        ]
+        "$ref": "#/components/schemas/AvailableTranslationLanguagesE"
       },
       "title": {
         "type": "string"
@@ -647,6 +644,12 @@
       "variants_of_words"
     ]
   },
+  "AvailableTranslationLanguagesE": {
+    "type": "string",
+    "enum": [
+      "ru"
+    ]
+  },
   "EnShortTranslationT": {
     "type": "object",
     "properties": {
@@ -657,10 +660,7 @@
         "type": "string"
       },
       "language": {
-        "type": "string",
-        "enum": [
-          "ru"
-        ]
+        "$ref": "#/components/schemas/AvailableTranslationLanguagesE"
       },
       "variants_of_words": {
         "type": "array",
@@ -916,10 +916,7 @@
         "type": "string"
       },
       "language": {
-        "type": "string",
-        "enum": [
-          "ru"
-        ]
+        "$ref": "#/components/schemas/AvailableTranslationLanguagesE"
       },
       "variants_of_words": {
         "type": "array",
@@ -953,10 +950,7 @@
         "type": "integer"
       },
       "language": {
-        "type": "string",
-        "enum": [
-          "ru"
-        ]
+        "$ref": "#/components/schemas/AvailableTranslationLanguagesE"
       },
       "title": {
         "type": "string"
@@ -1119,6 +1113,9 @@
       },
       "counts": {
         "$ref": "#/components/schemas/PublicDatasetCountsV1T"
+      },
+      "available_languages": {
+        "$ref": "#/components/schemas/PublicAvailableLanguagesV1T"
       }
     },
     "required": [
@@ -1128,7 +1125,29 @@
       "license",
       "license_url",
       "attribution",
-      "counts"
+      "counts",
+      "available_languages"
+    ]
+  },
+  "PublicAvailableLanguagesV1T": {
+    "type": "object",
+    "properties": {
+      "source": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "translations": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/AvailableTranslationLanguagesE"
+        }
+      }
+    },
+    "required": [
+      "source",
+      "translations"
     ]
   },
   "PublicMetaV1ResT": {

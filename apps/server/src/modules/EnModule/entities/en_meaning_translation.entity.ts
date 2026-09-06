@@ -33,7 +33,7 @@ export class EnMeaningTranslation {
   updateAt!: Date;
 
   @Column({ type: 'simple-enum', enum: AvailableTranslationLanguagesE })
-  language!: AvailableTranslationLanguagesE.ru;
+  language!: AvailableTranslationLanguagesE;
 
   @ManyToOne(() => EnMeaning, (entry) => entry.translations, {
     onDelete: 'CASCADE',

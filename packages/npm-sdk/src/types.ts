@@ -18,6 +18,7 @@ export type MeaningTranslation = Schemas['PublicMeaningTranslationV1T'];
 export type HeadwordTranslations = Schemas['PublicHeadwordTranslationsV1T'];
 export type Meta = Schemas['PublicMetaV1T'];
 export type DatasetCounts = Schemas['PublicDatasetCountsV1T'];
+export type AvailableLanguages = Schemas['PublicAvailableLanguagesV1T'];
 export type ApiError = Schemas['PublicApiErrorT'];
 
 // ----------------------------------------------------------------- enums
@@ -29,6 +30,7 @@ export type AreaVariant = Schemas['EnAreaVariantsE'];
 export type WordFormKind = Schemas['EnWordFormsE'];
 export type VerbTransitivity = Schemas['EnVerbTransitivityE'];
 export type PhrasalObjectPattern = Schemas['EnPhrasalObjectPatternE'];
+export type TranslationLanguage = Schemas['AvailableTranslationLanguagesE'];
 
 // -------------------------------------------------------------- requests
 export type SearchRequest = Schemas['SearchV1ReqDTO'];

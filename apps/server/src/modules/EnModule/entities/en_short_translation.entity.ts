@@ -40,7 +40,7 @@ export class EnShortTranslation {
   word!: EnWord;
 
   @Column({ type: 'simple-enum', enum: AvailableTranslationLanguagesE })
-  language!: AvailableTranslationLanguagesE.ru;
+  language!: AvailableTranslationLanguagesE;
 
   @Column({ type: checkIsPostgres() ? 'text' : 'simple-array', array: true, default: [] })
   variants_of_words!: string[];
