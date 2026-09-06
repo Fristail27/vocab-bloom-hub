@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
@@ -92,6 +92,10 @@ class VocabBloomClient:
     def word(self, headword: str) -> m.HeadwordResponse:
         """All entries of a headword: parts of speech, forms, meanings, translations, links."""
         return self._get(headword_path(headword), None, m.HeadwordResponse)
+
+    def words_batch(self, words: Sequence[str]) -> m.WordsBatchResponse:
+        """Up to 50 headwords in one request (one rate-limit unit); misses under ``meta.not_found``."""
+        return self._post("/words/batch", {"words": list(words)}, m.WordsBatchResponse)
 
     def word_by_id(self, id: int) -> m.WordResponse:
         """One entry by its numeric id."""

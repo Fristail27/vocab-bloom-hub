@@ -91,6 +91,24 @@ export type PublicHeadwordTranslationsV1ResT = PublicItemResT<PublicHeadwordTran
   meta: PublicHeadwordV1MetaT;
 };
 
+// Batch lookup (issue #397): one item per requested spelling that names
+// entries, in request order (duplicates and case collapse); `word` is the
+// normalized spelling as `meta.word` of the single lookup, `entries` what
+// GET /words/{word} would answer. Spellings with no entry are listed in
+// `meta.not_found` instead of failing the request
+export type PublicWordsBatchItemV1T = {
+  word: string;
+  /** @asType integer */
+  count: number;
+  entries: PublicWordV1T[];
+};
+export type PublicWordsBatchV1MetaT = {
+  /** @asType integer */
+  count: number;
+  not_found: string[];
+};
+export type PublicWordsBatchV1ResT = PublicListResT<PublicWordsBatchItemV1T, PublicWordsBatchV1MetaT>;
+
 // Cursor pagination: `next_cursor` is an opaque token to pass back as
 // `?cursor=`; null on the last page. Items are ordered by (word, id)
 export type PublicWordsV1MetaT = {

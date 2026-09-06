@@ -6,13 +6,19 @@ export type ParamValuesT = Record<string, unknown>;
 export type ResponseWordT = Partial<EnWordT> & Pick<EnWordT, 'id' | 'word'>;
 export type ResponseMetaT = { key: string; value: string };
 
+// A text list is typed as one string: "run, ran, put up with" → ['run', 'ran', 'put up with']
+export const splitTextList = (value: unknown): string[] =>
+  (Array.isArray(value) ? value.map(String) : String(value ?? '').split(/[,\n]/))
+    .map((item) => item.trim())
+    .filter((item) => item !== '');
+
 // Only the filters the user actually filled in are sent: the server applies its
 // own defaults and rejects unknown or empty fields (whitelist ValidationPipe)
 export const buildRequestBody = (params: ApiParamDocT[], values: ParamValuesT): ParamValuesT => {
   const body: ParamValuesT = {};
 
   params.forEach(({ name, control }) => {
-    const value = values[name];
+    const value = control === ParamControlE.text_list ? splitTextList(values[name]) : values[name];
 
     if (value === undefined || value === null || value === '') return;
     if (control === ParamControlE.boolean && value === false) return;

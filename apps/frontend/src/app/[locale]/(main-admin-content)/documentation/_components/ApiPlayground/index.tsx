@@ -23,6 +23,7 @@ const POST_RUNNERS: Partial<Record<ApiEndpointKeyE, (body: ParamValuesT) => Prom
   [ApiEndpointKeyE.search]: (body) => EnApi.publicSearch(body as unknown as SearchReqT),
   [ApiEndpointKeyE.search_detailed]: (body) =>
     EnApi.publicSearchDetailed(body as unknown as SearchDetailedReqT),
+  [ApiEndpointKeyE.words_batch]: (body) => EnApi.publicPost('/v1/words/batch', body),
   // files a real report into this instance's moderation queue (issue #349)
   [ApiEndpointKeyE.suggestions]: (body) => EnApi.publicPost('/v1/suggestions', body),
 };
@@ -45,7 +46,7 @@ const getInitialValues = (params: ApiParamDocT[]): ParamValuesT =>
       acc[param.name] = param.defaultValue ?? false;
     } else if (param.defaultValue !== undefined) {
       acc[param.name] = param.defaultValue;
-    } else if (param.control === ParamControlE.text) {
+    } else if (param.control === ParamControlE.text || param.control === ParamControlE.text_list) {
       acc[param.name] = '';
     }
 

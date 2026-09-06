@@ -58,7 +58,8 @@ yarn workspace server test:postgres       # Postgres-only suites: query-plan gua
 
 yarn lint / yarn lint:fix                 # ESLint 10 flat config (eslint.config.ts)
 yarn format / yarn format:check           # Prettier
-yarn check          # lint + format:check (run before finishing work)
+yarn peers:check    # fail on unmet peer dependencies not listed in scripts/check-peer-requirements.mjs (CI runs it)
+yarn check          # lint + format:check + peers:check (run before finishing work)
 ```
 
 Indexes a decorator cannot express (`COLLATE "C"`, GIN) are declared with `MANUALLY_MANAGED_INDEX` (`synchronize: false`) and created by their migration; `test:postgres` fails when a hot query stops using an index.

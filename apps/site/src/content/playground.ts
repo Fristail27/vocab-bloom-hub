@@ -6,6 +6,8 @@ export enum FieldControlE {
   boolean = 'boolean',
   select = 'select',
   multi = 'multi',
+  // a free list of strings, typed as one comma-separated text (the batch lookup)
+  list = 'list',
 }
 
 export type FieldT = {
@@ -39,7 +41,7 @@ const controlFor = (schema: SchemaT, spec: OpenApiSpecT): { control: FieldContro
   if (resolved.type === 'array') {
     const item = resolve(resolved.items ?? {}, spec);
 
-    return item.enum ? { control: FieldControlE.multi, options: item.enum } : { control: FieldControlE.text };
+    return item.enum ? { control: FieldControlE.multi, options: item.enum } : { control: FieldControlE.list };
   }
   if (resolved.enum) return { control: FieldControlE.select, options: resolved.enum };
   if (resolved.type === 'integer' || resolved.type === 'number') return { control: FieldControlE.number };
@@ -110,6 +112,12 @@ export const initialValues = (fields: FieldT[]): ValuesT =>
     ]),
   );
 
+// "run, ran, put up with" → ['run', 'ran', 'put up with']
+const splitList = (value: unknown): string[] =>
+  (Array.isArray(value) ? value.map(String) : String(value ?? '').split(/[,\n]/))
+    .map((item) => item.trim())
+    .filter((item) => item !== '');
+
 const isBlank = (value: unknown): boolean =>
   value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
 
@@ -134,7 +142,7 @@ export const planRequest = (endpoint: PlaygroundEndpointT, values: ValuesT): Req
   const body: Record<string, unknown> = {};
 
   for (const field of endpoint.fields) {
-    const value = values[field.name];
+    const value = field.control === FieldControlE.list ? splitList(values[field.name]) : values[field.name];
     if (field.in === 'path') {
       path = path.replace(`{${field.name}}`, encodeURIComponent(String(value ?? '')));
       continue;

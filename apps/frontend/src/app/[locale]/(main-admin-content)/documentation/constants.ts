@@ -15,6 +15,7 @@ export enum ApiEndpointKeyE {
   search = 'search',
   search_detailed = 'search_detailed',
   word = 'word',
+  words_batch = 'words_batch',
   word_meanings = 'word_meanings',
   word_translations = 'word_translations',
   word_forms = 'word_forms',
@@ -32,6 +33,8 @@ export enum ParamControlE {
   boolean = 'boolean',
   enum = 'enum',
   multi_enum = 'multi_enum',
+  // A free list of strings typed as one comma-separated text (the batch lookup, issue #397)
+  text_list = 'text_list',
 }
 
 export type ApiParamDocT = {
@@ -195,6 +198,25 @@ export const DOCUMENTED_ENDPOINTS: ApiEndpointDocT[] = [
     clientPath: '/v1/words/{word}',
     responseType: 'PublicHeadwordV1ResT',
     params: [HEADWORD_PARAM],
+  },
+  {
+    key: ApiEndpointKeyE.words_batch,
+    slug: 'words-batch',
+    method: 'POST',
+    path: '/api/v1/words/batch',
+    clientPath: '/v1/words/batch',
+    responseType: 'PublicWordsBatchV1ResT',
+    params: [
+      {
+        name: 'words',
+        type: 'string[]',
+        control: ParamControlE.text_list,
+        required: true,
+        min: 1,
+        max: 50,
+        constraints: 'comma-separated',
+      },
+    ],
   },
   {
     key: ApiEndpointKeyE.word_meanings,

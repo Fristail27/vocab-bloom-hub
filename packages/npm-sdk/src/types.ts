@@ -16,6 +16,7 @@ export type WordForm = Schemas['PublicWordFormV1T'];
 export type ShortTranslation = Schemas['PublicShortTranslationV1T'];
 export type MeaningTranslation = Schemas['PublicMeaningTranslationV1T'];
 export type HeadwordTranslations = Schemas['PublicHeadwordTranslationsV1T'];
+export type WordsBatchItem = Schemas['PublicWordsBatchItemV1T'];
 export type Meta = Schemas['PublicMetaV1T'];
 export type DatasetCounts = Schemas['PublicDatasetCountsV1T'];
 export type AvailableLanguages = Schemas['PublicAvailableLanguagesV1T'];
@@ -41,6 +42,7 @@ export type TranslationsQuery = NonNullable<
   operations['PublicWordsController_translations']['parameters']['query']
 >;
 export type SuggestionRequest = Schemas['CreateSuggestionV1ReqDTO'];
+export type WordsBatchRequest = Schemas['WordsBatchV1ReqDTO'];
 
 // ------------------------------------------------------------- responses
 export type SearchResponse = Schemas['PublicSearchV1ResT'];
@@ -51,5 +53,6 @@ export type MeaningsResponse = Schemas['PublicHeadwordMeaningsV1ResT'];
 export type TranslationsResponse = Schemas['PublicHeadwordTranslationsV1ResT'];
 export type FormsResponse = Schemas['PublicHeadwordFormsV1ResT'];
 export type WordsResponse = Schemas['PublicWordsV1ResT'];
+export type WordsBatchResponse = Schemas['PublicWordsBatchV1ResT'];
 export type MetaResponse = Schemas['PublicMetaV1ResT'];
 export type SuggestionCreatedResponse = Schemas['PublicSuggestionCreatedV1ResT'];

@@ -67,6 +67,21 @@ def test_headword_encoding_and_json_search_body() -> None:
     assert seen[1].headers["x-app"] == "test"
 
 
+def test_words_batch_posts_the_spellings() -> None:
+    seen: list[httpx.Request] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return json_response({"data": [], "meta": {"count": 0, "not_found": ["run", "ran"]}})
+
+    client = VocabBloomClient("http://localhost:3010", transport=transport(handle))
+    batch = client.words_batch(("run", "ran"))
+    assert str(seen[0].url) == "http://localhost:3010/api/v1/words/batch"
+    assert seen[0].method == "POST"
+    assert json.loads(seen[0].content) == {"words": ["run", "ran"]}
+    assert batch.meta.not_found == ["run", "ran"]
+
+
 def test_typed_errors() -> None:
     answers = iter(
         [

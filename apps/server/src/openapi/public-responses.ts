@@ -30,6 +30,7 @@ export const PUBLIC_RESPONSES: Record<string, PublicResponseSpecT> = {
   PublicWordsController_list: { type: 'PublicWordsV1ResT', errors: [400, 429] },
   PublicWordsController_byId: { type: 'PublicWordV1ResT', errors: [400, 404, 429] },
   PublicWordsController_byHeadword: { type: 'PublicHeadwordV1ResT', errors: [400, 404, 429] },
+  PublicWordsController_batch: { type: 'PublicWordsBatchV1ResT', errors: [400, 429] },
   PublicWordsController_meanings: { type: 'PublicHeadwordMeaningsV1ResT', errors: [400, 404, 429] },
   PublicWordsController_translations: { type: 'PublicHeadwordTranslationsV1ResT', errors: [400, 404, 429] },
   PublicWordsController_forms: { type: 'PublicHeadwordFormsV1ResT', errors: [400, 404, 429] },

@@ -48,6 +48,15 @@ def test_headword_reads_and_by_id(client: VocabBloomClient) -> None:
 
     assert client.word("ran").data[0].word == "run"  # an inflected form resolves to its base entry
 
+    # the batch lookup answers the same entries per spelling (issue #397)
+    batch = client.words_batch(["ran", "nope", "sprint"])
+    assert (batch.meta.count, batch.meta.not_found) == (2, ["nope"])
+    assert [(i.word, i.count, i.entries[0].word) for i in batch.data] == [
+        ("ran", 1, "run"),
+        ("sprint", 1, "sprint"),
+    ]
+    assert batch.data[0].entries == headword.data
+
     meaning = client.meanings("run").data[0]
     assert (meaning.title, meaning.word_id, meaning.part_of_speech.value) == ("to move fast", run_id, "verb")
 
@@ -124,6 +133,7 @@ async def test_async_client(server_url: str) -> None:
         assert "run" in [w.word for w in flat.data]
         headword = await client.word("run")
         assert headword.meta.count == 1
+        assert (await client.words_batch(["run", "nope"])).meta.not_found == ["nope"]
         assert [w.word async for w in client.iter_words(limit=1)] == ["abandon", "run", "sprint"]
         assert (await client.random(word_level=["A1"])).data.word == "run"
         assert (await client.meta()).data.counts.words == 3

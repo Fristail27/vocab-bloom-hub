@@ -1,14 +1,27 @@
-import { Controller, Get, Param, ParseIntPipe, Query, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  ParseIntPipe,
+  Post,
+  Query,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { PublicWordsService } from './public-words.service';
 import { ListWordsV1QueryDTO } from './dto/ListWordsV1Query.dto';
 import { HeadwordTranslationsV1QueryDTO } from './dto/HeadwordTranslationsV1Query.dto';
+import { PUBLIC_BATCH_MAX_WORDS, WordsBatchV1ReqDTO } from './dto/WordsBatchV1Req.dto';
 import {
   PublicHeadwordFormsV1ResT,
   PublicHeadwordMeaningsV1ResT,
   PublicHeadwordTranslationsV1ResT,
   PublicHeadwordV1ResT,
+  PublicWordsBatchV1ResT,
   PublicWordsV1ResT,
   PublicWordV1ResT,
 } from '../../../types';
@@ -24,7 +37,7 @@ const HEADWORD_PARAM = {
   schema: { type: 'string', minLength: 1, maxLength: HEADWORD_MAX_LENGTH },
 };
 
-/** Public reads of dictionary entries (issue #272): by headword, by id, and the filtered list */
+/** Public reads of dictionary entries (issue #272): by headword (one or a batch, #397), by id, and the filtered list */
 @ApiTags('Public API v1')
 @Controller(`${PUBLIC_API_PREFIX}/words`)
 @UseGuards(PublicApiThrottlerGuard)
@@ -42,6 +55,19 @@ export class PublicWordsController {
   @Get('/')
   async list(@Query() query: ListWordsV1QueryDTO): Promise<PublicWordsV1ResT> {
     return this.publicWordsService.listWords(query);
+  }
+
+  @ApiOperation({
+    summary: `Up to ${PUBLIC_BATCH_MAX_WORDS} headwords in one request`,
+    description:
+      'Every spelling is matched like `GET /words/{word}`; the answer keeps the request order, collapses ' +
+      'duplicates, and lists the spellings without an entry under `meta.not_found` instead of failing. ' +
+      'One request against the rate limit, whatever the size of the batch.',
+  })
+  @HttpCode(200)
+  @Post('batch')
+  async batch(@Body() body: WordsBatchV1ReqDTO): Promise<PublicWordsBatchV1ResT> {
+    return this.publicWordsService.getByHeadwords(body.words);
   }
 
   @ApiOperation({ summary: 'One dictionary entry by its numeric id' })

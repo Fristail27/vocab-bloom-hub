@@ -81,6 +81,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/words/batch': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Up to 50 headwords in one request
+     * @description Every spelling is matched like `GET /words/{word}`; the answer keeps the request order, collapses duplicates, and lists the spellings without an entry under `meta.not_found` instead of failing. One request against the rate limit, whatever the size of the batch.
+     */
+    post: operations['PublicWordsController_batch'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/words/id/{id}': {
     parameters: {
       query?: never;
@@ -277,6 +297,17 @@ export interface components {
       with_translations: boolean;
       /** @description Keep only these translation languages; no value means all of them */
       translation_languages?: 'ru'[];
+    };
+    WordsBatchV1ReqDTO: {
+      /**
+       * @description Headword spellings, 50 at most, each matched like GET /words/{word} (case-insensitively; an inflected form resolves to its base entry)
+       * @example [
+       *       "run",
+       *       "ran",
+       *       "put up with"
+       *     ]
+       */
+      words: string[];
     };
     PublicSearchV1MetaT: {
       count: number;
@@ -531,6 +562,19 @@ export interface components {
     PublicHeadwordTranslationsV1ResT: {
       meta: components['schemas']['PublicHeadwordV1MetaT'];
       data: components['schemas']['PublicHeadwordTranslationsV1T'];
+    };
+    PublicWordsBatchItemV1T: {
+      word: string;
+      count: number;
+      entries: components['schemas']['EnWordT'][];
+    };
+    PublicWordsBatchV1MetaT: {
+      count: number;
+      not_found: string[];
+    };
+    PublicWordsBatchV1ResT: {
+      data: components['schemas']['PublicWordsBatchItemV1T'][];
+      meta: components['schemas']['PublicWordsBatchV1MetaT'];
     };
     PublicWordsV1MetaT: {
       limit: number;
@@ -810,6 +854,48 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['PublicWordsV1ResT'];
+        };
+      };
+      /** @description Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+      /** @description Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+    };
+  };
+  PublicWordsController_batch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['WordsBatchV1ReqDTO'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicWordsBatchV1ResT'];
         };
       };
       /** @description Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor */

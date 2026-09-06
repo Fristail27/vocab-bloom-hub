@@ -13,6 +13,7 @@ const METHOD_BY_OPERATION: Record<string, keyof VocabBloomClient> = {
   PublicWordsController_list: 'words',
   PublicWordsController_byId: 'wordById',
   PublicWordsController_byHeadword: 'word',
+  PublicWordsController_batch: 'wordsBatch',
   PublicWordsController_meanings: 'meanings',
   PublicWordsController_translations: 'translations',
   PublicWordsController_forms: 'forms',

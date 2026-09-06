@@ -38,9 +38,24 @@ const spec: OpenApiSpecT = {
         responses: {},
       },
     },
+    '/api/v1/words/batch': {
+      post: {
+        operationId: 'batch',
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/BatchDTO' } } },
+        },
+        responses: {},
+      },
+    },
   },
   components: {
     schemas: {
+      BatchDTO: {
+        type: 'object',
+        properties: { words: { type: 'array', items: { type: 'string' } } },
+        required: ['words'],
+      },
       SearchDTO: {
         type: 'object',
         properties: {
@@ -54,7 +69,7 @@ const spec: OpenApiSpecT = {
   },
 };
 
-const [search, translations] = listEndpoints(spec).map((endpoint) => playgroundEndpoint(endpoint, spec));
+const [search, translations, batch] = listEndpoints(spec).map((endpoint) => playgroundEndpoint(endpoint, spec));
 
 describe('the playground form, derived from the OpenAPI document', () => {
   it('turns parameters and body fields into controls', () => {
@@ -105,6 +120,18 @@ describe('the playground form, derived from the OpenAPI document', () => {
     expect(curlOf(plan, 'http://localhost:3020/api')).toBe(
       'curl -X POST \'http://localhost:3020/api/v1/search\' \\\n  -H \'Content-Type: application/json\' \\\n  -d \'{"search":"run","limit":5}\'',
     );
+  });
+
+  it('types a free list of strings as one text and splits it on commas (the batch lookup)', () => {
+    expect(batch.fields.map((f) => [f.name, f.in, f.control, f.required])).toEqual([
+      ['words', 'body', FieldControlE.list, true],
+    ]);
+    expect(initialValues(batch.fields)).toEqual({ words: '' });
+    expect(planRequest(batch, { words: ' run, ran ,put up with,' }).body).toEqual({
+      words: ['run', 'ran', 'put up with'],
+    });
+    expect(planRequest(batch, { words: ' , ' }).body).toEqual({});
+    expect(missingRequired(batch, { words: '' })).toEqual(['words']);
   });
 
   it('names the required fields still blank', () => {
