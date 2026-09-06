@@ -440,6 +440,8 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
           meaning_translations: 2,
           short_translations: 1,
         },
+        // issue #394: the language dimension of the instance
+        available_languages: { source: ['en'], translations: ['ru'] },
       });
     });
 

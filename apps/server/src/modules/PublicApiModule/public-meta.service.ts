@@ -4,7 +4,8 @@ import { SettingsService } from '../SettingsModule/settings.service';
 import { DATASET_VERSION_SETTINGS_FIELD } from '../EnModule/modules/EnImportDictionary/constants';
 import { PUBLIC_API_VERSION } from '../../core/utils/public-api';
 import { DATA_LICENSE } from '../../../core/constants/data_license';
-import { PublicDatasetCountsV1T, PublicMetaV1T } from '../../../types';
+import { SOURCE_LANGUAGES } from '../../../core/constants/languages';
+import { AvailableTranslationLanguagesE, PublicDatasetCountsV1T, PublicMetaV1T } from '../../../types';
 
 // The counters are a dozen COUNT(*) queries over the whole dictionary; the
 // public prefix may be polled by every consumer, so they are refreshed at
@@ -49,6 +50,12 @@ export class PublicMetaService {
       license_url: DATA_LICENSE.url,
       attribution: DATA_LICENSE.attribution,
       counts,
+      // the schema, not the data: the languages a translation may carry on
+      // this build, whether or not one has been imported yet (issue #394)
+      available_languages: {
+        source: [...SOURCE_LANGUAGES],
+        translations: Object.values(AvailableTranslationLanguagesE),
+      },
     };
   }
 }

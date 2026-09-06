@@ -7,6 +7,7 @@ import type {
   EnWordFormT,
   EnWordT,
 } from '../../dictionaries/en';
+import type { AvailableTranslationLanguagesE } from '../../dictionaries';
 import type { ErrorResT } from '../../errors';
 
 /**
@@ -134,6 +135,15 @@ export type PublicMetaV1T = {
   license_url: string;
   attribution: string;
   counts: PublicDatasetCountsV1T;
+  available_languages: PublicAvailableLanguagesV1T;
+};
+// The languages the instance serves (issue #394): `source` is the language of
+// the headwords (`en` only, structural), `translations` the languages a
+// translation may carry — the values `?language=` accepts. Both are lists so
+// a further language extends the answer without changing its shape
+export type PublicAvailableLanguagesV1T = {
+  source: string[];
+  translations: AvailableTranslationLanguagesE[];
 };
 export type PublicMetaV1ResT = PublicItemResT<PublicMetaV1T>;
 

@@ -27,6 +27,14 @@ endpoints under the _Public API v1_ tag; the public contract alone is exported a
   { "statusCode": 429, "message": "too_many_requests", "error": true }
   ```
 
+- **Languages** (issue #394). The headwords are English and the prefix carries no language
+  segment: a second source language is out of scope, so `/api/v1/words/run` will not become
+  `/api/v1/en/words/run`. The translation language is a filter on the answer and travels as
+  the multi-valued query parameter `language` (`/api/v1/words/run/translations?language=ru`);
+  a route that reads translations and gains a language filter uses that name; the detailed
+  search keeps its `translation_languages` body field as shipped. Without the parameter every
+  language is returned. `GET /api/v1/meta` lists the languages an instance
+  serves under `available_languages`; consumers should read it instead of assuming `ru`.
 - **Rate limit.** One budget per client IP for the whole prefix, `PUBLIC_API_RATE_LIMIT`
   (`<requests>/<seconds>`, default `100/60`). Exceeding it answers `429` with the error above.
   There are no API keys yet; put the instance behind a reverse proxy if you need per-client
@@ -40,19 +48,19 @@ public, max-age=<PUBLIC_API_CACHE_MAX_AGE>`; conditional requests answer `304` �
 Every successful answer is an envelope: the payload under `data`, paging and counts under
 `meta`. The response types are in `apps/server/types/public/v1/index.ts`.
 
-| Method | Path                                | Query / body                                                                                   | Response                                                                   |
-| ------ | ----------------------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `POST` | `/api/v1/search`                    | `{ search, type?, limit? }`                                                                    | `{ data: EnSearchWordT[], meta: { count, fuzzy, short_term } }`            |
-| `POST` | `/api/v1/search/detailed`           | `{ search, type?, limit?, page?, with_meanings?, with_translations?, translation_languages? }` | `{ data: EnWordT[], meta: { page, limit, has_more, fuzzy, short_term } }`  |
-| `GET`  | `/api/v1/words/{word}`              | —                                                                                              | `{ data: EnWordT[], meta: { word, count } }`                               |
-| `GET`  | `/api/v1/words/{word}/meanings`     | —                                                                                              | `{ data: PublicMeaningV1T[], meta: { word, count } }`                      |
-| `GET`  | `/api/v1/words/{word}/translations` | `language?`                                                                                    | `{ data: { short_translations, meaning_translations }, meta }`             |
-| `GET`  | `/api/v1/words/{word}/forms`        | —                                                                                              | `{ data: PublicWordFormV1T[], meta: { word, count } }`                     |
-| `GET`  | `/api/v1/words/id/{id}`             | —                                                                                              | `{ data: EnWordT }`                                                        |
-| `GET`  | `/api/v1/words`                     | filters, `cursor?`, `limit?`, `with_meanings?`, `with_translations?`                           | `{ data: EnWordT[], meta: { limit, has_more, next_cursor } }`              |
-| `GET`  | `/api/v1/random`                    | filters                                                                                        | `{ data: EnWordT }`                                                        |
-| `GET`  | `/api/v1/meta`                      | —                                                                                              | `{ data: { api_version, app_version, dataset_version, license, counts } }` |
-| `POST` | `/api/v1/suggestions`               | `{ headword, word_id?, message?, kind?, edits? }`                                              | `201 { data: { id, status } }`                                             |
+| Method | Path                                | Query / body                                                                                   | Response                                                                                        |
+| ------ | ----------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `POST` | `/api/v1/search`                    | `{ search, type?, limit? }`                                                                    | `{ data: EnSearchWordT[], meta: { count, fuzzy, short_term } }`                                 |
+| `POST` | `/api/v1/search/detailed`           | `{ search, type?, limit?, page?, with_meanings?, with_translations?, translation_languages? }` | `{ data: EnWordT[], meta: { page, limit, has_more, fuzzy, short_term } }`                       |
+| `GET`  | `/api/v1/words/{word}`              | —                                                                                              | `{ data: EnWordT[], meta: { word, count } }`                                                    |
+| `GET`  | `/api/v1/words/{word}/meanings`     | —                                                                                              | `{ data: PublicMeaningV1T[], meta: { word, count } }`                                           |
+| `GET`  | `/api/v1/words/{word}/translations` | `language?`                                                                                    | `{ data: { short_translations, meaning_translations }, meta }`                                  |
+| `GET`  | `/api/v1/words/{word}/forms`        | —                                                                                              | `{ data: PublicWordFormV1T[], meta: { word, count } }`                                          |
+| `GET`  | `/api/v1/words/id/{id}`             | —                                                                                              | `{ data: EnWordT }`                                                                             |
+| `GET`  | `/api/v1/words`                     | filters, `cursor?`, `limit?`, `with_meanings?`, `with_translations?`                           | `{ data: EnWordT[], meta: { limit, has_more, next_cursor } }`                                   |
+| `GET`  | `/api/v1/random`                    | filters                                                                                        | `{ data: EnWordT }`                                                                             |
+| `GET`  | `/api/v1/meta`                      | —                                                                                              | `{ data: { api_version, app_version, dataset_version, license, counts, available_languages } }` |
+| `POST` | `/api/v1/suggestions`               | `{ headword, word_id?, message?, kind?, edits? }`                                              | `201 { data: { id, status } }`                                                                  |
 
 Every endpoint and its parameters are also described on the in-app _Documentation_ pages,
 which run live requests against the current database. The machine-readable contract is the
@@ -173,7 +181,11 @@ was last imported from, `null` for data authored in place or imported without a 
 the terms of the data — `license` (the SPDX identifier, `"CC-BY-4.0"`), `license_url` and
 `attribution` (the line a consumer has to show, see [`DATA_LICENSE.md`](../DATA_LICENSE.md)) —
 and `counts` (entries, words, phrases, grammar patterns, word forms, meanings, meaning and short
-translations; the counts are refreshed at most once a minute).
+translations; the counts are refreshed at most once a minute), and `available_languages`
+(issue #394): `source`, the language of the headwords (`["en"]`), and `translations`, the
+languages a translation may carry on this build (`["ru"]` today) — the values `?language=`
+accepts. They describe the schema, not the data: a language is listed whether or not a
+translation in it has been imported yet.
 
 ### OpenAPI document
 
