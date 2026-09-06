@@ -1,4 +1,5 @@
 import './helpers/clearDatabaseUrl';
+import { WordRowsService } from '../word-rows.service';
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
 import { DataSource } from 'typeorm';
@@ -31,6 +32,7 @@ describe('EnService.deleteWord (issue #164)', () => {
       ds,
       null as unknown as EnShortTranslationService,
       null as unknown as EnMeaningService,
+      new WordRowsService(ds),
     );
   });
 

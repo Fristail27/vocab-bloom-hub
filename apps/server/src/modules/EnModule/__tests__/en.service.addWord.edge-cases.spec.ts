@@ -1,4 +1,5 @@
 import './helpers/clearDatabaseUrl';
+import { WordRowsService } from '../word-rows.service';
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
 import { DataSource } from 'typeorm';
@@ -41,7 +42,13 @@ describe('EnService.addWord edge cases and editWord array fields (issue #87)', (
       meaningTranslationService,
     );
 
-    service = new EnService(ds.getRepository(EnWord), ds, shortTranslationService, meaningService);
+    service = new EnService(
+      ds.getRepository(EnWord),
+      ds,
+      shortTranslationService,
+      meaningService,
+      new WordRowsService(ds),
+    );
   });
 
   afterAll(async () => {

@@ -31,7 +31,8 @@ import {
 import { ErrorCodes } from '../../../core/constants/error_codes';
 import { prepareWordFromDB } from './utils/prepareWordFromDB';
 import { markEntryUserModified, markEntryUserModifiedByRow } from './utils/markEntryUserModified';
-import { FULL_WORD_RELATIONS, RELATION_LOAD_STRATEGY } from './utils/wordRelations';
+import { FULL_WORD_RELATIONS } from './utils/wordRelations';
+import { WordRowsService } from './word-rows.service';
 import { AddWordReqDTO, AddWordReqFormDTO } from './dto/AddWordReq.dto';
 import { AddWordFormReqDTO } from './dto/AddWordFormReq.dto';
 import { EditWordFormReqDTO } from './dto/EditWordFormReq.dto';
@@ -59,6 +60,7 @@ export class EnService {
 
     private readonly enShortTranslationService: EnShortTranslationService,
     private readonly enMeaningService: EnMeaningService,
+    private readonly wordRows: WordRowsService,
   ) {}
 
   async checkWord(word: string, partOfSpeech: EnPartOfSpeechE, forPhrasal: boolean): Promise<number | false> {
@@ -391,11 +393,7 @@ export class EnService {
   }
 
   async getWordById(id: number): Promise<EnWordT> {
-    const res = await this.enWordsRep.findOne({
-      where: { id },
-      relations: FULL_WORD_RELATIONS,
-      relationLoadStrategy: RELATION_LOAD_STRATEGY,
-    });
+    const [res] = await this.wordRows.load([id], FULL_WORD_RELATIONS);
 
     if (!res) {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);

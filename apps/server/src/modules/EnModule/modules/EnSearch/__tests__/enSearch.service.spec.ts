@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { WordRowsService } from '../../../word-rows.service';
 import { Repository } from 'typeorm';
 
 import { EnWord } from '../../../entities/en_word.entity';
@@ -45,7 +46,10 @@ describe('EnSearchService', () => {
       find: jest.fn(async () => []),
     } as unknown as Pick<Repository<EnWord>, 'createQueryBuilder' | 'find'>;
 
-    service = new EnSearchService(repMock as Repository<EnWord>);
+    service = new EnSearchService(
+      repMock as Repository<EnWord>,
+      { load: async () => [] } as unknown as WordRowsService,
+    );
   });
 
   const getIncludedTypesFromAnyMatchesTier = () => {

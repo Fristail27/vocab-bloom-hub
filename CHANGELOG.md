@@ -7,6 +7,13 @@ generated release notes; the full commit history lives in git.
 
 ## v0.2.0-beta.1 — unreleased
 
+- **Server**: the full word reads — headword, id, batch, random, the detailed search and the
+  list with joins, the admin entry read — assemble their rows from the same per-relation
+  statements without TypeORM entity hydration (issue #424): a batch of 50 headwords answers
+  in ~22 ms instead of ~275 ms on the full dictionary, one headword in ~7 ms instead of ~9,
+  with 9 statements instead of 23. The answers are unchanged (a test pins the loader to
+  `find()` field for field).
+
 - **npm SDK**: a CommonJS consumer (`require`, or TypeScript with `"module": "CommonJS"`)
   now resolves the CommonJS declarations (`dist/index.d.cts`) instead of the ESM ones — the
   `exports` map carries `types` per condition (issue #402). `publint` and

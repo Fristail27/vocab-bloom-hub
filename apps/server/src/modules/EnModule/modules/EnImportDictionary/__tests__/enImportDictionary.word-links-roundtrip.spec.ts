@@ -1,4 +1,5 @@
 import '../../../__tests__/helpers/clearDatabaseUrl';
+import { WordRowsService } from '../../../word-rows.service';
 
 import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { DataSource } from 'typeorm';
@@ -64,7 +65,13 @@ const makeServices = (ds: DataSource) => {
     ds.getRepository(EnMeaning),
     meaningTranslationService,
   );
-  const enService = new EnService(ds.getRepository(EnWord), ds, shortTranslationService, meaningService);
+  const enService = new EnService(
+    ds.getRepository(EnWord),
+    ds,
+    shortTranslationService,
+    meaningService,
+    new WordRowsService(ds),
+  );
   const settingsService = { upsert: jest.fn(async () => ({ success: true })) } as unknown as SettingsService;
   const importService = new EnImportDictionaryService(ds.getRepository(EnWord), settingsService);
   return { enService, importService };
