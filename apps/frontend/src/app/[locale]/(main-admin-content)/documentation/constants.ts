@@ -12,6 +12,8 @@ import {
 // Endpoints open to any consumer of the dictionary; the auth routes are admin
 // panel plumbing and stay out of the public documentation
 export enum ApiEndpointKeyE {
+  search_get = 'search_get',
+  search_detailed_get = 'search_detailed_get',
   search = 'search',
   search_detailed = 'search_detailed',
   word = 'word',
@@ -129,66 +131,89 @@ const WITH_TRANSLATIONS_PARAM: ApiParamDocT = {
   defaultValue: false,
 };
 
+// The fields of the search, shared by its GET (query) and POST (body) forms (issue #396)
+const SEARCH_PARAMS: ApiParamDocT[] = [
+  SEARCH_TERM_PARAM,
+  ENTRY_TYPE_PARAM,
+  {
+    name: 'limit',
+    type: 'number',
+    control: ParamControlE.number,
+    required: false,
+    defaultValue: 10,
+    min: 1,
+    max: 100,
+  },
+];
+
+const SEARCH_DETAILED_PARAMS: ApiParamDocT[] = [
+  SEARCH_TERM_PARAM,
+  ENTRY_TYPE_PARAM,
+  {
+    name: 'limit',
+    type: 'number',
+    control: ParamControlE.number,
+    required: false,
+    defaultValue: 10,
+    min: 1,
+    max: 20,
+  },
+  {
+    name: 'page',
+    type: 'number',
+    control: ParamControlE.number,
+    required: false,
+    defaultValue: 1,
+    min: 1,
+    max: 20,
+  },
+  WITH_MEANINGS_PARAM,
+  WITH_TRANSLATIONS_PARAM,
+  {
+    name: 'translation_languages',
+    type: 'AvailableTranslationLanguagesE[]',
+    control: ParamControlE.multi_enum,
+    required: false,
+    options: Object.values(AvailableTranslationLanguagesE),
+  },
+];
+
 export const DOCUMENTED_ENDPOINTS: ApiEndpointDocT[] = [
   {
-    key: ApiEndpointKeyE.search,
+    key: ApiEndpointKeyE.search_get,
     slug: 'search',
+    method: 'GET',
+    path: '/api/v1/search',
+    clientPath: '/v1/search',
+    responseType: 'PublicSearchV1ResT',
+    params: SEARCH_PARAMS,
+  },
+  {
+    key: ApiEndpointKeyE.search_detailed_get,
+    slug: 'search-detailed',
+    method: 'GET',
+    path: '/api/v1/search/detailed',
+    clientPath: '/v1/search/detailed',
+    responseType: 'PublicSearchDetailedV1ResT',
+    params: SEARCH_DETAILED_PARAMS,
+  },
+  {
+    key: ApiEndpointKeyE.search,
+    slug: 'search-post',
     method: 'POST',
     path: '/api/v1/search',
     clientPath: '/v1/search',
     responseType: 'PublicSearchV1ResT',
-    params: [
-      SEARCH_TERM_PARAM,
-      ENTRY_TYPE_PARAM,
-      {
-        name: 'limit',
-        type: 'number',
-        control: ParamControlE.number,
-        required: false,
-        defaultValue: 10,
-        min: 1,
-        max: 100,
-      },
-    ],
+    params: SEARCH_PARAMS,
   },
   {
     key: ApiEndpointKeyE.search_detailed,
-    slug: 'search-detailed',
+    slug: 'search-detailed-post',
     method: 'POST',
     path: '/api/v1/search/detailed',
     clientPath: '/v1/search/detailed',
     responseType: 'PublicSearchDetailedV1ResT',
-    params: [
-      SEARCH_TERM_PARAM,
-      ENTRY_TYPE_PARAM,
-      {
-        name: 'limit',
-        type: 'number',
-        control: ParamControlE.number,
-        required: false,
-        defaultValue: 10,
-        min: 1,
-        max: 20,
-      },
-      {
-        name: 'page',
-        type: 'number',
-        control: ParamControlE.number,
-        required: false,
-        defaultValue: 1,
-        min: 1,
-        max: 20,
-      },
-      WITH_MEANINGS_PARAM,
-      WITH_TRANSLATIONS_PARAM,
-      {
-        name: 'translation_languages',
-        type: 'AvailableTranslationLanguagesE[]',
-        control: ParamControlE.multi_enum,
-        required: false,
-        options: Object.values(AvailableTranslationLanguagesE),
-      },
-    ],
+    params: SEARCH_DETAILED_PARAMS,
   },
   {
     key: ApiEndpointKeyE.word,

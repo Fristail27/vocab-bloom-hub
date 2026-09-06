@@ -109,14 +109,16 @@ export class VocabBloomClient {
 
   // ------------------------------------------------------------- search
 
+  // Both searches go as GET (issue #396): the same fields in the query string,
+  // and the answer carries an ETag, so the client's cache revalidates it
   /** Flat search: relevance tiers, typo tolerance, no meanings joined */
   search(request: SearchRequest, options?: RequestOptions): Promise<SearchResponse> {
-    return this.post('/search', request, options);
+    return this.get('/search', request, options);
   }
 
   /** Paged search with meanings and translations on request */
   searchDetailed(request: DetailedSearchRequest, options?: RequestOptions): Promise<DetailedSearchResponse> {
-    return this.post('/search/detailed', request, options);
+    return this.get('/search/detailed', request, options);
   }
 
   // -------------------------------------------------------------- reads

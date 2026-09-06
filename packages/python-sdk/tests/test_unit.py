@@ -48,23 +48,37 @@ def test_url_under_api_v1_and_repeated_list_filters() -> None:
     assert seen[0].headers["accept"] == "application/json"
 
 
-def test_headword_encoding_and_json_search_body() -> None:
+def test_headword_encoding_and_search_as_get() -> None:
     seen: list[httpx.Request] = []
 
     def handle(request: httpx.Request) -> httpx.Response:
         seen.append(request)
         if request.url.path.endswith("/search"):
             return json_response({"data": [], "meta": {"count": 0, "fuzzy": False, "short_term": False}})
+        if request.url.path.endswith("/search/detailed"):
+            return json_response(
+                {
+                    "data": [],
+                    "meta": {"page": 1, "limit": 10, "has_more": False, "fuzzy": False, "short_term": False},
+                }
+            )
         return json_response({"data": [], "meta": {"word": "put up with", "count": 0}})
 
     client = VocabBloomClient("http://localhost:3010", headers={"X-App": "test"}, transport=transport(handle))
     client.word("put up with")
     assert str(seen[0].url) == "http://localhost:3010/api/v1/words/put%20up%20with"
+    # the searches go as GET with the fields in the query string (issue #396)
     client.search("run", limit=3, type=None)
-    assert seen[1].method == "POST"
-    assert json.loads(seen[1].content) == {"search": "run", "limit": 3}
-    assert seen[1].headers["content-type"] == "application/json"
+    assert seen[1].method == "GET"
+    assert str(seen[1].url) == "http://localhost:3010/api/v1/search?search=run&limit=3"
     assert seen[1].headers["x-app"] == "test"
+    client.search_detailed("run", with_meanings=True, translation_languages=["ru"])
+    assert seen[2].method == "GET"
+    assert dict(seen[2].url.params.multi_items()) == {
+        "search": "run",
+        "with_meanings": "true",
+        "translation_languages": "ru",
+    }
 
 
 def test_words_batch_posts_the_spellings() -> None:

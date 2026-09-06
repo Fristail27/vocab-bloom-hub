@@ -42,27 +42,29 @@ endpoints under the _Public API v1_ tag; the public contract alone is exported a
   quotas.
 - **Cacheable.** Every successful `GET` carries `ETag`, `Last-Modified` and `Cache-Control:
 public, max-age=<PUBLIC_API_CACHE_MAX_AGE>`; conditional requests answer `304` — see
-  [Caching](#caching).
+  [Caching](#caching). The search has a `GET` form for that reason (issue #396).
 
 ### Endpoints
 
 Every successful answer is an envelope: the payload under `data`, paging and counts under
 `meta`. The response types are in `apps/server/types/public/v1/index.ts`.
 
-| Method | Path                                | Query / body                                                                                   | Response                                                                                        |
-| ------ | ----------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `POST` | `/api/v1/search`                    | `{ search, type?, limit? }`                                                                    | `{ data: EnSearchWordT[], meta: { count, fuzzy, short_term } }`                                 |
-| `POST` | `/api/v1/search/detailed`           | `{ search, type?, limit?, page?, with_meanings?, with_translations?, translation_languages? }` | `{ data: EnWordT[], meta: { page, limit, has_more, fuzzy, short_term } }`                       |
-| `GET`  | `/api/v1/words/{word}`              | —                                                                                              | `{ data: EnWordT[], meta: { word, count } }`                                                    |
-| `POST` | `/api/v1/words/batch`               | `{ words: string[] }` (1–50)                                                                   | `{ data: { word, count, entries: EnWordT[] }[], meta: { count, not_found } }`                   |
-| `GET`  | `/api/v1/words/{word}/meanings`     | —                                                                                              | `{ data: PublicMeaningV1T[], meta: { word, count } }`                                           |
-| `GET`  | `/api/v1/words/{word}/translations` | `language?`                                                                                    | `{ data: { short_translations, meaning_translations }, meta }`                                  |
-| `GET`  | `/api/v1/words/{word}/forms`        | —                                                                                              | `{ data: PublicWordFormV1T[], meta: { word, count } }`                                          |
-| `GET`  | `/api/v1/words/id/{id}`             | —                                                                                              | `{ data: EnWordT }`                                                                             |
-| `GET`  | `/api/v1/words`                     | filters, `cursor?`, `limit?`, `with_meanings?`, `with_translations?`                           | `{ data: EnWordT[], meta: { limit, has_more, next_cursor } }`                                   |
-| `GET`  | `/api/v1/random`                    | filters                                                                                        | `{ data: EnWordT }`                                                                             |
-| `GET`  | `/api/v1/meta`                      | —                                                                                              | `{ data: { api_version, app_version, dataset_version, license, counts, available_languages } }` |
-| `POST` | `/api/v1/suggestions`               | `{ headword, word_id?, message?, kind?, edits? }`                                              | `201 { data: { id, status } }`                                                                  |
+| Method | Path                                | Query / body                                                                                           | Response                                                                                        |
+| ------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `GET`  | `/api/v1/search`                    | `search`, `type?`, `limit?`                                                                            | `{ data: EnSearchWordT[], meta: { count, fuzzy, short_term } }`                                 |
+| `GET`  | `/api/v1/search/detailed`           | `search`, `type?`, `limit?`, `page?`, `with_meanings?`, `with_translations?`, `translation_languages?` | `{ data: EnWordT[], meta: { page, limit, has_more, fuzzy, short_term } }`                       |
+| `POST` | `/api/v1/search`                    | `{ search, type?, limit? }` — the same search, not cacheable                                           | `{ data: EnSearchWordT[], meta: { count, fuzzy, short_term } }`                                 |
+| `POST` | `/api/v1/search/detailed`           | `{ search, type?, limit?, page?, with_meanings?, with_translations?, translation_languages? }`         | `{ data: EnWordT[], meta: { page, limit, has_more, fuzzy, short_term } }`                       |
+| `GET`  | `/api/v1/words/{word}`              | —                                                                                                      | `{ data: EnWordT[], meta: { word, count } }`                                                    |
+| `POST` | `/api/v1/words/batch`               | `{ words: string[] }` (1–50)                                                                           | `{ data: { word, count, entries: EnWordT[] }[], meta: { count, not_found } }`                   |
+| `GET`  | `/api/v1/words/{word}/meanings`     | —                                                                                                      | `{ data: PublicMeaningV1T[], meta: { word, count } }`                                           |
+| `GET`  | `/api/v1/words/{word}/translations` | `language?`                                                                                            | `{ data: { short_translations, meaning_translations }, meta }`                                  |
+| `GET`  | `/api/v1/words/{word}/forms`        | —                                                                                                      | `{ data: PublicWordFormV1T[], meta: { word, count } }`                                          |
+| `GET`  | `/api/v1/words/id/{id}`             | —                                                                                                      | `{ data: EnWordT }`                                                                             |
+| `GET`  | `/api/v1/words`                     | filters, `cursor?`, `limit?`, `with_meanings?`, `with_translations?`                                   | `{ data: EnWordT[], meta: { limit, has_more, next_cursor } }`                                   |
+| `GET`  | `/api/v1/random`                    | filters                                                                                                | `{ data: EnWordT }`                                                                             |
+| `GET`  | `/api/v1/meta`                      | —                                                                                                      | `{ data: { api_version, app_version, dataset_version, license, counts, available_languages } }` |
+| `POST` | `/api/v1/suggestions`               | `{ headword, word_id?, message?, kind?, edits? }`                                                      | `201 { data: { id, status } }`                                                                  |
 
 Every endpoint and its parameters are also described on the in-app _Documentation_ pages,
 which run live requests against the current database. The machine-readable contract is the
@@ -91,6 +93,9 @@ the shared `/api/v1` budget — and answers `503 suggestion_queue_full` once 500
 waiting for the admin. See [`data.md`](./data.md#reporting-errors).
 
 ```bash
+curl 'http://localhost:3010/api/v1/search?search=run&limit=5'
+curl 'http://localhost:3010/api/v1/search/detailed?search=run&with_meanings=true'
+# the same search as POST (not cacheable; kept through the beta)
 curl -X POST 'http://localhost:3010/api/v1/search/detailed' \
   -H 'Content-Type: application/json' \
   -d '{"search":"run","with_meanings":true}'
@@ -101,6 +106,13 @@ curl 'http://localhost:3010/api/v1/random?part_of_speech=verb&word_level=A2'
 ```
 
 #### Search tiers and typo tolerance
+
+Each search comes in two forms with the same fields and the same answer (issue #396): `GET`
+with the fields in the query string (`translation_languages` as a repeated key, booleans as
+`true` / `false`), which carries the caching headers of the prefix and can be pasted into a
+browser or shared as a link, and `POST` with a JSON body, which HTTP caches never store. Use
+the `GET` form; the `POST` form stays through the beta for the consumers that already use
+it.
 
 Both search endpoints rank their answer by tiers: exact headword, phrasal variants, starts
 with the term, phrases containing it as a word, ends with it, contains it anywhere. Every tier
@@ -271,7 +283,8 @@ informational (a minute behind at most) — when both validators are sent the `E
 CDN or proxy in front keeps an answer for `max-age` and then revalidates; lower
 `PUBLIC_API_CACHE_MAX_AGE` (or set it to `0`) on an instance whose dictionary is edited live.
 
-Not cached: the `POST` search reads (HTTP caches do not store `POST`), every error under the
+Not cached: the `POST` form of the search and the batch lookup (HTTP caches do not store
+`POST`; the `GET` search is cached like every other `GET`), every error under the
 prefix (`Cache-Control: no-store`, so a miss or a `429` is never served from a cache), and
 everything under the admin prefixes (`no-store` on every answer, including `401`s and the
 `404`s of a disabled surface).

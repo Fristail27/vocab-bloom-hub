@@ -10,6 +10,9 @@ from vocab_bloom_hub import AsyncVocabBloomClient, VocabBloomClient
 SPEC = Path(__file__).resolve().parents[3] / "apps" / "server" / "openapi" / "public-v1.json"
 
 METHOD_BY_OPERATION = {
+    # the client sends the GET form; the POST form is the same search (issue #396)
+    "PublicSearchController_searchGet": "search",
+    "PublicSearchController_searchDetailedGet": "search_detailed",
     "PublicSearchController_search": "search",
     "PublicSearchController_searchDetailed": "search_detailed",
     "PublicWordsController_list": "words",

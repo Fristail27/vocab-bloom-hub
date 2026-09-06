@@ -135,6 +135,12 @@ export const buildScenarios = ({ runVerbId }: ScenarioContextT): ScenarioT[] => 
     body: { search: 'run', with_meanings: true, with_translations: true },
   },
   // ---- headword / id lookups
+  {
+    name: 'search exact "run" as GET (#396)',
+    group: 'search',
+    method: 'GET',
+    path: '/api/v1/search?search=run',
+  },
   { name: 'word "run" (noun + verb, full)', group: 'word', method: 'GET', path: '/api/v1/words/run' },
   { name: 'word "ran" (form → base entry)', group: 'word', method: 'GET', path: '/api/v1/words/ran' },
   { name: 'word by id (run, verb)', group: 'word', method: 'GET', path: `/api/v1/words/id/${runVerbId}` },

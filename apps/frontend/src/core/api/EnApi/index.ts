@@ -86,14 +86,19 @@ export class EnApi extends AbstractBaseApi {
     return 'error' in res ? res : res.data;
   }
 
-  // Mirrors the raw endpoint contract: every filter the DTO accepts is passed through as is
+  // Mirrors the raw endpoint contract: every filter the DTO accepts is passed
+  // through as is, in the query string of the cacheable GET form (issue #396)
   /** The public search as consumers see it: the v1 envelope `{ data, meta }` */
-  static async publicSearch(body: SearchReqT): Promise<PublicSearchV1ResT | ErrorResT> {
-    return this.post<PublicSearchV1ResT>(`${this.baseURL}/v1/search`, body);
+  static async publicSearch(query: SearchReqT): Promise<PublicSearchV1ResT | ErrorResT> {
+    return this.get<PublicSearchV1ResT>(`${this.baseURL}/v1/search`, { query: query as unknown as ApiQueryT });
   }
 
-  static async publicSearchDetailed(body: SearchDetailedReqT): Promise<PublicSearchDetailedV1ResT | ErrorResT> {
-    return this.post<PublicSearchDetailedV1ResT>(`${this.baseURL}/v1/search/detailed`, body);
+  static async publicSearchDetailed(
+    query: SearchDetailedReqT,
+  ): Promise<PublicSearchDetailedV1ResT | ErrorResT> {
+    return this.get<PublicSearchDetailedV1ResT>(`${this.baseURL}/v1/search/detailed`, {
+      query: query as unknown as ApiQueryT,
+    });
   }
 
   /** Any GET read of the public prefix, e.g. `/v1/words/run` (the documentation playground) */

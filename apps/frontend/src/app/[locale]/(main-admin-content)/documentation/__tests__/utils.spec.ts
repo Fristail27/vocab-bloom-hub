@@ -163,7 +163,9 @@ describe('DOCUMENTED_ENDPOINTS', () => {
   });
 
   it('находит метод по сегменту маршрута', () => {
-    expect(getEndpointBySlug('search-detailed')).toBe(detailedEndpoint);
+    // the bare slug is the GET form; the POST form has its own (issue #396)
+    expect(getEndpointBySlug('search-detailed')?.key).toBe(ApiEndpointKeyE.search_detailed_get);
+    expect(getEndpointBySlug('search-detailed-post')).toBe(detailedEndpoint);
     expect(getEndpointBySlug('word-by-id')?.key).toBe(ApiEndpointKeyE.word_by_id);
     expect(getEndpointBySlug('unknown')).toBeUndefined();
   });

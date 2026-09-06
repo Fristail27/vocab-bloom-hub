@@ -31,11 +31,15 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get?: never;
-    put?: never;
     /**
      * Search dictionary entries (flat list, no meanings)
-     * @description Tiers in relevance order: exact, phrasal, starts-with, phrases, ends-with, contains. When none matches, a trigram similarity tier answers typos (`meta.fuzzy: true`, `similarity` on every item; Postgres instances only). A term shorter than 3 characters searches the exact and prefix tiers only (`meta.short_term: true`).
+     * @description Tiers in relevance order: exact, phrasal, starts-with, phrases, ends-with, contains. When none matches, a trigram similarity tier answers typos (`meta.fuzzy: true`, `similarity` on every item; Postgres instances only). A term shorter than 3 characters searches the exact and prefix tiers only (`meta.short_term: true`). Cacheable: the answer carries `ETag`, `Last-Modified` and `Cache-Control` like every public GET.
+     */
+    get: operations['PublicSearchController_searchGet'];
+    put?: never;
+    /**
+     * Search dictionary entries (flat list, no meanings) — the POST form
+     * @description The same search as `GET /search` with the fields in a JSON body; not cacheable. Kept through the beta.
      */
     post: operations['PublicSearchController_search'];
     delete?: never;
@@ -51,9 +55,16 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get?: never;
+    /**
+     * Search dictionary entries with pagination, meanings and translations
+     * @description The GET form of the detailed search: the same fields as the POST body, in the query string; cacheable.
+     */
+    get: operations['PublicSearchController_searchDetailedGet'];
     put?: never;
-    /** Search dictionary entries with pagination, meanings and translations */
+    /**
+     * Search dictionary entries with pagination, meanings and translations — the POST form
+     * @description The same search as `GET /search/detailed` with the fields in a JSON body; not cacheable. Kept through the beta.
+     */
     post: operations['PublicSearchController_searchDetailed'];
     delete?: never;
     options?: never;
@@ -693,6 +704,50 @@ export interface operations {
       };
     };
   };
+  PublicSearchController_searchGet: {
+    parameters: {
+      query: {
+        /** @description The term to search for */
+        search: string;
+        /** @description Restrict the answer to one entry type */
+        type?: 'word' | 'grammar_pattern' | 'phrase';
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicSearchV1ResT'];
+        };
+      };
+      /** @description Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+      /** @description Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+    };
+  };
   PublicSearchController_search: {
     parameters: {
       query?: never;
@@ -713,6 +768,57 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['PublicSearchV1ResT'];
+        };
+      };
+      /** @description Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+      /** @description Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+    };
+  };
+  PublicSearchController_searchDetailedGet: {
+    parameters: {
+      query: {
+        /** @description The term to search for */
+        search: string;
+        /** @description Restrict the answer to one entry type */
+        type?: 'word' | 'grammar_pattern' | 'phrase';
+        limit?: number;
+        page?: number;
+        /** @description Join the meanings (with translations, synonyms, antonyms) of every item */
+        with_meanings?: boolean;
+        /** @description Join the short translations of every item */
+        with_translations?: boolean;
+        /** @description Keep only these translation languages (a repeated key); no value means all of them */
+        translation_languages?: 'ru'[];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicSearchDetailedV1ResT'];
         };
       };
       /** @description Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor */

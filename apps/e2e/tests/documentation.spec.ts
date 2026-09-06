@@ -6,8 +6,11 @@ test.describe('documentation', () => {
   test('index page lists every documented public endpoint', async ({ page }) => {
     await page.goto('/en/documentation');
 
-    await expect(page.getByRole('link', { name: 'Basic search' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Detailed search' })).toBeVisible();
+    // each search has a GET form and a POST form (issue #396), both listed
+    await expect(page.getByRole('link', { name: 'Basic search', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Basic search (POST form)' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Detailed search', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Detailed search (POST form)' })).toBeVisible();
     // the auth routes are admin plumbing, not part of the public API
     await expect(page.getByRole('link', { name: 'Sign in' })).toHaveCount(0);
   });
