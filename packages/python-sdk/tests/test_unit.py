@@ -267,3 +267,25 @@ def test_memory_cache_evicts_least_recently_used() -> None:
     assert cache.get("b") is None
     assert cache.get("a") is not None
     assert len(cache) == 2
+
+
+def test_version_is_the_installed_distribution_version() -> None:
+    """``__version__`` comes from the package metadata (issue #401): the version of
+    pyproject.toml in PyPI's normalized form, so it cannot drift from a release."""
+    import importlib.metadata
+    import re
+    from pathlib import Path
+
+    import vocab_bloom_hub
+
+    assert vocab_bloom_hub.__version__ == importlib.metadata.version("vocab-bloom-hub")
+    pyproject = (Path(__file__).parents[1] / "pyproject.toml").read_text()
+    match = re.search(r'^version = "([^"]+)"$', pyproject, re.M)
+    assert match is not None
+    # 1.2.3-alpha.4 → 1.2.3a4, -beta.4 → b4, -rc.4 → rc4 (PEP 440)
+    normalized = re.sub(
+        r"-(alpha|beta|rc)\.(\d+)$",
+        lambda m: {"alpha": "a", "beta": "b", "rc": "rc"}[m[1]] + m[2],
+        match[1],
+    )
+    assert vocab_bloom_hub.__version__ == normalized
