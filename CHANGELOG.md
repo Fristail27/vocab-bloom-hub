@@ -7,6 +7,10 @@ generated release notes; the full commit history lives in git.
 
 ## v0.2.0-beta.1 — unreleased
 
+- **Website / docs**: Russian versions of the deployment, environment-variables and API pages
+  (`docs/*.ru.md`, rendered under `/ru/docs`), and the release notes as a page of the site
+  (`/docs/changelog`, this file) — issue #404.
+
 - **Docs** refreshed against the shipped alpha and this cycle's changes (issue #391): NestJS 12
   in the badges and the stack table, the SDKs described as published, the public API and SDK
   feature lists (cacheable `GET` search, batch lookup, synonyms / antonyms, retry, `User-Agent`),

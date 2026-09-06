@@ -14,7 +14,7 @@ export type DocPageT = {
   slug: string;
   /** The Markdown file, relative to the repository root */
   file: string;
-  /** A Russian version of the same page, when the repository has one */
+  /** A Russian version of the same page, when the repository has one (`<name>.ru.md` next to the English file) */
   ruFile?: string;
   section: DocSectionE;
   title: string;
@@ -35,6 +35,7 @@ export const DOC_PAGES: DocPageT[] = [
   {
     slug: 'deployment',
     file: 'docs/deployment/README.md',
+    ruFile: 'docs/deployment/README.ru.md',
     section: DocSectionE.deployment,
     title: 'Deployment',
     titleRu: 'Развёртывание',
@@ -56,6 +57,7 @@ export const DOC_PAGES: DocPageT[] = [
   {
     slug: 'environment',
     file: 'docs/environment.md',
+    ruFile: 'docs/environment.ru.md',
     section: DocSectionE.deployment,
     title: 'Environment variables',
     titleRu: 'Переменные окружения',
@@ -98,6 +100,7 @@ export const DOC_PAGES: DocPageT[] = [
   {
     slug: 'api',
     file: 'docs/api.md',
+    ruFile: 'docs/api.ru.md',
     section: DocSectionE.api,
     title: 'API surfaces',
     titleRu: 'Устройство API',
@@ -150,6 +153,15 @@ export const DOC_PAGES: DocPageT[] = [
     section: DocSectionE.project,
     title: 'Security policy',
     titleRu: 'Политика безопасности',
+  },
+  // the curated release notes (issue #404): every tagged release has a page
+  // on the site, and a link to CHANGELOG.md from any documented file lands here
+  {
+    slug: 'changelog',
+    file: 'CHANGELOG.md',
+    section: DocSectionE.project,
+    title: 'Release notes',
+    titleRu: 'История версий',
   },
 ];
 
