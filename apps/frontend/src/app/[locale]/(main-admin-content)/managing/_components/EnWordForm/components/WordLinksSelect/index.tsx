@@ -6,7 +6,7 @@ import { Spin, Typography } from 'antd';
 import { Select } from '@/core/ui/Select';
 import { EnApi } from '@/core/api/EnApi';
 import { useDebounced } from '@/core/hooks';
-import { EnPartOfSpeechE, EnSearchWordT, EnWordFormsE } from 'server/types';
+import { EnPartOfSpeechE, PublicSearchWordV1T, EnWordFormsE } from 'server/types';
 import { WordLinkKindT } from '../WordLinks';
 import styles from './styles.module.scss';
 
@@ -17,7 +17,7 @@ type FoundWordT = { word: string; parts_of_speech: EnPartOfSpeechE[] };
 // One option per headword; a word with several base-form entries ("run" the
 // verb and the noun) lists every part of speech so the admin knows what the
 // link will point at
-const groupByWord = (words: EnSearchWordT[]): FoundWordT[] => {
+const groupByWord = (words: PublicSearchWordV1T[]): FoundWordT[] => {
   const byWord = new Map<string, EnPartOfSpeechE[]>();
   for (const w of words) {
     if (w.form_of_word !== EnWordFormsE.base_form) continue;

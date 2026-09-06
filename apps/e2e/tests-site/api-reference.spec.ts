@@ -19,7 +19,7 @@ test.describe('API reference', () => {
     await page.goto('/en/api');
 
     // the sidebar of the reference lists every schema as an in-page anchor
-    await page.locator('a[href="#schema-EnWordT"]').first().click();
-    await expect(page.locator('[id="schema-EnWordT"]')).toBeVisible();
+    await page.locator('a[href="#schema-PublicWordV1T"]').first().click();
+    await expect(page.locator('[id="schema-PublicWordV1T"]')).toBeVisible();
   });
 });

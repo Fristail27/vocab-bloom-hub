@@ -1,13 +1,16 @@
 import type {
-  EnMeaningT,
-  EnMeaningTranslationT,
+  EnAreaVariantsE,
   EnPartOfSpeechE,
-  EnSearchWordT,
-  EnShortTranslationT,
-  EnWordFormT,
-  EnWordT,
+  EnPhrasalObjectPatternE,
+  EnVerbTransitivityE,
+  EnWordFormsE,
 } from '../../dictionaries/en';
-import type { AvailableTranslationLanguagesE } from '../../dictionaries';
+import type {
+  AvailableTranslationLanguagesE,
+  CategoryE,
+  LanguageRegisterE,
+  WordLevelE,
+} from '../../dictionaries';
 import type { ErrorResT } from '../../errors';
 
 /**
@@ -34,7 +37,7 @@ export type PublicSearchV1MetaT = {
   fuzzy: boolean;
   short_term: boolean;
 };
-export type PublicSearchV1ResT = PublicListResT<EnSearchWordT, PublicSearchV1MetaT>;
+export type PublicSearchV1ResT = PublicListResT<PublicSearchWordV1T, PublicSearchV1MetaT>;
 
 export type PublicSearchDetailedV1MetaT = {
   /** @asType integer */
@@ -45,13 +48,108 @@ export type PublicSearchDetailedV1MetaT = {
   fuzzy: boolean;
   short_term: boolean;
 };
-export type PublicSearchDetailedV1ResT = PublicListResT<EnWordT, PublicSearchDetailedV1MetaT>;
+export type PublicSearchDetailedV1ResT = PublicListResT<PublicWordV1T, PublicSearchDetailedV1MetaT>;
 
 // ------------------------------------------------------------ words (#272)
 
+// The projection of a dictionary entry the public API promises (issue #392):
+// every field is listed here on purpose and mapped by name in
+// PublicApiModule/utils/projection.ts — nothing is spread from the database
+// row, so a column added to the entity does not become a public promise by
+// accident. The instance's editorial state (`generated`, `generated_by_model`,
+// `version`, `user_modified`) stays on the admin API.
+
+export type PublicWordV1ShortTranslationT = {
+  /** @asType integer */
+  id: number;
+  language: AvailableTranslationLanguagesE;
+  description: string;
+  variants_of_words: string[];
+};
+
+export type PublicWordV1MeaningTranslationT = {
+  /** @asType integer */
+  id: number;
+  language: AvailableTranslationLanguagesE;
+  title: string;
+  definition: string;
+  variants_of_words: string[];
+};
+
+// `synonyms` and `antonyms` are the linked headwords (sorted, lowercase)
+export type PublicWordV1MeaningT = {
+  /** @asType integer */
+  id: number;
+  /** @asType integer */
+  sort_order: number;
+  title: string;
+  definition: string;
+  is_obsolete: boolean;
+  examples: string[];
+  categories: CategoryE[];
+  meaning_level: WordLevelE | null;
+  area_variant: EnAreaVariantsE;
+  language_register: LanguageRegisterE | null;
+  translations: PublicWordV1MeaningTranslationT[];
+  synonyms: string[];
+  antonyms: string[];
+};
+
+// An inflected form of an entry ("ran" of the verb "run")
+export type PublicWordV1FormT = {
+  /** @asType integer */
+  id: number;
+  word: string;
+  form_of_word: EnWordFormsE;
+  area_variant: EnAreaVariantsE;
+  transcription: string | null;
+};
+
+// An entry as the flat search answers it: the word itself, its grammar and
+// its forms — no meanings, no translations (the detailed search, the
+// headword and id reads carry those)
+export type PublicSearchWordV1T = {
+  /** @asType integer */
+  id: number;
+  word: string;
+  part_of_speech: EnPartOfSpeechE;
+  form_of_word: EnWordFormsE;
+  is_obsolete: boolean;
+  is_abbreviation: boolean;
+  word_level: WordLevelE | null;
+  area_variant: EnAreaVariantsE | null;
+  categories: CategoryE[];
+  language_register: LanguageRegisterE | null;
+  description: string | null;
+  transcription: string | null;
+  // grammar patterns the entry is used in
+  pattern: string[] | null;
+  noun___irregular_plural: boolean | null;
+  noun___uncountable: boolean | null;
+  noun___is_proper: boolean | null;
+  noun___always_plural: boolean | null;
+  verb___is_irregular: boolean | null;
+  verb___transitivity: EnVerbTransitivityE | null;
+  verb___is_phrasal: boolean | null;
+  verb___phrasal_object_pattern: EnPhrasalObjectPatternE | null;
+  // the headword of the base verb of a phrasal variant ("give" for "give up")
+  base_phrasal: string | null;
+  forms: PublicWordV1FormT[];
+  // Trigram similarity (0–1) to the search term, present only on the items
+  // of a fuzzy search answer (issue #278): the "did you mean" signal
+  similarity?: number;
+};
+
 // One dictionary entry with everything attached: forms, meanings (with their
-// translations, synonyms and antonyms) and short translations
-export type PublicWordV1T = EnWordT;
+// translations, synonyms and antonyms) and short translations. The detailed
+// search joins meanings and short translations on request only (empty lists
+// otherwise); `phrasal_variants` (the phrasal verbs built on this base verb)
+// is present on the headword, id, batch and random reads
+export type PublicWordV1T = PublicSearchWordV1T & {
+  meanings: PublicWordV1MeaningT[];
+  short_translations: PublicWordV1ShortTranslationT[];
+  phrasal_variants?: string[];
+};
 export type PublicWordV1ResT = PublicItemResT<PublicWordV1T>;
 
 // Every headword lookup answers for one spelling; `count` is the number of
@@ -71,14 +169,14 @@ export type PublicEntryRefV1T = {
   part_of_speech: EnPartOfSpeechE;
 };
 
-export type PublicMeaningV1T = EnMeaningT & PublicEntryRefV1T;
+export type PublicMeaningV1T = PublicWordV1MeaningT & PublicEntryRefV1T;
 export type PublicHeadwordMeaningsV1ResT = PublicListResT<PublicMeaningV1T, PublicHeadwordV1MetaT>;
 
-export type PublicWordFormV1T = EnWordFormT & PublicEntryRefV1T;
+export type PublicWordFormV1T = PublicWordV1FormT & PublicEntryRefV1T;
 export type PublicHeadwordFormsV1ResT = PublicListResT<PublicWordFormV1T, PublicHeadwordV1MetaT>;
 
-export type PublicShortTranslationV1T = EnShortTranslationT & PublicEntryRefV1T;
-export type PublicMeaningTranslationV1T = EnMeaningTranslationT &
+export type PublicShortTranslationV1T = PublicWordV1ShortTranslationT & PublicEntryRefV1T;
+export type PublicMeaningTranslationV1T = PublicWordV1MeaningTranslationT &
   PublicEntryRefV1T & {
     /** @asType integer */
     meaning_id: number;

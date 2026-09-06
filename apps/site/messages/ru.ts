@@ -158,7 +158,6 @@ export default {
     base_phrasal: 'Базовый глагол',
     synonyms: 'Синонимы',
     antonyms: 'Антонимы',
-    base_form: 'Базовая форма',
     phrasal_variants: 'Фразовые варианты',
     unavailable: 'Словарь сейчас недоступен — попробуйте через минуту.',
     report_button: 'Сообщить об ошибке',

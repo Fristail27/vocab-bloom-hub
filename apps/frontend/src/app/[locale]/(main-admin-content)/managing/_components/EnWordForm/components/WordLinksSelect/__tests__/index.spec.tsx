@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { EnPartOfSpeechE, EnSearchWordT, EnWordFormsE } from 'server/types';
+import { EnPartOfSpeechE, PublicSearchWordV1T, EnWordFormsE } from 'server/types';
 
 jest.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
@@ -22,14 +22,14 @@ const makeWord = (
   word: string,
   form_of_word = EnWordFormsE.base_form,
   part_of_speech = EnPartOfSpeechE.adjective,
-): EnSearchWordT =>
+): PublicSearchWordV1T =>
   ({
     id,
     word,
     part_of_speech,
     form_of_word,
     forms: [],
-  }) as unknown as EnSearchWordT;
+  }) as unknown as PublicSearchWordV1T;
 
 // the word span inside a dropdown option (the option also carries the part of speech)
 const optionWord = { selector: '.ant-select-item-option-content span' };

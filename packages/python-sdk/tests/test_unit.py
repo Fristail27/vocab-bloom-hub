@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from typing import Any
 
 import httpx
 import pytest
@@ -189,23 +190,43 @@ def test_etag_cache_revalidates_and_answers_304_from_it() -> None:
     assert cache.get(str(seen[2].url)).etag == 'W/"def"'  # type: ignore[union-attr]
 
 
+# The public projection of an entry (issue #392): every field the contract
+# lists, with the grammar left null the way an unannotated row answers
+def fake_word(i: int) -> dict[str, Any]:
+    return {
+        "id": i,
+        "word": f"w{i}",
+        "part_of_speech": "noun",
+        "form_of_word": "base_form",
+        "is_obsolete": False,
+        "is_abbreviation": False,
+        "word_level": None,
+        "area_variant": None,
+        "categories": [],
+        "language_register": None,
+        "description": None,
+        "transcription": None,
+        "pattern": None,
+        "noun___irregular_plural": None,
+        "noun___uncountable": None,
+        "noun___is_proper": None,
+        "noun___always_plural": None,
+        "verb___is_irregular": None,
+        "verb___transitivity": None,
+        "verb___is_phrasal": None,
+        "verb___phrasal_object_pattern": None,
+        "base_phrasal": None,
+        "forms": [],
+        "meanings": [],
+        "short_translations": [],
+    }
+
+
 def test_iter_words_walks_every_page() -> None:
     seen: list[str | None] = []
 
     def page(ids: list[int], next_cursor: str | None) -> httpx.Response:
-        data = [
-            {
-                "id": i,
-                "word": f"w{i}",
-                "part_of_speech": "noun",
-                "form_of_word": "base_form",
-                "version": "0",
-                "meanings": [],
-                "short_translations": [],
-                "forms": [],
-            }
-            for i in ids
-        ]
+        data = [fake_word(i) for i in ids]
         return json_response(
             {
                 "data": data,

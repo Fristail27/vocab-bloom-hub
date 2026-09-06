@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { EnPartOfSpeechE, EnWordFormsE, EnSearchWordT } from 'server/types';
+import { EnPartOfSpeechE, EnWordFormsE, PublicSearchWordV1T } from 'server/types';
 
 jest.mock('next-intl', () => ({
   useTranslations: () => {
@@ -23,14 +23,14 @@ const searchEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpoin
 const wordEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.word)!;
 const wordsEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.words)!;
 
-const makeWord = (id: number, word: string): EnSearchWordT =>
+const makeWord = (id: number, word: string): PublicSearchWordV1T =>
   ({
     id,
     word,
     part_of_speech: EnPartOfSpeechE.verb,
     form_of_word: EnWordFormsE.base_form,
     forms: [],
-  }) as unknown as EnSearchWordT;
+  }) as unknown as PublicSearchWordV1T;
 
 const typeSearch = (value: string) => fireEvent.change(screen.getByRole('textbox'), { target: { value } });
 

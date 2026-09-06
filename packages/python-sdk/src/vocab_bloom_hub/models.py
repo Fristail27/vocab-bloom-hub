@@ -11,8 +11,8 @@ from __future__ import annotations
 from ._generated import models as _g
 
 # ------------------------------------------------------------- entities
-Word = _g.EnWordT
-SearchWord = _g.EnSearchWordT
+Word = _g.PublicWordV1T
+SearchWord = _g.PublicSearchWordV1T
 Meaning = _g.PublicMeaningV1T
 WordForm = _g.PublicWordFormV1T
 ShortTranslation = _g.PublicShortTranslationV1T

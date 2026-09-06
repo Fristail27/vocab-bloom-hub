@@ -51,18 +51,18 @@ Every successful answer is an envelope: the payload under `data`, paging and cou
 
 | Method | Path                                | Query / body                                                                                           | Response                                                                                        |
 | ------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| `GET`  | `/api/v1/search`                    | `search`, `type?`, `limit?`                                                                            | `{ data: EnSearchWordT[], meta: { count, fuzzy, short_term } }`                                 |
-| `GET`  | `/api/v1/search/detailed`           | `search`, `type?`, `limit?`, `page?`, `with_meanings?`, `with_translations?`, `translation_languages?` | `{ data: EnWordT[], meta: { page, limit, has_more, fuzzy, short_term } }`                       |
-| `POST` | `/api/v1/search`                    | `{ search, type?, limit? }` — the same search, not cacheable                                           | `{ data: EnSearchWordT[], meta: { count, fuzzy, short_term } }`                                 |
-| `POST` | `/api/v1/search/detailed`           | `{ search, type?, limit?, page?, with_meanings?, with_translations?, translation_languages? }`         | `{ data: EnWordT[], meta: { page, limit, has_more, fuzzy, short_term } }`                       |
-| `GET`  | `/api/v1/words/{word}`              | —                                                                                                      | `{ data: EnWordT[], meta: { word, count } }`                                                    |
-| `POST` | `/api/v1/words/batch`               | `{ words: string[] }` (1–50)                                                                           | `{ data: { word, count, entries: EnWordT[] }[], meta: { count, not_found } }`                   |
+| `GET`  | `/api/v1/search`                    | `search`, `type?`, `limit?`                                                                            | `{ data: PublicSearchWordV1T[], meta: { count, fuzzy, short_term } }`                           |
+| `GET`  | `/api/v1/search/detailed`           | `search`, `type?`, `limit?`, `page?`, `with_meanings?`, `with_translations?`, `translation_languages?` | `{ data: PublicWordV1T[], meta: { page, limit, has_more, fuzzy, short_term } }`                 |
+| `POST` | `/api/v1/search`                    | `{ search, type?, limit? }` — the same search, not cacheable                                           | `{ data: PublicSearchWordV1T[], meta: { count, fuzzy, short_term } }`                           |
+| `POST` | `/api/v1/search/detailed`           | `{ search, type?, limit?, page?, with_meanings?, with_translations?, translation_languages? }`         | `{ data: PublicWordV1T[], meta: { page, limit, has_more, fuzzy, short_term } }`                 |
+| `GET`  | `/api/v1/words/{word}`              | —                                                                                                      | `{ data: PublicWordV1T[], meta: { word, count } }`                                              |
+| `POST` | `/api/v1/words/batch`               | `{ words: string[] }` (1–50)                                                                           | `{ data: { word, count, entries: PublicWordV1T[] }[], meta: { count, not_found } }`             |
 | `GET`  | `/api/v1/words/{word}/meanings`     | —                                                                                                      | `{ data: PublicMeaningV1T[], meta: { word, count } }`                                           |
 | `GET`  | `/api/v1/words/{word}/translations` | `language?`                                                                                            | `{ data: { short_translations, meaning_translations }, meta }`                                  |
 | `GET`  | `/api/v1/words/{word}/forms`        | —                                                                                                      | `{ data: PublicWordFormV1T[], meta: { word, count } }`                                          |
-| `GET`  | `/api/v1/words/id/{id}`             | —                                                                                                      | `{ data: EnWordT }`                                                                             |
-| `GET`  | `/api/v1/words`                     | filters, `cursor?`, `limit?`, `with_meanings?`, `with_translations?`                                   | `{ data: EnWordT[], meta: { limit, has_more, next_cursor } }`                                   |
-| `GET`  | `/api/v1/random`                    | filters                                                                                                | `{ data: EnWordT }`                                                                             |
+| `GET`  | `/api/v1/words/id/{id}`             | —                                                                                                      | `{ data: PublicWordV1T }`                                                                       |
+| `GET`  | `/api/v1/words`                     | filters, `cursor?`, `limit?`, `with_meanings?`, `with_translations?`                                   | `{ data: PublicWordV1T[], meta: { limit, has_more, next_cursor } }`                             |
+| `GET`  | `/api/v1/random`                    | filters                                                                                                | `{ data: PublicWordV1T }`                                                                       |
 | `GET`  | `/api/v1/meta`                      | —                                                                                                      | `{ data: { api_version, app_version, dataset_version, license, counts, available_languages } }` |
 | `POST` | `/api/v1/suggestions`               | `{ headword, word_id?, message?, kind?, edits? }`                                                      | `201 { data: { id, status } }`                                                                  |
 
@@ -167,10 +167,12 @@ whatever its size; instances exposed to the open internet size `PUBLIC_API_RATE_
 that in mind. Being a `POST`, it carries no cache validators; a consumer that re-reads the same
 words benefits from the cached single reads instead.
 
-Word items carry `user_modified` (issue #328): `true` when the instance admin edited the
-entry, so its content is the instance's own rather than the published dataset's — dictionary
-updates keep such entries (see
-[operations.md](./operations.md#dataset-updates-vs-code-updates)).
+Word items are an explicit projection of the dictionary rows (issue #392): the fields of
+`PublicWordV1T` and its parts in `apps/server/types/public/v1/index.ts` are the whole promise,
+each assigned by name from the row (`src/modules/PublicApiModule/utils/projection.ts`), so a
+column added to the database does not become public by accident. The instance's editorial
+state — `generated`, `generated_by_model`, `version`, `user_modified` — is not part of v1; it
+stays on the admin API (`GET /api/en/{id}`), where the admin UI reads it.
 
 #### Filtered list and cursor pagination
 

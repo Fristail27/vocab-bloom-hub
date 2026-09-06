@@ -2,7 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
-import type { EnMeaningT, EnWordT } from 'server/types';
+import type { PublicWordV1MeaningT, PublicWordV1T } from 'server/types';
 
 import { Pronounce } from '@/components/Pronounce';
 import { ReportMistake } from '@/components/ReportMistake';
@@ -56,7 +56,7 @@ type TranslateT = Awaited<ReturnType<typeof getTranslations>>;
 const humanize = (value: string): string => value.replace(/_/g, ' ');
 
 // the grammar flags of an entry as short localized phrases (issue #399)
-const grammarOf = (entry: EnWordT, t: TranslateT): string[] =>
+const grammarOf = (entry: PublicWordV1T, t: TranslateT): string[] =>
   [
     entry.noun___uncountable && t('uncountable'),
     entry.noun___always_plural && t('always_plural'),
@@ -67,7 +67,7 @@ const grammarOf = (entry: EnWordT, t: TranslateT): string[] =>
     entry.verb___phrasal_object_pattern && t(`phrasal_${entry.verb___phrasal_object_pattern}`),
   ].filter((item): item is string => Boolean(item));
 
-const Meaning = ({ meaning, t }: { meaning: EnMeaningT; t: TranslateT }) => (
+const Meaning = ({ meaning, t }: { meaning: PublicWordV1MeaningT; t: TranslateT }) => (
   <li>
     {meaning.title && <span className={styles.meaningTitle}>{meaning.title}</span>}
     {meaning.meaning_level && <span className={styles.tag}> {meaning.meaning_level}</span>}
@@ -118,7 +118,7 @@ const Meaning = ({ meaning, t }: { meaning: EnMeaningT; t: TranslateT }) => (
   </li>
 );
 
-const Entry = ({ entry, t }: { entry: EnWordT; t: TranslateT }) => {
+const Entry = ({ entry, t }: { entry: PublicWordV1T; t: TranslateT }) => {
   const grammar = grammarOf(entry, t);
 
   return (
@@ -172,11 +172,6 @@ const Entry = ({ entry, t }: { entry: EnWordT; t: TranslateT }) => {
             </li>
           ))}
         </ul>
-      )}
-      {entry.base_form && (
-        <p className={styles.relations}>
-          {t('base_form')}: <WordLink word={entry.base_form.word} />
-        </p>
       )}
       {entry.base_phrasal && (
         <p className={styles.relations}>

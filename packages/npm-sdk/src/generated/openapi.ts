@@ -326,59 +326,35 @@ export interface components {
       short_term: boolean;
     };
     PublicSearchV1ResT: {
-      data: components['schemas']['EnSearchWordT'][];
+      data: components['schemas']['PublicSearchWordV1T'][];
       meta: components['schemas']['PublicSearchV1MetaT'];
     };
-    EnSearchWordT: {
+    PublicSearchWordV1T: {
       id: number;
-      generated?: boolean;
-      generated_by_model?: string | null;
-      is_obsolete?: boolean | null;
-      is_abbreviation?: boolean | null;
-      word_level?: components['schemas']['WordLevelE'] | null;
-      area_variant?: components['schemas']['EnAreaVariantsE'] | null;
-      categories?: components['schemas']['CategoryE'][];
-      language_register?: components['schemas']['LanguageRegisterE'] | null;
+      word: string;
       part_of_speech: components['schemas']['EnPartOfSpeechE'];
       form_of_word: components['schemas']['EnWordFormsE'];
-      description?: string | null;
-      transcription?: string | null;
-      pattern?: string[] | null;
-      noun___irregular_plural?: boolean | null;
-      noun___uncountable?: boolean | null;
-      noun___is_proper?: boolean | null;
-      noun___always_plural?: boolean | null;
-      verb___is_irregular?: boolean | null;
-      verb___transitivity?: components['schemas']['EnVerbTransitivityE'] | null;
-      verb___is_phrasal?: boolean | null;
-      verb___phrasal_object_pattern?: components['schemas']['EnPhrasalObjectPatternE'] | null;
-      version: string;
-      word: string;
-      forms: components['schemas']['EnWordFormT'][];
-      phrasal_variants?: string[];
-      base_phrasal?: string;
-      base_form?: Record<string, never>;
+      is_obsolete: boolean;
+      is_abbreviation: boolean;
+      word_level: components['schemas']['WordLevelE'] | null;
+      area_variant: components['schemas']['EnAreaVariantsE'] | null;
+      categories: components['schemas']['CategoryE'][];
+      language_register: components['schemas']['LanguageRegisterE'] | null;
+      description: string | null;
+      transcription: string | null;
+      pattern: string[] | null;
+      noun___irregular_plural: boolean | null;
+      noun___uncountable: boolean | null;
+      noun___is_proper: boolean | null;
+      noun___always_plural: boolean | null;
+      verb___is_irregular: boolean | null;
+      verb___transitivity: components['schemas']['EnVerbTransitivityE'] | null;
+      verb___is_phrasal: boolean | null;
+      verb___phrasal_object_pattern: components['schemas']['EnPhrasalObjectPatternE'] | null;
+      base_phrasal: string | null;
+      forms: components['schemas']['PublicWordV1FormT'][];
       similarity?: number;
-      user_modified?: boolean;
     };
-    /** @enum {string} */
-    WordLevelE: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
-    /** @enum {string} */
-    EnAreaVariantsE: 'common' | 'british' | 'american' | 'australian';
-    /** @enum {string} */
-    CategoryE:
-      | 'scientific'
-      | 'technical'
-      | 'medical'
-      | 'legal'
-      | 'business'
-      | 'IT'
-      | 'art'
-      | 'political'
-      | 'sport'
-      | 'culinary';
-    /** @enum {string} */
-    LanguageRegisterE: 'formal' | 'informal' | 'slang';
     /** @enum {string} */
     EnPartOfSpeechE:
       | 'noun'
@@ -416,16 +392,33 @@ export interface components {
       | 'ordinal'
       | 'multiplicative';
     /** @enum {string} */
+    WordLevelE: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+    /** @enum {string} */
+    EnAreaVariantsE: 'common' | 'british' | 'american' | 'australian';
+    /** @enum {string} */
+    CategoryE:
+      | 'scientific'
+      | 'technical'
+      | 'medical'
+      | 'legal'
+      | 'business'
+      | 'IT'
+      | 'art'
+      | 'political'
+      | 'sport'
+      | 'culinary';
+    /** @enum {string} */
+    LanguageRegisterE: 'formal' | 'informal' | 'slang';
+    /** @enum {string} */
     EnVerbTransitivityE: 'transitive' | 'intransitive' | 'both';
     /** @enum {string} */
     EnPhrasalObjectPatternE: 'no_object' | 'inseparable' | 'separable' | 'separable_pronoun_only';
-    EnWordFormT: {
-      word: string;
-      area_variant: components['schemas']['EnAreaVariantsE'];
+    PublicWordV1FormT: {
       id: number;
-      transcription?: string | null;
+      word: string;
       form_of_word: components['schemas']['EnWordFormsE'];
-      is_obsolete?: boolean | null;
+      area_variant: components['schemas']['EnAreaVariantsE'];
+      transcription: string | null;
     };
     PublicSearchDetailedV1MetaT: {
       page: number;
@@ -435,59 +428,54 @@ export interface components {
       short_term: boolean;
     };
     PublicSearchDetailedV1ResT: {
-      data: components['schemas']['EnWordT'][];
+      data: components['schemas']['PublicWordV1T'][];
       meta: components['schemas']['PublicSearchDetailedV1MetaT'];
     };
-    EnWordT: {
-      word: string;
-      meanings: components['schemas']['EnMeaningT'][];
-      short_translations: components['schemas']['EnShortTranslationT'][];
-      forms: components['schemas']['EnWordFormT'][];
+    PublicWordV1T: {
+      meanings: components['schemas']['PublicWordV1MeaningT'][];
+      short_translations: components['schemas']['PublicWordV1ShortTranslationT'][];
       phrasal_variants?: string[];
-      base_phrasal?: string;
-      base_form?: Record<string, never>;
-      similarity?: number;
-      user_modified?: boolean;
       id: number;
-      generated?: boolean;
-      generated_by_model?: string | null;
-      is_obsolete?: boolean | null;
-      is_abbreviation?: boolean | null;
-      word_level?: components['schemas']['WordLevelE'] | null;
-      area_variant?: components['schemas']['EnAreaVariantsE'] | null;
-      categories?: components['schemas']['CategoryE'][];
-      language_register?: components['schemas']['LanguageRegisterE'] | null;
+      word: string;
       part_of_speech: components['schemas']['EnPartOfSpeechE'];
       form_of_word: components['schemas']['EnWordFormsE'];
-      description?: string | null;
-      transcription?: string | null;
-      pattern?: string[] | null;
-      noun___irregular_plural?: boolean | null;
-      noun___uncountable?: boolean | null;
-      noun___is_proper?: boolean | null;
-      noun___always_plural?: boolean | null;
-      verb___is_irregular?: boolean | null;
-      verb___transitivity?: components['schemas']['EnVerbTransitivityE'] | null;
-      verb___is_phrasal?: boolean | null;
-      verb___phrasal_object_pattern?: components['schemas']['EnPhrasalObjectPatternE'] | null;
-      version: string;
+      is_obsolete: boolean;
+      is_abbreviation: boolean;
+      word_level: components['schemas']['WordLevelE'] | null;
+      area_variant: components['schemas']['EnAreaVariantsE'] | null;
+      categories: components['schemas']['CategoryE'][];
+      language_register: components['schemas']['LanguageRegisterE'] | null;
+      description: string | null;
+      transcription: string | null;
+      pattern: string[] | null;
+      noun___irregular_plural: boolean | null;
+      noun___uncountable: boolean | null;
+      noun___is_proper: boolean | null;
+      noun___always_plural: boolean | null;
+      verb___is_irregular: boolean | null;
+      verb___transitivity: components['schemas']['EnVerbTransitivityE'] | null;
+      verb___is_phrasal: boolean | null;
+      verb___phrasal_object_pattern: components['schemas']['EnPhrasalObjectPatternE'] | null;
+      base_phrasal: string | null;
+      forms: components['schemas']['PublicWordV1FormT'][];
+      similarity?: number;
     };
-    EnMeaningT: {
-      translations: components['schemas']['EnMeaningTranslationT'][];
-      synonyms: string[];
-      antonyms: string[];
+    PublicWordV1MeaningT: {
       id: number;
-      categories?: components['schemas']['CategoryE'][] | null;
-      meaning_level?: components['schemas']['WordLevelE'] | null;
-      area_variant: components['schemas']['EnAreaVariantsE'];
-      language_register?: components['schemas']['LanguageRegisterE'] | null;
       sort_order: number;
       title: string;
       definition: string;
       is_obsolete: boolean;
       examples: string[];
+      categories: components['schemas']['CategoryE'][];
+      meaning_level: components['schemas']['WordLevelE'] | null;
+      area_variant: components['schemas']['EnAreaVariantsE'];
+      language_register: components['schemas']['LanguageRegisterE'] | null;
+      translations: components['schemas']['PublicWordV1MeaningTranslationT'][];
+      synonyms: string[];
+      antonyms: string[];
     };
-    EnMeaningTranslationT: {
+    PublicWordV1MeaningTranslationT: {
       id: number;
       language: components['schemas']['AvailableTranslationLanguagesE'];
       title: string;
@@ -496,39 +484,39 @@ export interface components {
     };
     /** @enum {string} */
     AvailableTranslationLanguagesE: 'ru';
-    EnShortTranslationT: {
+    PublicWordV1ShortTranslationT: {
       id: number;
-      description: string;
       language: components['schemas']['AvailableTranslationLanguagesE'];
+      description: string;
       variants_of_words: string[];
     };
     PublicWordV1ResT: {
-      data: components['schemas']['EnWordT'];
+      data: components['schemas']['PublicWordV1T'];
     };
     PublicHeadwordV1MetaT: {
       word: string;
       count: number;
     };
     PublicHeadwordV1ResT: {
-      data: components['schemas']['EnWordT'][];
+      data: components['schemas']['PublicWordV1T'][];
       meta: components['schemas']['PublicHeadwordV1MetaT'];
     };
     PublicMeaningV1T: {
       word_id: number;
       part_of_speech: components['schemas']['EnPartOfSpeechE'];
-      translations: components['schemas']['EnMeaningTranslationT'][];
-      synonyms: string[];
-      antonyms: string[];
       id: number;
-      categories?: components['schemas']['CategoryE'][] | null;
-      meaning_level?: components['schemas']['WordLevelE'] | null;
-      area_variant: components['schemas']['EnAreaVariantsE'];
-      language_register?: components['schemas']['LanguageRegisterE'] | null;
       sort_order: number;
       title: string;
       definition: string;
       is_obsolete: boolean;
       examples: string[];
+      categories: components['schemas']['CategoryE'][];
+      meaning_level: components['schemas']['WordLevelE'] | null;
+      area_variant: components['schemas']['EnAreaVariantsE'];
+      language_register: components['schemas']['LanguageRegisterE'] | null;
+      translations: components['schemas']['PublicWordV1MeaningTranslationT'][];
+      synonyms: string[];
+      antonyms: string[];
     };
     PublicHeadwordMeaningsV1ResT: {
       data: components['schemas']['PublicMeaningV1T'][];
@@ -537,12 +525,11 @@ export interface components {
     PublicWordFormV1T: {
       word_id: number;
       part_of_speech: components['schemas']['EnPartOfSpeechE'];
-      word: string;
-      area_variant: components['schemas']['EnAreaVariantsE'];
       id: number;
-      transcription?: string | null;
+      word: string;
       form_of_word: components['schemas']['EnWordFormsE'];
-      is_obsolete?: boolean | null;
+      area_variant: components['schemas']['EnAreaVariantsE'];
+      transcription: string | null;
     };
     PublicHeadwordFormsV1ResT: {
       data: components['schemas']['PublicWordFormV1T'][];
@@ -552,8 +539,8 @@ export interface components {
       word_id: number;
       part_of_speech: components['schemas']['EnPartOfSpeechE'];
       id: number;
-      description: string;
       language: components['schemas']['AvailableTranslationLanguagesE'];
+      description: string;
       variants_of_words: string[];
     };
     PublicMeaningTranslationV1T: {
@@ -577,7 +564,7 @@ export interface components {
     PublicWordsBatchItemV1T: {
       word: string;
       count: number;
-      entries: components['schemas']['EnWordT'][];
+      entries: components['schemas']['PublicWordV1T'][];
     };
     PublicWordsBatchV1MetaT: {
       count: number;
@@ -593,7 +580,7 @@ export interface components {
       next_cursor: string | null;
     };
     PublicWordsV1ResT: {
-      data: components['schemas']['EnWordT'][];
+      data: components['schemas']['PublicWordV1T'][];
       meta: components['schemas']['PublicWordsV1MetaT'];
     };
     PublicDatasetCountsV1T: {

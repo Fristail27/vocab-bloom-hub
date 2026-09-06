@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import type { EnSearchWordT, PublicSearchV1ResT } from 'server/types';
+import type { PublicSearchWordV1T, PublicSearchV1ResT } from 'server/types';
 
 import { browserApiBase } from '@/core/apiBase';
 import { Link } from '@/i18n/navigation';
@@ -12,7 +12,7 @@ import styles from './styles.module.scss';
 type StateT =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'results'; items: EnSearchWordT[]; fuzzy: boolean }
+  | { kind: 'results'; items: PublicSearchWordV1T[]; fuzzy: boolean }
   | { kind: 'error' };
 
 // the search term travels in ?q= so a search can be shared and reloaded

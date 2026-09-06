@@ -1463,7 +1463,7 @@
           "data": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/EnSearchWordT"
+              "$ref": "#/components/schemas/PublicSearchWordV1T"
             }
           },
           "meta": {
@@ -1475,26 +1475,26 @@
           "meta"
         ]
       },
-      "EnSearchWordT": {
+      "PublicSearchWordV1T": {
         "type": "object",
         "properties": {
           "id": {
             "type": "integer"
           },
-          "generated": {
-            "type": "boolean"
+          "word": {
+            "type": "string"
           },
-          "generated_by_model": {
-            "type": "string",
-            "nullable": true
+          "part_of_speech": {
+            "$ref": "#/components/schemas/EnPartOfSpeechE"
+          },
+          "form_of_word": {
+            "$ref": "#/components/schemas/EnWordFormsE"
           },
           "is_obsolete": {
-            "type": "boolean",
-            "nullable": true
+            "type": "boolean"
           },
           "is_abbreviation": {
-            "type": "boolean",
-            "nullable": true
+            "type": "boolean"
           },
           "word_level": {
             "allOf": [
@@ -1525,12 +1525,6 @@
               }
             ],
             "nullable": true
-          },
-          "part_of_speech": {
-            "$ref": "#/components/schemas/EnPartOfSpeechE"
-          },
-          "form_of_word": {
-            "$ref": "#/components/schemas/EnWordFormsE"
           },
           "description": {
             "type": "string",
@@ -1587,44 +1581,86 @@
             ],
             "nullable": true
           },
-          "version": {
-            "type": "string"
-          },
-          "word": {
-            "type": "string"
+          "base_phrasal": {
+            "type": "string",
+            "nullable": true
           },
           "forms": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/EnWordFormT"
+              "$ref": "#/components/schemas/PublicWordV1FormT"
             }
-          },
-          "phrasal_variants": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "base_phrasal": {
-            "type": "string"
-          },
-          "base_form": {
-            "type": "object"
           },
           "similarity": {
             "type": "number"
-          },
-          "user_modified": {
-            "type": "boolean"
           }
         },
         "required": [
           "id",
+          "word",
           "part_of_speech",
           "form_of_word",
-          "version",
-          "word",
+          "is_obsolete",
+          "is_abbreviation",
+          "word_level",
+          "area_variant",
+          "categories",
+          "language_register",
+          "description",
+          "transcription",
+          "pattern",
+          "noun___irregular_plural",
+          "noun___uncountable",
+          "noun___is_proper",
+          "noun___always_plural",
+          "verb___is_irregular",
+          "verb___transitivity",
+          "verb___is_phrasal",
+          "verb___phrasal_object_pattern",
+          "base_phrasal",
           "forms"
+        ]
+      },
+      "EnPartOfSpeechE": {
+        "type": "string",
+        "enum": [
+          "noun",
+          "verb",
+          "modal_verb",
+          "adjective",
+          "adverb",
+          "pronoun",
+          "numeral",
+          "numeral_fractional",
+          "determiner",
+          "interjection",
+          "article",
+          "preposition",
+          "conjunction",
+          "letter",
+          "phrase",
+          "grammar_pattern"
+        ]
+      },
+      "EnWordFormsE": {
+        "type": "string",
+        "enum": [
+          "base_form",
+          "plural_form",
+          "possessive_singular_form",
+          "possessive_plural_form",
+          "past_simple",
+          "past_participle",
+          "present_participle",
+          "third_person_singular",
+          "comparative_form",
+          "superlative_form",
+          "object",
+          "possessive_adjective",
+          "possessive_pronoun",
+          "reflexive",
+          "ordinal",
+          "multiplicative"
         ]
       },
       "WordLevelE": {
@@ -1670,48 +1706,6 @@
           "slang"
         ]
       },
-      "EnPartOfSpeechE": {
-        "type": "string",
-        "enum": [
-          "noun",
-          "verb",
-          "modal_verb",
-          "adjective",
-          "adverb",
-          "pronoun",
-          "numeral",
-          "numeral_fractional",
-          "determiner",
-          "interjection",
-          "article",
-          "preposition",
-          "conjunction",
-          "letter",
-          "phrase",
-          "grammar_pattern"
-        ]
-      },
-      "EnWordFormsE": {
-        "type": "string",
-        "enum": [
-          "base_form",
-          "plural_form",
-          "possessive_singular_form",
-          "possessive_plural_form",
-          "past_simple",
-          "past_participle",
-          "present_participle",
-          "third_person_singular",
-          "comparative_form",
-          "superlative_form",
-          "object",
-          "possessive_adjective",
-          "possessive_pronoun",
-          "reflexive",
-          "ordinal",
-          "multiplicative"
-        ]
-      },
       "EnVerbTransitivityE": {
         "type": "string",
         "enum": [
@@ -1729,35 +1723,32 @@
           "separable_pronoun_only"
         ]
       },
-      "EnWordFormT": {
+      "PublicWordV1FormT": {
         "type": "object",
         "properties": {
-          "word": {
-            "type": "string"
-          },
-          "area_variant": {
-            "$ref": "#/components/schemas/EnAreaVariantsE"
-          },
           "id": {
             "type": "integer"
           },
-          "transcription": {
-            "type": "string",
-            "nullable": true
+          "word": {
+            "type": "string"
           },
           "form_of_word": {
             "$ref": "#/components/schemas/EnWordFormsE"
           },
-          "is_obsolete": {
-            "type": "boolean",
+          "area_variant": {
+            "$ref": "#/components/schemas/EnAreaVariantsE"
+          },
+          "transcription": {
+            "type": "string",
             "nullable": true
           }
         },
         "required": [
-          "area_variant",
-          "form_of_word",
           "id",
-          "word"
+          "word",
+          "form_of_word",
+          "area_variant",
+          "transcription"
         ]
       },
       "PublicSearchDetailedV1MetaT": {
@@ -1793,7 +1784,7 @@
           "data": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/EnWordT"
+              "$ref": "#/components/schemas/PublicWordV1T"
             }
           },
           "meta": {
@@ -1805,28 +1796,19 @@
           "meta"
         ]
       },
-      "EnWordT": {
+      "PublicWordV1T": {
         "type": "object",
         "properties": {
-          "word": {
-            "type": "string"
-          },
           "meanings": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/EnMeaningT"
+              "$ref": "#/components/schemas/PublicWordV1MeaningT"
             }
           },
           "short_translations": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/EnShortTranslationT"
-            }
-          },
-          "forms": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/EnWordFormT"
+              "$ref": "#/components/schemas/PublicWordV1ShortTranslationT"
             }
           },
           "phrasal_variants": {
@@ -1835,35 +1817,23 @@
               "type": "string"
             }
           },
-          "base_phrasal": {
-            "type": "string"
-          },
-          "base_form": {
-            "type": "object"
-          },
-          "similarity": {
-            "type": "number"
-          },
-          "user_modified": {
-            "type": "boolean"
-          },
           "id": {
             "type": "integer"
           },
-          "generated": {
-            "type": "boolean"
+          "word": {
+            "type": "string"
           },
-          "generated_by_model": {
-            "type": "string",
-            "nullable": true
+          "part_of_speech": {
+            "$ref": "#/components/schemas/EnPartOfSpeechE"
+          },
+          "form_of_word": {
+            "$ref": "#/components/schemas/EnWordFormsE"
           },
           "is_obsolete": {
-            "type": "boolean",
-            "nullable": true
+            "type": "boolean"
           },
           "is_abbreviation": {
-            "type": "boolean",
-            "nullable": true
+            "type": "boolean"
           },
           "word_level": {
             "allOf": [
@@ -1894,12 +1864,6 @@
               }
             ],
             "nullable": true
-          },
-          "part_of_speech": {
-            "$ref": "#/components/schemas/EnPartOfSpeechE"
-          },
-          "form_of_word": {
-            "$ref": "#/components/schemas/EnWordFormsE"
           },
           "description": {
             "type": "string",
@@ -1956,51 +1920,77 @@
             ],
             "nullable": true
           },
-          "version": {
-            "type": "string"
+          "base_phrasal": {
+            "type": "string",
+            "nullable": true
+          },
+          "forms": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicWordV1FormT"
+            }
+          },
+          "similarity": {
+            "type": "number"
           }
         },
         "required": [
+          "area_variant",
+          "base_phrasal",
+          "categories",
+          "description",
           "form_of_word",
           "forms",
           "id",
+          "is_abbreviation",
+          "is_obsolete",
+          "language_register",
           "meanings",
+          "noun___always_plural",
+          "noun___irregular_plural",
+          "noun___is_proper",
+          "noun___uncountable",
           "part_of_speech",
+          "pattern",
           "short_translations",
-          "version",
-          "word"
+          "transcription",
+          "verb___is_irregular",
+          "verb___is_phrasal",
+          "verb___phrasal_object_pattern",
+          "verb___transitivity",
+          "word",
+          "word_level"
         ]
       },
-      "EnMeaningT": {
+      "PublicWordV1MeaningT": {
         "type": "object",
         "properties": {
-          "translations": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/EnMeaningTranslationT"
-            }
-          },
-          "synonyms": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "antonyms": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
           "id": {
             "type": "integer"
+          },
+          "sort_order": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "definition": {
+            "type": "string"
+          },
+          "is_obsolete": {
+            "type": "boolean"
+          },
+          "examples": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "categories": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CategoryE"
-            },
-            "nullable": true
+            }
           },
           "meaning_level": {
             "allOf": [
@@ -2021,19 +2011,19 @@
             ],
             "nullable": true
           },
-          "sort_order": {
-            "type": "integer"
+          "translations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicWordV1MeaningTranslationT"
+            }
           },
-          "title": {
-            "type": "string"
+          "synonyms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
-          "definition": {
-            "type": "string"
-          },
-          "is_obsolete": {
-            "type": "boolean"
-          },
-          "examples": {
+          "antonyms": {
             "type": "array",
             "items": {
               "type": "string"
@@ -2041,19 +2031,22 @@
           }
         },
         "required": [
-          "antonyms",
-          "area_variant",
-          "definition",
-          "examples",
           "id",
-          "is_obsolete",
           "sort_order",
-          "synonyms",
           "title",
-          "translations"
+          "definition",
+          "is_obsolete",
+          "examples",
+          "categories",
+          "meaning_level",
+          "area_variant",
+          "language_register",
+          "translations",
+          "synonyms",
+          "antonyms"
         ]
       },
-      "EnMeaningTranslationT": {
+      "PublicWordV1MeaningTranslationT": {
         "type": "object",
         "properties": {
           "id": {
@@ -2089,17 +2082,17 @@
           "ru"
         ]
       },
-      "EnShortTranslationT": {
+      "PublicWordV1ShortTranslationT": {
         "type": "object",
         "properties": {
           "id": {
             "type": "integer"
           },
-          "description": {
-            "type": "string"
-          },
           "language": {
             "$ref": "#/components/schemas/AvailableTranslationLanguagesE"
+          },
+          "description": {
+            "type": "string"
           },
           "variants_of_words": {
             "type": "array",
@@ -2110,8 +2103,8 @@
         },
         "required": [
           "id",
-          "description",
           "language",
+          "description",
           "variants_of_words"
         ]
       },
@@ -2119,7 +2112,7 @@
         "type": "object",
         "properties": {
           "data": {
-            "$ref": "#/components/schemas/EnWordT"
+            "$ref": "#/components/schemas/PublicWordV1T"
           }
         },
         "required": [
@@ -2147,7 +2140,7 @@
           "data": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/EnWordT"
+              "$ref": "#/components/schemas/PublicWordV1T"
             }
           },
           "meta": {
@@ -2168,33 +2161,32 @@
           "part_of_speech": {
             "$ref": "#/components/schemas/EnPartOfSpeechE"
           },
-          "translations": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/EnMeaningTranslationT"
-            }
-          },
-          "synonyms": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "antonyms": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
           "id": {
             "type": "integer"
+          },
+          "sort_order": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "definition": {
+            "type": "string"
+          },
+          "is_obsolete": {
+            "type": "boolean"
+          },
+          "examples": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "categories": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CategoryE"
-            },
-            "nullable": true
+            }
           },
           "meaning_level": {
             "allOf": [
@@ -2215,19 +2207,19 @@
             ],
             "nullable": true
           },
-          "sort_order": {
-            "type": "integer"
+          "translations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicWordV1MeaningTranslationT"
+            }
           },
-          "title": {
-            "type": "string"
+          "synonyms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
-          "definition": {
-            "type": "string"
-          },
-          "is_obsolete": {
-            "type": "boolean"
-          },
-          "examples": {
+          "antonyms": {
             "type": "array",
             "items": {
               "type": "string"
@@ -2237,10 +2229,13 @@
         "required": [
           "antonyms",
           "area_variant",
+          "categories",
           "definition",
           "examples",
           "id",
           "is_obsolete",
+          "language_register",
+          "meaning_level",
           "part_of_speech",
           "sort_order",
           "synonyms",
@@ -2276,24 +2271,20 @@
           "part_of_speech": {
             "$ref": "#/components/schemas/EnPartOfSpeechE"
           },
-          "word": {
-            "type": "string"
-          },
-          "area_variant": {
-            "$ref": "#/components/schemas/EnAreaVariantsE"
-          },
           "id": {
             "type": "integer"
           },
-          "transcription": {
-            "type": "string",
-            "nullable": true
+          "word": {
+            "type": "string"
           },
           "form_of_word": {
             "$ref": "#/components/schemas/EnWordFormsE"
           },
-          "is_obsolete": {
-            "type": "boolean",
+          "area_variant": {
+            "$ref": "#/components/schemas/EnAreaVariantsE"
+          },
+          "transcription": {
+            "type": "string",
             "nullable": true
           }
         },
@@ -2302,6 +2293,7 @@
           "form_of_word",
           "id",
           "part_of_speech",
+          "transcription",
           "word",
           "word_id"
         ]
@@ -2336,11 +2328,11 @@
           "id": {
             "type": "integer"
           },
-          "description": {
-            "type": "string"
-          },
           "language": {
             "$ref": "#/components/schemas/AvailableTranslationLanguagesE"
+          },
+          "description": {
+            "type": "string"
           },
           "variants_of_words": {
             "type": "array",
@@ -2448,7 +2440,7 @@
           "entries": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/EnWordT"
+              "$ref": "#/components/schemas/PublicWordV1T"
             }
           }
         },
@@ -2520,7 +2512,7 @@
           "data": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/EnWordT"
+              "$ref": "#/components/schemas/PublicWordV1T"
             }
           },
           "meta": {
