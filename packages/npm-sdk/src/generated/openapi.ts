@@ -81,7 +81,7 @@ export interface paths {
     };
     /**
      * List dictionary entries by filters, cursor-paged and ordered by (word, id)
-     * @description Every filter accepts a repeated key; values of one filter are OR-ed, filters are AND-ed. Pass `meta.next_cursor` back as `cursor` to read the next page.
+     * @description Every enum filter accepts a repeated key; values of one filter are OR-ed, filters are AND-ed. `search` keeps the headwords starting with the prefix (an autocomplete or an A–Z browser: cacheable, unlike the search). Pass `meta.next_cursor` back as `cursor` to read the next page.
      */
     get: operations['PublicWordsController_list'];
     put?: never;
@@ -155,6 +155,46 @@ export interface paths {
     };
     /** The meanings of a headword across its entries */
     get: operations['PublicWordsController_meanings'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/words/{word}/synonyms': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * The synonyms of a headword, per meaning
+     * @description One item per linked headword and meaning; each names its `meaning_id`, `word_id` and `part_of_speech`.
+     */
+    get: operations['PublicWordsController_synonyms'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/words/{word}/antonyms': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * The antonyms of a headword, per meaning
+     * @description One item per linked headword and meaning; each names its `meaning_id`, `word_id` and `part_of_speech`.
+     */
+    get: operations['PublicWordsController_antonyms'];
     put?: never;
     post?: never;
     delete?: never;
@@ -553,6 +593,16 @@ export interface components {
       definition: string;
       variants_of_words: string[];
     };
+    PublicWordLinkV1T: {
+      meaning_id: number;
+      word: string;
+      word_id: number;
+      part_of_speech: components['schemas']['EnPartOfSpeechE'];
+    };
+    PublicHeadwordLinksV1ResT: {
+      data: components['schemas']['PublicWordLinkV1T'][];
+      meta: components['schemas']['PublicHeadwordV1MetaT'];
+    };
     PublicHeadwordTranslationsV1T: {
       short_translations: components['schemas']['PublicShortTranslationV1T'][];
       meaning_translations: components['schemas']['PublicMeaningTranslationV1T'][];
@@ -873,6 +923,10 @@ export interface operations {
   PublicWordsController_list: {
     parameters: {
       query?: {
+        /** @description Headword prefix, case-insensitive (`ru` lists run, rung, runner, …) */
+        search?: string;
+        /** @description true: obsolete entries only, false: current ones only */
+        is_obsolete?: boolean;
         part_of_speech?: (
           | 'noun'
           | 'verb'
@@ -1160,6 +1214,106 @@ export interface operations {
       };
     };
   };
+  PublicWordsController_synonyms: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Headword spelling, case-insensitive (spaces URL-encoded for phrases). An inflected form resolves to its base entry */
+        word: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicHeadwordLinksV1ResT'];
+        };
+      };
+      /** @description Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+      /** @description Nothing matches */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+      /** @description Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+    };
+  };
+  PublicWordsController_antonyms: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Headword spelling, case-insensitive (spaces URL-encoded for phrases). An inflected form resolves to its base entry */
+        word: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicHeadwordLinksV1ResT'];
+        };
+      };
+      /** @description Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+      /** @description Nothing matches */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+      /** @description Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+    };
+  };
   PublicWordsController_translations: {
     parameters: {
       query?: {
@@ -1266,6 +1420,10 @@ export interface operations {
   PublicDictionaryController_random: {
     parameters: {
       query?: {
+        /** @description Headword prefix, case-insensitive (`ru` lists run, rung, runner, …) */
+        search?: string;
+        /** @description true: obsolete entries only, false: current ones only */
+        is_obsolete?: boolean;
         part_of_speech?: (
           | 'noun'
           | 'verb'

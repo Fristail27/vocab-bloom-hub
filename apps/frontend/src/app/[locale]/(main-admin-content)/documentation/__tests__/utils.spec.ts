@@ -184,6 +184,8 @@ describe('DOCUMENTED_ENDPOINTS', () => {
 
   it('описывает фильтры списка и курсорную пагинацию', () => {
     expect(wordsEndpoint.params.map(({ name }) => name)).toEqual([
+      'search',
+      'is_obsolete',
       'part_of_speech',
       'word_level',
       'language_register',

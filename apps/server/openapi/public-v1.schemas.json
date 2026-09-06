@@ -968,6 +968,47 @@
       "word_id"
     ]
   },
+  "PublicWordLinkV1T": {
+    "type": "object",
+    "properties": {
+      "meaning_id": {
+        "type": "integer"
+      },
+      "word": {
+        "type": "string"
+      },
+      "word_id": {
+        "type": "integer"
+      },
+      "part_of_speech": {
+        "$ref": "#/components/schemas/EnPartOfSpeechE"
+      }
+    },
+    "required": [
+      "meaning_id",
+      "part_of_speech",
+      "word",
+      "word_id"
+    ]
+  },
+  "PublicHeadwordLinksV1ResT": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/PublicWordLinkV1T"
+        }
+      },
+      "meta": {
+        "$ref": "#/components/schemas/PublicHeadwordV1MetaT"
+      }
+    },
+    "required": [
+      "data",
+      "meta"
+    ]
+  },
   "PublicHeadwordTranslationsV1T": {
     "type": "object",
     "properties": {

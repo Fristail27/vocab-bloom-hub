@@ -39,13 +39,23 @@ def test_url_under_api_v1_and_repeated_list_filters() -> None:
         return json_response(PAGE_EMPTY)
 
     client = VocabBloomClient("https://dict.example.com/", transport=transport(handle))
-    client.words(part_of_speech=["noun", PartOfSpeech.verb], with_meanings=True, limit=5, cursor=None)
+    client.words(
+        part_of_speech=["noun", PartOfSpeech.verb],
+        with_meanings=True,
+        limit=5,
+        cursor=None,
+        search="ru",
+        is_obsolete=False,
+    )
     url = seen[0].url
     assert f"{url.scheme}://{url.host}{url.path}" == "https://dict.example.com/api/v1/words"
     assert url.params.get_list("part_of_speech") == ["noun", "verb"]
     assert url.params["with_meanings"] == "true"
     assert url.params["limit"] == "5"
     assert "cursor" not in url.params
+    # the prefix and obsolete filters of issue #403
+    assert url.params["search"] == "ru"
+    assert url.params["is_obsolete"] == "false"
     assert seen[0].headers["accept"] == "application/json"
 
 

@@ -5,6 +5,7 @@ import type {
   DetailedSearchResponse,
   FormsResponse,
   HeadwordResponse,
+  LinksResponse,
   ListWordsQuery,
   MeaningsResponse,
   MetaResponse,
@@ -159,6 +160,16 @@ export class VocabBloomClient {
   /** Inflected forms of every entry of a headword */
   forms(headword: string, options?: RequestOptions): Promise<FormsResponse> {
     return this.get(`/words/${encodeURIComponent(headword)}/forms`, undefined, options);
+  }
+
+  /** The synonyms of every meaning of a headword, each naming its meaning and entry (issue #403) */
+  synonyms(headword: string, options?: RequestOptions): Promise<LinksResponse> {
+    return this.get(`/words/${encodeURIComponent(headword)}/synonyms`, undefined, options);
+  }
+
+  /** The antonyms of every meaning of a headword, each naming its meaning and entry (issue #403) */
+  antonyms(headword: string, options?: RequestOptions): Promise<LinksResponse> {
+    return this.get(`/words/${encodeURIComponent(headword)}/antonyms`, undefined, options);
   }
 
   // --------------------------------------------------------------- list

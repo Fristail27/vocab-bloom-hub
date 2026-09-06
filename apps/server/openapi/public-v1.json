@@ -386,9 +386,28 @@
     },
     "/api/v1/words": {
       "get": {
-        "description": "Every filter accepts a repeated key; values of one filter are OR-ed, filters are AND-ed. Pass `meta.next_cursor` back as `cursor` to read the next page.",
+        "description": "Every enum filter accepts a repeated key; values of one filter are OR-ed, filters are AND-ed. `search` keeps the headwords starting with the prefix (an autocomplete or an A–Z browser: cacheable, unlike the search). Pass `meta.next_cursor` back as `cursor` to read the next page.",
         "operationId": "PublicWordsController_list",
         "parameters": [
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Headword prefix, case-insensitive (`ru` lists run, rung, runner, …)",
+            "schema": {
+              "maxLength": 128,
+              "type": "string"
+            }
+          },
+          {
+            "name": "is_obsolete",
+            "required": false,
+            "in": "query",
+            "description": "true: obsolete entries only, false: current ones only",
+            "schema": {
+              "type": "boolean"
+            }
+          },
           {
             "name": "part_of_speech",
             "required": false,
@@ -847,6 +866,136 @@
         ]
       }
     },
+    "/api/v1/words/{word}/synonyms": {
+      "get": {
+        "description": "One item per linked headword and meaning; each names its `meaning_id`, `word_id` and `part_of_speech`.",
+        "operationId": "PublicWordsController_synonyms",
+        "parameters": [
+          {
+            "name": "word",
+            "required": true,
+            "in": "path",
+            "description": "Headword spelling, case-insensitive (spaces URL-encoded for phrases). An inflected form resolves to its base entry",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicHeadwordLinksV1ResT"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nothing matches",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          }
+        },
+        "summary": "The synonyms of a headword, per meaning",
+        "tags": [
+          "Public API v1"
+        ]
+      }
+    },
+    "/api/v1/words/{word}/antonyms": {
+      "get": {
+        "description": "One item per linked headword and meaning; each names its `meaning_id`, `word_id` and `part_of_speech`.",
+        "operationId": "PublicWordsController_antonyms",
+        "parameters": [
+          {
+            "name": "word",
+            "required": true,
+            "in": "path",
+            "description": "Headword spelling, case-insensitive (spaces URL-encoded for phrases). An inflected form resolves to its base entry",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicHeadwordLinksV1ResT"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nothing matches",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          }
+        },
+        "summary": "The antonyms of a headword, per meaning",
+        "tags": [
+          "Public API v1"
+        ]
+      }
+    },
     "/api/v1/words/{word}/translations": {
       "get": {
         "operationId": "PublicWordsController_translations",
@@ -994,6 +1143,25 @@
       "get": {
         "operationId": "PublicDictionaryController_random",
         "parameters": [
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Headword prefix, case-insensitive (`ru` lists run, rung, runner, …)",
+            "schema": {
+              "maxLength": 128,
+              "type": "string"
+            }
+          },
+          {
+            "name": "is_obsolete",
+            "required": false,
+            "in": "query",
+            "description": "true: obsolete entries only, false: current ones only",
+            "schema": {
+              "type": "boolean"
+            }
+          },
           {
             "name": "part_of_speech",
             "required": false,
@@ -2390,6 +2558,47 @@
           "title",
           "variants_of_words",
           "word_id"
+        ]
+      },
+      "PublicWordLinkV1T": {
+        "type": "object",
+        "properties": {
+          "meaning_id": {
+            "type": "integer"
+          },
+          "word": {
+            "type": "string"
+          },
+          "word_id": {
+            "type": "integer"
+          },
+          "part_of_speech": {
+            "$ref": "#/components/schemas/EnPartOfSpeechE"
+          }
+        },
+        "required": [
+          "meaning_id",
+          "part_of_speech",
+          "word",
+          "word_id"
+        ]
+      },
+      "PublicHeadwordLinksV1ResT": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicWordLinkV1T"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PublicHeadwordV1MetaT"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
         ]
       },
       "PublicHeadwordTranslationsV1T": {

@@ -121,6 +121,14 @@ class VocabBloomClient:
         """Inflected forms of every entry of a headword."""
         return self._get(headword_path(headword, "/forms"), None, m.FormsResponse)
 
+    def synonyms(self, headword: str) -> m.LinksResponse:
+        """The synonyms of every meaning of a headword, each naming its meaning and entry."""
+        return self._get(headword_path(headword, "/synonyms"), None, m.LinksResponse)
+
+    def antonyms(self, headword: str) -> m.LinksResponse:
+        """The antonyms of every meaning of a headword, each naming its meaning and entry."""
+        return self._get(headword_path(headword, "/antonyms"), None, m.LinksResponse)
+
     # --------------------------------------------------------------- list
 
     def words(self, **options: Unpack[ListOptions]) -> m.WordsResponse:

@@ -170,6 +170,14 @@ export const buildScenarios = ({ runVerbId }: ScenarioContextT): ScenarioT[] => 
     path: '/api/v1/words?part_of_speech=noun&word_level=C2',
   },
   { name: 'list category=IT (rare)', group: 'list', method: 'GET', path: '/api/v1/words?category=IT' },
+  { name: 'list search=ab (prefix, #403)', group: 'list', method: 'GET', path: '/api/v1/words?search=ab' },
+  {
+    name: 'list is_obsolete=false (#403)',
+    group: 'list',
+    method: 'GET',
+    path: '/api/v1/words?is_obsolete=false',
+  },
+  { name: 'word "run" synonyms (#403)', group: 'word', method: 'GET', path: '/api/v1/words/run/synonyms' },
   {
     name: 'list language_register=slang',
     group: 'list',

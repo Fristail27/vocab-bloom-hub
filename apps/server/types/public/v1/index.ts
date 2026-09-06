@@ -181,6 +181,17 @@ export type PublicMeaningTranslationV1T = PublicWordV1MeaningTranslationT &
     /** @asType integer */
     meaning_id: number;
   };
+// The thesaurus reads (issue #403): every synonym / antonym of a headword,
+// one item per linked headword and meaning, in the order of the entries and
+// their meanings
+export type PublicWordLinkV1T = PublicEntryRefV1T & {
+  /** @asType integer */
+  meaning_id: number;
+  // the linked headword (lowercase), readable through /words/{word}
+  word: string;
+};
+export type PublicHeadwordLinksV1ResT = PublicListResT<PublicWordLinkV1T, PublicHeadwordV1MetaT>;
+
 export type PublicHeadwordTranslationsV1T = {
   short_translations: PublicShortTranslationV1T[];
   meaning_translations: PublicMeaningTranslationV1T[];

@@ -60,6 +60,8 @@ Every successful answer is an envelope: the payload under `data`, paging and cou
 | `GET`  | `/api/v1/words/{word}/meanings`     | —                                                                                                      | `{ data: PublicMeaningV1T[], meta: { word, count } }`                                           |
 | `GET`  | `/api/v1/words/{word}/translations` | `language?`                                                                                            | `{ data: { short_translations, meaning_translations }, meta }`                                  |
 | `GET`  | `/api/v1/words/{word}/forms`        | —                                                                                                      | `{ data: PublicWordFormV1T[], meta: { word, count } }`                                          |
+| `GET`  | `/api/v1/words/{word}/synonyms`     | —                                                                                                      | `{ data: PublicWordLinkV1T[], meta: { word, count } }`                                          |
+| `GET`  | `/api/v1/words/{word}/antonyms`     | —                                                                                                      | `{ data: PublicWordLinkV1T[], meta: { word, count } }`                                          |
 | `GET`  | `/api/v1/words/id/{id}`             | —                                                                                                      | `{ data: PublicWordV1T }`                                                                       |
 | `GET`  | `/api/v1/words`                     | filters, `cursor?`, `limit?`, `with_meanings?`, `with_translations?`                                   | `{ data: PublicWordV1T[], meta: { limit, has_more, next_cursor } }`                             |
 | `GET`  | `/api/v1/random`                    | filters                                                                                                | `{ data: PublicWordV1T }`                                                                       |
@@ -152,7 +154,10 @@ spelling answers `404` with `word_doesnt_found`.
 The partial reads (`/meanings`, `/translations`, `/forms`) flatten the same entries into one
 list; every item carries `word_id` and `part_of_speech` so it can be tied back to its entry.
 `/translations` splits into `short_translations` (per entry) and `meaning_translations` (per
-meaning, with `meaning_id`); `?language=ru` keeps one language only.
+meaning, with `meaning_id`); `?language=ru` keeps one language only. `/synonyms` and
+`/antonyms` (issue #403) list the linked headwords of every meaning — `{ word, meaning_id,
+word_id, part_of_speech }`, each `word` readable through `/words/{word}` — so a thesaurus
+does not need the full entry; a headword without links answers an empty list.
 
 `GET /api/v1/words/id/{id}` is the same entry by its numeric id (the `id` of any item above).
 
@@ -179,9 +184,14 @@ stays on the admin API (`GET /api/en/{id}`), where the admin UI reads it.
 `GET /api/v1/words` lists entries ordered by `(word, id)` — the headword by its bytes
 (`COLLATE "C"` on Postgres, the default on SQLite: `a bag of wind` before `aaron burr`,
 whatever the database locale), then the id. Filters: `part_of_speech`,
-`word_level`, `language_register`, `category`, `area_variant`, `form_of_word`. Every filter
-accepts one value or a repeated key; values of one filter are OR-ed, different filters are
-AND-ed (`?word_level=B1&word_level=B2&part_of_speech=noun` — B1 or B2 nouns). Without
+`word_level`, `language_register`, `category`, `area_variant`, `form_of_word`, plus `search`
+and `is_obsolete` (issue #403). Every enum filter accepts one value or a repeated key; values
+of one filter are OR-ed, different filters are AND-ed
+(`?word_level=B1&word_level=B2&part_of_speech=noun` — B1 or B2 nouns). `search` keeps the
+headwords starting with the prefix, case-insensitively (`?search=ru` — run, rung, runner, …;
+a phrase prefix keeps its spaces); ordered as the list is and cacheable like every `GET`, it
+is what an autocomplete or an A–Z browser should page through instead of the search.
+`is_obsolete=true` / `false` keeps obsolete or current entries only. Without
 `form_of_word` only base forms are listed; inflected forms are reachable through their base
 entry's `forms` or explicitly (`?form_of_word=past_simple`). Items carry no meanings or
 short translations unless `with_meanings=true` / `with_translations=true` is passed.

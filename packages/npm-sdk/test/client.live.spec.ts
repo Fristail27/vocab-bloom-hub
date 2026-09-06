@@ -125,6 +125,14 @@ describe('VocabBloomClient against the running server (issue #275)', () => {
     ]);
     expect(batch.data[0].entries).toEqual(headword.data);
 
+    // the thesaurus reads (issue #403): the fixture links "sprint" as a synonym of "run"
+    const synonyms = await client.synonyms('run');
+    expect(synonyms.data.map((link) => link.word)).toEqual(['sprint']);
+    expect(synonyms.data[0]).toMatchObject({ word_id: runId, part_of_speech: 'verb' });
+    expect((await client.antonyms('run')).data).toEqual([]);
+    // the list filters of #403: a headword prefix, case-insensitively
+    expect((await client.words({ search: 'RU' })).data.map((w) => w.word)).toEqual(['run']);
+
     const meanings = await client.meanings('run');
     expect(meanings.data[0]).toMatchObject({ title: 'to move fast', word_id: runId, part_of_speech: 'verb' });
 

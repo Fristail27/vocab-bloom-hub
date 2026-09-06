@@ -4,6 +4,8 @@ import { FindOptionsRelations, In, Repository, SelectQueryBuilder } from 'typeor
 import { EnWord } from '../EnModule/entities/en_word.entity';
 import { FULL_WORD_RELATIONS, RELATION_LOAD_STRATEGY } from '../EnModule/utils/wordRelations';
 import { bytewise } from '../EnModule/utils/bytewise';
+import { escapeLike } from '../EnModule/modules/EnSearch/utils/escapeLike';
+import { WordLinkKindT } from '../EnModule/utils/normalizeWordLinks';
 import { toPublicWord } from './utils/projection';
 import { ErrorCodes } from '../../../core/constants/error_codes';
 import { checkIsPostgres } from '../../../configuration';
@@ -11,6 +13,7 @@ import {
   AvailableTranslationLanguagesE,
   EnWordFormsE,
   PublicHeadwordFormsV1ResT,
+  PublicHeadwordLinksV1ResT,
   PublicHeadwordMeaningsV1ResT,
   PublicHeadwordTranslationsV1ResT,
   PublicHeadwordV1ResT,
@@ -166,6 +169,22 @@ export class PublicWordsService {
     return { data, meta };
   }
 
+  /** The synonyms or antonyms of every meaning of the headword, each naming its meaning and entry (issue #403) */
+  async getLinksByHeadword(raw: string, kind: WordLinkKindT): Promise<PublicHeadwordLinksV1ResT> {
+    const { data: entries, meta } = await this.getByHeadword(raw);
+    const data = entries.flatMap((entry) =>
+      entry.meanings.flatMap((meaning) =>
+        meaning[kind].map((word) => ({
+          word,
+          meaning_id: meaning.id,
+          word_id: entry.id,
+          part_of_speech: entry.part_of_speech,
+        })),
+      ),
+    );
+    return { data, meta };
+  }
+
   async getTranslationsByHeadword(
     raw: string,
     languages?: AvailableTranslationLanguagesE[],
@@ -209,6 +228,15 @@ export class PublicWordsService {
   private applyFilters(qb: SelectQueryBuilder<EnWord>, filters: WordFiltersV1QueryDTO): void {
     const forms = filters.form_of_word?.length ? filters.form_of_word : [EnWordFormsE.base_form];
     qb.andWhere('w.form_of_word IN (:...forms)', { forms });
+    // a byte-order prefix on the headword: the same IDX_EN_WORD_C range the
+    // ordering walks, so an autocomplete page is one index scan (issue #403)
+    const prefix = filters.search?.trim().toLowerCase();
+    if (prefix) {
+      qb.andWhere(`${this.orderedWord} LIKE :prefix ESCAPE '\\'`, { prefix: `${escapeLike(prefix)}%` });
+    }
+    if (filters.is_obsolete !== undefined) {
+      qb.andWhere({ is_obsolete: filters.is_obsolete });
+    }
     if (filters.part_of_speech?.length) {
       qb.andWhere('w.part_of_speech IN (:...partsOfSpeech)', { partsOfSpeech: filters.part_of_speech });
     }
