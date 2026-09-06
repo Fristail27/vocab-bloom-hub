@@ -9,6 +9,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 
 import { EnModule } from '../src/modules/EnModule/en.module';
+import { EnSearchService } from '../src/modules/EnModule/modules/EnSearch/enSearch.service';
 import { hashLoginString } from '../core/utils/crypto';
 import { createJwt } from '../core/utils/auth';
 import { AvailableTranslationLanguagesE, EnAreaVariantsE, EnPartOfSpeechE, EnWordFormsE } from '../types';
@@ -270,13 +271,10 @@ describe('En word add/edit routes (e2e, issue #87)', () => {
       // normalized, without the headword itself
       expect(meaning?.synonyms).toEqual(['sprint']);
 
-      const searchRes = await request(server())
-        .post('/api/en/search/detailed')
-        .send({ search: 'run', with_meanings: true })
-        .expect(201);
-      const found = (
-        searchRes.body.items as Array<{ id: number; meanings: Array<{ synonyms: string[] }> }>
-      ).find((w) => w.id === wordId);
+      // the detailed search (served publicly by /api/v1/search/detailed, outside
+      // this EnModule-only fixture) joins the normalized synonyms too
+      const searchRes = await app.get(EnSearchService).searchDetailed({ search: 'run', with_meanings: true });
+      const found = searchRes.items.find((w) => w.id === wordId);
       expect(found?.meanings.map((m) => m.synonyms)).toContainEqual(['sprint']);
     });
 

@@ -102,8 +102,8 @@ describe('resolveClientPath', () => {
 });
 
 describe('extractWords', () => {
-  it('читает плоский список базового поиска', () => {
-    expect(extractWords([{ id: 1, word: 'run' }])).toHaveLength(1);
+  it('не принимает голый список: у ответов v1 всегда есть конверт', () => {
+    expect(extractWords([{ id: 1, word: 'run' }])).toBeNull();
   });
 
   it('читает data из конверта v1', () => {

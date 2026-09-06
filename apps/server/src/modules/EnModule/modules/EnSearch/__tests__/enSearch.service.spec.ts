@@ -61,13 +61,13 @@ describe('EnSearchService', () => {
   };
 
   it('ограничивает тир anyMatches переданным type (issue #169)', async () => {
-    await service.search({ search: 'take', type: EnEntryTypesE.phrase, limit: 10 });
+    await service.searchFlat({ search: 'take', type: EnEntryTypesE.phrase, limit: 10 });
 
     expect(getIncludedTypesFromAnyMatchesTier()).toEqual([EnEntryTypesE.phrase]);
   });
 
   it('без type тир anyMatches ищет по всем типам', async () => {
-    await service.search({ search: 'take', type: undefined, limit: 10 });
+    await service.searchFlat({ search: 'take', type: undefined, limit: 10 });
 
     expect(getIncludedTypesFromAnyMatchesTier()).toEqual([
       EnEntryTypesE.grammar_pattern,

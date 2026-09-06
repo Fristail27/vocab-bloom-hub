@@ -5,7 +5,7 @@ import { FindOptionsRelations, In, Repository } from 'typeorm';
 import { EnWord } from '../../entities/en_word.entity';
 import { SearchReqDTO } from './dto/SearchReq.dto';
 import { SearchDetailedReqDTO } from './dto/SearchDetailedReq.dto';
-import { EnEntryTypesE, EnSearchWordT, SearchDetailedItemsT, SearchItemsT } from '../../../../../types';
+import { EnEntryTypesE, SearchDetailedItemsT, SearchItemsT } from '../../../../../types';
 import { checkIsPostgres } from '../../../../../configuration';
 import { mapSearchResults } from './utils/mapSearchResults';
 import { mapDetailedSearchResults } from './utils/mapDetailedSearchResults';
@@ -353,10 +353,6 @@ export class EnSearchService {
     this.metrics?.searchAnswered(tier, short_term);
     const words = await this.findWordsByIdsOrdered(ids, { word: true, forms: { word: true } });
     return { items: mapSearchResults(words, similarity), fuzzy, short_term };
-  }
-
-  async search(body: SearchReqDTO): Promise<EnSearchWordT[]> {
-    return (await this.searchFlat(body)).items;
   }
 
   async searchDetailed({

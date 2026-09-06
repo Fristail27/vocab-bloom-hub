@@ -139,25 +139,9 @@ describe('public API /api/v1 (e2e, issue #271)', () => {
     expect(limited.headers['x-api-version']).toBe('1');
   });
 
-  it('keeps the old search paths as deprecated aliases with the bare response', async () => {
-    const res = await request(server()).post('/api/en/search').send({ search: 'flick' }).expect(201);
-    expect(res.headers.deprecation).toBe('true');
-    expect(res.headers.link).toBe('</api/v1/search>; rel="successor-version"');
-    expect(res.body).toEqual([expect.objectContaining({ word: 'flicker' })]);
-
-    const detailed = await request(server())
-      .post('/api/en/search/detailed')
-      .send({ search: 'flick' })
-      .expect(201);
-    expect(detailed.headers.deprecation).toBe('true');
-    expect(detailed.body).toEqual({
-      items: expect.any(Array),
-      page: 1,
-      limit: 10,
-      has_more: false,
-      fuzzy: false,
-      short_term: false,
-    });
+  it('no longer serves the pre-public-API search aliases (removed in the beta, issue #395)', async () => {
+    await request(server()).post('/api/en/search').send({ search: 'flick' }).expect(404);
+    await request(server()).post('/api/en/search/detailed').send({ search: 'flick' }).expect(404);
   });
 
   it('hides the public prefix when PUBLIC_API_ENABLED=false', async () => {

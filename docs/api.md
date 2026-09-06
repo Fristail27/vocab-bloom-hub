@@ -276,13 +276,13 @@ prefix (`Cache-Control: no-store`, so a miss or a `429` is never served from a c
 everything under the admin prefixes (`no-store` on every answer, including `401`s and the
 `404`s of a disabled surface).
 
-### Deprecated aliases
+### Removed aliases
 
-`POST /api/en/search` and `POST /api/en/search/detailed` keep answering with the pre-envelope
-bodies (`EnSearchWordT[]` and `{ items, page, limit, has_more }`) so existing consumers do not
-break. They carry `Deprecation: true` and a `Link: <...>; rel="successor-version"` header
-pointing at the `/api/v1` route and will be removed with the alpha release. New integrations
-should use `/api/v1` only.
+`POST /api/en/search` and `POST /api/en/search/detailed`, the pre-public-API search routes
+that answered with the bare bodies and a `Deprecation: true` header through the alpha, are
+gone since `v0.2.0-beta.1` (issue #395): they answer `404` like any unknown admin route.
+The successors are `POST /api/v1/search` and `POST /api/v1/search/detailed` with the
+`{ data, meta }` envelope.
 
 ## Running a public-only or admin-only instance
 

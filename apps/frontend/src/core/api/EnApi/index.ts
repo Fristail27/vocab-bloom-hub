@@ -79,8 +79,8 @@ export class EnApi extends AbstractBaseApi {
     return this.post<AddResT>(`${this.baseURL}/en/add/word`, data);
   }
 
-  // Reads through the public prefix (the /api/en/search aliases are
-  // deprecated) and unwraps the v1 envelope for the admin components
+  // Reads through the public prefix and unwraps the v1 envelope for the
+  // admin components
   static async search(search: string): Promise<SearchResT> {
     const res = await this.publicSearch({ search, limit: 100 });
     return 'error' in res ? res : res.data;

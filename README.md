@@ -244,7 +244,7 @@ Full guide: [`docs/deployment/`](docs/deployment/README.md) → [`reverse-proxy.
 - [`docs/offline-import.md`](docs/offline-import.md) — moving a dictionary between instances without internet access (export → copy → import from file)
 - [`docs/observability.md`](docs/observability.md) — Prometheus metrics and structured JSON logs: enabling the endpoint, keeping it private, every metric, the log fields and the request id, shipping the logs to a collector
 - [`docs/performance.md`](docs/performance.md) — latency of the hot reads on the full dictionary (Postgres vs SQLite), the indexes behind them, the benchmark and the query-plan guard
-- [`docs/api.md`](docs/api.md) — the public `/api/v1` contract (envelope, errors, rate limit, caching, OpenAPI export, deprecated aliases) and the public-only / admin-only switches
+- [`docs/api.md`](docs/api.md) — the public `/api/v1` contract (envelope, errors, rate limit, caching, OpenAPI export) and the public-only / admin-only switches
 - [`docs/data.md`](docs/data.md) — where the dictionary data comes from (LLM-generated, `generated_by_model`), known limitations, how to report errors; the terms are in [`DATA_LICENSE.md`](DATA_LICENSE.md)
 - [`docs/README.ru.md`](docs/README.ru.md) — this README in Russian
 - Swagger UI at `/api` on a running server — the live API reference; the public contract as OpenAPI: [`apps/server/openapi/public-v1.json`](apps/server/openapi/public-v1.json) or `GET /api/v1/openapi.json`
