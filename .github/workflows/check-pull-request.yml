@@ -17,10 +17,13 @@ concurrency:
 permissions:
   contents: read
 
+# Every job has a timeout (issue #409): a hung step fails in minutes instead
+# of holding a runner for the six-hour default
 jobs:
   lint:
     name: lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -50,6 +53,7 @@ jobs:
   typecheck:
     name: typecheck
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -69,9 +73,13 @@ jobs:
       - name: Typecheck SDK
         run: yarn workspace @vocab-bloom-hub/client typecheck
 
+      - name: Typecheck browser e2e
+        run: yarn workspace e2e typecheck
+
   tests:
     name: tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -86,13 +94,33 @@ jobs:
       - name: Unit tests
         run: yarn test
 
+      # The server unit suites again, with coverage over every source file
+      # (issue #409): jest fails the step when a figure drops below the
+      # thresholds of apps/server/jest.config.ts
+      - name: Server unit coverage does not regress
+        run: yarn workspace server test:cov --silent
+
+      - name: Upload the coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: server-coverage
+          path: apps/server/coverage/lcov-report
+          retention-days: 7
+
       - name: Server e2e tests
         run: yarn workspace server test:e2e
 
   python-sdk:
-    name: python-sdk
+    name: python-sdk (${{ matrix.python }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # the oldest and the newest interpreter the package claims (pyproject
+    # classifiers 3.10–3.13, issue #409)
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.13']
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -103,6 +131,7 @@ jobs:
       - name: Setup uv
         uses: astral-sh/setup-uv@v7
         with:
+          python-version: ${{ matrix.python }}
           enable-cache: true
           cache-dependency-glob: packages/python-sdk/uv.lock
 
@@ -133,6 +162,7 @@ jobs:
   postgres:
     name: postgres-only tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     # The suites that need Postgres: the query-plan guard of the public reads
     # (issue #279: with sequential scans disabled, every statement of a hot
@@ -288,6 +318,7 @@ jobs:
   e2e:
     name: browser e2e
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -333,6 +364,7 @@ jobs:
   site-e2e:
     name: site browser e2e
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -374,3 +406,34 @@ jobs:
             apps/e2e/playwright-report
             apps/e2e/test-results
           retention-days: 7
+
+  audit:
+    name: dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # Known vulnerabilities of high severity and above in the dependency
+    # trees (issue #409): the npm workspaces including transitive packages,
+    # and the Python SDK's environment. A finding fails the job; the fix is
+    # `yarn up -R <package>` / a lock refresh, never a silenced advisory
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup
+
+      - name: npm audit (all workspaces, transitive, high and above)
+        run: yarn npm audit --all --recursive --severity high
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: packages/python-sdk/uv.lock
+
+      - name: pip-audit (the Python SDK environment)
+        working-directory: packages/python-sdk
+        run: |
+          uv sync --locked
+          uv run --with pip-audit pip-audit --skip-editable

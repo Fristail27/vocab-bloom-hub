@@ -35,6 +35,7 @@ docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d  
 yarn test           # all tests (root jest config with projects: server + frontend + site + sdk)
 yarn jest path/to/file.spec.ts            # single test file
 yarn jest --selectProjects server         # only server tests (or: frontend, site, sdk)
+yarn workspace server test:cov            # server unit tests with coverage over every source file; CI fails below the thresholds in apps/server/jest.config.ts
 yarn workspace server test:e2e            # server e2e tests (supertest, in-memory sqlite)
 
 yarn e2e            # browser e2e: prod frontend build + Playwright (boots API :3011, frontend :3001)
