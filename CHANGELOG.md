@@ -7,6 +7,12 @@ generated release notes; the full commit history lives in git.
 
 ## v0.2.0-beta.1 — unreleased
 
+- **Docs** refreshed against the shipped alpha and this cycle's changes (issue #391): NestJS 12
+  in the badges and the stack table, the SDKs described as published, the public API and SDK
+  feature lists (cacheable `GET` search, batch lookup, synonyms / antonyms, retry, `User-Agent`),
+  the CI gates (coverage, audits, `peers:check`), the dataset figures of the `v0.1.0` revision
+  (synonym and antonym links), CLAUDE.md's picture of the public API.
+
 - **Server**: the full word reads — headword, id, batch, random, the detailed search and the
   list with joins, the admin entry read — assemble their rows from the same per-relation
   statements without TypeORM entity hydration (issue #424): a batch of 50 headwords answers

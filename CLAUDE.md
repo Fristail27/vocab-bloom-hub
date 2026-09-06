@@ -8,10 +8,10 @@ Vocab Bloom Hub — a monorepo for a multilingual dictionary/vocabulary platform
 
 - `apps/frontend` — Next.js 16 (App Router) admin UI with Ant Design, Sass modules, and next-intl (en/ru locales via the `[locale]` route segment; middleware in `src/proxy.ts`).
 - `apps/site` — Next.js 16 project website (next-intl en/ru, Sass modules, no Ant Design): the landing, the documentation rendered at build time from the repository's Markdown (`src/content/registry.ts` maps files to routes, links between the files are rewritten), the public API reference and the playground generated from `apps/server/openapi/public-v1.json` (`src/content/openapi.ts`, `playground.ts`), and server-rendered word pages over the public API (`src/core/dictionary.ts`; `API_INTERNAL_URL`, the same `/api/*` forwarding route as the frontend). Types from `server/types`. Served next to an instance as the `site` compose profile (off by default), image `vocab-bloom-hub-site`, port `SITE_PORT` (3020).
-- `apps/server` — NestJS 11 API with TypeORM. Swagger UI is served at `/api` on the running server.
+- `apps/server` — NestJS 12 API with TypeORM. Swagger UI is served at `/api` on the running server.
 - `apps/e2e` — Playwright browser tests that boot both apps against an isolated SQLite database (own tsconfig on purpose: jest and Playwright globals must not share a TS project).
-- `packages/npm-sdk` — `@vocab-bloom-hub/client`, the typed Node.js / browser client of the public API: types generated from `apps/server/openapi/public-v1.json` (`src/generated/openapi.ts`, committed) plus a hand-written wrapper; tsup build (ESM + CJS + d.ts), no runtime dependencies. Not published to npm before the alpha (#308).
-- `packages/python-sdk` — `vocab-bloom-hub` on PyPI (import `vocab_bloom_hub`), the Python client: pydantic models generated from the same spec (`src/vocab_bloom_hub/_generated/models.py`, committed), sync + async clients on httpx; managed with `uv` (`uv sync`, `uv run ruff/mypy/pytest`), Python ≥ 3.10. The live tests start the server through `yarn workspace server fixture:public-api`. Not published before the alpha (#310).
+- `packages/npm-sdk` — `@vocab-bloom-hub/client`, the typed Node.js / browser client of the public API: types generated from `apps/server/openapi/public-v1.json` (`src/generated/openapi.ts`, committed) plus a hand-written wrapper; tsup build (ESM + CJS, a declaration file per format; `pack:check` = publint + arethetypeswrong gates the exports map), no runtime dependencies. On npm since `v0.1.0-alpha.1` (prerelease dist-tag `alpha`); `SDK_VERSION` / `USER_AGENT` come from `package.json` at build time.
+- `packages/python-sdk` — `vocab-bloom-hub` on PyPI (import `vocab_bloom_hub`), the Python client: pydantic models generated from the same spec (`src/vocab_bloom_hub/_generated/models.py`, committed), sync + async clients on httpx; managed with `uv` (`uv sync`, `uv run ruff/mypy/pytest`), Python ≥ 3.10. The live tests start the server through `yarn workspace server fixture:public-api`. On PyPI since `v0.1.0-alpha.1` (`pip install --pre`); `__version__` is read from the installed metadata (`_version.py`), `pyproject.toml` is the only Python version source.
 
 ## Commands
 
@@ -49,6 +49,7 @@ yarn workspace server openapi:check       # fail if the committed public spec is
 yarn workspace @vocab-bloom-hub/client generate        # regenerate the SDK types from the public spec (commit the result)
 yarn workspace @vocab-bloom-hub/client generate:check  # fail if the generated SDK types are stale (CI runs it)
 yarn workspace @vocab-bloom-hub/client build / test    # SDK build; unit tests + the client against the real server
+yarn workspace @vocab-bloom-hub/client pack:check      # publint + arethetypeswrong on the packed tarball (CI, release)
 
 cd packages/python-sdk && uv sync                          # Python SDK environment (.venv)
 uv run python scripts/generate_models.py [--check]         # pydantic models from the public spec (commit the result)
@@ -90,6 +91,10 @@ For a pre-existing database whose tables were created by the old `synchronize`, 
 ### Shared types: frontend imports from the server workspace
 
 `apps/server/types/` (API request/response types, enums, `ErrorResT`) and `apps/server/core/` (constants like `ErrorCodes`, utils) are the single source of truth shared across apps. The frontend imports them through the workspace package name, e.g. `import { ErrorResT } from 'server/types'`. When changing an API contract, update these types — both apps consume them.
+
+### Public API: an explicit projection, raw-row loading
+
+`PublicApiModule` serves `/api/v1`: the search (`GET` and `POST` forms of `/search` and `/search/detailed`, the same fields), the headword reads (`/words/{word}` and its `/meanings`, `/translations`, `/forms`, `/synonyms`, `/antonyms`), `POST /words/batch` (up to 50 spellings, one rate-limit unit), `/words/id/{id}`, the filtered cursor-paged `/words` (`search` prefix, `is_obsolete`, enum filters), `/random`, `/meta` (`available_languages`, counts, license) and `/suggestions`. Answers are the explicit projection of `types/public/v1` (`PublicWordV1T`, `PublicSearchWordV1T`, …), assigned field by field in `PublicApiModule/utils/projection.ts` — never a spread of an entity, so a new column stays internal until added on purpose; the editorial state (`generated`, `generated_by_model`, `version`, `user_modified`) is admin-only. Every full read (public, search, the admin `GET /api/en/:id`) loads its rows through `EnModule/word-rows.service.ts` (`WordRowsService`): the per-relation statements of `find()` without entity hydration, pinned to `find()` by a unit test. Every public `GET` carries ETag / Last-Modified / Cache-Control (`PublicCacheInterceptor`); one rate budget per client IP for the whole prefix (`PublicApiThrottlerGuard`, `PUBLIC_API_RATE_LIMIT`).
 
 ### Server: domain modules with sub-controller/service pairs
 

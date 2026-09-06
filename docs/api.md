@@ -262,13 +262,14 @@ fields fail), which is what makes the schemas trustworthy for SDK generators (#2
 ### SDKs
 
 - **Node.js / TypeScript** — [`@vocab-bloom-hub/client`](../packages/npm-sdk/README.md) (issue #275):
-  one method per endpoint, types generated from `openapi/public-v1.json`, typed errors, cursor
-  iteration, optional ETag cache. Built and tested in this repository; published to npm with the
-  first alpha (#308).
+  one method per endpoint (the batch and thesaurus reads included), types generated from
+  `openapi/public-v1.json`, typed errors, cursor and page iteration, optional ETag cache, opt-in
+  retry on `429` / `5xx` honouring `Retry-After`, a versioned `User-Agent`. ESM and CommonJS with a
+  declaration file each. On npm since the first alpha (#308).
 - **Python** — [`vocab-bloom-hub`](../packages/python-sdk/README.md) (issue #276): sync and async
-  clients on httpx, pydantic models generated from the same spec, typed exceptions, cursor
-  iteration, ETag cache, `words_dataframe()` for notebooks. Published to PyPI with the first alpha
-  (#310).
+  clients on httpx, pydantic models generated from the same spec, typed exceptions, per-request
+  options, opt-in retry, cursor and page iteration, ETag cache, `words_dataframe()` for notebooks.
+  On PyPI since the first alpha (#310).
 
 ### Caching
 
@@ -306,8 +307,8 @@ everything under the admin prefixes (`no-store` on every answer, including `401`
 `POST /api/en/search` and `POST /api/en/search/detailed`, the pre-public-API search routes
 that answered with the bare bodies and a `Deprecation: true` header through the alpha, are
 gone since `v0.2.0-beta.1` (issue #395): they answer `404` like any unknown admin route.
-The successors are `POST /api/v1/search` and `POST /api/v1/search/detailed` with the
-`{ data, meta }` envelope.
+The successors are `GET /api/v1/search` and `GET /api/v1/search/detailed` (or their `POST`
+forms) with the `{ data, meta }` envelope.
 
 ## Running a public-only or admin-only instance
 

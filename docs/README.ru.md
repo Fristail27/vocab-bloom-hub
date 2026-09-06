@@ -30,7 +30,7 @@
   <img src="https://img.shields.io/badge/yarn-4-2C8EBB?logo=yarn&logoColor=white" alt="Yarn 4" />
   <img src="https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white" alt="Next.js 16" />
-  <img src="https://img.shields.io/badge/NestJS-11-E0234E?logo=nestjs&logoColor=white" alt="NestJS 11" />
+  <img src="https://img.shields.io/badge/NestJS-12-E0234E?logo=nestjs&logoColor=white" alt="NestJS 12" />
   <img src="https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL" />
   <img src="https://img.shields.io/badge/tests-Jest%20%7C%20Playwright-C21325?logo=jest&logoColor=white" alt="Jest и Playwright" />
   <a href="../CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PR приветствуются" /></a>
@@ -85,15 +85,15 @@
   - _Managing_ — создание и редактирование английских слов, их значений, переводов, синонимов, антонимов и кратких переводов;
   - _Statistics_ — сводка по содержимому словаря;
   - _Documentation_ — встроенный справочник по модели данных.
-- **REST API** с документацией Swagger/OpenAPI: публичный read-only версионированный префикс `/api/v1` для приложений-потребителей (без логина, с лимитом запросов) и админский API, защищённый единственным админским логином (httpOnly JWT-cookie или Bearer-токен) — см. [`api.md`](api.md).
-- **Node.js / TypeScript SDK** для публичного API — [`@vocab-bloom-hub/client`](../packages/npm-sdk/README.md): типизированные методы по эндпоинтам, итерация по курсору, типизированные ошибки, ETag-кэш; типы генерируются из закоммиченного OpenAPI-документа — `npm install @vocab-bloom-hub/client`.
-- **Python SDK** — [`vocab-bloom-hub`](../packages/python-sdk/README.md): sync + async клиенты, pydantic-модели из того же спека, `words_dataframe()` для ноутбуков — `pip install --pre vocab-bloom-hub`.
+- **REST API** с документацией Swagger/OpenAPI: публичный read-only версионированный префикс `/api/v1` для приложений-потребителей — поиск (кэшируемый `GET`), слово со значениями, формами, переводами, синонимами и антонимами, пакетный поиск, списки с фильтрами и курсорной пагинацией, случайное слово; без логина, с лимитом запросов, каждый `GET` кэшируется по ETag — и админский API, защищённый единственным админским логином (httpOnly JWT-cookie или Bearer-токен) — см. [`api.md`](api.md).
+- **Node.js / TypeScript SDK** для публичного API — [`@vocab-bloom-hub/client`](../packages/npm-sdk/README.md): типизированные методы по эндпоинтам, итерация по курсору и по страницам, типизированные ошибки, ETag-кэш, опциональные повторы запросов, версионированный `User-Agent`; ESM и CommonJS, типы генерируются из закоммиченного OpenAPI-документа — `npm install @vocab-bloom-hub/client`.
+- **Python SDK** — [`vocab-bloom-hub`](../packages/python-sdk/README.md): sync + async клиенты, pydantic-модели из того же спека, опции на запрос, опциональные повторы, `words_dataframe()` для ноутбуков — `pip install --pre vocab-bloom-hub`.
 - **Импорт / экспорт словаря** в виде NDJSON-датасетов (`POST /api/en/dictionary/import`, `GET /api/en/dictionary/export`) — весь словарь можно версионировать, передавать и переносить между окружениями, в том числе офлайн: из загруженного архива или папки на сервере (см. [`offline-import.md`](offline-import.md)).
 - **Веб-сайт** — [`apps/site`](../apps/site): документация, отрендеренная из этого репозитория, справочник публичного API из OpenAPI-документа, живой playground и страницы слов поверх работающего экземпляра; профиль `site` в `docker-compose.yml`.
 - **Поиск** по словам, значениям и переводам.
 - **PostgreSQL** в production с миграциями TypeORM, применяемыми при старте, и **SQLite** без настройки для локальной разработки и тестов.
 - **Общие типы API** — фронтенд импортирует типы запросов/ответов и коды ошибок напрямую из workspace `server`, поэтому приложения не расходятся.
-- **Контроль качества** — ESLint, Prettier, проверка типов, unit-, API- и браузерные e2e-тесты запускаются в CI на каждый pull request; CodeQL сканирует `main`.
+- **Контроль качества** — ESLint, Prettier, проверка типов, unit-, API- (SQLite и Postgres) и браузерные e2e-тесты запускаются в CI на каждый pull request, плюс порог покрытия сервера и аудит зависимостей; CodeQL сканирует `main`.
 
 ---
 
@@ -102,7 +102,7 @@
 | Слой         | Технологии                                                                                |
 | ------------ | ----------------------------------------------------------------------------------------- |
 | Фронтенд     | [Next.js 16](https://nextjs.org/) (App Router), React, Ant Design, Sass-модули, next-intl |
-| Бэкенд       | [NestJS 11](https://nestjs.com/), TypeORM, Swagger (OpenAPI)                              |
+| Бэкенд       | [NestJS 12](https://nestjs.com/), TypeORM, Swagger (OpenAPI)                              |
 | База данных  | PostgreSQL (production) / SQLite через better-sqlite3 (разработка)                        |
 | Тестирование | Jest, Supertest, Playwright                                                               |
 | Инструменты  | TypeScript, Yarn 4 workspaces, ESLint 10, Prettier, Husky + lint-staged, Dependabot       |
@@ -180,13 +180,14 @@ yarn dev
 | `yarn server:dev` / `yarn front:dev` | Только API (порт `SERVER_PORT`, по умолчанию 3010) или только UI (порт `FRONT_PORT`, по умолчанию 3000) |
 | `yarn site:dev` / `yarn start:site`  | Сайт: dev-сервер / запуск production-сборки (порт `SITE_PORT`, по умолчанию 3020)                       |
 | `yarn test`                          | Все unit-тесты (сервер, фронтенд, сайт, npm SDK)                                                        |
-| `yarn jest --selectProjects server`  | Только серверные тесты (или `frontend`)                                                                 |
+| `yarn jest --selectProjects server`  | Только серверные тесты (или `frontend`, `site`, `sdk`)                                                  |
+| `yarn workspace server test:cov`     | Unit-тесты сервера с покрытием; CI падает ниже порогов из `apps/server/jest.config.ts`                  |
 | `yarn workspace server test:e2e`     | Серверные e2e-тесты (Supertest на SQLite в памяти)                                                      |
 | `yarn e2e` / `yarn e2e:ui`           | Браузерные e2e: production-сборка фронтенда + Playwright (API :3011, UI :3001)                          |
 | `yarn e2e:site`                      | Браузерные e2e сайта (API :3012, сайт :3021)                                                            |
 | `yarn lint` / `yarn lint:fix`        | ESLint                                                                                                  |
 | `yarn format` / `yarn format:check`  | Prettier                                                                                                |
-| `yarn check`                         | `lint` + `format:check` — запускайте перед открытием PR                                                 |
+| `yarn check`                         | `lint` + `format:check` + `peers:check` (незакрытые peer-зависимости) — запускайте перед открытием PR   |
 
 Миграции базы данных (только Postgres, нужен `DATABASE_URL`):
 
@@ -244,7 +245,7 @@ DATABASE_URL=postgres://... yarn workspace server migration:run      # такж�
 - [`offline-import.md`](offline-import.md) — перенос словаря между инстансами без интернета (экспорт → копирование → импорт из файла)
 - [`observability.md`](observability.md) — метрики Prometheus и структурированные JSON-логи: включение эндпоинта, как держать его приватным, все метрики, поля лога и request id, отправка логов в систему сбора
 - [`performance.md`](performance.md) — задержки горячих чтений на полном словаре (Postgres vs SQLite), индексы за ними, бенчмарк и guard планов запросов
-- [`api.md`](api.md) — контракт публичного `/api/v1` (конверт, ошибки, лимит запросов, кэширование, экспорт OpenAPI, устаревшие алиасы) и переключатели public-only / admin-only
+- [`api.md`](api.md) — контракт публичного `/api/v1` (конверт, ошибки, лимит запросов, кэширование, экспорт OpenAPI) и переключатели public-only / admin-only
 - [`data.md`](data.md) — откуда берутся данные словаря (сгенерированы LLM, `generated_by_model`), известные ограничения, как сообщать об ошибках; условия использования — в [`DATA_LICENSE.md`](../DATA_LICENSE.md)
 - [`../README.md`](../README.md) — этот README на английском
 - Swagger UI по адресу `/api` на запущенном сервере — актуальный справочник API; публичный контракт в формате OpenAPI: [`apps/server/openapi/public-v1.json`](../apps/server/openapi/public-v1.json) или `GET /api/v1/openapi.json`
