@@ -103,6 +103,21 @@ General recommendations:
 - Avoid unnecessary dependencies
 - Keep functions and components small when possible
 
+### Dependencies
+
+- Declare a dependency in the workspace that imports it (`apps/frontend`, `apps/server`, …),
+  not at the root; the root holds only the tooling shared by every workspace.
+- Peer dependencies must be met. `yarn peers:check` (part of `yarn check`, run in CI) fails
+  on any unmet one — Yarn itself only warns. When a package declares a range that lags
+  behind the version the monorepo runs and CI exercises the combination anyway, list it in
+  `KNOWN_MISMATCHES` in `scripts/check-peer-requirements.mjs` with the reason; the check
+  also fails when a listed mismatch is gone, so the list stays current. Yarn's
+  `packageExtensions` cannot widen a range a package already declares, which is why the
+  exceptions live there.
+- Dependabot (`.github/dependabot.yml`) watches every workspace manifest, the Python SDK (uv)
+  and the GitHub Actions, grouped per directory into one weekly PR each. A new workspace
+  must be added to its `directories` list.
+
 ## Reporting Bugs
 
 When creating a bug report, please include:
