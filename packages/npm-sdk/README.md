@@ -113,7 +113,10 @@ yarn workspace @vocab-bloom-hub/client generate        # types from apps/server/
 yarn workspace @vocab-bloom-hub/client generate:check  # fail when the generated types are stale (CI)
 yarn workspace @vocab-bloom-hub/client build           # dist/ (ESM, CJS, d.ts)
 yarn workspace @vocab-bloom-hub/client test            # unit tests + the client against the real server on SQLite
+yarn workspace @vocab-bloom-hub/client pack:check      # publint + arethetypeswrong on the packed tarball (CI, release)
 ```
+
+The package ships ESM and CommonJS with a declaration file for each (`dist/index.d.ts`, `dist/index.d.cts`); the `exports` map hands every consumer the pair its resolution asks for.
 
 `src/generated/openapi.ts` is produced by `openapi-typescript` from the committed public spec and committed itself: a contract change on the server shows up as a diff here, and `test/contract.spec.ts` fails until every operation of the spec has a client method.
 

@@ -64,6 +64,9 @@ jobs:
       - name: Build
         run: yarn workspace @vocab-bloom-hub/client build
 
+      - name: Package resolves for every consumer (publint, arethetypeswrong)
+        run: yarn workspace @vocab-bloom-hub/client pack:check
+
       # OIDC trusted publishing: npm >= 11.5 exchanges the workflow identity
       # for the publish right, provenance included, no token involved.
       # npm refuses a bare publish of a prerelease — the dist-tag must be
