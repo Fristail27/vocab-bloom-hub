@@ -1,7 +1,8 @@
 # Read performance on the full dictionary
 
 How the API behaves on the real data volume (issue #279) — ~298k `en_entries`, ~327k
-`en_words`, ~161k `en_meanings`, ~163k meaning translations, ~115k short translations — what
+`en_words`, ~161k `en_meanings`, ~161k meaning translations, ~115k short translations, ~509k
+synonym and ~183k antonym links — what
 was done about it, and how to measure it again.
 
 ## Targets and where things stand

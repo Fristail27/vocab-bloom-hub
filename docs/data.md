@@ -21,6 +21,10 @@ Two columns on every base-form word record the provenance:
 | `generated`          | `true` when the entry was produced by a model; `false` for entries authored by hand in the admin  |
 | `generated_by_model` | The model behind the entry, as an OpenRouter-style id (`deepseek/deepseek-v4-flash`); may be null |
 
+Meanings link to other headwords as **synonyms and antonyms** (~509k and ~183k links in the
+`v0.1.0` revision, counted in `manifest.json` as `synonym_links` / `antonym_links`); the API
+serves them under every entry and as `/words/{word}/synonyms` / `/antonyms`.
+
 Both are exported into the dataset files (`words`, `phrases`, `grammar-patterns`). The bulk of
 the published revision comes from DeepSeek v4 Flash, with smaller batches from
 `deepseek/deepseek-v4-pro` and `x-ai/grok-4.1-fast`; early batches were labelled by hand, so the
@@ -38,7 +42,8 @@ the A1–B2 vocabulary is on the roadmap.
   use the data as ground truth for evaluating other dictionaries or as a citable source of
   English usage.
 - **Translations are generated too** and have not been reviewed by a translator. Russian is the
-  only translation language populated.
+  only translation language populated (`GET /api/v1/meta` lists the instance's
+  `available_languages`; a second one is planned, issue #410).
 - **Entry-level `language_register` is unreliable on words** — almost every word says `formal`
   because the field defaulted that way during generation. The per-sense register inside
   `meanings` is the meaningful one.
@@ -60,7 +65,8 @@ The data contains no personal information.
 Each published revision of the HuggingFace dataset carries its version in `manifest.json`
 (`manifest.version`) and is **git-tagged with that version** on the dataset repository
 (HF datasets are git repos; the publishing step ends with
-`git tag <version> && git push origin <version>` there). The tags make revisions addressable:
+`git tag <version> && git push origin <version>` there — `v0.1.0` is the first tagged
+revision). The tags make revisions addressable:
 
 - HF serves any revision via `resolve/<revision>/…`, and the server imports one with
   `POST /api/en/dictionary/import` `{ "source": { "kind": "huggingface", "revision": "<tag>" } }`

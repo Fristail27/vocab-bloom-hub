@@ -2,9 +2,10 @@
 
 ## Supported versions
 
-The project is on its first release line, the `0.1.0` alphas. Security fixes land on `main`
-and ship in the next release — there are no backports: the supported release is the **latest
-one** (Docker images on GHCR, `@vocab-bloom-hub/client` on npm, `vocab-bloom-hub` on PyPI).
+The project is on its `0.x` prereleases (the `0.1.0` alphas, next the `0.2.0` betas). Security
+fixes land on `main` and ship in the next release — there are no backports: the supported
+release is the **latest one** (Docker images on GHCR, `@vocab-bloom-hub/client` on npm,
+`vocab-bloom-hub` on PyPI).
 
 | Version                                                                                         | Supported |
 | ----------------------------------------------------------------------------------------------- | --------- |
@@ -35,3 +36,6 @@ to ship a fix before disclosing publicly.
   topic, not a vulnerability; bypassing the limits is one.
 - The bundled `docker-compose.yml` defaults (local Postgres, no TLS) are a development
   convenience; production hardening is documented in `docs/deployment/`.
+- Every pull request audits the dependency trees (`yarn npm audit` over all workspaces with
+  transitive packages, `pip-audit` for the Python SDK) for advisories of high severity and
+  above; Dependabot proposes the upgrades weekly.

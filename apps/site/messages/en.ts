@@ -28,10 +28,10 @@ export default {
     features: {
       api_title: 'Public API',
       api_text:
-        'Versioned, read-only, no login: search with typo tolerance, headwords with meanings, forms and translations, cursor-paged lists, a random entry — every answer in one envelope, cached with ETag.',
+        'Versioned, read-only, no login: search with typo tolerance, headwords with meanings, forms, translations, synonyms and antonyms, a batch lookup, cursor-paged lists, a random entry — every answer in one envelope, cached with ETag.',
       sdk_title: 'SDKs',
       sdk_text:
-        'Typed clients for Node.js / TypeScript and Python generated from the same OpenAPI document: one method per endpoint, cursor iteration, typed errors, an ETag cache, a DataFrame for notebooks.',
+        'Typed clients for Node.js / TypeScript and Python generated from the same OpenAPI document: one method per endpoint, cursor iteration, typed errors, an ETag cache, opt-in retry, a DataFrame for notebooks.',
       admin_title: 'Admin UI',
       admin_text:
         'Edit words, meanings, translations, synonyms and antonyms in the browser, watch the statistics, import and export the whole dictionary as a dataset.',

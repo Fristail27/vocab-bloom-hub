@@ -30,7 +30,7 @@
   <img src="https://img.shields.io/badge/yarn-4-2C8EBB?logo=yarn&logoColor=white" alt="Yarn 4" />
   <img src="https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white" alt="Next.js 16" />
-  <img src="https://img.shields.io/badge/NestJS-11-E0234E?logo=nestjs&logoColor=white" alt="NestJS 11" />
+  <img src="https://img.shields.io/badge/NestJS-12-E0234E?logo=nestjs&logoColor=white" alt="NestJS 12" />
   <img src="https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL" />
   <img src="https://img.shields.io/badge/tests-Jest%20%7C%20Playwright-C21325?logo=jest&logoColor=white" alt="Jest and Playwright" />
   <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs welcome" /></a>
@@ -85,15 +85,15 @@ The project is in **early development** (`0.x`). The first alpha is [released](h
   - _Managing_ — create and edit English words, their meanings, translations, synonyms, antonyms and short translations;
   - _Statistics_ — an overview of the dictionary contents;
   - _Documentation_ — in-app reference for the data model.
-- **REST API** documented with Swagger/OpenAPI: a public read-only, versioned prefix `/api/v1` for consuming applications (no login, rate-limited) and an admin API protected by a single admin login (httpOnly JWT cookie or Bearer token) — see [`docs/api.md`](docs/api.md).
-- **Node.js / TypeScript SDK** for the public API — [`@vocab-bloom-hub/client`](packages/npm-sdk/README.md): typed methods per endpoint, cursor iteration, typed errors, ETag cache; types generated from the committed OpenAPI document — `npm install @vocab-bloom-hub/client`.
-- **Python SDK** — [`vocab-bloom-hub`](packages/python-sdk/README.md): sync + async clients, pydantic models from the same spec, `words_dataframe()` for notebooks — `pip install --pre vocab-bloom-hub`.
+- **REST API** documented with Swagger/OpenAPI: a public read-only, versioned prefix `/api/v1` for consuming applications — search (a cacheable `GET`), headwords with meanings, forms, translations, synonyms and antonyms, a batch lookup, filtered cursor-paged lists, a random entry; no login, rate-limited, every `GET` cached with ETag — and an admin API protected by a single admin login (httpOnly JWT cookie or Bearer token) — see [`docs/api.md`](docs/api.md).
+- **Node.js / TypeScript SDK** for the public API — [`@vocab-bloom-hub/client`](packages/npm-sdk/README.md): typed methods per endpoint, cursor and page iteration, typed errors, ETag cache, opt-in retry, a versioned `User-Agent`; ESM and CommonJS, types generated from the committed OpenAPI document — `npm install @vocab-bloom-hub/client`.
+- **Python SDK** — [`vocab-bloom-hub`](packages/python-sdk/README.md): sync + async clients, pydantic models from the same spec, per-request options, opt-in retry, `words_dataframe()` for notebooks — `pip install --pre vocab-bloom-hub`.
 - **Dictionary import / export** as NDJSON datasets (`POST /api/en/dictionary/import`, `GET /api/en/dictionary/export`), so the whole dictionary can be versioned, shared or moved between environments — including offline, from an uploaded archive or a folder on the server (see [`docs/offline-import.md`](docs/offline-import.md)).
 - **Website** — [`apps/site`](apps/site): the documentation rendered from this repository, the public API reference from the OpenAPI document, a live playground and word pages over a running instance; the `site` profile of `docker-compose.yml`.
 - **Search** across words, meanings and translations.
 - **PostgreSQL** in production with TypeORM migrations applied on startup, and a zero-config **SQLite** fallback for local development and tests.
 - **Shared API types** — the frontend imports request/response types and error codes straight from the `server` workspace, so the two apps never drift apart.
-- **Quality gates** — ESLint, Prettier, type checks, unit, API and browser e2e tests run in CI on every pull request; CodeQL scans `main`.
+- **Quality gates** — ESLint, Prettier, type checks, unit, API (SQLite and Postgres) and browser e2e tests run in CI on every pull request, with a server coverage threshold and a dependency audit; CodeQL scans `main`.
 
 ---
 
@@ -102,7 +102,7 @@ The project is in **early development** (`0.x`). The first alpha is [released](h
 | Layer    | Technology                                                                                 |
 | -------- | ------------------------------------------------------------------------------------------ |
 | Frontend | [Next.js 16](https://nextjs.org/) (App Router), React, Ant Design, Sass modules, next-intl |
-| Backend  | [NestJS 11](https://nestjs.com/), TypeORM, Swagger (OpenAPI)                               |
+| Backend  | [NestJS 12](https://nestjs.com/), TypeORM, Swagger (OpenAPI)                               |
 | Database | PostgreSQL (production) / SQLite via better-sqlite3 (development)                          |
 | Testing  | Jest, Supertest, Playwright                                                                |
 | Tooling  | TypeScript, Yarn 4 workspaces, ESLint 10, Prettier, Husky + lint-staged, Dependabot        |
@@ -180,13 +180,14 @@ All commands run from the repository root.
 | `yarn server:dev` / `yarn front:dev` | Run only the API (port `SERVER_PORT`, default 3010) or only the UI (port `FRONT_PORT`, default 3000) |
 | `yarn site:dev` / `yarn start:site`  | The website: dev server / production build start (port `SITE_PORT`, default 3020)                    |
 | `yarn test`                          | All unit tests (server, frontend, site, npm SDK)                                                     |
-| `yarn jest --selectProjects server`  | Only server tests (or `frontend`)                                                                    |
+| `yarn jest --selectProjects server`  | Only server tests (or `frontend`, `site`, `sdk`)                                                     |
+| `yarn workspace server test:cov`     | Server unit tests with coverage; CI fails below the thresholds in `apps/server/jest.config.ts`       |
 | `yarn workspace server test:e2e`     | Server e2e tests (Supertest against an in-memory SQLite)                                             |
 | `yarn e2e` / `yarn e2e:ui`           | Browser e2e: production frontend build + Playwright (API :3011, UI :3001)                            |
 | `yarn e2e:site`                      | Browser e2e of the website (API :3012, site :3021)                                                   |
 | `yarn lint` / `yarn lint:fix`        | ESLint                                                                                               |
 | `yarn format` / `yarn format:check`  | Prettier                                                                                             |
-| `yarn check`                         | `lint` + `format:check` — run before opening a PR                                                    |
+| `yarn check`                         | `lint` + `format:check` + `peers:check` (unmet peer dependencies) — run before opening a PR          |
 
 Database migrations (Postgres only, need `DATABASE_URL`):
 
