@@ -24,8 +24,13 @@ ParamValue = Scalar | Iterable[Scalar] | None
 
 
 class WordFilters(TypedDict, total=False):
-    """The filters of the list and the random draw; values of one filter are OR-ed, filters are AND-ed."""
+    """The filters of the list and the random draw; values of one filter are OR-ed, filters are AND-ed.
 
+    ``search`` is a case-insensitive headword prefix, ``is_obsolete`` keeps obsolete or current entries only.
+    """
+
+    search: str | None
+    is_obsolete: bool | None
     part_of_speech: Iterable[str | Enum]
     word_level: Iterable[str | Enum]
     language_register: Iterable[str | Enum]

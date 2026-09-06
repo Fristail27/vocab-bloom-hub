@@ -90,6 +90,12 @@ class AsyncVocabBloomClient:
     async def forms(self, headword: str) -> m.FormsResponse:
         return await self._get(headword_path(headword, "/forms"), None, m.FormsResponse)
 
+    async def synonyms(self, headword: str) -> m.LinksResponse:
+        return await self._get(headword_path(headword, "/synonyms"), None, m.LinksResponse)
+
+    async def antonyms(self, headword: str) -> m.LinksResponse:
+        return await self._get(headword_path(headword, "/antonyms"), None, m.LinksResponse)
+
     async def words(self, **options: Unpack[ListOptions]) -> m.WordsResponse:
         return await self._get("/words", options, m.WordsResponse)
 

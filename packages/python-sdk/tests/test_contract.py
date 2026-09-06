@@ -22,6 +22,8 @@ METHOD_BY_OPERATION = {
     "PublicWordsController_meanings": "meanings",
     "PublicWordsController_translations": "translations",
     "PublicWordsController_forms": "forms",
+    "PublicWordsController_synonyms": "synonyms",
+    "PublicWordsController_antonyms": "antonyms",
     "PublicDictionaryController_random": "random",
     "PublicDictionaryController_meta": "meta",
     "PublicOpenApiController_openapi": "openapi",

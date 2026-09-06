@@ -21,6 +21,8 @@ export enum ApiEndpointKeyE {
   word_meanings = 'word_meanings',
   word_translations = 'word_translations',
   word_forms = 'word_forms',
+  word_synonyms = 'word_synonyms',
+  word_antonyms = 'word_antonyms',
   word_by_id = 'word_by_id',
   words = 'words',
   random = 'random',
@@ -104,6 +106,8 @@ const multiEnum = (name: string, type: string, values: Record<string, string>): 
 
 // Filters shared by the list and the random entry (WordFiltersV1QueryDTO on the server)
 const WORD_FILTER_PARAMS: ApiParamDocT[] = [
+  { name: 'search', type: 'string', control: ParamControlE.text, required: false, max: 128 },
+  { name: 'is_obsolete', type: 'boolean', control: ParamControlE.boolean, required: false },
   multiEnum('part_of_speech', 'EnPartOfSpeechE', EnPartOfSpeechE),
   multiEnum('word_level', 'WordLevelE', WordLevelE),
   multiEnum('language_register', 'LanguageRegisterE', LanguageRegisterE),
@@ -271,6 +275,24 @@ export const DOCUMENTED_ENDPOINTS: ApiEndpointDocT[] = [
     path: '/api/v1/words/{word}/forms',
     clientPath: '/v1/words/{word}/forms',
     responseType: 'PublicHeadwordFormsV1ResT',
+    params: [HEADWORD_PARAM],
+  },
+  {
+    key: ApiEndpointKeyE.word_synonyms,
+    slug: 'word-synonyms',
+    method: 'GET',
+    path: '/api/v1/words/{word}/synonyms',
+    clientPath: '/v1/words/{word}/synonyms',
+    responseType: 'PublicHeadwordLinksV1ResT',
+    params: [HEADWORD_PARAM],
+  },
+  {
+    key: ApiEndpointKeyE.word_antonyms,
+    slug: 'word-antonyms',
+    method: 'GET',
+    path: '/api/v1/words/{word}/antonyms',
+    clientPath: '/v1/words/{word}/antonyms',
+    responseType: 'PublicHeadwordLinksV1ResT',
     params: [HEADWORD_PARAM],
   },
   {

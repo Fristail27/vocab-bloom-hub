@@ -505,6 +505,12 @@ export default {
     endpoint_word_meanings: 'Значения слова',
     endpoint_word_translations: 'Переводы слова',
     endpoint_word_forms: 'Формы слова',
+    endpoint_word_synonyms: 'Синонимы слова',
+    endpoint_word_antonyms: 'Антонимы слова',
+    desc_word_synonyms:
+      'Синонимы всех значений слова одним плоским списком: каждый элемент — связанное заголовочное слово (доступно через поиск по заголовку) с meaning_id, word_id и part_of_speech, к которым он относится. Слово без синонимов отвечает пустым списком.',
+    desc_word_antonyms:
+      'Антонимы всех значений слова одним плоским списком: каждый элемент — связанное заголовочное слово с meaning_id, word_id и part_of_speech, к которым он относится. Слово без антонимов отвечает пустым списком.',
     endpoint_word_by_id: 'Запись по id',
     endpoint_words: 'Список по фильтрам',
     endpoint_random: 'Случайная запись',
@@ -547,7 +553,9 @@ export default {
     param_desc_area_variant: 'Региональные пометы, которые нужно оставить',
     param_desc_form_of_word: 'Какие словоформы перечислять; по умолчанию только базовые',
     param_desc_language: 'Языки переводов; без значения — все',
-    param_desc_search: 'Поисковый запрос',
+    param_desc_search:
+      'Поисковый запрос; для списка и случайной записи — префикс заголовочного слова без учёта регистра (ru — run, rung, runner, …)',
+    param_desc_is_obsolete: 'true: только устаревшие записи, false: только актуальные',
     param_desc_type: 'Ограничивает поиск одним типом записи',
     param_desc_limit: 'Количество элементов на странице',
     param_desc_page: 'Номер страницы',

@@ -16,6 +16,7 @@ import {
   EnWordFormsE,
   EnWordT,
   PublicHeadwordFormsV1ResT,
+  PublicHeadwordLinksV1ResT,
   PublicHeadwordMeaningsV1ResT,
   PublicHeadwordTranslationsV1ResT,
   PublicHeadwordV1ResT,
@@ -135,7 +136,8 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
       part_of_speech: EnPartOfSpeechE.verb,
       form_of_word: EnWordFormsE.base_form,
       word_level: WordLevelE.C1,
-      meanings: [makeMeaning('to leave', 1)],
+      // the only antonym of the fixture (issue #403); "run" exists already
+      meanings: [makeMeaning('to leave', 1, { antonyms: ['run'] })],
     });
     ids.phrase = await addWord({
       word: 'put up with',
@@ -151,6 +153,13 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
       else process.env[key] = saved[key];
     }
     await app.close();
+  });
+
+  // The suite sends well over a hundred requests from one address; the
+  // default budget (100/60) would 429 the last tests. The two rate-limit
+  // tests set their own value; afterEach clears it again
+  beforeEach(() => {
+    process.env.PUBLIC_API_RATE_LIMIT = '100000/60';
   });
 
   afterEach(() => {
@@ -343,6 +352,36 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
 
   // ------------------------------------------------------------------ id
 
+  describe('GET /api/v1/words/{word}/synonyms, /antonyms (issue #403)', () => {
+    it('lists the linked headwords per meaning, naming the meaning and the entry', async () => {
+      const res = await request(server()).get('/api/v1/words/RUN/synonyms').expect(200);
+      const body = res.body as PublicHeadwordLinksV1ResT;
+      expect(body.meta).toEqual({ word: 'run', count: 2 });
+      const meanings = (await request(server()).get('/api/v1/words/run/meanings').expect(200))
+        .body as PublicHeadwordMeaningsV1ResT;
+      const moveFast = meanings.data.find((m) => m.title === 'to move fast')!;
+      expect(body.data).toEqual([
+        { word: 'sprint', meaning_id: moveFast.id, word_id: ids.runVerb, part_of_speech: EnPartOfSpeechE.verb },
+      ]);
+      // an inflected form resolves to its base entry here too
+      expect((await request(server()).get('/api/v1/words/ran/synonyms').expect(200)).body.data).toHaveLength(1);
+
+      const antonyms = (await request(server()).get('/api/v1/words/abandon/antonyms').expect(200))
+        .body as PublicHeadwordLinksV1ResT;
+      expect(antonyms.meta).toEqual({ word: 'abandon', count: 1 });
+      expect(antonyms.data).toEqual([
+        expect.objectContaining({ word: 'run', word_id: ids.abandon, part_of_speech: EnPartOfSpeechE.verb }),
+      ]);
+      // a headword without links answers an empty list, not 404
+      expect((await request(server()).get('/api/v1/words/run/antonyms').expect(200)).body.data).toEqual([]);
+      // an unknown headword is 404 like every headword read
+      await request(server()).get('/api/v1/words/nope/synonyms').expect(404);
+      await request(server())
+        .get(`/api/v1/words/${'x'.repeat(129)}/antonyms`)
+        .expect(400);
+    });
+  });
+
   describe('GET /api/v1/words/id/{id}', () => {
     it('answers the entry in the { data } envelope', async () => {
       const res = await request(server()).get(`/api/v1/words/id/${ids.runNoun}`).expect(200);
@@ -412,6 +451,26 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
         'run:noun',
       ]);
       expect(keys(await list('?area_variant=british'))).toEqual([]);
+    });
+
+    it('filters by a case-insensitive headword prefix and by is_obsolete (issue #403)', async () => {
+      expect(keys(await list('?search=ru'))).toEqual(['run:verb', 'run:noun']);
+      expect(keys(await list('?search=RU&part_of_speech=noun'))).toEqual(['run:noun']);
+      // a phrase prefix keeps its space; LIKE wildcards in the term are literal
+      expect(keys(await list('?search=put%20up'))).toEqual(['put up with:phrase']);
+      expect(keys(await list('?search=%25'))).toEqual([]);
+      expect(keys(await list('?search=ra&form_of_word=past_simple'))).toEqual(['ran:verb']);
+      expect(keys(await list('?is_obsolete=true'))).toEqual([]);
+      expect(keys(await list('?is_obsolete=false&search=sp'))).toEqual(['sprint:verb']);
+      // the same filters drive the random draw
+      const random = await request(server()).get('/api/v1/random?search=aba').expect(200);
+      expect((random.body as PublicWordV1ResT).data.word).toBe('abandon');
+      await request(server()).get('/api/v1/random?search=zzz').expect(404);
+      // validated like every filter
+      await request(server())
+        .get(`/api/v1/words?search=${'x'.repeat(129)}`)
+        .expect(400);
+      await request(server()).get('/api/v1/words?is_obsolete=maybe').expect(400);
     });
 
     it('filters by category over the array column', async () => {

@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsArray, IsEnum, IsOptional } from 'class-validator';
+import { IsArray, IsBoolean, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 import {
   CategoryE,
   EnAreaVariantsE,
@@ -9,16 +9,34 @@ import {
   LanguageRegisterE,
   WordLevelE,
 } from '../../../../types';
-import { toArray } from '../../EnModule/modules/EnAdminLists/dto/PaginationQuery.dto';
+import { toArray, toBoolean } from '../../EnModule/modules/EnAdminLists/dto/PaginationQuery.dto';
+import { HEADWORD_MAX_LENGTH } from '../utils/headword-param.pipe';
 
 /**
  * Filters shared by the public list and random-word reads (issue #272).
- * Every filter accepts one value or a repeated key (`?word_level=B1&word_level=B2`);
- * values of one filter are OR-ed, different filters are AND-ed. Without
- * `form_of_word` only base forms are considered: inflected forms ("ran")
- * are reachable through the base entry's `forms`.
+ * Every enum filter accepts one value or a repeated key
+ * (`?word_level=B1&word_level=B2`); values of one filter are OR-ed, different
+ * filters are AND-ed. Without `form_of_word` only base forms are considered:
+ * inflected forms ("ran") are reachable through the base entry's `forms`.
+ * `search` (a case-insensitive headword prefix) and `is_obsolete` (issue
+ * #403) make the cacheable list serve an autocomplete or an A–Z browser.
  */
 export class WordFiltersV1QueryDTO {
+  @ApiPropertyOptional({
+    maxLength: HEADWORD_MAX_LENGTH,
+    description: 'Headword prefix, case-insensitive (`ru` lists run, rung, runner, …)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(HEADWORD_MAX_LENGTH)
+  search?: string;
+
+  @ApiPropertyOptional({ type: Boolean, description: 'true: obsolete entries only, false: current ones only' })
+  @IsOptional()
+  @Transform(toBoolean)
+  @IsBoolean()
+  is_obsolete?: boolean;
+
   @ApiPropertyOptional({ enum: EnPartOfSpeechE, isArray: true })
   @IsOptional()
   @Transform(toArray)

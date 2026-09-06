@@ -502,6 +502,12 @@ export default {
     endpoint_word_meanings: 'Meanings of a headword',
     endpoint_word_translations: 'Translations of a headword',
     endpoint_word_forms: 'Forms of a headword',
+    endpoint_word_synonyms: 'Synonyms of a headword',
+    endpoint_word_antonyms: 'Antonyms of a headword',
+    desc_word_synonyms:
+      'The synonyms of every meaning of the headword in one flat list: each item is a linked headword (readable through the headword lookup) with the meaning_id, word_id and part_of_speech it belongs to. A headword without synonyms answers an empty list.',
+    desc_word_antonyms:
+      'The antonyms of every meaning of the headword in one flat list: each item is a linked headword with the meaning_id, word_id and part_of_speech it belongs to. A headword without antonyms answers an empty list.',
     endpoint_word_by_id: 'Entry by id',
     endpoint_words: 'Filtered list',
     endpoint_random: 'Random entry',
@@ -544,7 +550,9 @@ export default {
     param_desc_area_variant: 'Regional labels to keep',
     param_desc_form_of_word: 'Word forms to list; base forms only by default',
     param_desc_language: 'Translation languages; no value means all of them',
-    param_desc_search: 'Search query',
+    param_desc_search:
+      'Search term; on the list and the random entry a case-insensitive headword prefix (ru — run, rung, runner, …)',
+    param_desc_is_obsolete: 'true: obsolete entries only, false: current ones only',
     param_desc_type: 'Restricts the search to one entry type',
     param_desc_limit: 'Number of items per page',
     param_desc_page: 'Page number',

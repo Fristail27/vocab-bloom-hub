@@ -18,6 +18,7 @@ import { HeadwordTranslationsV1QueryDTO } from './dto/HeadwordTranslationsV1Quer
 import { PUBLIC_BATCH_MAX_WORDS, WordsBatchV1ReqDTO } from './dto/WordsBatchV1Req.dto';
 import {
   PublicHeadwordFormsV1ResT,
+  PublicHeadwordLinksV1ResT,
   PublicHeadwordMeaningsV1ResT,
   PublicHeadwordTranslationsV1ResT,
   PublicHeadwordV1ResT,
@@ -49,7 +50,8 @@ export class PublicWordsController {
   @ApiOperation({
     summary: 'List dictionary entries by filters, cursor-paged and ordered by (word, id)',
     description:
-      'Every filter accepts a repeated key; values of one filter are OR-ed, filters are AND-ed. ' +
+      'Every enum filter accepts a repeated key; values of one filter are OR-ed, filters are AND-ed. ' +
+      '`search` keeps the headwords starting with the prefix (an autocomplete or an A–Z browser: cacheable, unlike the search). ' +
       'Pass `meta.next_cursor` back as `cursor` to read the next page.',
   })
   @Get('/')
@@ -89,6 +91,28 @@ export class PublicWordsController {
   @Get(':word/meanings')
   async meanings(@Param('word', HeadwordParamPipe) word: string): Promise<PublicHeadwordMeaningsV1ResT> {
     return this.publicWordsService.getMeaningsByHeadword(word);
+  }
+
+  @ApiOperation({
+    summary: 'The synonyms of a headword, per meaning',
+    description:
+      'One item per linked headword and meaning; each names its `meaning_id`, `word_id` and `part_of_speech`.',
+  })
+  @ApiParam(HEADWORD_PARAM)
+  @Get(':word/synonyms')
+  async synonyms(@Param('word', HeadwordParamPipe) word: string): Promise<PublicHeadwordLinksV1ResT> {
+    return this.publicWordsService.getLinksByHeadword(word, 'synonyms');
+  }
+
+  @ApiOperation({
+    summary: 'The antonyms of a headword, per meaning',
+    description:
+      'One item per linked headword and meaning; each names its `meaning_id`, `word_id` and `part_of_speech`.',
+  })
+  @ApiParam(HEADWORD_PARAM)
+  @Get(':word/antonyms')
+  async antonyms(@Param('word', HeadwordParamPipe) word: string): Promise<PublicHeadwordLinksV1ResT> {
+    return this.publicWordsService.getLinksByHeadword(word, 'antonyms');
   }
 
   @ApiOperation({ summary: 'The short and per-meaning translations of a headword' })

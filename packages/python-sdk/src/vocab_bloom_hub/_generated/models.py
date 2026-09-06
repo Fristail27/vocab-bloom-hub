@@ -248,6 +248,18 @@ class PublicMeaningTranslationV1T(BaseModel):
     variants_of_words: list[str]
 
 
+class PublicWordLinkV1T(BaseModel):
+    meaning_id: int
+    word: str
+    word_id: int
+    part_of_speech: EnPartOfSpeechE
+
+
+class PublicHeadwordLinksV1ResT(BaseModel):
+    data: list[PublicWordLinkV1T]
+    meta: PublicHeadwordV1MetaT
+
+
 class PublicHeadwordTranslationsV1T(BaseModel):
     short_translations: list[PublicShortTranslationV1T]
     meaning_translations: list[PublicMeaningTranslationV1T]

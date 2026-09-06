@@ -68,6 +68,8 @@ async with AsyncVocabBloomClient("https://dict.example.com") as client:
 | `meanings(headword)`                        | `GET /words/{word}/meanings`       | `MeaningsResponse`                                                                                             |
 | `translations(headword, *, language)`       | `GET /words/{word}/translations`   | `TranslationsResponse`                                                                                         |
 | `forms(headword)`                           | `GET /words/{word}/forms`          | `FormsResponse`                                                                                                |
+| `synonyms(headword)`                        | `GET /words/{word}/synonyms`       | `LinksResponse` — the linked headwords per meaning                                                             |
+| `antonyms(headword)`                        | `GET /words/{word}/antonyms`       | `LinksResponse`                                                                                                |
 | `words(**filters, cursor, limit, with_...)` | `GET /words`                       | `WordsResponse` (one page)                                                                                     |
 | `iter_words(**filters, ...)`                | `GET /words`, following the cursor | `Iterator[Word]`                                                                                               |
 | `random(**filters)`                         | `GET /random`                      | `WordResponse`                                                                                                 |

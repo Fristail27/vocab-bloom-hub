@@ -57,6 +57,11 @@ def test_headword_reads_and_by_id(client: VocabBloomClient) -> None:
     ]
     assert batch.data[0].entries == headword.data
 
+    # the thesaurus reads (issue #403) and the prefix filter of the list
+    assert [link.word for link in client.synonyms("run").data] == ["sprint"]
+    assert client.antonyms("run").data == []
+    assert [w.word for w in client.words(search="RU").data] == ["run"]
+
     meaning = client.meanings("run").data[0]
     assert (meaning.title, meaning.word_id, meaning.part_of_speech.value) == ("to move fast", run_id, "verb")
 

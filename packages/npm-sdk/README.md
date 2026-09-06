@@ -54,6 +54,8 @@ for await (const word of client.iterateWords({ word_level: ['A1', 'A2'], with_me
 | `meanings(headword)`             | `GET /words/{word}/meanings`       | `MeaningsResponse`                                                                                             |
 | `translations(headword, query?)` | `GET /words/{word}/translations`   | `TranslationsResponse`                                                                                         |
 | `forms(headword)`                | `GET /words/{word}/forms`          | `FormsResponse`                                                                                                |
+| `synonyms(headword)`             | `GET /words/{word}/synonyms`       | `LinksResponse` — the linked headwords per meaning                                                             |
+| `antonyms(headword)`             | `GET /words/{word}/antonyms`       | `LinksResponse`                                                                                                |
 | `words(query?)`                  | `GET /words`                       | `WordsResponse` (one page)                                                                                     |
 | `iterateWords(query?)`           | `GET /words`, following the cursor | `AsyncGenerator<Word>`                                                                                         |
 | `random(filters?)`               | `GET /random`                      | `WordResponse`                                                                                                 |
