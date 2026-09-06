@@ -492,6 +492,7 @@ export default {
     desc_search_detailed:
       'The same search with pagination, which can additionally join meanings and their translations. Because every item may carry joined data, both the page size and the pagination depth are capped tighter than in the basic search.',
     endpoint_word: 'Headword lookup',
+    endpoint_words_batch: 'Batch headword lookup',
     endpoint_word_meanings: 'Meanings of a headword',
     endpoint_word_translations: 'Translations of a headword',
     endpoint_word_forms: 'Forms of a headword',
@@ -501,6 +502,8 @@ export default {
     endpoint_meta: 'Dictionary metadata',
     desc_word:
       'Every entry of a headword — one item per part of speech — with its forms, meanings (definitions, examples, translations, synonyms, antonyms) and short translations. The spelling is matched case-insensitively; an inflected form ("ran") resolves to its base entry ("run"). An unknown spelling answers 404.',
+    desc_words_batch:
+      'Up to 50 headwords in one request, for a consumer enriching a word list. Every spelling is matched like the headword lookup; the answer keeps the request order with one item per spelling (word, count, entries), collapses duplicates and case, and lists the spellings without an entry under meta.not_found instead of failing. A batch costs one request of the rate limit whatever its size.',
     desc_word_meanings:
       'The meanings of every entry of the headword in one flat list; each item carries word_id and part_of_speech of the entry it belongs to.',
     desc_word_translations:
@@ -525,6 +528,7 @@ export default {
     param_desc_message: 'What is wrong and, ideally, what would be right',
     param_desc_word_id: 'Id of one entry of the headword, when the report concerns a specific part of speech',
     param_desc_word: 'Headword spelling, case-insensitive; spaces are allowed for phrases',
+    param_desc_words: 'Headword spellings, 1 to 50, comma-separated; each matched like the headword lookup',
     param_desc_id: 'Numeric id of the entry',
     param_desc_cursor: 'meta.next_cursor of the previous page; omit for the first page',
     param_desc_part_of_speech: 'Parts of speech to keep',

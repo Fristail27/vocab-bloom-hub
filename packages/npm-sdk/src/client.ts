@@ -17,6 +17,7 @@ import type {
   Word,
   WordFilters,
   WordResponse,
+  WordsBatchResponse,
   WordsResponse,
 } from './types';
 
@@ -123,6 +124,15 @@ export class VocabBloomClient {
   /** All entries of a headword (parts of speech, forms, meanings, translations, links) */
   word(headword: string, options?: RequestOptions): Promise<HeadwordResponse> {
     return this.get(`/words/${encodeURIComponent(headword)}`, undefined, options);
+  }
+
+  /**
+   * Up to 50 headwords in one request (issue #397): one item per spelling
+   * in request order, the spellings without an entry under `meta.not_found`.
+   * Costs one request of the rate limit whatever the size of the batch.
+   */
+  wordsBatch(words: string[], options?: RequestOptions): Promise<WordsBatchResponse> {
+    return this.post('/words/batch', { words }, options);
   }
 
   /** One entry by its numeric id */

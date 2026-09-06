@@ -79,6 +79,16 @@ class SearchDetailedV1ReqDTO(BaseModel):
     )
 
 
+class WordsBatchV1ReqDTO(BaseModel):
+    words: list[str] = Field(
+        ...,
+        description="Headword spellings, 50 at most, each matched like GET /words/{word} (case-insensitively; an inflected form resolves to its base entry)",
+        examples=[["run", "ran", "put up with"]],
+        max_length=50,
+        min_length=1,
+    )
+
+
 class PublicSearchV1MetaT(BaseModel):
     count: int
     fuzzy: bool
@@ -248,6 +258,11 @@ class PublicHeadwordTranslationsV1T(BaseModel):
 class PublicHeadwordTranslationsV1ResT(BaseModel):
     meta: PublicHeadwordV1MetaT
     data: PublicHeadwordTranslationsV1T
+
+
+class PublicWordsBatchV1MetaT(BaseModel):
+    count: int
+    not_found: list[str]
 
 
 class PublicWordsV1MetaT(BaseModel):
@@ -429,6 +444,17 @@ class PublicWordV1ResT(BaseModel):
 class PublicHeadwordV1ResT(BaseModel):
     data: list[EnWordT]
     meta: PublicHeadwordV1MetaT
+
+
+class PublicWordsBatchItemV1T(BaseModel):
+    word: str
+    count: int
+    entries: list[EnWordT]
+
+
+class PublicWordsBatchV1ResT(BaseModel):
+    data: list[PublicWordsBatchItemV1T]
+    meta: PublicWordsBatchV1MetaT
 
 
 class PublicWordsV1ResT(BaseModel):

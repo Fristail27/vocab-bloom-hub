@@ -15,6 +15,60 @@ export type ScenarioContextT = {
   runVerbId: number;
 };
 
+// Fifty everyday headwords, the worst case of the batch lookup (#397)
+const BATCH_50_WORDS = [
+  'time',
+  'year',
+  'people',
+  'way',
+  'day',
+  'man',
+  'thing',
+  'woman',
+  'life',
+  'child',
+  'world',
+  'school',
+  'state',
+  'family',
+  'student',
+  'group',
+  'country',
+  'problem',
+  'hand',
+  'part',
+  'place',
+  'case',
+  'week',
+  'company',
+  'system',
+  'program',
+  'question',
+  'work',
+  'government',
+  'number',
+  'night',
+  'point',
+  'home',
+  'water',
+  'room',
+  'mother',
+  'area',
+  'money',
+  'story',
+  'fact',
+  'month',
+  'lot',
+  'right',
+  'study',
+  'book',
+  'eye',
+  'job',
+  'word',
+  'business',
+  'issue',
+];
+
 /**
  * The hot reads of the API on the full dictionary (issue #279): every
  * search tier, the headword and id lookups, the filtered list at
@@ -85,6 +139,21 @@ export const buildScenarios = ({ runVerbId }: ScenarioContextT): ScenarioT[] => 
   { name: 'word "ran" (form → base entry)', group: 'word', method: 'GET', path: '/api/v1/words/ran' },
   { name: 'word by id (run, verb)', group: 'word', method: 'GET', path: `/api/v1/words/id/${runVerbId}` },
   { name: 'word "run" translations', group: 'word', method: 'GET', path: '/api/v1/words/run/translations' },
+  {
+    name: 'words batch (run, ran, abandon + 2 unknown)',
+    group: 'word',
+    method: 'POST',
+    path: '/api/v1/words/batch',
+    body: { words: ['run', 'ran', 'abandon', 'qzxvj', 'xylo'] },
+  },
+  {
+    // the largest batch the endpoint accepts, all of them common headwords
+    name: 'words batch, 50 headwords (the cap)',
+    group: 'word',
+    method: 'POST',
+    path: '/api/v1/words/batch',
+    body: { words: BATCH_50_WORDS },
+  },
   // ---- filtered list: unselective, selective, array column, deep cursor, joins
   { name: 'list first page (no filter)', group: 'list', method: 'GET', path: '/api/v1/words' },
   { name: 'list word_level=B1', group: 'list', method: 'GET', path: '/api/v1/words?word_level=B1' },

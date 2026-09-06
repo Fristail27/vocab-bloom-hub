@@ -17,6 +17,8 @@ import {
   PublicHeadwordMeaningsV1ResT,
   PublicHeadwordTranslationsV1ResT,
   PublicHeadwordV1ResT,
+  PublicWordsBatchItemV1T,
+  PublicWordsBatchV1ResT,
   PublicWordsV1ResT,
 } from '../../../types';
 import { WordFiltersV1QueryDTO } from './dto/WordFiltersV1Query.dto';
@@ -40,24 +42,44 @@ export class PublicWordsService {
   // ------------------------------------------------------------ headword
 
   /**
-   * The base entries a spelling names: a row that is a base form itself, or
-   * the base form an inflected row ("ran") belongs to. Ordered by part of
-   * speech, then id, so the answer is stable
+   * The base entries each spelling names: a row that is a base form itself,
+   * or the base form an inflected row ("ran") belongs to. One query for the
+   * whole list (the batch lookup, issue #397); per spelling the ids are
+   * ordered by part of speech, then id, so the answer is stable. A spelling
+   * with no entry has no key in the result
    */
-  private async resolveEntryIds(word: string): Promise<number[]> {
+  private async resolveEntryIdsByWords(words: string[]): Promise<Map<string, number[]>> {
+    const found = new Map<string, number[]>();
+    if (words.length === 0) return found;
     const rows = await this.enWordsRep
       .createQueryBuilder('w')
       .innerJoin('w.word', 'entry')
       .leftJoin('w.base_form', 'baseForm')
       .select(['w.id', 'w.part_of_speech'])
+      .addSelect(['entry.word'])
       .addSelect(['baseForm.id', 'baseForm.part_of_speech'])
-      .where('entry.word = :word', { word })
+      .where('entry.word IN (:...words)', { words })
       .getMany();
-    const targets = rows.map((row) => row.base_form ?? row);
-    const unique = new Map(targets.map((row) => [row.id, row]));
-    return [...unique.values()]
-      .sort((a, b) => a.part_of_speech.localeCompare(b.part_of_speech) || a.id - b.id)
-      .map((row) => row.id);
+    const byWord = new Map<string, Map<number, EnWord>>();
+    for (const row of rows) {
+      const target = row.base_form ?? row;
+      const targets = byWord.get(row.word.word) ?? new Map<number, EnWord>();
+      targets.set(target.id, target);
+      byWord.set(row.word.word, targets);
+    }
+    for (const [word, targets] of byWord) {
+      found.set(
+        word,
+        [...targets.values()]
+          .sort((a, b) => a.part_of_speech.localeCompare(b.part_of_speech) || a.id - b.id)
+          .map((row) => row.id),
+      );
+    }
+    return found;
+  }
+
+  private async resolveEntryIds(word: string): Promise<number[]> {
+    return (await this.resolveEntryIdsByWords([word])).get(word) ?? [];
   }
 
   // Relation rows come back in storage order; the public answer sorts them
@@ -96,6 +118,30 @@ export class PublicWordsService {
     }
     const data = await this.loadFull(ids);
     return { data, meta: { word, count: data.length } };
+  }
+
+  /**
+   * Many headwords in two queries instead of two per word (issue #397): the
+   * spellings are normalized like the single lookup and de-duplicated in
+   * request order; the ones naming no entry go to `meta.not_found`
+   */
+  async getByHeadwords(raws: string[]): Promise<PublicWordsBatchV1ResT> {
+    const words = [...new Set(raws.map((raw) => this.normalizeHeadword(raw)).filter((word) => word !== ''))];
+    const idsByWord = await this.resolveEntryIdsByWords(words);
+    const entries = await this.loadFull([...new Set([...idsByWord.values()].flat())]);
+    const entryById = new Map(entries.map((entry) => [entry.id, entry]));
+    const data: PublicWordsBatchItemV1T[] = [];
+    const not_found: string[] = [];
+    for (const word of words) {
+      const ids = idsByWord.get(word);
+      if (!ids) {
+        not_found.push(word);
+        continue;
+      }
+      const found = ids.map((id) => entryById.get(id)).filter((entry): entry is EnWordT => entry !== undefined);
+      data.push({ word, count: found.length, entries: found });
+    }
+    return { data, meta: { count: data.length, not_found } };
   }
 
   async getMeaningsByHeadword(raw: string): Promise<PublicHeadwordMeaningsV1ResT> {

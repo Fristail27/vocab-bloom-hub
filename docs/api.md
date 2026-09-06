@@ -36,7 +36,8 @@ endpoints under the _Public API v1_ tag; the public contract alone is exported a
   language is returned. `GET /api/v1/meta` lists the languages an instance
   serves under `available_languages`; consumers should read it instead of assuming `ru`.
 - **Rate limit.** One budget per client IP for the whole prefix, `PUBLIC_API_RATE_LIMIT`
-  (`<requests>/<seconds>`, default `100/60`). Exceeding it answers `429` with the error above.
+  (`<requests>/<seconds>`, default `100/60`); every request costs one unit, the batch lookup
+  included. Exceeding it answers `429` with the error above.
   There are no API keys yet; put the instance behind a reverse proxy if you need per-client
   quotas.
 - **Cacheable.** Every successful `GET` carries `ETag`, `Last-Modified` and `Cache-Control:
@@ -53,6 +54,7 @@ Every successful answer is an envelope: the payload under `data`, paging and cou
 | `POST` | `/api/v1/search`                    | `{ search, type?, limit? }`                                                                    | `{ data: EnSearchWordT[], meta: { count, fuzzy, short_term } }`                                 |
 | `POST` | `/api/v1/search/detailed`           | `{ search, type?, limit?, page?, with_meanings?, with_translations?, translation_languages? }` | `{ data: EnWordT[], meta: { page, limit, has_more, fuzzy, short_term } }`                       |
 | `GET`  | `/api/v1/words/{word}`              | —                                                                                              | `{ data: EnWordT[], meta: { word, count } }`                                                    |
+| `POST` | `/api/v1/words/batch`               | `{ words: string[] }` (1–50)                                                                   | `{ data: { word, count, entries: EnWordT[] }[], meta: { count, not_found } }`                   |
 | `GET`  | `/api/v1/words/{word}/meanings`     | —                                                                                              | `{ data: PublicMeaningV1T[], meta: { word, count } }`                                           |
 | `GET`  | `/api/v1/words/{word}/translations` | `language?`                                                                                    | `{ data: { short_translations, meaning_translations }, meta }`                                  |
 | `GET`  | `/api/v1/words/{word}/forms`        | —                                                                                              | `{ data: PublicWordFormV1T[], meta: { word, count } }`                                          |
@@ -141,6 +143,17 @@ list; every item carries `word_id` and `part_of_speech` so it can be tied back t
 meaning, with `meaning_id`); `?language=ru` keeps one language only.
 
 `GET /api/v1/words/id/{id}` is the same entry by its numeric id (the `id` of any item above).
+
+`POST /api/v1/words/batch` with `{ "words": ["run", "ran", "put up with"] }` (issue #397) looks
+up to 50 spellings in one request — for a consumer enriching a word list, which would
+otherwise spend its whole rate-limit budget on per-word GETs. Each spelling is matched like
+the single read; the answer keeps the request order with one item per spelling — `word` (the
+normalized spelling), `count` and `entries`, exactly what `GET /api/v1/words/{word}` answers
+under `data` — collapsing duplicates and case, and lists the spellings without an entry under
+`meta.not_found` instead of failing. A batch counts as **one request** against the rate limit
+whatever its size; instances exposed to the open internet size `PUBLIC_API_RATE_LIMIT` with
+that in mind. Being a `POST`, it carries no cache validators; a consumer that re-reads the same
+words benefits from the cached single reads instead.
 
 Word items carry `user_modified` (issue #328): `true` when the instance admin edited the
 entry, so its content is the instance's own rather than the published dataset's — dictionary

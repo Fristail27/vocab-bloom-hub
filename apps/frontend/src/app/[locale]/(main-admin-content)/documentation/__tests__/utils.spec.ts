@@ -41,6 +41,15 @@ describe('buildRequestBody', () => {
     expect(body).toEqual({ search: 'run', limit: 5, page: 1, with_meanings: true });
   });
 
+  it('разбивает текстовый список на массив строк (batch, issue #397)', () => {
+    const batchEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.words_batch)!;
+
+    expect(buildRequestBody(batchEndpoint.params, { words: ' run, ran ,put up with,\n' })).toEqual({
+      words: ['run', 'ran', 'put up with'],
+    });
+    expect(buildRequestBody(batchEndpoint.params, { words: ' , ' })).toEqual({});
+  });
+
   it('не пропускает значения параметров, которых нет в описании метода', () => {
     const body = buildRequestBody(searchEndpoint.params, { search: 'run', page: 3 });
 

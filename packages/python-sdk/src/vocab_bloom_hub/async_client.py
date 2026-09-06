@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Iterable, Mapping
+from collections.abc import AsyncIterator, Iterable, Mapping, Sequence
 from enum import Enum
 from typing import Any
 
@@ -70,6 +70,9 @@ class AsyncVocabBloomClient:
 
     async def word(self, headword: str) -> m.HeadwordResponse:
         return await self._get(headword_path(headword), None, m.HeadwordResponse)
+
+    async def words_batch(self, words: Sequence[str]) -> m.WordsBatchResponse:
+        return await self._post("/words/batch", {"words": list(words)}, m.WordsBatchResponse)
 
     async def word_by_id(self, id: int) -> m.WordResponse:
         return await self._get(f"/words/id/{id}", None, m.WordResponse)

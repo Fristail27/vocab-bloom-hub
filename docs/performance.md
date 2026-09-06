@@ -16,9 +16,19 @@ was done about it, and how to measure it again.
 | Search, typo (fuzzy tier)                          |        20 ms |      ≤ 10 ms | `pg_trgm` similarity when nothing else matches    |
 | Search, 1–2 character term (short-term flow)       |        20 ms |       ≤ 6 ms | exact and prefix tiers only, index lookups (#292) |
 | List page with meanings joined (`with_meanings`)   |        50 ms |      ≤ 25 ms | 17 small queries instead of one exploding join    |
+| Batch lookup, 5 spellings (`/words/batch`, #397)   |        20 ms |       ≤ 9 ms | the same 23 statements as one headword            |
+| Batch lookup, 50 spellings (the cap)               |       300 ms |     ≤ 280 ms | ~50 ms in Postgres; the rest is TypeORM hydration |
 
 Numbers are p95 of the [benchmark](#the-benchmark) on a laptop against a local Postgres 18
 with the published dataset; treat them as an order of magnitude, not a promise.
+
+The batch lookup costs the same 23 statements whatever its size — every relation is loaded
+with one `IN (...)` for the whole batch — so its time grows with the entries it returns, not
+with the spellings: 50 everyday headwords are ~80 entries with ~240 meanings (a 285 KB
+answer), of which the database takes ~50 ms and TypeORM's entity hydration the remaining
+~220 ms. That hydration is the same code path as one headword read, only multiplied; making
+it cheaper (hand-mapped rows instead of `find` with relations) would speed up every full read
+and is the natural follow-up if batch consumers appear.
 
 **SQLite is a development and test database only.** On the full dictionary its search tiers
 take 0.1 – 1 s per request and the admin statistics 0.25 s (tables below): `LIKE` cannot use
@@ -94,8 +104,8 @@ DATABASE_URL=sqlite:../../dev.sqlite yarn workspace server bench   # the same on
 
 `src/bench/run.ts` boots the real application on an ephemeral port and drives the scenarios
 of `src/bench/scenarios.ts` through HTTP — every search tier, the headword / id lookups, the
-list at several selectivities and cursor depths, the random draw, the meta endpoint and the
-admin listings. It reports p50 / p95 / max latency and, through a TypeORM logger attached
+batch lookup (5 spellings and the 50-spelling cap), the list at several selectivities and
+cursor depths, the random draw, the meta endpoint and the admin listings. It reports p50 / p95 / max latency and, through a TypeORM logger attached
 to the data source (`QueryRecorder`), **how many statements one request costs** — the N+1
 audit in one column. `--explain` runs `EXPLAIN (FORMAT JSON)` on each recorded statement
 with its parameters bound and prints the sequential scans over the large tables.

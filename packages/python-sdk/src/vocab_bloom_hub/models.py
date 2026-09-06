@@ -18,6 +18,7 @@ WordForm = _g.PublicWordFormV1T
 ShortTranslation = _g.PublicShortTranslationV1T
 MeaningTranslation = _g.PublicMeaningTranslationV1T
 HeadwordTranslations = _g.PublicHeadwordTranslationsV1T
+WordsBatchItem = _g.PublicWordsBatchItemV1T
 Meta = _g.PublicMetaV1T
 DatasetCounts = _g.PublicDatasetCountsV1T
 AvailableLanguages = _g.PublicAvailableLanguagesV1T
@@ -43,6 +44,7 @@ MeaningsResponse = _g.PublicHeadwordMeaningsV1ResT
 TranslationsResponse = _g.PublicHeadwordTranslationsV1ResT
 FormsResponse = _g.PublicHeadwordFormsV1ResT
 WordsResponse = _g.PublicWordsV1ResT
+WordsBatchResponse = _g.PublicWordsBatchV1ResT
 MetaResponse = _g.PublicMetaV1ResT
 SuggestionCreatedResponse = _g.PublicSuggestionCreatedV1ResT
 
@@ -76,5 +78,7 @@ __all__ = [
     "WordFormKind",
     "WordLevel",
     "WordResponse",
+    "WordsBatchItem",
+    "WordsBatchResponse",
     "WordsResponse",
 ]

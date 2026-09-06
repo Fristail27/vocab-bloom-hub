@@ -20,6 +20,7 @@ import {
   PublicHeadwordTranslationsV1ResT,
   PublicHeadwordV1ResT,
   PublicMetaV1ResT,
+  PublicWordsBatchV1ResT,
   PublicWordsV1ResT,
   PublicWordV1ResT,
   WordLevelE,
@@ -215,6 +216,64 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
       await request(server()).get(`/api/v1/words/${oversized}/meanings`).expect(400);
       await request(server()).get(`/api/v1/words/${oversized}/translations`).expect(400);
       await request(server()).get(`/api/v1/words/${oversized}/forms`).expect(400);
+    });
+  });
+
+  describe('POST /api/v1/words/batch', () => {
+    it('answers many headwords in request order, collapsing duplicates and case, with a not-found list', async () => {
+      const res = await request(server())
+        .post('/api/v1/words/batch')
+        .send({ words: ['Run', 'nope', 'put up with', 'RAN', 'run', ' sprint ', 'zzz'] })
+        .expect(200);
+      expect(res.headers['x-api-version']).toBe('1');
+      const body = res.body as PublicWordsBatchV1ResT;
+      expect(body.meta).toEqual({ count: 4, not_found: ['nope', 'zzz'] });
+      expect(body.data.map((item) => [item.word, item.count, item.entries.map((w) => w.id)])).toEqual([
+        ['run', 2, [ids.runNoun, ids.runVerb]],
+        ['put up with', 1, [ids.phrase]],
+        // an inflected form resolves to its base entry, under its own spelling
+        ['ran', 1, [ids.runVerb]],
+        ['sprint', 1, [ids.sprint]],
+      ]);
+      // the entries are the full projection of the single lookup
+      const single = (await request(server()).get('/api/v1/words/run').expect(200))
+        .body as PublicHeadwordV1ResT;
+      expect(body.data[0].entries).toEqual(single.data);
+      // a POST read carries no caching directives (Express still stamps its own ETag)
+      expect(res.headers['cache-control']).toBeUndefined();
+      expect(res.headers['last-modified']).toBeUndefined();
+    });
+
+    it('answers an empty list, not 404, when nothing is found', async () => {
+      const res = await request(server())
+        .post('/api/v1/words/batch')
+        .send({ words: ['nope'] })
+        .expect(200);
+      expect(res.body).toEqual({ data: [], meta: { count: 0, not_found: ['nope'] } });
+    });
+
+    it('rejects an empty, oversized or non-string batch and unknown fields', async () => {
+      const reject = async (body: object) => {
+        const res = await request(server()).post('/api/v1/words/batch').send(body).expect(400);
+        expectPublicError(res.body, 400);
+      };
+      await reject({ words: [] });
+      await reject({ words: Array.from({ length: 51 }, (_, i) => `w${i}`) });
+      await reject({ words: [42] });
+      await reject({ words: ['x'.repeat(129)] });
+      await reject({ words: 'run' });
+      await reject({ words: ['run'], limit: 5 });
+      await reject({});
+    });
+
+    it('costs one request against the prefix budget, whatever the size of the batch', async () => {
+      process.env.PUBLIC_API_RATE_LIMIT = '2/60';
+      const ip = { 'X-Forwarded-For': '203.0.113.97' };
+      const words = Array.from({ length: 50 }, (_, i) => `word${i}`);
+      await request(server()).post('/api/v1/words/batch').set(ip).send({ words }).expect(200);
+      await request(server()).post('/api/v1/words/batch').set(ip).send({ words }).expect(200);
+      const limited = await request(server()).post('/api/v1/words/batch').set(ip).send({ words }).expect(429);
+      expectPublicError(limited.body, 429, 'too_many_requests');
     });
   });
 

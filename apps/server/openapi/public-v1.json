@@ -400,6 +400,59 @@
         ]
       }
     },
+    "/api/v1/words/batch": {
+      "post": {
+        "description": "Every spelling is matched like `GET /words/{word}`; the answer keeps the request order, collapses duplicates, and lists the spellings without an entry under `meta.not_found` instead of failing. One request against the rate limit, whatever the size of the batch.",
+        "operationId": "PublicWordsController_batch",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WordsBatchV1ReqDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicWordsBatchV1ResT"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Up to 50 headwords in one request",
+        "tags": [
+          "Public API v1"
+        ]
+      }
+    },
     "/api/v1/words/id/{id}": {
       "get": {
         "operationId": "PublicWordsController_byId",
@@ -1156,6 +1209,28 @@
         },
         "required": [
           "search"
+        ]
+      },
+      "WordsBatchV1ReqDTO": {
+        "type": "object",
+        "properties": {
+          "words": {
+            "minItems": 1,
+            "maxItems": 50,
+            "description": "Headword spellings, 50 at most, each matched like GET /words/{word} (case-insensitively; an inflected form resolves to its base entry)",
+            "example": [
+              "run",
+              "ran",
+              "put up with"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "words"
         ]
       },
       "PublicSearchV1MetaT": {
@@ -2149,6 +2224,64 @@
           },
           "data": {
             "$ref": "#/components/schemas/PublicHeadwordTranslationsV1T"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "PublicWordsBatchItemV1T": {
+        "type": "object",
+        "properties": {
+          "word": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EnWordT"
+            }
+          }
+        },
+        "required": [
+          "word",
+          "count",
+          "entries"
+        ]
+      },
+      "PublicWordsBatchV1MetaT": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer"
+          },
+          "not_found": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "count",
+          "not_found"
+        ]
+      },
+      "PublicWordsBatchV1ResT": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicWordsBatchItemV1T"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PublicWordsBatchV1MetaT"
           }
         },
         "required": [

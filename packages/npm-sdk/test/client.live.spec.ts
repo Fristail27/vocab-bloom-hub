@@ -116,6 +116,15 @@ describe('VocabBloomClient against the running server (issue #275)', () => {
     // an inflected form resolves to its base entry
     expect((await client.word('ran')).data[0].word).toBe('run');
 
+    // the batch lookup answers the same entries per spelling (issue #397)
+    const batch = await client.wordsBatch(['ran', 'nope', 'sprint']);
+    expect(batch.meta).toEqual({ count: 2, not_found: ['nope'] });
+    expect(batch.data.map((item) => [item.word, item.count, item.entries[0].word])).toEqual([
+      ['ran', 1, 'run'],
+      ['sprint', 1, 'sprint'],
+    ]);
+    expect(batch.data[0].entries).toEqual(headword.data);
+
     const meanings = await client.meanings('run');
     expect(meanings.data[0]).toMatchObject({ title: 'to move fast', word_id: runId, part_of_speech: 'verb' });
 

@@ -57,6 +57,18 @@ describe('VocabBloomClient without a server (issue #275)', () => {
     expect(calls[1].init.headers).toMatchObject({ 'Content-Type': 'application/json', 'X-App': 'test' });
   });
 
+  it('posts a batch lookup as { words } (issue #397)', async () => {
+    const { fetch, calls } = fakeFetch([
+      () => json({ data: [], meta: { count: 0, not_found: ['run', 'ran'] } }),
+    ]);
+    const client = new VocabBloomClient({ baseUrl: 'http://localhost:3010', fetch });
+    const batch = await client.wordsBatch(['run', 'ran']);
+    expect(calls[0].url).toBe('http://localhost:3010/api/v1/words/batch');
+    expect(calls[0].init.method).toBe('POST');
+    expect(calls[0].init.body).toBe(JSON.stringify({ words: ['run', 'ran'] }));
+    expect(batch.meta.not_found).toEqual(['run', 'ran']);
+  });
+
   it('throws typed errors: NotFoundError, RateLimitError with Retry-After, VocabBloomError with the API code', async () => {
     const { fetch } = fakeFetch([
       () => json({ statusCode: 404, message: 'word_doesnt_found', error: true }, { status: 404 }),

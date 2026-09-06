@@ -15,6 +15,7 @@ METHOD_BY_OPERATION = {
     "PublicWordsController_list": "words",
     "PublicWordsController_byId": "word_by_id",
     "PublicWordsController_byHeadword": "word",
+    "PublicWordsController_batch": "words_batch",
     "PublicWordsController_meanings": "meanings",
     "PublicWordsController_translations": "translations",
     "PublicWordsController_forms": "forms",

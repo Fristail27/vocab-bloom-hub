@@ -1012,6 +1012,64 @@
       "meta"
     ]
   },
+  "PublicWordsBatchItemV1T": {
+    "type": "object",
+    "properties": {
+      "word": {
+        "type": "string"
+      },
+      "count": {
+        "type": "integer"
+      },
+      "entries": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/EnWordT"
+        }
+      }
+    },
+    "required": [
+      "word",
+      "count",
+      "entries"
+    ]
+  },
+  "PublicWordsBatchV1MetaT": {
+    "type": "object",
+    "properties": {
+      "count": {
+        "type": "integer"
+      },
+      "not_found": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "count",
+      "not_found"
+    ]
+  },
+  "PublicWordsBatchV1ResT": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/PublicWordsBatchItemV1T"
+        }
+      },
+      "meta": {
+        "$ref": "#/components/schemas/PublicWordsBatchV1MetaT"
+      }
+    },
+    "required": [
+      "data",
+      "meta"
+    ]
+  },
   "PublicWordsV1MetaT": {
     "type": "object",
     "properties": {
