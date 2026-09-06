@@ -91,6 +91,13 @@ in English only.
 - [ ] Documentation updated if necessary
 - [ ] No unnecessary files included
 
+The `check-pull-request` workflow runs the linters, the typecheck of every workspace, the
+unit and e2e suites (SQLite and Postgres), the browser suites, the production and Docker
+smokes, and two quality gates: the server unit coverage must not drop below the thresholds
+in `apps/server/jest.config.ts` (`yarn workspace server test:cov` reproduces the check), and
+`yarn npm audit --all --recursive --severity high` plus `pip-audit` on the Python SDK must
+find nothing — fix an advisory by upgrading (`yarn up -R <package>`), not by silencing it.
+
 ## Coding Guidelines
 
 Please follow the existing project structure and coding style.

@@ -92,3 +92,6 @@ dev.sqlite
 # generated on demand by `yarn workspace server openapi:generate`; only the public spec is committed
 apps/server/openapi/admin.json
 packages/npm-sdk/dist
+
+# jest coverage reports (yarn workspace server test:cov)
+coverage/

@@ -24,6 +24,7 @@ jobs:
   guard:
     name: tag matches the version
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -42,6 +43,7 @@ jobs:
     name: publish @vocab-bloom-hub/client to npm
     needs: guard
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment: npm
     permissions:
       contents: read
@@ -80,6 +82,7 @@ jobs:
     name: publish vocab-bloom-hub to PyPI
     needs: guard
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment: pypi
     permissions:
       contents: read
@@ -94,8 +97,15 @@ jobs:
       - name: Generated models are up to date
         working-directory: packages/python-sdk
         run: |
-          uv sync
+          uv sync --locked
           uv run python scripts/generate_models.py --check
+
+      # The suites that need no server (issue #409): the unit tests and the
+      # contract map against the committed spec — the live ones ran on the
+      # pull request; here there is no Node workspace to boot the server
+      - name: Tests (offline suites)
+        working-directory: packages/python-sdk
+        run: uv run pytest tests/test_unit.py tests/test_contract.py
 
       - name: Build
         working-directory: packages/python-sdk
@@ -112,6 +122,7 @@ jobs:
     # job fails — expected once, on the very first npm publish (see the header)
     needs: guard
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: write
     steps:

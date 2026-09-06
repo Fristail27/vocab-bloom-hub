@@ -1,5 +1,5 @@
 name: Setup workspace
-description: Install Node with yarn caching, activate Yarn 4 and install dependencies
+description: Install Node with yarn caching, activate Yarn 4 with a retry, restore node_modules and install dependencies
 
 runs:
   using: composite
@@ -10,16 +10,40 @@ runs:
       shell: bash
       run: corepack enable
 
-    - name: Prepare Yarn 4
-      shell: bash
-      # picks the version pinned in the packageManager field of package.json
-      run: corepack prepare --activate
-
     - name: Setup Node
       uses: actions/setup-node@v7
       with:
         node-version: 24
         cache: yarn
+
+    # setup-node swaps the Node installation, so the shims are enabled again
+    # on the Node that will run the jobs; `prepare` downloads the pinned Yarn
+    # from the npm registry — one of eight jobs hitting a registry hiccup was
+    # enough for a spurious red (issue #409), hence the retry
+    - name: Prepare Yarn 4 (with retry)
+      shell: bash
+      run: |
+        corepack enable
+        for attempt in 1 2 3; do
+          if corepack prepare --activate; then
+            exit 0
+          fi
+          echo "corepack prepare failed (attempt $attempt of 3)"
+          sleep $((attempt * 10))
+        done
+        echo "::error::corepack prepare --activate failed three times"
+        exit 1
+
+    # The linked node_modules of every workspace, keyed on the lockfile: the
+    # install below then only verifies the tree instead of linking it again
+    - name: Restore node_modules
+      uses: actions/cache@v6
+      with:
+        path: |
+          node_modules
+          apps/*/node_modules
+          packages/*/node_modules
+        key: node-modules-${{ runner.os }}-node24-${{ hashFiles('yarn.lock') }}
 
     - name: Install dependencies
       shell: bash
