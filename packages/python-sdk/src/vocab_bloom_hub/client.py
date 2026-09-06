@@ -12,6 +12,7 @@ from typing_extensions import Unpack
 
 from . import models as m
 from ._core import (
+    DETAILED_SEARCH_MAX_PAGE,
     Core,
     ListOptions,
     ModelT,
@@ -129,7 +130,9 @@ class VocabBloomClient:
         options: RequestOptions | None = None,
     ) -> Iterator[m.Word]:
         """Every item of the detailed search, page after page from ``page`` (1 by default) while
-        ``meta.has_more`` says there is one: :meth:`iter_words` for the page-based search."""
+        ``meta.has_more`` says there is one: :meth:`iter_words` for the page-based search. The server
+        serves ``DETAILED_SEARCH_MAX_PAGE`` pages at most, so a broad search ends there rather than with
+        a 400; narrow it (``type``, a longer term) to see the rest."""
         current = page or 1
         while True:
             answer = self.search_detailed(
@@ -143,9 +146,9 @@ class VocabBloomClient:
                 options=options,
             )
             yield from answer.data
-            if not answer.meta.has_more:
-                return
             current += 1
+            if not answer.meta.has_more or current > DETAILED_SEARCH_MAX_PAGE:
+                return
 
     # -------------------------------------------------------------- reads
 

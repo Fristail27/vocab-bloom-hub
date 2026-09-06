@@ -58,7 +58,7 @@ for await (const word of client.iterateWords({ word_level: ['A1', 'A2'], with_me
 | `antonyms(headword)`             | `GET /words/{word}/antonyms`            | `LinksResponse`                                                                                                |
 | `words(query?)`                  | `GET /words`                            | `WordsResponse` (one page)                                                                                     |
 | `iterateWords(query?)`           | `GET /words`, following the cursor      | `AsyncGenerator<Word>`                                                                                         |
-| `iterateSearchDetailed(request)` | `GET /search/detailed`, page after page | `AsyncGenerator<Word>`                                                                                         |
+| `iterateSearchDetailed(request)` | `GET /search/detailed`, page after page | `AsyncGenerator<Word>` — stops at the server's page cap (`DETAILED_SEARCH_MAX_PAGE`, 20)                       |
 | `random(filters?)`               | `GET /random`                           | `WordResponse`                                                                                                 |
 | `meta()`                         | `GET /meta`                             | `MetaResponse`                                                                                                 |
 | `openapi()`                      | `GET /openapi.json`                     | the OpenAPI 3 document                                                                                         |
@@ -75,7 +75,7 @@ new VocabBloomClient({
   cache: true, // ETag revalidation (see below); or your own ResponseCache
   fetch: myFetch, // a custom fetch (instrumentation, polyfills, tests)
   timeoutMs: 10_000, // fail a hung request with NetworkError; null disables (the default is 10 s)
-  retry: { attempts: 3, backoffMs: 500 }, // opt-in: retry the GET reads on 429 / 5xx (see below)
+  retry: { attempts: 3, backoffMs: 500, maxDelayMs: 60_000 }, // opt-in: retry the GET reads on 429 / 5xx (see below)
 });
 ```
 
@@ -85,7 +85,7 @@ Every request carries `User-Agent: vocab-bloom-hub-npm/<version>` (`USER_AGENT`,
 
 ### Retry
 
-Off by default — the client documents exact request counts against the rate limit, so the loop is opt-in. With `retry: {}` (or explicit `attempts` / `backoffMs`) a `GET` answered `429` or `5xx` is sent again: after `Retry-After` when the server sent it, otherwise after `backoffMs`, then twice that, and so on, up to `attempts` tries in total (the first one included; 3 and 500 ms by default). `POST` requests (the batch lookup, a suggestion), `4xx` answers and network errors are never retried; an abort of your `signal` while waiting ends the wait with `NetworkError`.
+Off by default — the client documents exact request counts against the rate limit, so the loop is opt-in. With `retry: {}` (or explicit `attempts` / `backoffMs`) a `GET` answered `429` or `5xx` is sent again: after `Retry-After` when the server sent it, otherwise after `backoffMs`, then twice that, and so on, up to `attempts` tries in total (the first one included; 3 and 500 ms by default); no single wait exceeds `maxDelayMs` (60 s by default), whatever `Retry-After` says. `POST` requests (the batch lookup, a suggestion), `4xx` answers and network errors are never retried; an abort of your `signal` while waiting ends the wait with `NetworkError`.
 
 ### Errors
 

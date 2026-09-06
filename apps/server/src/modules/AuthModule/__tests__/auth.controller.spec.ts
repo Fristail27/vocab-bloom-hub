@@ -157,9 +157,9 @@ describe('AuthController', () => {
       expect(mockAuthService.clearTokenCookie).toHaveBeenCalledWith(res, req);
     });
 
-    it('is admin-only', () => {
+    it('needs no valid token: an expired or rotated one is when the cookie must go', () => {
       const guards: unknown[] = Reflect.getMetadata(GUARDS_METADATA, controller.logout) ?? [];
-      expect(guards).toContain(AdminGuard);
+      expect(guards).not.toContain(AdminGuard);
     });
   });
 });

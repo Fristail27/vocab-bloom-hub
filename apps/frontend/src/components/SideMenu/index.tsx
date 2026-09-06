@@ -42,10 +42,9 @@ export const SideMenu = () => {
     setLoggingOut(true);
     try {
       const res = await AuthApi.logout();
-      if ('error' in res) {
-        message.error(tErr(res.message));
-        return;
-      }
+      // a failed request still ends the session on this side: the login page
+      // asks for credentials again either way
+      if ('error' in res) message.error(tErr(res.message));
       router.push(`/${String(locale)}/login`);
       router.refresh();
     } finally {

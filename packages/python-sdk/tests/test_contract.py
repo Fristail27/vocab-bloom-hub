@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from vocab_bloom_hub import AsyncVocabBloomClient, VocabBloomClient
+from vocab_bloom_hub import DETAILED_SEARCH_MAX_PAGE, AsyncVocabBloomClient, VocabBloomClient
 
 SPEC = Path(__file__).resolve().parents[3] / "apps" / "server" / "openapi" / "public-v1.json"
 
@@ -38,3 +38,11 @@ def test_every_operation_has_a_method() -> None:
     for method in METHOD_BY_OPERATION.values():
         assert callable(getattr(VocabBloomClient, method))
         assert callable(getattr(AsyncVocabBloomClient, method))
+
+
+def test_page_iterator_stops_at_the_documented_cap() -> None:
+    spec = json.loads(SPEC.read_text())
+    page = next(
+        p for p in spec["paths"]["/api/v1/search/detailed"]["get"]["parameters"] if p["name"] == "page"
+    )
+    assert page["schema"]["maximum"] == DETAILED_SEARCH_MAX_PAGE

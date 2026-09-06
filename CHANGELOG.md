@@ -7,6 +7,18 @@ generated release notes; the full commit history lives in git.
 
 ## v0.2.0-beta.1 — unreleased
 
+- **Fixes from the post-alpha review**: the admin UI's reads of the public prefix bypass the
+  browser's HTTP cache (an edited or deleted word no longer lingers in the admin search for an
+  hour); search and list items carry `base_phrasal` like the headword read; the detailed
+  search rejects an empty `translation_languages` (`400`) instead of reading it as "all"; the
+  batch lookup rejects a blank spelling instead of dropping it silently; `POST /api/auth/logout`
+  needs no valid token, and the admin UI signs out even when the request fails; the SDKs'
+  detailed-search iterators stop at the server's page cap instead of failing on page 21, and a
+  retry wait is capped (`maxDelayMs` / `max_delay`, 60 s) with `Retry-After` edge cases
+  (`inf`, a `-0000` date) handled; the full reads run their relation statements in two
+  concurrent waves; the server e2e suite on Postgres empties the database on every application
+  boot, as SQLite's in-memory database does.
+
 - **Spanish (`es`) as a translation language** (issue #410): `AvailableTranslationLanguagesE`
   gains `es`, a migration widens both Postgres enum types, the admin offers it wherever a
   translation is added (flag and label), the public filters (`?language=`,
@@ -65,7 +77,7 @@ generated release notes; the full commit history lives in git.
   `POST /api/v1/search` and `POST /api/v1/search/detailed` — the admin UI, the website and
   both SDKs already do.
 
-## v0.1.0-alpha.3 — unreleased
+## v0.1.0-alpha.3 — 2026-09-04
 
 The documentation catches up with the shipped alpha.
 

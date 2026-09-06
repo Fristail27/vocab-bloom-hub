@@ -43,9 +43,18 @@ export type RetryOptions = {
   attempts?: number;
   /** Base delay in milliseconds when the server sent no `Retry-After`; default 500 */
   backoffMs?: number;
+  /** Longest single wait, whatever `Retry-After` or the backoff says; default 60 000 */
+  maxDelayMs?: number;
 };
 
-export const DEFAULT_RETRY: Required<RetryOptions> = { attempts: 3, backoffMs: 500 };
+export const DEFAULT_RETRY: Required<RetryOptions> = { attempts: 3, backoffMs: 500, maxDelayMs: 60_000 };
+
+/**
+ * The deepest page the detailed search serves (`page` ≤ 20 on the server;
+ * `test/contract.spec.ts` pins it to the OpenAPI document): the page iterator
+ * stops there even when `meta.has_more` says more, narrow the search instead
+ */
+export const DETAILED_SEARCH_MAX_PAGE = 20;
 
 export type ClientOptions = {
   /** Origin of the instance, e.g. `https://dict.example.com`; the client appends `/api/v1` */
@@ -177,12 +186,15 @@ export class VocabBloomClient {
   /**
    * Every item of the detailed search, page after page from `request.page`
    * (1 by default) while `meta.has_more` says there is one (issue #408); the
-   * counterpart of `iterateWords` for the page-based search
+   * counterpart of `iterateWords` for the page-based search. The server
+   * serves `DETAILED_SEARCH_MAX_PAGE` pages at most, so a broad search ends
+   * there rather than with a 400 — narrow it (`type`, a longer term) to see
+   * the rest
    */
   async *iterateSearchDetailed(request: DetailedSearchRequest, options?: RequestOptions): AsyncGenerator<Word> {
     let page = request.page ?? 1;
     let has_more = true;
-    while (has_more) {
+    while (has_more && page <= DETAILED_SEARCH_MAX_PAGE) {
       const answer = await this.searchDetailed({ ...request, page }, options);
       yield* answer.data;
       has_more = answer.meta.has_more;
@@ -345,8 +357,9 @@ export class VocabBloomClient {
       const response = await this.send(url, init, options);
       const retriable = response.status === 429 || response.status >= 500;
       if (!retriable || attempt >= this.retry.attempts) return response;
-      const delay =
+      const wanted =
         retryAfterMs(response.headers.get('retry-after')) ?? this.retry.backoffMs * 2 ** (attempt - 1);
+      const delay = Math.min(wanted, this.retry.maxDelayMs);
       try {
         await sleep(delay, options?.signal);
       } catch (cause) {

@@ -156,144 +156,194 @@ export class WordRowsService {
     const foundIds = found.map((row) => row.id as number);
     if (foundIds.length === 0) return [];
 
-    // ---- forms: the rows whose base form is one of the entries
-    if (relations.forms) {
-      const formEntry = this.wantsEntry(relations.forms);
-      const fq = this.dataSource.createQueryBuilder(EnWord, 'f').select([]);
-      this.selectScalars(fq, words, 'f');
-      this.selectKey(fq, 'f', wordFk);
-      this.selectKey(fq, 'f', baseFormFk);
-      if (formEntry) {
-        fq.leftJoin('f.word', 'fe');
-        this.selectScalars(fq, entries, 'fe');
-      }
-      const rawForms = (await fq
-        .where(`${this.column('f', baseFormFk)} IN (:...ids)`, { ids: foundIds })
-        .orderBy(this.column('f', 'id'), 'ASC')
-        .getRawMany()) as PlainT[];
-      const forms = rawForms.map((raw) => ({
-        ...this.hydrate(words, raw, 'f'),
-        word: formEntry ? this.hydrate(entries, raw, 'fe') : { word: raw[`f_${wordFk}`] },
-        base: raw[`f_${baseFormFk}`],
-      }));
-      const groups = this.groupBy(forms, (form) => form.base);
-      for (const row of found) row.forms = (groups.get(row.id) ?? []).map(({ base: _base, ...form }) => form);
-    }
+    // ---- the collections hang off the entries (wave 1) and off the meanings
+    // (wave 2); each wave runs its statements concurrently — a full read
+    // costs two round-trips after the entries, not seven in a row
+    const [formsOf, meaningRows, shortsOf, variantsOf] = await Promise.all([
+      relations.forms
+        ? this.loadForms(words, entries, foundIds, wordFk, baseFormFk, this.wantsEntry(relations.forms))
+        : null,
+      relations.meanings ? this.loadMeanings(meanings, foundIds) : null,
+      relations.short_translations ? this.loadShortTranslations(shorts, foundIds) : null,
+      relations.phrasal_variants
+        ? this.loadVariants(
+            words,
+            entries,
+            foundIds,
+            wordFk,
+            basePhrasalFk,
+            this.wantsEntry(relations.phrasal_variants),
+          )
+        : null,
+    ]);
+    if (formsOf) for (const row of found) row.forms = formsOf.get(row.id) ?? [];
+    if (shortsOf) for (const row of found) row.short_translations = shortsOf.get(row.id) ?? [];
+    if (variantsOf) for (const row of found) row.phrasal_variants = variantsOf.get(row.id) ?? [];
 
-    // ---- meanings, with their translations and word links
-    if (relations.meanings) {
-      const meaningFk = this.fk(meanings, 'word');
-      const mq = this.dataSource.createQueryBuilder(EnMeaning, 'm').select([]);
-      this.selectScalars(mq, meanings, 'm');
-      this.selectKey(mq, 'm', meaningFk);
-      const rawMeanings = (await mq
-        .where(`${this.column('m', meaningFk)} IN (:...ids)`, { ids: foundIds })
-        .orderBy(this.column('m', 'sort_order'), 'ASC')
-        .addOrderBy(this.column('m', 'id'), 'ASC')
-        .getRawMany()) as PlainT[];
-      const rows: Array<PlainT & { owner: unknown }> = rawMeanings.map((raw) => ({
-        ...this.hydrate(meanings, raw, 'm'),
-        owner: raw[`m_${meaningFk}`],
-      }));
-      const meaningIds = rows.map((row) => row.id as number);
+    if (meaningRows) {
       const nested = typeof relations.meanings === 'object' ? relations.meanings : {};
-      const translationsOf = new Map<unknown, PlainT[]>();
-      const linksOf: Record<'synonyms' | 'antonyms', Map<unknown, PlainT[]>> = {
-        synonyms: new Map(),
-        antonyms: new Map(),
-      };
-      if (meaningIds.length > 0) {
-        if (nested.translations) {
-          const translationFk = this.fk(translations, 'meaning');
-          const tq = this.dataSource.createQueryBuilder(EnMeaningTranslation, 't').select([]);
-          this.selectScalars(tq, translations, 't');
-          this.selectKey(tq, 't', translationFk);
-          const rawTranslations = (await tq
-            .where(`${this.column('t', translationFk)} IN (:...ids)`, { ids: meaningIds })
-            .orderBy(this.column('t', 'id'), 'ASC')
-            .getRawMany()) as PlainT[];
-          for (const [owner, group] of this.groupBy(rawTranslations, (raw) => raw[`t_${translationFk}`])) {
-            translationsOf.set(
-              owner,
-              group.map((raw) => this.hydrate(translations, raw, 't')),
-            );
-          }
-        }
-        for (const kind of ['synonyms', 'antonyms'] as const) {
-          if (!nested[kind]) continue;
-          // the junction rows joined with the linked headword's entry row
-          const { table, owner, inverse } = this.junction(meanings, kind);
-          const lq = this.dataSource
-            .createQueryBuilder()
-            .select(this.column('j', owner), 'owner')
-            .from(table, 'j')
-            .leftJoin(entries.tableName, 'le', `${this.column('le', 'word')} = ${this.column('j', inverse)}`);
-          this.selectScalars(lq, entries, 'le');
-          const rawLinks = (await lq
-            .where(`${this.column('j', owner)} IN (:...ids)`, { ids: meaningIds })
-            .orderBy(this.column('j', inverse), 'ASC')
-            .getRawMany()) as PlainT[];
-          for (const [meaningId, group] of this.groupBy(rawLinks, (link) => link.owner)) {
-            linksOf[kind].set(
-              meaningId,
-              group.map((raw) => this.hydrate(entries, raw, 'le')),
-            );
-          }
-        }
-      }
-      const groups = this.groupBy(rows, (row) => row.owner);
+      const meaningIds = meaningRows.map((row) => row.id as number);
+      const [translationsOf, synonymsOf, antonymsOf] = await Promise.all([
+        nested.translations && meaningIds.length > 0 ? this.loadTranslations(translations, meaningIds) : null,
+        nested.synonyms && meaningIds.length > 0
+          ? this.loadLinks(meanings, entries, 'synonyms', meaningIds)
+          : null,
+        nested.antonyms && meaningIds.length > 0
+          ? this.loadLinks(meanings, entries, 'antonyms', meaningIds)
+          : null,
+      ]);
+      const groups = this.groupBy(meaningRows, (row) => row.owner);
       for (const row of found) {
         row.meanings = (groups.get(row.id) ?? []).map(({ owner: _owner, ...meaning }) => ({
           ...meaning,
-          ...(nested.translations && { translations: translationsOf.get(meaning.id) ?? [] }),
-          ...(nested.synonyms && { synonyms: linksOf.synonyms.get(meaning.id) ?? [] }),
-          ...(nested.antonyms && { antonyms: linksOf.antonyms.get(meaning.id) ?? [] }),
+          ...(nested.translations && { translations: translationsOf?.get(meaning.id) ?? [] }),
+          ...(nested.synonyms && { synonyms: synonymsOf?.get(meaning.id) ?? [] }),
+          ...(nested.antonyms && { antonyms: antonymsOf?.get(meaning.id) ?? [] }),
         }));
       }
     }
 
-    // ---- short translations
-    if (relations.short_translations) {
-      const shortFk = this.fk(shorts, 'word');
-      const sq = this.dataSource.createQueryBuilder(EnShortTranslation, 's').select([]);
-      this.selectScalars(sq, shorts, 's');
-      this.selectKey(sq, 's', shortFk);
-      const rawShorts = (await sq
-        .where(`${this.column('s', shortFk)} IN (:...ids)`, { ids: foundIds })
-        .orderBy(this.column('s', 'id'), 'ASC')
-        .getRawMany()) as PlainT[];
-      const groups = this.groupBy(rawShorts, (raw) => raw[`s_${shortFk}`]);
-      for (const row of found) {
-        row.short_translations = (groups.get(row.id) ?? []).map((raw) => this.hydrate(shorts, raw, 's'));
-      }
-    }
-
-    // ---- phrasal variants: the rows whose phrasal base is one of the entries
-    if (relations.phrasal_variants) {
-      const variantEntry = this.wantsEntry(relations.phrasal_variants);
-      const vq = this.dataSource.createQueryBuilder(EnWord, 'v').select([]);
-      this.selectScalars(vq, words, 'v');
-      this.selectKey(vq, 'v', wordFk);
-      this.selectKey(vq, 'v', basePhrasalFk);
-      if (variantEntry) {
-        vq.leftJoin('v.word', 've');
-        this.selectScalars(vq, entries, 've');
-      }
-      const rawVariants = (await vq
-        .where(`${this.column('v', basePhrasalFk)} IN (:...ids)`, { ids: foundIds })
-        .orderBy(this.column('v', 'id'), 'ASC')
-        .getRawMany()) as PlainT[];
-      const variants = rawVariants.map((raw) => ({
-        ...this.hydrate(words, raw, 'v'),
-        word: variantEntry ? this.hydrate(entries, raw, 've') : { word: raw[`v_${wordFk}`] },
-        base: raw[`v_${basePhrasalFk}`],
-      }));
-      const groups = this.groupBy(variants, (variant) => variant.base);
-      for (const row of found) {
-        row.phrasal_variants = (groups.get(row.id) ?? []).map(({ base: _base, ...variant }) => variant);
-      }
-    }
-
     return found as unknown as EnWord[];
+  }
+
+  private async loadForms(
+    words: EntityMetadata,
+    entries: EntityMetadata,
+    ids: number[],
+    wordFk: string,
+    baseFormFk: string,
+    withEntry: boolean,
+  ): Promise<Map<unknown, PlainT[]>> {
+    const fq = this.dataSource.createQueryBuilder(EnWord, 'f').select([]);
+    this.selectScalars(fq, words, 'f');
+    this.selectKey(fq, 'f', wordFk);
+    this.selectKey(fq, 'f', baseFormFk);
+    if (withEntry) {
+      fq.leftJoin('f.word', 'fe');
+      this.selectScalars(fq, entries, 'fe');
+    }
+    const raw = (await fq
+      .where(`${this.column('f', baseFormFk)} IN (:...ids)`, { ids })
+      .orderBy(this.column('f', 'id'), 'ASC')
+      .getRawMany()) as PlainT[];
+    const groups = new Map<unknown, PlainT[]>();
+    for (const r of raw) {
+      const form = {
+        ...this.hydrate(words, r, 'f'),
+        word: withEntry ? this.hydrate(entries, r, 'fe') : { word: r[`f_${wordFk}`] },
+      };
+      const base = r[`f_${baseFormFk}`];
+      groups.set(base, [...(groups.get(base) ?? []), form]);
+    }
+    return groups;
+  }
+
+  private async loadMeanings(
+    meanings: EntityMetadata,
+    ids: number[],
+  ): Promise<Array<PlainT & { owner: unknown }>> {
+    const meaningFk = this.fk(meanings, 'word');
+    const mq = this.dataSource.createQueryBuilder(EnMeaning, 'm').select([]);
+    this.selectScalars(mq, meanings, 'm');
+    this.selectKey(mq, 'm', meaningFk);
+    const raw = (await mq
+      .where(`${this.column('m', meaningFk)} IN (:...ids)`, { ids })
+      .orderBy(this.column('m', 'sort_order'), 'ASC')
+      .addOrderBy(this.column('m', 'id'), 'ASC')
+      .getRawMany()) as PlainT[];
+    return raw.map((r) => ({ ...this.hydrate(meanings, r, 'm'), owner: r[`m_${meaningFk}`] }));
+  }
+
+  private async loadTranslations(
+    translations: EntityMetadata,
+    meaningIds: number[],
+  ): Promise<Map<unknown, PlainT[]>> {
+    const translationFk = this.fk(translations, 'meaning');
+    const tq = this.dataSource.createQueryBuilder(EnMeaningTranslation, 't').select([]);
+    this.selectScalars(tq, translations, 't');
+    this.selectKey(tq, 't', translationFk);
+    const raw = (await tq
+      .where(`${this.column('t', translationFk)} IN (:...ids)`, { ids: meaningIds })
+      .orderBy(this.column('t', 'id'), 'ASC')
+      .getRawMany()) as PlainT[];
+    const groups = new Map<unknown, PlainT[]>();
+    for (const r of raw) {
+      const owner = r[`t_${translationFk}`];
+      groups.set(owner, [...(groups.get(owner) ?? []), this.hydrate(translations, r, 't')]);
+    }
+    return groups;
+  }
+
+  // the junction rows joined with the linked headword's entry row
+  private async loadLinks(
+    meanings: EntityMetadata,
+    entries: EntityMetadata,
+    kind: 'synonyms' | 'antonyms',
+    meaningIds: number[],
+  ): Promise<Map<unknown, PlainT[]>> {
+    const { table, owner, inverse } = this.junction(meanings, kind);
+    const lq = this.dataSource
+      .createQueryBuilder()
+      .select(this.column('j', owner), 'owner')
+      .from(table, 'j')
+      .leftJoin(entries.tableName, 'le', `${this.column('le', 'word')} = ${this.column('j', inverse)}`);
+    this.selectScalars(lq, entries, 'le');
+    const raw = (await lq
+      .where(`${this.column('j', owner)} IN (:...ids)`, { ids: meaningIds })
+      .orderBy(this.column('j', inverse), 'ASC')
+      .getRawMany()) as PlainT[];
+    const groups = new Map<unknown, PlainT[]>();
+    for (const r of raw) groups.set(r.owner, [...(groups.get(r.owner) ?? []), this.hydrate(entries, r, 'le')]);
+    return groups;
+  }
+
+  private async loadShortTranslations(shorts: EntityMetadata, ids: number[]): Promise<Map<unknown, PlainT[]>> {
+    const shortFk = this.fk(shorts, 'word');
+    const sq = this.dataSource.createQueryBuilder(EnShortTranslation, 's').select([]);
+    this.selectScalars(sq, shorts, 's');
+    this.selectKey(sq, 's', shortFk);
+    const raw = (await sq
+      .where(`${this.column('s', shortFk)} IN (:...ids)`, { ids })
+      .orderBy(this.column('s', 'id'), 'ASC')
+      .getRawMany()) as PlainT[];
+    const groups = new Map<unknown, PlainT[]>();
+    for (const r of raw) {
+      const owner = r[`s_${shortFk}`];
+      groups.set(owner, [...(groups.get(owner) ?? []), this.hydrate(shorts, r, 's')]);
+    }
+    return groups;
+  }
+
+  // the rows whose phrasal base is one of the entries
+  private async loadVariants(
+    words: EntityMetadata,
+    entries: EntityMetadata,
+    ids: number[],
+    wordFk: string,
+    basePhrasalFk: string,
+    withEntry: boolean,
+  ): Promise<Map<unknown, PlainT[]>> {
+    const vq = this.dataSource.createQueryBuilder(EnWord, 'v').select([]);
+    this.selectScalars(vq, words, 'v');
+    this.selectKey(vq, 'v', wordFk);
+    this.selectKey(vq, 'v', basePhrasalFk);
+    if (withEntry) {
+      vq.leftJoin('v.word', 've');
+      this.selectScalars(vq, entries, 've');
+    }
+    const raw = (await vq
+      .where(`${this.column('v', basePhrasalFk)} IN (:...ids)`, { ids })
+      .orderBy(this.column('v', 'id'), 'ASC')
+      .getRawMany()) as PlainT[];
+    const groups = new Map<unknown, PlainT[]>();
+    for (const r of raw) {
+      const variant = {
+        ...this.hydrate(words, r, 'v'),
+        word: withEntry ? this.hydrate(entries, r, 've') : { word: r[`v_${wordFk}`] },
+      };
+      const base = r[`v_${basePhrasalFk}`];
+      groups.set(base, [...(groups.get(base) ?? []), variant]);
+    }
+    return groups;
   }
 }

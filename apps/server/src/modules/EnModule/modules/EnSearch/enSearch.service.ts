@@ -11,6 +11,7 @@ import { toPublicSearchWord, toPublicWord } from '../../../PublicApiModule/utils
 import { escapeLike } from './utils/escapeLike';
 import { bytewise } from '../../utils/bytewise';
 import { WordRowsService } from '../../word-rows.service';
+import { SEARCH_ITEM_RELATIONS } from '../../utils/wordRelations';
 
 /**
  * Terms shorter than this get the short-term flow (issue #292): the exact
@@ -347,7 +348,8 @@ export class EnSearchService {
     const search = s.trim().toLowerCase();
     const { ids, similarity, fuzzy, short_term, tier } = await this.collectOrderedIds(search, type, limit);
     this.metrics?.searchAnswered(tier, short_term);
-    const words = await this.findWordsByIdsOrdered(ids, { word: true, forms: { word: true } });
+    // the phrasal base too: the item type promises `base_phrasal` (issue #392)
+    const words = await this.findWordsByIdsOrdered(ids, SEARCH_ITEM_RELATIONS);
     return { items: words.map((w) => toPublicSearchWord(w, similarity?.get(w.id))), fuzzy, short_term };
   }
 
@@ -370,7 +372,7 @@ export class EnSearchService {
     this.metrics?.searchAnswered(tier, short_term);
     const pageIds = ids.slice((page - 1) * limit, page * limit);
 
-    const relations: FindOptionsRelations<EnWord> = { word: true, forms: { word: true } };
+    const relations: FindOptionsRelations<EnWord> = { ...SEARCH_ITEM_RELATIONS };
     if (with_meanings) {
       relations.meanings = { translations: true, synonyms: true, antonyms: true };
     }

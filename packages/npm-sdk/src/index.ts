@@ -3,6 +3,7 @@ export {
   type ClientOptions,
   DEFAULT_RETRY,
   DEFAULT_TIMEOUT_MS,
+  DETAILED_SEARCH_MAX_PAGE,
   type FetchLike,
   PUBLIC_API_PREFIX,
   type RequestOptions,

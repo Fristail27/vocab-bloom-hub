@@ -7,7 +7,12 @@ import { EnEntryTypesE } from '../../../../../../types';
 export const SEARCH_TERM_MAX_LENGTH = 256;
 
 export class SearchReqDTO {
-  @ApiProperty({ minLength: 1, maxLength: SEARCH_TERM_MAX_LENGTH })
+  @ApiProperty({
+    minLength: 1,
+    maxLength: SEARCH_TERM_MAX_LENGTH,
+    description: 'The term to search for',
+    example: 'run',
+  })
   @IsString()
   @IsNotEmpty()
   @MaxLength(SEARCH_TERM_MAX_LENGTH)

@@ -89,8 +89,17 @@ export class EnApi extends AbstractBaseApi {
   // Mirrors the raw endpoint contract: every filter the DTO accepts is passed
   // through as is, in the query string of the cacheable GET form (issue #396)
   /** The public search as consumers see it: the v1 envelope `{ data, meta }` */
+  // The public GETs carry `Cache-Control: public, max-age=3600` for consumers;
+  // the admin edits the data it reads, so its own requests must not be
+  // answered from the browser's HTTP cache (a deleted word would come back
+  // in the search for an hour)
+  private static readonly PUBLIC_READ: RequestInit = { cache: 'no-store' };
+
   static async publicSearch(query: SearchReqT): Promise<PublicSearchV1ResT | ErrorResT> {
-    return this.get<PublicSearchV1ResT>(`${this.baseURL}/v1/search`, { query: query as unknown as ApiQueryT });
+    return this.get<PublicSearchV1ResT>(`${this.baseURL}/v1/search`, {
+      query: query as unknown as ApiQueryT,
+      ...this.PUBLIC_READ,
+    });
   }
 
   static async publicSearchDetailed(
@@ -98,12 +107,13 @@ export class EnApi extends AbstractBaseApi {
   ): Promise<PublicSearchDetailedV1ResT | ErrorResT> {
     return this.get<PublicSearchDetailedV1ResT>(`${this.baseURL}/v1/search/detailed`, {
       query: query as unknown as ApiQueryT,
+      ...this.PUBLIC_READ,
     });
   }
 
   /** Any GET read of the public prefix, e.g. `/v1/words/run` (the documentation playground) */
   static async publicGet<T>(path: string, query?: ApiQueryT): Promise<T | ErrorResT> {
-    return this.get<T>(`${this.baseURL}${path}`, { query });
+    return this.get<T>(`${this.baseURL}${path}`, { query, ...this.PUBLIC_READ });
   }
 
   /** Any POST of the public prefix, e.g. `/v1/suggestions` (the documentation playground) */

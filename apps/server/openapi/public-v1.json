@@ -283,8 +283,9 @@
             "name": "translation_languages",
             "required": false,
             "in": "query",
-            "description": "Keep only these translation languages (a repeated key); no value means all of them",
+            "description": "Keep only these translation languages (a repeated key); omit the key for all of them",
             "schema": {
+              "minItems": 1,
               "type": "array",
               "items": {
                 "type": "string",
@@ -1510,7 +1511,9 @@
           "search": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 256
+            "maxLength": 256,
+            "description": "The term to search for",
+            "example": "run"
           },
           "type": {
             "type": "string",
@@ -1538,7 +1541,9 @@
           "search": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 256
+            "maxLength": 256,
+            "description": "The term to search for",
+            "example": "run"
           },
           "type": {
             "type": "string",
@@ -1573,7 +1578,8 @@
           },
           "translation_languages": {
             "type": "array",
-            "description": "Keep only these translation languages; no value means all of them",
+            "minItems": 1,
+            "description": "Keep only these translation languages; omit the field for all of them",
             "items": {
               "type": "string",
               "enum": [

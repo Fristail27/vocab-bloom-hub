@@ -72,7 +72,7 @@ async with AsyncVocabBloomClient("https://dict.example.com") as client:
 | `antonyms(headword)`                        | `GET /words/{word}/antonyms`            | `LinksResponse`                                                                                                |
 | `words(**filters, cursor, limit, with_...)` | `GET /words`                            | `WordsResponse` (one page)                                                                                     |
 | `iter_words(**filters, ...)`                | `GET /words`, following the cursor      | `Iterator[Word]`                                                                                               |
-| `iter_search_detailed(search, *, ...)`      | `GET /search/detailed`, page after page | `Iterator[Word]`                                                                                               |
+| `iter_search_detailed(search, *, ...)`      | `GET /search/detailed`, page after page | `Iterator[Word]` — stops at the server's page cap (`DETAILED_SEARCH_MAX_PAGE`, 20)                             |
 | `random(**filters)`                         | `GET /random`                           | `WordResponse`                                                                                                 |
 | `meta()`                                    | `GET /meta`                             | `MetaResponse`                                                                                                 |
 | `openapi()`                                 | `GET /openapi.json`                     | `dict` — the OpenAPI document                                                                                  |
@@ -89,7 +89,11 @@ VocabBloomClient(
     headers={"X-App": "my-app"},  # sent with every request
     timeout=10.0,  # seconds, or an httpx.Timeout
     cache=True,  # ETag revalidation (below); or your own ResponseCache
-    retry={"attempts": 3, "backoff": 0.5},  # opt-in: retry the GET reads on 429 / 5xx (below)
+    retry={
+        "attempts": 3,
+        "backoff": 0.5,
+        "max_delay": 60.0,
+    },  # opt-in: retry the GET reads on 429 / 5xx (below)
     transport=...,  # a custom httpx transport (tests, instrumentation)
 )
 ```
@@ -121,7 +125,7 @@ Every request carries `User-Agent: vocab-bloom-hub-python/<version>` (`vocab_blo
 
 ### Retry
 
-Off by default — the client documents exact request counts against the rate limit, so the loop is opt-in. With `retry={}` (or explicit `attempts` / `backoff`) a `GET` answered `429` or `5xx` is sent again: after `Retry-After` when the server sent it, otherwise after `backoff`, then twice that, and so on, up to `attempts` tries in total (the first one included; 3 and 0.5 s by default). `POST` requests (the batch lookup, a suggestion), `4xx` answers and network errors are never retried.
+Off by default — the client documents exact request counts against the rate limit, so the loop is opt-in. With `retry={}` (or explicit `attempts` / `backoff`) a `GET` answered `429` or `5xx` is sent again: after `Retry-After` when the server sent it, otherwise after `backoff`, then twice that, and so on, up to `attempts` tries in total (the first one included; 3 and 0.5 s by default); no single wait exceeds `max_delay` seconds (60 by default), whatever `Retry-After` says. `POST` requests (the batch lookup, a suggestion), `4xx` answers and network errors are never retried.
 
 ### ETag cache
 

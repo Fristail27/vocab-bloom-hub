@@ -114,7 +114,8 @@ with the fields in the query string (`translation_languages` as a repeated key, 
 `true` / `false`), which carries the caching headers of the prefix and can be pasted into a
 browser or shared as a link, and `POST` with a JSON body, which HTTP caches never store. Use
 the `GET` form; the `POST` form stays through the beta for the consumers that already use
-it.
+it. `translation_languages` is either omitted (every language) or a non-empty list — an empty
+list answers `400`.
 
 Both search endpoints rank their answer by tiers: exact headword, phrasal variants, starts
 with the term, phrases containing it as a word, ends with it, contains it anywhere. Every tier

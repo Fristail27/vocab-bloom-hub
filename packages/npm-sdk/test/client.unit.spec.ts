@@ -259,6 +259,15 @@ describe('VocabBloomClient without a server (issue #275)', () => {
       expect(calls).toHaveLength(2);
     });
 
+    it('caps a huge Retry-After at maxDelayMs', async () => {
+      const { fetch, calls } = fakeFetch([() => limited('86400'), () => json({ data: {} })]);
+      const client = new VocabBloomClient({ baseUrl: 'http://localhost', fetch, retry: { maxDelayMs: 1 } });
+      const started = Date.now();
+      await client.meta();
+      expect(calls).toHaveLength(2);
+      expect(Date.now() - started).toBeLessThan(1000);
+    });
+
     it('stops waiting when the caller aborts', async () => {
       const { fetch, calls } = fakeFetch([() => limited('30')]);
       const client = new VocabBloomClient({ baseUrl: 'http://localhost', fetch, retry: {} });
@@ -268,6 +277,24 @@ describe('VocabBloomClient without a server (issue #275)', () => {
       await expect(pending).rejects.toBeInstanceOf(NetworkError);
       expect(calls).toHaveLength(1);
     });
+  });
+
+  it('ends the detailed-search iterator at the page cap instead of asking for page 21', async () => {
+    let served = 0;
+    const { fetch, calls } = fakeFetch(
+      Array.from({ length: 25 }, () => () => {
+        served += 1;
+        return json({
+          data: [{ id: served, word: `w${served}` }],
+          meta: { page: served, limit: 1, has_more: true, fuzzy: false, short_term: false },
+        });
+      }),
+    );
+    const client = new VocabBloomClient({ baseUrl: 'http://localhost', fetch });
+    const seen: number[] = [];
+    for await (const word of client.iterateSearchDetailed({ search: 'w', limit: 1 })) seen.push(word.id);
+    expect(seen).toHaveLength(20);
+    expect(calls).toHaveLength(20);
   });
 
   it('walks every page of the detailed search through has_more (issue #408)', async () => {

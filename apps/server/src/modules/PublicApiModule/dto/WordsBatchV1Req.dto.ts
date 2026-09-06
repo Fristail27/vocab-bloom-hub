@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsString, Length } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsString, Length, Matches } from 'class-validator';
 import { HEADWORD_MAX_LENGTH } from '../utils/headword-param.pipe';
 
 /** Spellings one batch lookup may carry (issue #397) */
@@ -21,5 +21,7 @@ export class WordsBatchV1ReqDTO {
   @ArrayMaxSize(PUBLIC_BATCH_MAX_WORDS)
   @IsString({ each: true })
   @Length(1, HEADWORD_MAX_LENGTH, { each: true })
+  // a blank spelling would normalize to nothing and vanish from the answer
+  @Matches(/\S/, { each: true, message: 'each word must contain a non-blank character' })
   words!: string[];
 }

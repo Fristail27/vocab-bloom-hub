@@ -28,6 +28,8 @@ const METHOD_BY_OPERATION: Record<string, keyof VocabBloomClient> = {
   PublicSuggestionsController_create: 'suggest',
 };
 
+import { DETAILED_SEARCH_MAX_PAGE } from '../src';
+
 describe('SDK coverage of the public contract (issue #275)', () => {
   const spec = JSON.parse(
     readFileSync(resolve(__dirname, '../../../apps/server/openapi/public-v1.json'), 'utf8'),
@@ -47,5 +49,13 @@ describe('SDK coverage of the public contract (issue #275)', () => {
     for (const method of Object.values(METHOD_BY_OPERATION)) {
       expect(typeof client[method]).toBe('function');
     }
+  });
+
+  it('stops the detailed-search iterator at the page cap the document declares', () => {
+    const detailed = spec.paths['/api/v1/search/detailed'] as {
+      get: { parameters: Array<{ name: string; schema: { maximum?: number } }> };
+    };
+    const page = detailed.get.parameters.find((p) => p.name === 'page')!;
+    expect(page.schema.maximum).toBe(DETAILED_SEARCH_MAX_PAGE);
   });
 });
