@@ -7,6 +7,11 @@ generated release notes; the full commit history lives in git.
 
 ## v0.2.0-beta.1 — unreleased
 
+- **Python SDK**: `vocab_bloom_hub.__version__` reports the installed version (it was a
+  hardcoded `0.0.1`), read from the package metadata so it follows `pyproject.toml` on every
+  release; `typing-extensions`, imported by the client, is a declared dependency instead of a
+  transitive accident (issue #401).
+
 - **Breaking (prerelease window): the public `/api/v1` word items are an explicit projection**
   (issue #392) instead of the database entity. The fields are enumerated in
   `types/public/v1` and mapped by name; the editorial state of the instance —
