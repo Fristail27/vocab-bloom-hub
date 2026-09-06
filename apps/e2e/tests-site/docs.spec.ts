@@ -29,6 +29,26 @@ test.describe('documentation', () => {
     }
   });
 
+  test('a translated page renders the Russian file without the banner (issue #404)', async ({ page }) => {
+    await page.goto('/ru/docs/environment');
+
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Переменные окружения');
+    await expect(page.getByText('Эта страница доступна только на английском.')).toHaveCount(0);
+    // the sidebar link of the page and a link into another translated page
+    await expect(page.locator('aside nav a[aria-current="page"]')).toHaveAttribute(
+      'href',
+      /\/ru\/docs\/environment$/,
+    );
+    await expect(page.locator('.markdown a[href="/ru/docs/api"]').first()).toBeVisible();
+  });
+
+  test('the release notes are a page of the site', async ({ page }) => {
+    await page.goto('/en/docs/changelog');
+
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Changelog');
+    await expect(page.locator('.markdown h2').first()).toContainText(/^v\d/);
+  });
+
   test('a page without a Russian translation says so', async ({ page }) => {
     await page.goto('/ru/docs/observability');
 

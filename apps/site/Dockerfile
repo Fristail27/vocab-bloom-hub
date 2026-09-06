@@ -29,7 +29,7 @@ ENV NODE_ENV=production
 COPY tsconfig.base.json ./
 # the content the pages are rendered from: the READMEs, docs/, the licences,
 # the OpenAPI document and the response types of the server workspace
-COPY README.md CONTRIBUTING.md DATA_LICENSE.md SECURITY.md LICENSE ./
+COPY README.md CONTRIBUTING.md CHANGELOG.md DATA_LICENSE.md SECURITY.md LICENSE ./
 COPY docs docs
 COPY packages/npm-sdk/README.md packages/npm-sdk/
 COPY packages/python-sdk/README.md packages/python-sdk/

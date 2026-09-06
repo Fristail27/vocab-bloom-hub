@@ -250,7 +250,7 @@ DATABASE_URL=postgres://... yarn workspace server migration:run      # такж�
 - [`../README.md`](../README.md) — этот README на английском
 - Swagger UI по адресу `/api` на запущенном сервере — актуальный справочник API; публичный контракт в формате OpenAPI: [`apps/server/openapi/public-v1.json`](../apps/server/openapi/public-v1.json) или `GET /api/v1/openapi.json`
 
-Документация в `docs/` (кроме этого файла) ведётся на английском языке.
+Документация в `docs/` ведётся на английском; у части страниц есть русская версия рядом (`<имя>.ru.md`: [`api.ru.md`](api.ru.md), [`environment.ru.md`](environment.ru.md), [`deployment/README.ru.md`](deployment/README.ru.md)), сайт показывает её под `/ru`.
 
 ---
 

@@ -79,10 +79,13 @@ Before submitting a pull request:
 
 ### Documentation languages
 
-The README exists in two languages: `README.md` (English) and `docs/README.ru.md` (Russian).
-Any change to one of them must be applied to the other in the same PR so the two stay in sync
-section by section. Everything else (`docs/`, code comments, issue and PR templates) is written
-in English only.
+English is the source language of the documentation. A page may have a Russian version next
+to it, named `<name>.ru.md` (`README.md` ↔ `docs/README.ru.md`, `docs/api.md` ↔
+`docs/api.ru.md`, …) and registered as its `ruFile` in `apps/site/src/content/registry.ts`,
+where the website renders it under `/ru`. Any change to a page with a translation must be
+applied to the other file in the same PR so the two stay in sync section by section; a page
+without one shows the English text on the site with a notice. Code comments, issue and PR
+templates and the pages without a translation are English only.
 
 ### Pull Request Checklist
 
