@@ -41,9 +41,11 @@ the A1–B2 vocabulary is on the roadmap.
   labels are model judgements. Hallucinated senses and invented examples are possible; do not
   use the data as ground truth for evaluating other dictionaries or as a citable source of
   English usage.
-- **Translations are generated too** and have not been reviewed by a translator. Russian is the
-  only translation language populated (`GET /api/v1/meta` lists the instance's
-  `available_languages`; a second one is planned, issue #410).
+- **Translations are generated too** and have not been reviewed by a translator. The schema
+  carries two translation languages, Russian and Spanish (`GET /api/v1/meta` lists them under
+  `available_languages`, issue #410); the published `v0.1.0` revision holds Russian only —
+  Spanish arrives with a later revision, and `manifest.json` counts the rows per language
+  (`translations`).
 - **Entry-level `language_register` is unreliable on words** — almost every word says `formal`
   because the field defaulted that way during generation. The per-sense register inside
   `meanings` is the meaningful one.

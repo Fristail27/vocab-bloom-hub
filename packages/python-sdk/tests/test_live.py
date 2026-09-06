@@ -99,7 +99,7 @@ def test_random_meta_openapi(client: VocabBloomClient) -> None:
     meta = client.meta().data
     assert (meta.api_version, meta.license, meta.counts.words) == ("1", "CC-BY-4.0", 3)
     assert meta.available_languages.source == ["en"]
-    assert meta.available_languages.translations == [TranslationLanguage.ru]
+    assert meta.available_languages.translations == [TranslationLanguage.ru, TranslationLanguage.es]
     document = client.openapi()
     assert str(document["openapi"]).startswith("3.")
     assert "/api/v1/words/{word}" in document["paths"]

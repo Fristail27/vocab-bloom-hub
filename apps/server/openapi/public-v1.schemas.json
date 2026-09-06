@@ -640,7 +640,8 @@
   "AvailableTranslationLanguagesE": {
     "type": "string",
     "enum": [
-      "ru"
+      "ru",
+      "es"
     ]
   },
   "PublicWordV1ShortTranslationT": {

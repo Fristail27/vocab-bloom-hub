@@ -393,6 +393,7 @@ export default {
     word_link_not_found: 'Такого слова нет в словаре',
     translation_language: 'Язык перевода',
     translation_rus: 'Русский',
+    translation_es: 'Испанский',
     translation_desc: 'Перевод описания слова',
     translation_variants: 'Варианты прямого перевода',
     translation_short_meaning: 'Короткий перевод значения',

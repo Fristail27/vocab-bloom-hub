@@ -67,6 +67,14 @@ const grammarOf = (entry: PublicWordV1T, t: TranslateT): string[] =>
     entry.verb___phrasal_object_pattern && t(`phrasal_${entry.verb___phrasal_object_pattern}`),
   ].filter((item): item is string => Boolean(item));
 
+// The translation languages present in a list (issue #410): a label per
+// item is shown only when the list mixes languages, so a single-language
+// dictionary reads as before
+const mixesLanguages = (items: ReadonlyArray<{ language: string }>): boolean =>
+  new Set(items.map((item) => item.language)).size > 1;
+
+const LanguageTag = ({ language }: { language: string }) => <small className={styles.tag}>{language}</small>;
+
 const Meaning = ({ meaning, t }: { meaning: PublicWordV1MeaningT; t: TranslateT }) => (
   <li>
     {meaning.title && <span className={styles.meaningTitle}>{meaning.title}</span>}
@@ -94,6 +102,7 @@ const Meaning = ({ meaning, t }: { meaning: PublicWordV1MeaningT; t: TranslateT 
       <p className={styles.translations}>
         {meaning.translations.map((translation) => (
           <span key={translation.id} lang={translation.language} title={translation.definition}>
+            {mixesLanguages(meaning.translations) && <LanguageTag language={translation.language} />}
             {translation.title}
           </span>
         ))}
@@ -151,6 +160,7 @@ const Entry = ({ entry, t }: { entry: PublicWordV1T; t: TranslateT }) => {
         <p className={styles.short}>
           {entry.short_translations.map((item) => (
             <span key={item.id} lang={item.language}>
+              {mixesLanguages(entry.short_translations) && <LanguageTag language={item.language} />}
               {item.description}
             </span>
           ))}

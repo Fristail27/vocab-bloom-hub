@@ -347,7 +347,7 @@ export interface components {
        */
       with_translations: boolean;
       /** @description Keep only these translation languages; no value means all of them */
-      translation_languages?: 'ru'[];
+      translation_languages?: ('ru' | 'es')[];
     };
     WordsBatchV1ReqDTO: {
       /**
@@ -523,7 +523,7 @@ export interface components {
       variants_of_words: string[];
     };
     /** @enum {string} */
-    AvailableTranslationLanguagesE: 'ru';
+    AvailableTranslationLanguagesE: 'ru' | 'es';
     PublicWordV1ShortTranslationT: {
       id: number;
       language: components['schemas']['AvailableTranslationLanguagesE'];
@@ -841,7 +841,7 @@ export interface operations {
         /** @description Join the short translations of every item */
         with_translations?: boolean;
         /** @description Keep only these translation languages (a repeated key); no value means all of them */
-        translation_languages?: 'ru'[];
+        translation_languages?: ('ru' | 'es')[];
       };
       header?: never;
       path?: never;
@@ -1318,7 +1318,7 @@ export interface operations {
     parameters: {
       query?: {
         /** @description Translation languages; no value means all of them */
-        language?: 'ru'[];
+        language?: ('ru' | 'es')[];
       };
       header?: never;
       path: {

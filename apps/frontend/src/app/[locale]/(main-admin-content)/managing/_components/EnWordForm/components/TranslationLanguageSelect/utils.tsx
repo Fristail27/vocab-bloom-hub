@@ -8,6 +8,7 @@ type LanguagePresentationT = { icons: Array<keyof typeof allIcons>; labelKey: Pa
 // language fails to type-check until its flag and label are declared here
 const TRANSLATION_LANGUAGE_PRESENTATION: Record<AvailableTranslationLanguagesE, LanguagePresentationT> = {
   [AvailableTranslationLanguagesE.ru]: { icons: ['rusFlag'], labelKey: 'translation_rus' },
+  [AvailableTranslationLanguagesE.es]: { icons: ['esFlag'], labelKey: 'translation_es' },
 };
 
 export const getTranslationsOptions = (t: TranslatorT) =>

@@ -560,6 +560,29 @@ export class EnImportDictionaryService implements OnModuleDestroy {
    * every base-form meaning. Recorded in the manifest so the import can count
    * the linking stage into its progress total.
    */
+  /** Translation rows per language (issue #410): the counts a consumer of the revision can expect */
+  private async countTranslationsByLanguage(): Promise<NonNullable<DatasetManifestT['translations']>> {
+    const manager = this.enWordsRep.manager;
+    const count = async (entity: typeof EnMeaningTranslation | typeof EnShortTranslation) =>
+      manager
+        .getRepository(entity)
+        .createQueryBuilder('t')
+        .select('t.language', 'language')
+        .addSelect('COUNT(*)', 'count')
+        .groupBy('t.language')
+        .getRawMany<{ language: string; count: string }>();
+    const result: NonNullable<DatasetManifestT['translations']> = {};
+    for (const row of await count(EnMeaningTranslation)) {
+      result[row.language] = { meaning_translations: Number(row.count), short_translations: 0 };
+    }
+    for (const row of await count(EnShortTranslation)) {
+      const entry = result[row.language] ?? { meaning_translations: 0, short_translations: 0 };
+      entry.short_translations = Number(row.count);
+      result[row.language] = entry;
+    }
+    return result;
+  }
+
   private async countExportedLinks(kind: WordLinkKindT): Promise<number> {
     const row = await this.enWordsRep.manager
       .getRepository(EnMeaning)
@@ -1200,6 +1223,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         attribution: DATA_LICENSE.attribution,
         synonym_links: await this.countExportedLinks('synonyms'),
         antonym_links: await this.countExportedLinks('antonyms'),
+        translations: await this.countTranslationsByLanguage(),
         files: {
           [DATASET_FILE_NAMES.words]: { lines: wordsLines },
           [DATASET_FILE_NAMES.phrasalVerbs]: { lines: phrasalVerbsLines },
