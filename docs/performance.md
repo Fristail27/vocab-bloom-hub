@@ -9,7 +9,7 @@ was done about it, and how to measure it again.
 
 | Read (public API)                                  | Target (p95) | Postgres now | Note                                              |
 | -------------------------------------------------- | -----------: | -----------: | ------------------------------------------------- |
-| Headword / id lookup (`/words/{word}`, `/id/{id}`) |        20 ms |       ≤ 7 ms | one query per relation, rows assembled by hand    |
+| Headword / id lookup (`/words/{word}`, `/id/{id}`) |        20 ms |       ≤ 4 ms | one query per relation, rows assembled by hand    |
 | Filtered list page (`/words?…`)                    |        20 ms |       ≤ 5 ms | index walk in `(word, id)` order, keyset cursor   |
 | Random entry (`/random?…`)                         |        20 ms |       ≤ 7 ms | primary-key pivot, no `ORDER BY random()`         |
 | Search, exact / prefix tiers (`/search`)           |        20 ms |       ≤ 8 ms | byte-order index on the headword                  |
@@ -28,7 +28,9 @@ The full reads cost the same 9 statements whatever they return — the entries, 
 returns, not with the spellings: 50 everyday headwords are ~80 entries with ~240 meanings (a
 285 KB answer) in ~22 ms. They used to take ~275 ms: the same statements, but `find()` with
 relations then spent ~220 ms turning the rows into entity instances. Since issue #424
-`WordRowsService` (`src/modules/EnModule/word-rows.service.ts`) runs the statements itself,
+`WordRowsService` (`src/modules/EnModule/word-rows.service.ts`) runs the statements itself —
+in two concurrent waves after the entries (the collections of the entries, then those of the
+meanings), so a read costs three round-trips whatever the distance to the database —
 converts the raw values through the driver (the conversion hydration applies: booleans, enums,
 arrays, JSON, dates) and groups the collections by foreign key in one pass; a unit test pins
 its answer to `find()`'s field for field. The admin entry read, the detailed search and the

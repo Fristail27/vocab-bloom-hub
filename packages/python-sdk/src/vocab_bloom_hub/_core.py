@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -60,14 +61,20 @@ class RequestOptions(TypedDict, total=False):
 class RetryOptions(TypedDict, total=False):
     """Opt-in retry of the GET reads (issue #408): a ``429`` or a ``5xx`` answer is tried again after
     ``Retry-After`` when the server sent it, otherwise after ``backoff``, twice and four times ``backoff``, …
-    seconds; ``attempts`` counts every try, the first included. POST requests, ``4xx`` answers and
-    network errors are never retried."""
+    seconds; ``attempts`` counts every try, the first included; no single wait exceeds ``max_delay``
+    seconds. POST requests, ``4xx`` answers and network errors are never retried."""
 
     attempts: int
     backoff: float
+    max_delay: float
 
 
-DEFAULT_RETRY: RetryOptions = {"attempts": 3, "backoff": 0.5}
+DEFAULT_RETRY: RetryOptions = {"attempts": 3, "backoff": 0.5, "max_delay": 60.0}
+
+# The deepest page the detailed search serves (``page`` <= 20 on the server;
+# tests/test_contract.py pins it to the OpenAPI document): the page iterators
+# stop there even when ``meta.has_more`` says more, narrow the search instead
+DETAILED_SEARCH_MAX_PAGE = 20
 
 
 def _scalar(value: Scalar) -> str:
@@ -124,16 +131,22 @@ class PreparedGet:
 
 
 def _retry_after_seconds(value: str | None) -> float | None:
+    """Seconds from a ``Retry-After`` header; ``None`` when absent or unreadable (``inf`` included)."""
     if value is None:
         return None
     try:
-        return max(0.0, float(value))
+        seconds: float | None = float(value)
     except ValueError:
-        pass
+        seconds = None
+    if seconds is not None:
+        return max(0.0, seconds) if math.isfinite(seconds) else None
     try:
         at = parsedate_to_datetime(value)
     except (TypeError, ValueError):
         return None
+    # a "-0000" date parses as naive: it means UTC
+    if at.tzinfo is None:
+        at = at.replace(tzinfo=timezone.utc)
     return max(0.0, (at - datetime.now(timezone.utc)).total_seconds())
 
 
@@ -178,7 +191,8 @@ class Core:
         if attempt >= self.retry["attempts"]:
             return None
         server = _retry_after_seconds(response.headers.get("retry-after"))
-        return server if server is not None else self.retry["backoff"] * 2 ** (attempt - 1)
+        wanted = server if server is not None else self.retry["backoff"] * 2 ** (attempt - 1)
+        return min(wanted, self.retry["max_delay"])
 
     def prepare_get(
         self, path: str, params: Mapping[str, Any] | None, options: RequestOptions | None = None

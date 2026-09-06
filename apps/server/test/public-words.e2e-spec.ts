@@ -296,6 +296,8 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
       await reject({ words: Array.from({ length: 51 }, (_, i) => `w${i}`) });
       await reject({ words: [42] });
       await reject({ words: ['x'.repeat(129)] });
+      // a blank spelling would vanish from the answer: rejected instead
+      await reject({ words: ['run', '   '] });
       await reject({ words: 'run' });
       await reject({ words: ['run'], limit: 5 });
       await reject({});

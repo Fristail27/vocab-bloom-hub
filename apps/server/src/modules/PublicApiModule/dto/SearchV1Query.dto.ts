@@ -1,74 +1,36 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import {
-  IsArray,
-  IsBoolean,
-  IsEnum,
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  Max,
-  MaxLength,
-  Min,
-} from 'class-validator';
-import { AvailableTranslationLanguagesE, EnEntryTypesE } from '../../../../types';
-import { SEARCH_TERM_MAX_LENGTH } from '../../EnModule/modules/EnSearch/dto/SearchReq.dto';
+import { ArrayMinSize, IsArray, IsBoolean, IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { AvailableTranslationLanguagesE } from '../../../../types';
+import { SearchReqDTO } from '../../EnModule/modules/EnSearch/dto/SearchReq.dto';
+import { SearchDetailedReqDTO } from '../../EnModule/modules/EnSearch/dto/SearchDetailedReq.dto';
 import { toArray, toBoolean } from '../../EnModule/modules/EnAdminLists/dto/PaginationQuery.dto';
 
 // The GET form of the search (issue #396): the same fields as the POST bodies
-// (SearchV1ReqDTO, SearchDetailedV1ReqDTO), read from the query string —
-// numbers, booleans and the language list arrive as text and are converted
-// here. A GET answer carries the caching headers of the prefix and can be
-// shared as a link; the POST routes stay through the beta.
+// (SearchReqDTO / SearchDetailedReqDTO), read from the query string. Only the
+// fields that arrive as text are re-declared, with the conversion in front of
+// the same validators and bounds; everything else is inherited, so the two
+// forms cannot drift. The transforms stay here: on the POST bodies they would
+// loosen the validation (a string where a number is required).
 
-const SEARCH_TERM = {
-  minLength: 1,
-  maxLength: SEARCH_TERM_MAX_LENGTH,
-  description: 'The term to search for',
-  example: 'run',
-};
-
-export class SearchV1QueryDTO {
-  @ApiProperty(SEARCH_TERM)
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(SEARCH_TERM_MAX_LENGTH)
-  search!: string;
-
-  @ApiPropertyOptional({ enum: EnEntryTypesE, description: 'Restrict the answer to one entry type' })
-  @IsOptional()
-  @IsEnum(EnEntryTypesE)
-  type?: EnEntryTypesE;
-
+export class SearchV1QueryDTO extends SearchReqDTO {
   @ApiPropertyOptional({ type: 'integer', minimum: 1, maximum: 100, default: 10 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(100)
-  limit = 10;
+  override limit = 10;
 }
 
-export class SearchDetailedV1QueryDTO {
-  @ApiProperty(SEARCH_TERM)
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(SEARCH_TERM_MAX_LENGTH)
-  search!: string;
-
-  @ApiPropertyOptional({ enum: EnEntryTypesE, description: 'Restrict the answer to one entry type' })
-  @IsOptional()
-  @IsEnum(EnEntryTypesE)
-  type?: EnEntryTypesE;
-
+export class SearchDetailedV1QueryDTO extends SearchDetailedReqDTO {
   @ApiPropertyOptional({ type: 'integer', minimum: 1, maximum: 20, default: 10 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(20)
-  limit?: number = 10;
+  override limit?: number = 10;
 
   @ApiPropertyOptional({ type: 'integer', minimum: 1, maximum: 20, default: 1 })
   @IsOptional()
@@ -76,7 +38,7 @@ export class SearchDetailedV1QueryDTO {
   @IsInt()
   @Min(1)
   @Max(20)
-  page?: number = 1;
+  override page?: number = 1;
 
   @ApiPropertyOptional({
     type: Boolean,
@@ -86,7 +48,7 @@ export class SearchDetailedV1QueryDTO {
   @IsOptional()
   @Transform(toBoolean)
   @IsBoolean()
-  with_meanings?: boolean = false;
+  override with_meanings?: boolean = false;
 
   @ApiPropertyOptional({
     type: Boolean,
@@ -96,16 +58,18 @@ export class SearchDetailedV1QueryDTO {
   @IsOptional()
   @Transform(toBoolean)
   @IsBoolean()
-  with_translations?: boolean = false;
+  override with_translations?: boolean = false;
 
   @ApiPropertyOptional({
     enum: AvailableTranslationLanguagesE,
     isArray: true,
-    description: 'Keep only these translation languages (a repeated key); no value means all of them',
+    minItems: 1,
+    description: 'Keep only these translation languages (a repeated key); omit the key for all of them',
   })
   @IsOptional()
   @Transform(toArray)
   @IsArray()
+  @ArrayMinSize(1)
   @IsEnum(AvailableTranslationLanguagesE, { each: true })
-  translation_languages?: AvailableTranslationLanguagesE[];
+  override translation_languages?: AvailableTranslationLanguagesE[] = undefined;
 }

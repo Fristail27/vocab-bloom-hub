@@ -316,6 +316,10 @@ export interface components {
       edits?: components['schemas']['SuggestionEditV1DTO'][];
     };
     SearchV1ReqDTO: {
+      /**
+       * @description The term to search for
+       * @example run
+       */
       search: string;
       /**
        * @description Restrict the answer to one entry type
@@ -326,6 +330,10 @@ export interface components {
       limit: number;
     };
     SearchDetailedV1ReqDTO: {
+      /**
+       * @description The term to search for
+       * @example run
+       */
       search: string;
       /**
        * @description Restrict the answer to one entry type
@@ -346,7 +354,7 @@ export interface components {
        * @default false
        */
       with_translations: boolean;
-      /** @description Keep only these translation languages; no value means all of them */
+      /** @description Keep only these translation languages; omit the field for all of them */
       translation_languages?: ('ru' | 'es')[];
     };
     WordsBatchV1ReqDTO: {
@@ -840,7 +848,7 @@ export interface operations {
         with_meanings?: boolean;
         /** @description Join the short translations of every item */
         with_translations?: boolean;
-        /** @description Keep only these translation languages (a repeated key); no value means all of them */
+        /** @description Keep only these translation languages (a repeated key); omit the key for all of them */
         translation_languages?: ('ru' | 'es')[];
       };
       header?: never;

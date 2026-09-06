@@ -65,6 +65,19 @@ describe('public API /api/v1 (e2e, issue #271)', () => {
         ],
       })
       .expect(201);
+    // a phrasal verb and its base: the search items promise `base_phrasal` (issue #392)
+    for (const body of [
+      { word: 'glow', part_of_speech: EnPartOfSpeechE.verb, form_of_word: EnWordFormsE.base_form },
+      {
+        word: 'glow up',
+        part_of_speech: EnPartOfSpeechE.verb,
+        form_of_word: EnWordFormsE.base_form,
+        verb___is_phrasal: true,
+        base_phrasal: 'glow',
+      },
+    ]) {
+      await request(server()).post('/api/en/add/word').set(auth).send(body).expect(201);
+    }
   });
 
   afterAll(async () => {
@@ -142,6 +155,35 @@ describe('public API /api/v1 (e2e, issue #271)', () => {
     await request(server()).get('/api/v1/search/detailed?search=x&limit=21').expect(400);
     await request(server()).get('/api/v1/search/detailed?search=x&with_meanings=maybe').expect(400);
     await request(server()).get('/api/v1/search/detailed?search=x&translation_languages=xx').expect(400);
+  });
+
+  it('answers base_phrasal on search and list items like the headword read does', async () => {
+    const flat = await request(server()).get('/api/v1/search?search=glow%20up').expect(200);
+    expect(
+      flat.body.data.map((w: { word: string; base_phrasal: string | null }) => [w.word, w.base_phrasal]),
+    ).toEqual([['glow up', 'glow']]);
+    const detailed = await request(server()).get('/api/v1/search/detailed?search=glow%20up').expect(200);
+    expect(detailed.body.data[0]).toMatchObject({ word: 'glow up', base_phrasal: 'glow' });
+    const list = await request(server()).get('/api/v1/words?search=glow%20up').expect(200);
+    expect(list.body.data[0]).toMatchObject({ word: 'glow up', base_phrasal: 'glow' });
+    const single = await request(server()).get('/api/v1/words/glow%20up').expect(200);
+    expect(single.body.data[0].base_phrasal).toBe('glow');
+  });
+
+  it('rejects an empty translation_languages list on both forms of the detailed search', async () => {
+    await request(server())
+      .post('/api/v1/search/detailed')
+      .send({ search: 'flick', translation_languages: [] })
+      .expect(400);
+    await request(server()).get('/api/v1/search/detailed?search=flick&translation_languages=').expect(400);
+    // omitting the field means every language
+    await request(server()).post('/api/v1/search/detailed').send({ search: 'flick' }).expect(200);
+  });
+
+  it('drops the session cookie on logout without a valid token (issue #398)', async () => {
+    const res = await request(server()).post('/api/auth/logout').expect(201);
+    expect(res.body).toEqual({ success: true });
+    expect(String(res.headers['set-cookie'])).toMatch(/bearer=;/);
   });
 
   it('rejects an empty and an oversized search term (issue #345)', async () => {

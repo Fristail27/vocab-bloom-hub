@@ -140,7 +140,7 @@ describe('Automatic dictionary import (e2e, issue #268)', () => {
   it('does nothing on a start with a recorded dataset version', async () => {
     await boot();
     await waitForImport();
-    // the sqlite database is per application here, so record the version by hand
+    // every boot starts from an empty database (on both drivers), so record the version by hand
     await app.close();
     await boot();
     await app.get(SettingsService).upsert(DATASET_VERSION_SETTINGS_FIELD, '9.9.9');

@@ -24,6 +24,17 @@ export const RELATION_LOAD_STRATEGY = 'query' as const;
  * base and its variants. Shared by the admin GET /api/en/:id and the public
  * reads so both answer the same shape.
  */
+/**
+ * What a search or list item carries (PublicSearchWordV1T): the headword, the
+ * forms and the phrasal base — `base_phrasal` is a promised field of the
+ * item, so the relation is loaded (one join) rather than answered null
+ */
+export const SEARCH_ITEM_RELATIONS: FindOptionsRelations<EnWord> = {
+  word: true,
+  forms: { word: true },
+  base_phrasal: { word: true },
+};
+
 export const FULL_WORD_RELATIONS: FindOptionsRelations<EnWord> = {
   forms: { word: true },
   meanings: { translations: true, synonyms: true, antonyms: true },

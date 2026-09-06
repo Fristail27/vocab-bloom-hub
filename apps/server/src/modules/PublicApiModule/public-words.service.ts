@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsRelations, Repository, SelectQueryBuilder } from 'typeorm';
 import { EnWord } from '../EnModule/entities/en_word.entity';
-import { FULL_WORD_RELATIONS } from '../EnModule/utils/wordRelations';
+import { FULL_WORD_RELATIONS, SEARCH_ITEM_RELATIONS } from '../EnModule/utils/wordRelations';
 import { WordRowsService } from '../EnModule/word-rows.service';
 import { bytewise } from '../EnModule/utils/bytewise';
 import { escapeLike } from '../EnModule/modules/EnSearch/utils/escapeLike';
@@ -276,7 +276,7 @@ export class PublicWordsService {
     if (ids.length === 0) return [];
     const with_meanings = query.with_meanings ?? false;
     const with_translations = query.with_translations ?? false;
-    const relations: FindOptionsRelations<EnWord> = { word: true, forms: { word: true } };
+    const relations: FindOptionsRelations<EnWord> = { ...SEARCH_ITEM_RELATIONS };
     if (with_meanings) relations.meanings = { translations: true, synonyms: true, antonyms: true };
     if (with_translations) relations.short_translations = true;
     const rows = await this.wordRows.load(ids, relations);

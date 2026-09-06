@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsEnum,
@@ -15,7 +16,12 @@ import { AvailableTranslationLanguagesE, EnEntryTypesE } from '../../../../../..
 import { SEARCH_TERM_MAX_LENGTH } from './SearchReq.dto';
 
 export class SearchDetailedReqDTO {
-  @ApiProperty({ minLength: 1, maxLength: SEARCH_TERM_MAX_LENGTH })
+  @ApiProperty({
+    minLength: 1,
+    maxLength: SEARCH_TERM_MAX_LENGTH,
+    description: 'The term to search for',
+    example: 'run',
+  })
   @IsString()
   @IsNotEmpty()
   @MaxLength(SEARCH_TERM_MAX_LENGTH)
@@ -55,14 +61,17 @@ export class SearchDetailedReqDTO {
   @IsBoolean()
   with_translations?: boolean = false;
 
-  // No filter means all languages
+  // No filter means all languages; an empty list is rejected rather than
+  // read as "none" or "all" (the two readings drifted once, issue #392)
   @ApiPropertyOptional({
     enum: AvailableTranslationLanguagesE,
     isArray: true,
-    description: 'Keep only these translation languages; no value means all of them',
+    minItems: 1,
+    description: 'Keep only these translation languages; omit the field for all of them',
   })
   @IsOptional()
   @IsArray()
+  @ArrayMinSize(1)
   @IsEnum(AvailableTranslationLanguagesE, { each: true })
   translation_languages?: AvailableTranslationLanguagesE[];
 }

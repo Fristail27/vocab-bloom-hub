@@ -12,6 +12,7 @@ from typing_extensions import Unpack
 
 from . import models as m
 from ._core import (
+    DETAILED_SEARCH_MAX_PAGE,
     Core,
     ListOptions,
     ModelT,
@@ -117,9 +118,9 @@ class AsyncVocabBloomClient:
             )
             for word in answer.data:
                 yield word
-            if not answer.meta.has_more:
-                return
             current += 1
+            if not answer.meta.has_more or current > DETAILED_SEARCH_MAX_PAGE:
+                return
 
     async def word(self, headword: str, *, options: RequestOptions | None = None) -> m.HeadwordResponse:
         return await self._get(headword_path(headword), None, m.HeadwordResponse, options)

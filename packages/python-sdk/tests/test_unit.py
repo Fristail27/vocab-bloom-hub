@@ -468,3 +468,50 @@ async def test_async_client_retries_iterates_pages_and_builds_a_dataframe(
         assert [w.id async for w in client.iter_search_detailed("w", limit=1)] == [1, 2]
         frame = await client.words_dataframe(search="w", options={"headers": {"X-Request": "df"}})
         assert list(frame["word"]) == ["w7"]
+
+
+def test_retry_after_edge_cases_are_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
+    import time
+
+    from vocab_bloom_hub._core import _retry_after_seconds
+
+    assert _retry_after_seconds("inf") is None  # unreadable, the backoff applies
+    assert _retry_after_seconds("nan") is None
+    assert _retry_after_seconds("-5") == 0.0
+    # a "-0000" date parses as a naive datetime: it means UTC, not an exception
+    far = _retry_after_seconds("Thu, 01 Jan 2099 00:00:00 -0000")
+    assert far is not None and far > 0
+
+    slept: list[float] = []
+    monkeypatch.setattr(time, "sleep", slept.append)
+    calls = 0
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return json_response(LIMITED, status=429, headers={"retry-after": "86400"})
+        return json_response({"data": {"ok": True}})
+
+    client = VocabBloomClient("http://localhost", retry={"max_delay": 2.0}, transport=transport(handle))
+    prepared = client._core.prepare_get("/meta", None)
+    assert client._send_get(prepared, None).json() == {"data": {"ok": True}}
+    assert slept == [2.0]
+
+
+def test_iter_search_detailed_stops_at_the_page_cap() -> None:
+    served = 0
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        nonlocal served
+        served += 1
+        return json_response(
+            {
+                "data": [fake_word(served)],
+                "meta": {"page": served, "limit": 1, "has_more": True, "fuzzy": False, "short_term": False},
+            }
+        )
+
+    client = VocabBloomClient("http://localhost", transport=transport(handle))
+    assert len(list(client.iter_search_detailed("w", limit=1))) == 20
+    assert served == 20

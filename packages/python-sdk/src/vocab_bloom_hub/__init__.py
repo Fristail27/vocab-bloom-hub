@@ -1,6 +1,13 @@
 """Typed Python client for the Vocab Bloom Hub public dictionary API (``/api/v1``)."""
 
-from ._core import PUBLIC_API_PREFIX, ListOptions, RequestOptions, RetryOptions, WordFilters
+from ._core import (
+    DETAILED_SEARCH_MAX_PAGE,
+    PUBLIC_API_PREFIX,
+    ListOptions,
+    RequestOptions,
+    RetryOptions,
+    WordFilters,
+)
 from ._version import USER_AGENT, __version__
 from .async_client import AsyncVocabBloomClient
 from .cache import CacheEntry, MemoryCache, ResponseCache
@@ -13,6 +20,7 @@ __all__ = [
     "PUBLIC_API_PREFIX",
     "__version__",
     "AsyncVocabBloomClient",
+    "DETAILED_SEARCH_MAX_PAGE",
     "CacheEntry",
     "ListOptions",
     "MemoryCache",

@@ -56,7 +56,9 @@ class Type(Enum):
 
 
 class SearchV1ReqDTO(BaseModel):
-    search: str = Field(..., max_length=256, min_length=1)
+    search: str = Field(
+        ..., description="The term to search for", examples=["run"], max_length=256, min_length=1
+    )
     type: Type | None = Field(None, description="Restrict the answer to one entry type")
     limit: int = Field(10, ge=1, le=100)
 
@@ -67,7 +69,9 @@ class TranslationLanguage(Enum):
 
 
 class SearchDetailedV1ReqDTO(BaseModel):
-    search: str = Field(..., max_length=256, min_length=1)
+    search: str = Field(
+        ..., description="The term to search for", examples=["run"], max_length=256, min_length=1
+    )
     type: Type | None = Field(None, description="Restrict the answer to one entry type")
     limit: int = Field(10, ge=1, le=20)
     page: int = Field(1, ge=1, le=20)
@@ -76,7 +80,9 @@ class SearchDetailedV1ReqDTO(BaseModel):
     )
     with_translations: bool = Field(False, description="Join the short translations of every item")
     translation_languages: list[TranslationLanguage] | None = Field(
-        None, description="Keep only these translation languages; no value means all of them"
+        None,
+        description="Keep only these translation languages; omit the field for all of them",
+        min_length=1,
     )
 
 
