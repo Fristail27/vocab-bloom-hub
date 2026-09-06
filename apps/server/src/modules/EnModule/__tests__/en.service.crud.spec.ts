@@ -1,4 +1,5 @@
 import './helpers/clearDatabaseUrl';
+import { WordRowsService } from '../word-rows.service';
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
 import { ConflictException, NotFoundException } from '@nestjs/common';
@@ -49,7 +50,13 @@ describe('EnService word CRUD (issue #187)', () => {
       meaningTranslationService,
     );
 
-    service = new EnService(ds.getRepository(EnWord), ds, shortTranslationService, meaningService);
+    service = new EnService(
+      ds.getRepository(EnWord),
+      ds,
+      shortTranslationService,
+      meaningService,
+      new WordRowsService(ds),
+    );
   });
 
   afterAll(async () => {

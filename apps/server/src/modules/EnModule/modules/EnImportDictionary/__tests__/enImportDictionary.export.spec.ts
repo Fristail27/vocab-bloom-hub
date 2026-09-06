@@ -1,4 +1,5 @@
 import '../../../__tests__/helpers/clearDatabaseUrl';
+import { WordRowsService } from '../../../word-rows.service';
 
 import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { NotFoundException } from '@nestjs/common';
@@ -130,7 +131,13 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
       ds.getRepository(EnMeaning),
       meaningTranslationService,
     );
-    const enService = new EnService(ds.getRepository(EnWord), ds, shortTranslationService, meaningService);
+    const enService = new EnService(
+      ds.getRepository(EnWord),
+      ds,
+      shortTranslationService,
+      meaningService,
+      new WordRowsService(ds),
+    );
 
     const settingsService = { upsert: jest.fn() } as unknown as SettingsService;
     service = new EnImportDictionaryService(ds.getRepository(EnWord), settingsService);

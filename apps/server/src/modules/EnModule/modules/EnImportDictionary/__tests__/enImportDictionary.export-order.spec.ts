@@ -1,4 +1,5 @@
 import '../../../__tests__/helpers/clearDatabaseUrl';
+import { WordRowsService } from '../../../word-rows.service';
 
 import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { DataSource } from 'typeorm';
@@ -143,7 +144,13 @@ const runExport = async (words: EnWordT[]): Promise<ExportRun> => {
     ds.getRepository(EnMeaning),
     meaningTranslationService,
   );
-  const enService = new EnService(ds.getRepository(EnWord), ds, shortTranslationService, meaningService);
+  const enService = new EnService(
+    ds.getRepository(EnWord),
+    ds,
+    shortTranslationService,
+    meaningService,
+    new WordRowsService(ds),
+  );
   for (const w of words) await enService.addWord(w);
 
   const settingsService = { upsert: jest.fn() } as unknown as SettingsService;

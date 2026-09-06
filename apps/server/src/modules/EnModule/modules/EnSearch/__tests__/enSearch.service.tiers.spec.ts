@@ -1,4 +1,5 @@
 import '../../../__tests__/helpers/clearDatabaseUrl';
+import { WordRowsService } from '../../../word-rows.service';
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
 import { DataSource } from 'typeorm';
@@ -29,7 +30,7 @@ describe('EnSearchService tier categorization (issue #187)', () => {
     });
     await ds.initialize();
 
-    service = new EnSearchService(ds.getRepository(EnWord));
+    service = new EnSearchService(ds.getRepository(EnWord), new WordRowsService(ds));
   });
 
   afterAll(async () => {

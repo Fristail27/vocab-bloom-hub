@@ -8,27 +8,30 @@ was done about it, and how to measure it again.
 
 | Read (public API)                                  | Target (p95) | Postgres now | Note                                              |
 | -------------------------------------------------- | -----------: | -----------: | ------------------------------------------------- |
-| Headword / id lookup (`/words/{word}`, `/id/{id}`) |        20 ms |       ≤ 9 ms | one query per relation, no row multiplication     |
+| Headword / id lookup (`/words/{word}`, `/id/{id}`) |        20 ms |       ≤ 7 ms | one query per relation, rows assembled by hand    |
 | Filtered list page (`/words?…`)                    |        20 ms |       ≤ 5 ms | index walk in `(word, id)` order, keyset cursor   |
 | Random entry (`/random?…`)                         |        20 ms |       ≤ 7 ms | primary-key pivot, no `ORDER BY random()`         |
 | Search, exact / prefix tiers (`/search`)           |        20 ms |       ≤ 8 ms | byte-order index on the headword                  |
 | Search, substring / suffix tiers                   |        20 ms |       ≤ 8 ms | trigram GIN index (#278)                          |
 | Search, typo (fuzzy tier)                          |        20 ms |      ≤ 10 ms | `pg_trgm` similarity when nothing else matches    |
 | Search, 1–2 character term (short-term flow)       |        20 ms |       ≤ 6 ms | exact and prefix tiers only, index lookups (#292) |
-| List page with meanings joined (`with_meanings`)   |        50 ms |      ≤ 25 ms | 17 small queries instead of one exploding join    |
-| Batch lookup, 5 spellings (`/words/batch`, #397)   |        20 ms |       ≤ 9 ms | the same 23 statements as one headword            |
-| Batch lookup, 50 spellings (the cap)               |       300 ms |     ≤ 280 ms | ~50 ms in Postgres; the rest is TypeORM hydration |
+| List page with meanings joined (`with_meanings`)   |        50 ms |      ≤ 13 ms | 8 small queries instead of one exploding join     |
+| Batch lookup, 5 spellings (`/words/batch`, #397)   |        20 ms |       ≤ 5 ms | the same 9 statements as one headword             |
+| Batch lookup, 50 spellings (the cap)               |       100 ms |      ≤ 25 ms | 9 statements, ~80 entries, no entity hydration    |
 
 Numbers are p95 of the [benchmark](#the-benchmark) on a laptop against a local Postgres 18
 with the published dataset; treat them as an order of magnitude, not a promise.
 
-The batch lookup costs the same 23 statements whatever its size — every relation is loaded
-with one `IN (...)` for the whole batch — so its time grows with the entries it returns, not
-with the spellings: 50 everyday headwords are ~80 entries with ~240 meanings (a 285 KB
-answer), of which the database takes ~50 ms and TypeORM's entity hydration the remaining
-~220 ms. That hydration is the same code path as one headword read, only multiplied; making
-it cheaper (hand-mapped rows instead of `find` with relations) would speed up every full read
-and is the natural follow-up if batch consumers appear.
+The full reads cost the same 9 statements whatever they return — the entries, then one
+`IN (...)` per relation for the whole set — so a batch's time grows with the entries it
+returns, not with the spellings: 50 everyday headwords are ~80 entries with ~240 meanings (a
+285 KB answer) in ~22 ms. They used to take ~275 ms: the same statements, but `find()` with
+relations then spent ~220 ms turning the rows into entity instances. Since issue #424
+`WordRowsService` (`src/modules/EnModule/word-rows.service.ts`) runs the statements itself,
+converts the raw values through the driver (the conversion hydration applies: booleans, enums,
+arrays, JSON, dates) and groups the collections by foreign key in one pass; a unit test pins
+its answer to `find()`'s field for field. The admin entry read, the detailed search and the
+list with joins go through it too.
 
 **SQLite is a development and test database only.** On the full dictionary its search tiers
 take 0.1 – 1 s per request and the admin statistics 0.25 s (tables below): `LIKE` cannot use

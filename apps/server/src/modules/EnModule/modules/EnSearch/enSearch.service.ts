@@ -1,7 +1,7 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { MetricsService, SearchTierT } from '../../../MetricsModule/metrics.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsRelations, In, Repository } from 'typeorm';
+import { FindOptionsRelations, Repository } from 'typeorm';
 import { EnWord } from '../../entities/en_word.entity';
 import { SearchReqDTO } from './dto/SearchReq.dto';
 import { SearchDetailedReqDTO } from './dto/SearchDetailedReq.dto';
@@ -10,7 +10,7 @@ import { checkIsPostgres } from '../../../../../configuration';
 import { toPublicSearchWord, toPublicWord } from '../../../PublicApiModule/utils/projection';
 import { escapeLike } from './utils/escapeLike';
 import { bytewise } from '../../utils/bytewise';
-import { RELATION_LOAD_STRATEGY } from '../../utils/wordRelations';
+import { WordRowsService } from '../../word-rows.service';
 
 /**
  * Terms shorter than this get the short-term flow (issue #292): the exact
@@ -35,6 +35,7 @@ export class EnSearchService {
   constructor(
     @InjectRepository(EnWord)
     private readonly enWordsRep: Repository<EnWord>,
+    private readonly wordRows: WordRowsService,
     @Optional() private readonly metrics?: MetricsService,
   ) {}
 
@@ -337,11 +338,7 @@ export class EnSearchService {
     if (ids.length === 0) {
       return [];
     }
-    const rows = await this.enWordsRep.find({
-      where: { id: In(ids) },
-      relations,
-      relationLoadStrategy: RELATION_LOAD_STRATEGY,
-    });
+    const rows = await this.wordRows.load(ids, relations);
     const byId = new Map(rows.map((row) => [row.id, row]));
     return ids.map((id) => byId.get(id)).filter((row): row is EnWord => row !== undefined);
   }

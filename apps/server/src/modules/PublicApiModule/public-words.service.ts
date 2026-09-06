@@ -1,8 +1,9 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsRelations, In, Repository, SelectQueryBuilder } from 'typeorm';
+import { FindOptionsRelations, Repository, SelectQueryBuilder } from 'typeorm';
 import { EnWord } from '../EnModule/entities/en_word.entity';
-import { FULL_WORD_RELATIONS, RELATION_LOAD_STRATEGY } from '../EnModule/utils/wordRelations';
+import { FULL_WORD_RELATIONS } from '../EnModule/utils/wordRelations';
+import { WordRowsService } from '../EnModule/word-rows.service';
 import { bytewise } from '../EnModule/utils/bytewise';
 import { escapeLike } from '../EnModule/modules/EnSearch/utils/escapeLike';
 import { WordLinkKindT } from '../EnModule/utils/normalizeWordLinks';
@@ -37,6 +38,7 @@ export class PublicWordsService {
   constructor(
     @InjectRepository(EnWord)
     private readonly enWordsRep: Repository<EnWord>,
+    private readonly wordRows: WordRowsService,
   ) {}
 
   // ------------------------------------------------------------ headword
@@ -94,19 +96,14 @@ export class PublicWordsService {
 
   // Every relation of the contract, projected by name (issue #392)
   private async loadFull(ids: number[]): Promise<PublicWordV1T[]> {
-    if (ids.length === 0) return [];
-    const rows = await this.enWordsRep.find({
-      where: { id: In(ids) },
-      relations: FULL_WORD_RELATIONS,
-      relationLoadStrategy: RELATION_LOAD_STRATEGY,
-    });
-    const byId = new Map(rows.map((row) => [row.id, this.sortRelations(row)]));
-    return ids
-      .map((id) => byId.get(id))
-      .filter((row): row is EnWord => row !== undefined)
-      .map((row) =>
-        toPublicWord(row, { with_meanings: true, with_translations: true, with_phrasal_variants: true }),
-      );
+    const rows = await this.wordRows.load(ids, FULL_WORD_RELATIONS);
+    return rows.map((row) =>
+      toPublicWord(this.sortRelations(row), {
+        with_meanings: true,
+        with_translations: true,
+        with_phrasal_variants: true,
+      }),
+    );
   }
 
   private normalizeHeadword(raw: string): string {
@@ -282,16 +279,8 @@ export class PublicWordsService {
     const relations: FindOptionsRelations<EnWord> = { word: true, forms: { word: true } };
     if (with_meanings) relations.meanings = { translations: true, synonyms: true, antonyms: true };
     if (with_translations) relations.short_translations = true;
-    const rows = await this.enWordsRep.find({
-      where: { id: In(ids) },
-      relations,
-      relationLoadStrategy: RELATION_LOAD_STRATEGY,
-    });
-    const byId = new Map(rows.map((row) => [row.id, this.sortRelations(row)]));
-    return ids
-      .map((id) => byId.get(id))
-      .filter((row): row is EnWord => row !== undefined)
-      .map((row) => toPublicWord(row, { with_meanings, with_translations }));
+    const rows = await this.wordRows.load(ids, relations);
+    return rows.map((row) => toPublicWord(this.sortRelations(row), { with_meanings, with_translations }));
   }
 
   // The headword column of en_words ordered by its bytes (backed by

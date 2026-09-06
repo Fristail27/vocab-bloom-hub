@@ -8,6 +8,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { SettingsModule } from '../SettingsModule/settings.module';
 import { EnController } from './en.controller';
 import { EnService } from './en.service';
+import { WordRowsService } from './word-rows.service';
 import { EnMeaning } from './entities/en_meaning.entity';
 import { EnEntry } from './entities/en_entry.entity';
 import { EnWord } from './entities/en_word.entity';
@@ -58,6 +59,7 @@ import { EnAdminListsService } from './modules/EnAdminLists/enAdminLists.service
     EnImportDictionaryController,
   ],
   providers: [
+    WordRowsService,
     EnService,
     EnShortTranslationService,
     EnMeaningTranslationService,
@@ -72,6 +74,6 @@ import { EnAdminListsService } from './modules/EnAdminLists/enAdminLists.service
     SuggestionApplyService,
   ],
   // the public API reuses the search service and the statistics counters
-  exports: [EnService, EnSearchService, EnStatisticsService],
+  exports: [EnService, EnSearchService, EnStatisticsService, WordRowsService],
 })
 export class EnModule {}

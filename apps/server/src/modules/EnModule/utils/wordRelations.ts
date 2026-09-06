@@ -12,6 +12,12 @@ import { EnWord } from '../entities/en_word.entity';
  */
 export const RELATION_LOAD_STRATEGY = 'query' as const;
 
+// Since issue #424 the reads no longer call find() at all: WordRowsService
+// sends the same one-statement-per-relation plan and assembles plain rows
+// itself, skipping entity hydration (four times the database's time on a
+// batch of 50 headwords). The strategy stays for the equivalence test and
+// for any write path that still loads an entity graph.
+
 /**
  * Everything a full dictionary entry (EnWordT) carries: forms, meanings
  * with their translations and word links, short translations, the phrasal
