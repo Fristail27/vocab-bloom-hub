@@ -62,6 +62,9 @@ def test_headword_reads_and_by_id(client: VocabBloomClient) -> None:
     assert client.antonyms("run").data == []
     assert [w.word for w in client.words(search="RU").data] == ["run"]
 
+    # per-request options (issue #408): extra headers and a timeout for one call
+    assert client.word("run", options={"headers": {"X-Request": "1"}, "timeout": 5.0}).meta.word == "run"
+
     meaning = client.meanings("run").data[0]
     assert (meaning.title, meaning.word_id, meaning.part_of_speech.value) == ("to move fast", run_id, "verb")
 

@@ -3,9 +3,12 @@ import {
   NetworkError,
   NotFoundError,
   RateLimitError,
+  SDK_VERSION,
+  USER_AGENT,
   VocabBloomClient,
   VocabBloomError,
 } from '../src';
+import pkg from '../package.json';
 
 type CallT = { url: string; init: RequestInit };
 
@@ -192,6 +195,93 @@ describe('VocabBloomClient without a server (issue #275)', () => {
     const pending = client.word('run', { signal: controller.signal, timeoutMs: 10_000 });
     controller.abort(new Error('caller aborted'));
     await expect(pending).rejects.toThrow(/caller aborted/);
+  });
+
+  it('identifies itself with a versioned User-Agent the caller may override (issue #408)', async () => {
+    expect(SDK_VERSION).toBe(pkg.version);
+    expect(USER_AGENT).toBe(`vocab-bloom-hub-npm/${pkg.version}`);
+    const { fetch, calls } = fakeFetch([() => json({ data: {} }), () => json({ data: {} })]);
+    await new VocabBloomClient({ baseUrl: 'http://localhost', fetch }).meta();
+    expect((calls[0].init.headers as Record<string, string>)['User-Agent']).toBe(USER_AGENT);
+    await new VocabBloomClient({
+      baseUrl: 'http://localhost',
+      fetch,
+      headers: { 'User-Agent': 'my-app/1' },
+    }).meta();
+    expect((calls[1].init.headers as Record<string, string>)['User-Agent']).toBe('my-app/1');
+  });
+
+  describe('opt-in retry (issue #408)', () => {
+    const limited = (retryAfter?: string) =>
+      json(
+        { statusCode: 429, message: 'too_many_requests', error: true },
+        { status: 429, headers: retryAfter === undefined ? {} : { 'retry-after': retryAfter } },
+      );
+    const failing = () => json({ statusCode: 503, message: 'unavailable', error: true }, { status: 503 });
+
+    it('is off by default: a 429 throws at once', async () => {
+      const { fetch, calls } = fakeFetch([() => limited('0')]);
+      const client = new VocabBloomClient({ baseUrl: 'http://localhost', fetch });
+      await expect(client.meta()).rejects.toBeInstanceOf(RateLimitError);
+      expect(calls).toHaveLength(1);
+    });
+
+    it('retries a GET after Retry-After, then after the backoff, until an answer', async () => {
+      const { fetch, calls } = fakeFetch([
+        () => limited('0'),
+        () => failing(),
+        () => json({ data: { ok: true } }),
+      ]);
+      const client = new VocabBloomClient({ baseUrl: 'http://localhost', fetch, retry: { backoffMs: 1 } });
+      expect(await client.meta()).toEqual({ data: { ok: true } });
+      expect(calls).toHaveLength(3);
+    });
+
+    it('gives up after `attempts` tries with the last error', async () => {
+      const { fetch, calls } = fakeFetch([() => failing(), () => failing(), () => failing()]);
+      const client = new VocabBloomClient({
+        baseUrl: 'http://localhost',
+        fetch,
+        retry: { attempts: 2, backoffMs: 1 },
+      });
+      await expect(client.meta()).rejects.toMatchObject({ status: 503 });
+      expect(calls).toHaveLength(2);
+    });
+
+    it('never retries a POST or a 4xx', async () => {
+      const { fetch, calls } = fakeFetch([
+        () => limited('0'),
+        () => json({ statusCode: 404, message: 'word_doesnt_found', error: true }, { status: 404 }),
+      ]);
+      const client = new VocabBloomClient({ baseUrl: 'http://localhost', fetch, retry: { backoffMs: 1 } });
+      await expect(client.wordsBatch(['run'])).rejects.toBeInstanceOf(RateLimitError);
+      await expect(client.word('nope')).rejects.toBeInstanceOf(NotFoundError);
+      expect(calls).toHaveLength(2);
+    });
+
+    it('stops waiting when the caller aborts', async () => {
+      const { fetch, calls } = fakeFetch([() => limited('30')]);
+      const client = new VocabBloomClient({ baseUrl: 'http://localhost', fetch, retry: {} });
+      const controller = new AbortController();
+      const pending = client.meta({ signal: controller.signal });
+      controller.abort();
+      await expect(pending).rejects.toBeInstanceOf(NetworkError);
+      expect(calls).toHaveLength(1);
+    });
+  });
+
+  it('walks every page of the detailed search through has_more (issue #408)', async () => {
+    const page = (ids: number[], has_more: boolean, pageNo: number) =>
+      json({
+        data: ids.map((id) => ({ id, word: `w${id}` })),
+        meta: { page: pageNo, limit: 2, has_more, fuzzy: false, short_term: false },
+      });
+    const { fetch, calls } = fakeFetch([() => page([1, 2], true, 1), () => page([3], false, 2)]);
+    const client = new VocabBloomClient({ baseUrl: 'http://localhost', fetch });
+    const seen: number[] = [];
+    for await (const word of client.iterateSearchDetailed({ search: 'w', limit: 2 })) seen.push(word.id);
+    expect(seen).toEqual([1, 2, 3]);
+    expect(calls.map((c) => new URL(c.url).searchParams.get('page'))).toEqual(['1', '2']);
   });
 
   it('evicts the least recently used entry beyond maxEntries', () => {

@@ -1,5 +1,6 @@
 import { MemoryCache, type ResponseCache } from './cache';
 import { errorFromResponse, NetworkError } from './errors';
+import { USER_AGENT } from './version';
 import type {
   DetailedSearchRequest,
   DetailedSearchResponse,
@@ -29,6 +30,23 @@ export type FetchLike = (input: string, init: RequestInit) => Promise<Response>;
 /** A request without an answer fails after this long unless overridden (issue #352) */
 export const DEFAULT_TIMEOUT_MS = 10_000;
 
+/**
+ * Opt-in retry of the GET reads (issue #408): a `429` or a `5xx` answer is
+ * tried again after `Retry-After` when the server sent it, otherwise after
+ * `backoffMs`, `2 × backoffMs`, `4 × backoffMs`, …; `attempts` counts every
+ * try, the first included. POST requests, `4xx` answers and network errors
+ * are never retried — the request count against the rate limit stays what
+ * the caller asked for, plus what the caller opted into.
+ */
+export type RetryOptions = {
+  /** Total attempts, the first one included; default 3 */
+  attempts?: number;
+  /** Base delay in milliseconds when the server sent no `Retry-After`; default 500 */
+  backoffMs?: number;
+};
+
+export const DEFAULT_RETRY: Required<RetryOptions> = { attempts: 3, backoffMs: 500 };
+
 export type ClientOptions = {
   /** Origin of the instance, e.g. `https://dict.example.com`; the client appends `/api/v1` */
   baseUrl: string;
@@ -47,6 +65,11 @@ export type ClientOptions = {
    * `null` disables the timeout entirely.
    */
   timeoutMs?: number | null;
+  /**
+   * Retry the GET reads on `429` / `5xx`, honouring `Retry-After`; off by
+   * default — `{}` enables it with 3 attempts and a 500 ms backoff.
+   */
+  retry?: RetryOptions;
 };
 
 export type RequestOptions = {
@@ -62,6 +85,33 @@ const trimTrailingSlashes = (value: string): string => {
   let end = value.length;
   while (end > 0 && value[end - 1] === '/') end -= 1;
   return value.slice(0, end);
+};
+
+// Sleeps `ms`, or rejects with the abort reason as soon as the signal fires
+const sleep = (ms: number, signal: AbortSignal | undefined): Promise<void> =>
+  new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(signal.reason);
+      return;
+    }
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    function onAbort() {
+      clearTimeout(timer);
+      reject(signal?.reason);
+    }
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+
+// Seconds from a `Retry-After` header (a delay or an HTTP date); null when absent or unreadable
+const retryAfterMs = (value: string | null): number | null => {
+  if (value === null) return null;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds) * 1000;
+  const at = Date.parse(value);
+  return Number.isNaN(at) ? null : Math.max(0, at - Date.now());
 };
 
 type QueryValueT = string | number | boolean | null | undefined;
@@ -93,6 +143,7 @@ export class VocabBloomClient {
   private readonly headers: Record<string, string>;
   private readonly cache: ResponseCache | null;
   private readonly timeoutMs: number | null;
+  private readonly retry: Required<RetryOptions> | null;
 
   constructor(options: ClientOptions) {
     this.baseUrl = trimTrailingSlashes(options.baseUrl) + PUBLIC_API_PREFIX;
@@ -103,9 +154,10 @@ export class VocabBloomClient {
       );
     }
     this.fetchImpl = fetchImpl;
-    this.headers = { Accept: 'application/json', ...options.headers };
+    this.headers = { Accept: 'application/json', 'User-Agent': USER_AGENT, ...options.headers };
     this.cache = options.cache === true ? new MemoryCache() : options.cache || null;
     this.timeoutMs = options.timeoutMs === undefined ? DEFAULT_TIMEOUT_MS : options.timeoutMs;
+    this.retry = options.retry ? { ...DEFAULT_RETRY, ...options.retry } : null;
   }
 
   // ------------------------------------------------------------- search
@@ -120,6 +172,22 @@ export class VocabBloomClient {
   /** Paged search with meanings and translations on request */
   searchDetailed(request: DetailedSearchRequest, options?: RequestOptions): Promise<DetailedSearchResponse> {
     return this.get('/search/detailed', request, options);
+  }
+
+  /**
+   * Every item of the detailed search, page after page from `request.page`
+   * (1 by default) while `meta.has_more` says there is one (issue #408); the
+   * counterpart of `iterateWords` for the page-based search
+   */
+  async *iterateSearchDetailed(request: DetailedSearchRequest, options?: RequestOptions): AsyncGenerator<Word> {
+    let page = request.page ?? 1;
+    let has_more = true;
+    while (has_more) {
+      const answer = await this.searchDetailed({ ...request, page }, options);
+      yield* answer.data;
+      has_more = answer.meta.has_more;
+      page += 1;
+    }
   }
 
   // -------------------------------------------------------------- reads
@@ -247,7 +315,7 @@ export class VocabBloomClient {
       // revalidation and keeps undici's hands off
       headers['Cache-Control'] ??= 'max-age=0';
     }
-    const response = await this.send(url, { method: 'GET', headers }, options);
+    const response = await this.sendWithRetry(url, { method: 'GET', headers }, options);
     if (response.status === 304 && cached) return cached.body as T;
     if (!response.ok) throw await errorFromResponse(response);
     const body = (await response.json()) as T;
@@ -268,6 +336,23 @@ export class VocabBloomClient {
     );
     if (!response.ok) throw await errorFromResponse(response);
     return (await response.json()) as T;
+  }
+
+  // The GET reads only: a POST (the batch lookup, a suggestion) is sent once
+  private async sendWithRetry(url: string, init: RequestInit, options?: RequestOptions): Promise<Response> {
+    if (!this.retry) return this.send(url, init, options);
+    for (let attempt = 1; ; attempt += 1) {
+      const response = await this.send(url, init, options);
+      const retriable = response.status === 429 || response.status >= 500;
+      if (!retriable || attempt >= this.retry.attempts) return response;
+      const delay =
+        retryAfterMs(response.headers.get('retry-after')) ?? this.retry.backoffMs * 2 ** (attempt - 1);
+      try {
+        await sleep(delay, options?.signal);
+      } catch (cause) {
+        throw new NetworkError(`Request to ${url} aborted while waiting to retry`, cause);
+      }
+    }
   }
 
   private async send(url: string, init: RequestInit, options?: RequestOptions): Promise<Response> {

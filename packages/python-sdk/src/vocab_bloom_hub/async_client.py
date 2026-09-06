@@ -2,16 +2,30 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator, Iterable, Mapping, Sequence
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 from typing_extensions import Unpack
 
 from . import models as m
-from ._core import Core, ListOptions, ModelT, WordFilters, build_json, headword_path, network_error
+from ._core import (
+    Core,
+    ListOptions,
+    ModelT,
+    RequestOptions,
+    RetryOptions,
+    WordFilters,
+    build_json,
+    headword_path,
+    network_error,
+)
 from .cache import ResponseCache
+
+if TYPE_CHECKING:
+    import pandas
 
 
 class AsyncVocabBloomClient:
@@ -27,9 +41,10 @@ class AsyncVocabBloomClient:
         headers: Mapping[str, str] | None = None,
         timeout: float | httpx.Timeout = 10.0,
         cache: bool | ResponseCache = False,
+        retry: RetryOptions | None = None,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
-        self._core = Core(base_url, headers, cache)
+        self._core = Core(base_url, headers, cache, retry)
         self._http = httpx.AsyncClient(timeout=timeout, transport=transport)
 
     async def aclose(self) -> None:
@@ -42,9 +57,16 @@ class AsyncVocabBloomClient:
         await self.aclose()
 
     async def search(
-        self, search: str, *, type: str | Enum | None = None, limit: int | None = None
+        self,
+        search: str,
+        *,
+        type: str | Enum | None = None,
+        limit: int | None = None,
+        options: RequestOptions | None = None,
     ) -> m.SearchResponse:
-        return await self._get("/search", {"search": search, "type": type, "limit": limit}, m.SearchResponse)
+        return await self._get(
+            "/search", {"search": search, "type": type, "limit": limit}, m.SearchResponse, options
+        )
 
     async def search_detailed(
         self,
@@ -56,6 +78,7 @@ class AsyncVocabBloomClient:
         with_meanings: bool | None = None,
         with_translations: bool | None = None,
         translation_languages: Iterable[str | Enum] | None = None,
+        options: RequestOptions | None = None,
     ) -> m.DetailedSearchResponse:
         params = {
             "search": search,
@@ -66,59 +89,101 @@ class AsyncVocabBloomClient:
             "with_translations": with_translations,
             "translation_languages": translation_languages,
         }
-        return await self._get("/search/detailed", params, m.DetailedSearchResponse)
+        return await self._get("/search/detailed", params, m.DetailedSearchResponse, options)
 
-    async def word(self, headword: str) -> m.HeadwordResponse:
-        return await self._get(headword_path(headword), None, m.HeadwordResponse)
+    async def iter_search_detailed(
+        self,
+        search: str,
+        *,
+        type: str | Enum | None = None,
+        limit: int | None = None,
+        page: int | None = None,
+        with_meanings: bool | None = None,
+        with_translations: bool | None = None,
+        translation_languages: Iterable[str | Enum] | None = None,
+        options: RequestOptions | None = None,
+    ) -> AsyncIterator[m.Word]:
+        current = page or 1
+        while True:
+            answer = await self.search_detailed(
+                search,
+                type=type,
+                limit=limit,
+                page=current,
+                with_meanings=with_meanings,
+                with_translations=with_translations,
+                translation_languages=translation_languages,
+                options=options,
+            )
+            for word in answer.data:
+                yield word
+            if not answer.meta.has_more:
+                return
+            current += 1
 
-    async def words_batch(self, words: Sequence[str]) -> m.WordsBatchResponse:
-        return await self._post("/words/batch", {"words": list(words)}, m.WordsBatchResponse)
+    async def word(self, headword: str, *, options: RequestOptions | None = None) -> m.HeadwordResponse:
+        return await self._get(headword_path(headword), None, m.HeadwordResponse, options)
 
-    async def word_by_id(self, id: int) -> m.WordResponse:
-        return await self._get(f"/words/id/{id}", None, m.WordResponse)
+    async def words_batch(
+        self, words: Sequence[str], *, options: RequestOptions | None = None
+    ) -> m.WordsBatchResponse:
+        return await self._post("/words/batch", {"words": list(words)}, m.WordsBatchResponse, options)
 
-    async def meanings(self, headword: str) -> m.MeaningsResponse:
-        return await self._get(headword_path(headword, "/meanings"), None, m.MeaningsResponse)
+    async def word_by_id(self, id: int, *, options: RequestOptions | None = None) -> m.WordResponse:
+        return await self._get(f"/words/id/{id}", None, m.WordResponse, options)
+
+    async def meanings(self, headword: str, *, options: RequestOptions | None = None) -> m.MeaningsResponse:
+        return await self._get(headword_path(headword, "/meanings"), None, m.MeaningsResponse, options)
 
     async def translations(
-        self, headword: str, *, language: Iterable[str | Enum] | None = None
+        self,
+        headword: str,
+        *,
+        language: Iterable[str | Enum] | None = None,
+        options: RequestOptions | None = None,
     ) -> m.TranslationsResponse:
         return await self._get(
-            headword_path(headword, "/translations"), {"language": language}, m.TranslationsResponse
+            headword_path(headword, "/translations"), {"language": language}, m.TranslationsResponse, options
         )
 
-    async def forms(self, headword: str) -> m.FormsResponse:
-        return await self._get(headword_path(headword, "/forms"), None, m.FormsResponse)
+    async def forms(self, headword: str, *, options: RequestOptions | None = None) -> m.FormsResponse:
+        return await self._get(headword_path(headword, "/forms"), None, m.FormsResponse, options)
 
-    async def synonyms(self, headword: str) -> m.LinksResponse:
-        return await self._get(headword_path(headword, "/synonyms"), None, m.LinksResponse)
+    async def synonyms(self, headword: str, *, options: RequestOptions | None = None) -> m.LinksResponse:
+        return await self._get(headword_path(headword, "/synonyms"), None, m.LinksResponse, options)
 
-    async def antonyms(self, headword: str) -> m.LinksResponse:
-        return await self._get(headword_path(headword, "/antonyms"), None, m.LinksResponse)
+    async def antonyms(self, headword: str, *, options: RequestOptions | None = None) -> m.LinksResponse:
+        return await self._get(headword_path(headword, "/antonyms"), None, m.LinksResponse, options)
 
-    async def words(self, **options: Unpack[ListOptions]) -> m.WordsResponse:
-        return await self._get("/words", options, m.WordsResponse)
+    async def words(
+        self, *, options: RequestOptions | None = None, **filters: Unpack[ListOptions]
+    ) -> m.WordsResponse:
+        return await self._get("/words", filters, m.WordsResponse, options)
 
-    async def iter_words(self, **options: Unpack[ListOptions]) -> AsyncIterator[m.Word]:
-        query: dict[str, Any] = {k: v for k, v in options.items() if k != "cursor"}
+    async def iter_words(
+        self, *, options: RequestOptions | None = None, **filters: Unpack[ListOptions]
+    ) -> AsyncIterator[m.Word]:
+        query: dict[str, Any] = {k: v for k, v in filters.items() if k != "cursor"}
         cursor: str | None = None
         while True:
-            page = await self.words(**query, cursor=cursor)
+            page = await self.words(**query, cursor=cursor, options=options)
             for word in page.data:
                 yield word
             cursor = page.meta.next_cursor
             if cursor is None:
                 return
 
-    async def random(self, **filters: Unpack[WordFilters]) -> m.WordResponse:
-        return await self._get("/random", filters, m.WordResponse)
+    async def random(
+        self, *, options: RequestOptions | None = None, **filters: Unpack[WordFilters]
+    ) -> m.WordResponse:
+        return await self._get("/random", filters, m.WordResponse, options)
 
-    async def meta(self) -> m.MetaResponse:
-        return await self._get("/meta", None, m.MetaResponse)
+    async def meta(self, *, options: RequestOptions | None = None) -> m.MetaResponse:
+        return await self._get("/meta", None, m.MetaResponse, options)
 
-    async def openapi(self) -> dict[str, Any]:
-        prepared = self._core.prepare_get("/openapi.json", None)
-        response = await self._send("GET", prepared.url, headers=prepared.headers)
+    async def openapi(self, *, options: RequestOptions | None = None) -> dict[str, Any]:
+        prepared = self._core.prepare_get("/openapi.json", None, options)
+        response = await self._send_get(prepared, options)
         document: dict[str, Any] = self._core.finish_get_raw(prepared, response)
         return document
 
@@ -130,6 +195,7 @@ class AsyncVocabBloomClient:
         word_id: int | None = None,
         kind: str | Enum | None = None,
         edits: Iterable[Mapping[str, Any]] | None = None,
+        options: RequestOptions | None = None,
     ) -> m.SuggestionCreatedResponse:
         """Files reader feedback into the instance's moderation queue (issue #327)."""
         body = {
@@ -139,16 +205,59 @@ class AsyncVocabBloomClient:
             "kind": kind,
             "edits": [dict(edit) for edit in edits] if edits is not None else None,
         }
-        return await self._post("/suggestions", body, m.SuggestionCreatedResponse)
+        return await self._post("/suggestions", body, m.SuggestionCreatedResponse, options)
 
-    async def _get(self, path: str, params: Mapping[str, Any] | None, model: type[ModelT]) -> ModelT:
-        prepared = self._core.prepare_get(path, params)
-        response = await self._send("GET", prepared.url, headers=prepared.headers)
+    async def words_dataframe(
+        self, *, options: RequestOptions | None = None, **filters: Unpack[ListOptions]
+    ) -> pandas.DataFrame:
+        """The whole filtered list as a DataFrame, one row per entry (needs the ``pandas`` extra)."""
+        try:
+            import pandas
+        except ImportError as error:  # pragma: no cover - depends on the environment
+            raise ImportError(
+                "words_dataframe needs pandas: pip install 'vocab-bloom-hub[pandas]'"
+            ) from error
+        rows = [word.model_dump(mode="json") async for word in self.iter_words(options=options, **filters)]
+        return pandas.json_normalize(rows, max_level=0)
+
+    async def _get(
+        self,
+        path: str,
+        params: Mapping[str, Any] | None,
+        model: type[ModelT],
+        options: RequestOptions | None = None,
+    ) -> ModelT:
+        prepared = self._core.prepare_get(path, params, options)
+        response = await self._send_get(prepared, options)
         return self._core.finish_get(prepared, response, model)
 
-    async def _post(self, path: str, body: Mapping[str, Any], model: type[ModelT]) -> ModelT:
+    # The GET reads only are retried (when opted in): a POST is sent once
+    async def _send_get(self, prepared: Any, options: RequestOptions | None) -> httpx.Response:
+        kwargs = self._core.send_kwargs(options)
+        attempt = 1
+        while True:
+            response = await self._send("GET", prepared.url, headers=prepared.headers, **kwargs)
+            delay = self._core.retry_delay(response, attempt)
+            if delay is None:
+                return response
+            await asyncio.sleep(delay)
+            attempt += 1
+
+    async def _post(
+        self,
+        path: str,
+        body: Mapping[str, Any],
+        model: type[ModelT],
+        options: RequestOptions | None = None,
+    ) -> ModelT:
         url = self._core.base_url + path
-        response = await self._send("POST", url, headers=self._core.headers, json=build_json(body))
+        response = await self._send(
+            "POST",
+            url,
+            headers=self._core.request_headers(options),
+            json=build_json(body),
+            **self._core.send_kwargs(options),
+        )
         return self._core.finish_post(response, model)
 
     async def _send(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
