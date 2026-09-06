@@ -10,6 +10,8 @@ import httpx
 import pytest
 
 from vocab_bloom_hub import (
+    USER_AGENT,
+    AsyncVocabBloomClient,
     MemoryCache,
     NetworkError,
     NotFoundError,
@@ -289,3 +291,180 @@ def test_version_is_the_installed_distribution_version() -> None:
         match[1],
     )
     assert vocab_bloom_hub.__version__ == normalized
+
+
+def test_user_agent_is_versioned_and_overridable() -> None:
+    import vocab_bloom_hub
+
+    assert f"vocab-bloom-hub-python/{vocab_bloom_hub.__version__}" == USER_AGENT
+    seen: list[httpx.Request] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return json_response(PAGE_EMPTY)
+
+    VocabBloomClient("http://localhost", transport=transport(handle)).words()
+    assert seen[0].headers["user-agent"] == USER_AGENT
+    VocabBloomClient(
+        "http://localhost", headers={"User-Agent": "my-app/1"}, transport=transport(handle)
+    ).words()
+    assert seen[1].headers["user-agent"] == "my-app/1"
+
+
+def test_per_request_options_merge_headers_and_set_the_timeout() -> None:
+    seen: list[httpx.Request] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        if request.method == "POST":
+            return json_response({"data": [], "meta": {"count": 0, "not_found": ["run"]}})
+        return json_response(PAGE_EMPTY)
+
+    client = VocabBloomClient("http://localhost", headers={"X-App": "app"}, transport=transport(handle))
+    client.words(options={"headers": {"X-Request": "1"}, "timeout": 2.5}, search="ru")
+    assert seen[0].headers["x-app"] == "app"
+    assert seen[0].headers["x-request"] == "1"
+    assert seen[0].url.params["search"] == "ru"
+    assert seen[0].extensions["timeout"]["read"] == 2.5
+    client.words_batch(["run"], options={"headers": {"X-Request": "2"}})
+    assert seen[1].headers["x-request"] == "2"
+
+
+LIMITED = {"statusCode": 429, "message": "too_many_requests", "error": True}
+FAILING = {"statusCode": 503, "message": "unavailable", "error": True}
+
+
+def test_retry_is_off_by_default() -> None:
+    calls = 0
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return json_response(LIMITED, status=429, headers={"retry-after": "0"})
+
+    with pytest.raises(RateLimitError):
+        VocabBloomClient("http://localhost", transport=transport(handle)).meta()
+    assert calls == 1
+
+
+def test_retry_honours_retry_after_then_backs_off_until_an_answer(monkeypatch: pytest.MonkeyPatch) -> None:
+    import time
+
+    slept: list[float] = []
+    monkeypatch.setattr(time, "sleep", slept.append)
+    answers = [
+        json_response(LIMITED, status=429, headers={"retry-after": "2"}),
+        json_response(FAILING, status=503),
+        json_response({"data": {"ok": True}}),
+    ]
+    calls = 0
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return answers[calls - 1]
+
+    client = VocabBloomClient("http://localhost", retry={"backoff": 0.25}, transport=transport(handle))
+    prepared = client._core.prepare_get("/meta", None)
+    response = client._send_get(prepared, None)
+    assert response.json() == {"data": {"ok": True}}
+    assert calls == 3
+    # Retry-After of the 429, then the backoff of the second try (0.25 doubled)
+    assert slept == [2.0, 0.5]
+
+
+def test_retry_gives_up_after_attempts_and_never_touches_a_post(monkeypatch: pytest.MonkeyPatch) -> None:
+    import time
+
+    monkeypatch.setattr(time, "sleep", lambda _: None)
+    calls = 0
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return json_response(FAILING, status=503)
+
+    client = VocabBloomClient("http://localhost", retry={"attempts": 2}, transport=transport(handle))
+    with pytest.raises(VocabBloomError) as failed:
+        client.meta()
+    assert failed.value.status == 503
+    assert calls == 2
+    calls = 0
+    with pytest.raises(VocabBloomError):
+        client.words_batch(["run"])
+    assert calls == 1
+
+
+def test_iter_search_detailed_walks_every_page() -> None:
+    seen: list[str | None] = []
+
+    def page(ids: list[int], has_more: bool, number: int) -> httpx.Response:
+        return json_response(
+            {
+                "data": [fake_word(i) for i in ids],
+                "meta": {
+                    "page": number,
+                    "limit": 2,
+                    "has_more": has_more,
+                    "fuzzy": False,
+                    "short_term": False,
+                },
+            }
+        )
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        seen.append(request.url.params.get("page"))
+        return page([1, 2], True, 1) if len(seen) == 1 else page([3], False, 2)
+
+    client = VocabBloomClient("http://localhost", transport=transport(handle))
+    assert [w.id for w in client.iter_search_detailed("w", limit=2)] == [1, 2, 3]
+    assert seen == ["1", "2"]
+
+
+async def test_async_client_retries_iterates_pages_and_builds_a_dataframe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import asyncio
+
+    slept: list[float] = []
+
+    async def fake_sleep(seconds: float) -> None:
+        slept.append(seconds)
+
+    monkeypatch.setattr(asyncio, "sleep", fake_sleep)
+    calls = 0
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if request.url.path.endswith("/meta") and calls == 1:
+            return json_response(LIMITED, status=429, headers={"retry-after": "1"})
+        if request.url.path.endswith("/search/detailed"):
+            number = int(request.url.params["page"])
+            return json_response(
+                {
+                    "data": [fake_word(number)],
+                    "meta": {
+                        "page": number,
+                        "limit": 1,
+                        "has_more": number < 2,
+                        "fuzzy": False,
+                        "short_term": False,
+                    },
+                }
+            )
+        if request.url.path.endswith("/words"):
+            return json_response(
+                {"data": [fake_word(7)], "meta": {"limit": 20, "has_more": False, "next_cursor": None}}
+            )
+        return json_response({"data": {"ok": True}})
+
+    async with AsyncVocabBloomClient(
+        "http://localhost", retry={}, transport=httpx.MockTransport(handle)
+    ) as client:
+        prepared = client._core.prepare_get("/meta", None)
+        assert (await client._send_get(prepared, None)).json() == {"data": {"ok": True}}
+        assert slept == [1.0]
+        assert [w.id async for w in client.iter_search_detailed("w", limit=1)] == [1, 2]
+        frame = await client.words_dataframe(search="w", options={"headers": {"X-Request": "df"}})
+        assert list(frame["word"]) == ["w7"]

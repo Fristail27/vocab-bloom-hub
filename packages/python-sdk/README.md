@@ -58,25 +58,26 @@ async with AsyncVocabBloomClient("https://dict.example.com") as client:
 
 ## API
 
-| Method                                      | Endpoint                           | Answer                                                                                                         |
-| ------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `search(search, *, type, limit)`            | `GET /search`                      | `SearchResponse`                                                                                               |
-| `search_detailed(search, *, ...)`           | `GET /search/detailed`             | `DetailedSearchResponse`                                                                                       |
-| `word(headword)`                            | `GET /words/{word}`                | `HeadwordResponse`                                                                                             |
-| `words_batch(words)`                        | `POST /words/batch`                | `WordsBatchResponse` — up to 50 headwords, one rate-limit unit; misses under `meta.not_found`                  |
-| `word_by_id(id)`                            | `GET /words/id/{id}`               | `WordResponse`                                                                                                 |
-| `meanings(headword)`                        | `GET /words/{word}/meanings`       | `MeaningsResponse`                                                                                             |
-| `translations(headword, *, language)`       | `GET /words/{word}/translations`   | `TranslationsResponse`                                                                                         |
-| `forms(headword)`                           | `GET /words/{word}/forms`          | `FormsResponse`                                                                                                |
-| `synonyms(headword)`                        | `GET /words/{word}/synonyms`       | `LinksResponse` — the linked headwords per meaning                                                             |
-| `antonyms(headword)`                        | `GET /words/{word}/antonyms`       | `LinksResponse`                                                                                                |
-| `words(**filters, cursor, limit, with_...)` | `GET /words`                       | `WordsResponse` (one page)                                                                                     |
-| `iter_words(**filters, ...)`                | `GET /words`, following the cursor | `Iterator[Word]`                                                                                               |
-| `random(**filters)`                         | `GET /random`                      | `WordResponse`                                                                                                 |
-| `meta()`                                    | `GET /meta`                        | `MetaResponse`                                                                                                 |
-| `openapi()`                                 | `GET /openapi.json`                | `dict` — the OpenAPI document                                                                                  |
-| `suggest(headword, ...)`                    | `POST /suggestions`                | `SuggestionCreatedResponse` — files a reader report (or an edit proposal) into the instance's moderation queue |
-| `words_dataframe(**filters, ...)`           | `GET /words`, every page           | `pandas.DataFrame`                                                                                             |
+| Method                                      | Endpoint                                | Answer                                                                                                         |
+| ------------------------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `search(search, *, type, limit)`            | `GET /search`                           | `SearchResponse`                                                                                               |
+| `search_detailed(search, *, ...)`           | `GET /search/detailed`                  | `DetailedSearchResponse`                                                                                       |
+| `word(headword)`                            | `GET /words/{word}`                     | `HeadwordResponse`                                                                                             |
+| `words_batch(words)`                        | `POST /words/batch`                     | `WordsBatchResponse` — up to 50 headwords, one rate-limit unit; misses under `meta.not_found`                  |
+| `word_by_id(id)`                            | `GET /words/id/{id}`                    | `WordResponse`                                                                                                 |
+| `meanings(headword)`                        | `GET /words/{word}/meanings`            | `MeaningsResponse`                                                                                             |
+| `translations(headword, *, language)`       | `GET /words/{word}/translations`        | `TranslationsResponse`                                                                                         |
+| `forms(headword)`                           | `GET /words/{word}/forms`               | `FormsResponse`                                                                                                |
+| `synonyms(headword)`                        | `GET /words/{word}/synonyms`            | `LinksResponse` — the linked headwords per meaning                                                             |
+| `antonyms(headword)`                        | `GET /words/{word}/antonyms`            | `LinksResponse`                                                                                                |
+| `words(**filters, cursor, limit, with_...)` | `GET /words`                            | `WordsResponse` (one page)                                                                                     |
+| `iter_words(**filters, ...)`                | `GET /words`, following the cursor      | `Iterator[Word]`                                                                                               |
+| `iter_search_detailed(search, *, ...)`      | `GET /search/detailed`, page after page | `Iterator[Word]`                                                                                               |
+| `random(**filters)`                         | `GET /random`                           | `WordResponse`                                                                                                 |
+| `meta()`                                    | `GET /meta`                             | `MetaResponse`                                                                                                 |
+| `openapi()`                                 | `GET /openapi.json`                     | `dict` — the OpenAPI document                                                                                  |
+| `suggest(headword, ...)`                    | `POST /suggestions`                     | `SuggestionCreatedResponse` — files a reader report (or an edit proposal) into the instance's moderation queue |
+| `words_dataframe(**filters, ...)`           | `GET /words`, every page                | `pandas.DataFrame` (sync and async clients)                                                                    |
 
 Every response is the `{ data, meta }` envelope the API answers with, as a pydantic model. Filters (`part_of_speech`, `word_level`, `language_register`, `category`, `area_variant`, `form_of_word`) take lists of strings or of the exported enums (`PartOfSpeech`, `WordLevel`, ...); values of one filter are OR-ed, different filters are AND-ed. The contract itself — tiers, filters, cursor pagination, caching — is documented in the server's [`docs/api.md`](https://github.com/Fristail27/vocab-bloom-hub/blob/main/docs/api.md).
 
@@ -88,6 +89,7 @@ VocabBloomClient(
     headers={"X-App": "my-app"},  # sent with every request
     timeout=10.0,  # seconds, or an httpx.Timeout
     cache=True,  # ETag revalidation (below); or your own ResponseCache
+    retry={"attempts": 3, "backoff": 0.5},  # opt-in: retry the GET reads on 429 / 5xx (below)
     transport=...,  # a custom httpx transport (tests, instrumentation)
 )
 ```
@@ -105,7 +107,21 @@ Use the client as a context manager (`with` / `async with`) to close the connect
 
 `code` is the machine-readable error of the API (`invalid_cursor`, `too_many_requests`, ...), or `http_error` when the answer was not JSON (a proxy page, for instance).
 
-The client never retries on its own: a `RateLimitError` carries `retry_after` (seconds) and backoff is the caller's decision.
+Without the `retry` option the client never retries on its own: a `RateLimitError` carries `retry_after` (seconds) and backoff is the caller's decision.
+
+### Per-request options
+
+Every method takes `options=` — a `RequestOptions` dict with `headers` (merged over the client's for that call) and `timeout` (seconds or an `httpx.Timeout`, replacing the client's) — the counterpart of the Node client's last argument:
+
+```python
+client.word("run", options={"headers": {"X-Request-Id": "abc"}, "timeout": 2.0})
+```
+
+Every request carries `User-Agent: vocab-bloom-hub-python/<version>` (`vocab_bloom_hub.USER_AGENT`) so an operator can tell SDK traffic apart in the log; pass your own `User-Agent` in `headers` to replace it.
+
+### Retry
+
+Off by default — the client documents exact request counts against the rate limit, so the loop is opt-in. With `retry={}` (or explicit `attempts` / `backoff`) a `GET` answered `429` or `5xx` is sent again: after `Retry-After` when the server sent it, otherwise after `backoff`, then twice that, and so on, up to `attempts` tries in total (the first one included; 3 and 0.5 s by default). `POST` requests (the batch lookup, a suggestion), `4xx` answers and network errors are never retried.
 
 ### ETag cache
 

@@ -7,6 +7,14 @@ generated release notes; the full commit history lives in git.
 
 ## v0.2.0-beta.1 — unreleased
 
+- **SDK ergonomics** (issue #408), both clients: an opt-in `retry` of the `GET` reads on
+  `429` / `5xx` honouring `Retry-After` (off by default, so request counts stay explicit), a
+  versioned `User-Agent` (`vocab-bloom-hub-npm/<version>`, `vocab-bloom-hub-python/<version>`,
+  overridable through `headers`), a page iterator over the detailed search
+  (`iterateSearchDetailed` / `iter_search_detailed`); the Python client takes `options=`
+  (`headers`, `timeout`) on every method like the Node client's last argument, and the async
+  client gained `words_dataframe`.
+
 - **Python SDK**: `vocab_bloom_hub.__version__` reports the installed version (it was a
   hardcoded `0.0.1`), read from the package metadata so it follows `pyproject.toml` on every
   release; `typing-extensions`, imported by the client, is a declared dependency instead of a

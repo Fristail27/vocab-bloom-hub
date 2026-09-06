@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from enum import Enum
 from typing import Any, TypeVar
 from urllib.parse import quote
@@ -12,6 +14,7 @@ import httpx
 from pydantic import BaseModel
 from typing_extensions import TypedDict
 
+from ._version import USER_AGENT
 from .cache import CacheEntry, MemoryCache, ResponseCache
 from .errors import NetworkError, error_from_response
 
@@ -44,6 +47,27 @@ class ListOptions(WordFilters, total=False):
     limit: int | None
     with_meanings: bool | None
     with_translations: bool | None
+
+
+class RequestOptions(TypedDict, total=False):
+    """Per-call overrides (issue #408), the ``options=`` keyword of every method: ``headers`` are merged
+    over the client's, ``timeout`` replaces the client's for this request."""
+
+    headers: Mapping[str, str] | None
+    timeout: float | httpx.Timeout | None
+
+
+class RetryOptions(TypedDict, total=False):
+    """Opt-in retry of the GET reads (issue #408): a ``429`` or a ``5xx`` answer is tried again after
+    ``Retry-After`` when the server sent it, otherwise after ``backoff``, twice and four times ``backoff``, …
+    seconds; ``attempts`` counts every try, the first included. POST requests, ``4xx`` answers and
+    network errors are never retried."""
+
+    attempts: int
+    backoff: float
+
+
+DEFAULT_RETRY: RetryOptions = {"attempts": 3, "backoff": 0.5}
 
 
 def _scalar(value: Scalar) -> str:
@@ -99,12 +123,32 @@ class PreparedGet:
     cached: CacheEntry | None
 
 
-class Core:
-    """The stateless part of a client: URL, headers, cache, parsing."""
+def _retry_after_seconds(value: str | None) -> float | None:
+    if value is None:
+        return None
+    try:
+        return max(0.0, float(value))
+    except ValueError:
+        pass
+    try:
+        at = parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return None
+    return max(0.0, (at - datetime.now(timezone.utc)).total_seconds())
 
-    def __init__(self, base_url: str, headers: Mapping[str, str] | None, cache: bool | ResponseCache) -> None:
+
+class Core:
+    """The stateless part of a client: URL, headers, cache, parsing, the retry policy."""
+
+    def __init__(
+        self,
+        base_url: str,
+        headers: Mapping[str, str] | None,
+        cache: bool | ResponseCache,
+        retry: RetryOptions | None = None,
+    ) -> None:
         self.base_url = trim_base_url(base_url)
-        self.headers = {"Accept": "application/json", **(headers or {})}
+        self.headers = {"Accept": "application/json", "User-Agent": USER_AGENT, **(headers or {})}
         # explicit `is` checks: an empty MemoryCache is falsy (it has __len__)
         if cache is True:
             self.cache: ResponseCache | None = MemoryCache()
@@ -112,11 +156,36 @@ class Core:
             self.cache = None
         else:
             self.cache = cache
+        self.retry: RetryOptions | None = {**DEFAULT_RETRY, **retry} if retry is not None else None
 
-    def prepare_get(self, path: str, params: Mapping[str, Any] | None) -> PreparedGet:
+    def request_headers(self, options: RequestOptions | None) -> dict[str, str]:
+        return {**self.headers, **((options or {}).get("headers") or {})}
+
+    def send_kwargs(self, options: RequestOptions | None) -> dict[str, Any]:
+        """The httpx keyword arguments a per-request option adds (the timeout)."""
+        timeout = (options or {}).get("timeout")
+        return {"timeout": timeout} if timeout is not None else {}
+
+    def retry_delay(self, response: httpx.Response, attempt: int) -> float | None:
+        """Seconds to wait before trying a GET again, or ``None`` when the answer stands.
+
+        ``attempt`` is the number of the try that just answered, the first being 1.
+        """
+        if self.retry is None:
+            return None
+        if response.status_code != 429 and response.status_code < 500:
+            return None
+        if attempt >= self.retry["attempts"]:
+            return None
+        server = _retry_after_seconds(response.headers.get("retry-after"))
+        return server if server is not None else self.retry["backoff"] * 2 ** (attempt - 1)
+
+    def prepare_get(
+        self, path: str, params: Mapping[str, Any] | None, options: RequestOptions | None = None
+    ) -> PreparedGet:
         url = str(httpx.URL(self.base_url + path, params=build_params(params or {})))
         cached = self.cache.get(url) if self.cache else None
-        headers = dict(self.headers)
+        headers = self.request_headers(options)
         if cached is not None:
             headers["If-None-Match"] = cached.etag
         return PreparedGet(url=url, headers=headers, cached=cached)
