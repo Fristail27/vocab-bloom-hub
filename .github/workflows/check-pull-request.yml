@@ -35,6 +35,11 @@ jobs:
       - name: Prettier check
         run: yarn format:check
 
+      # Yarn only warns about unmet peer dependencies; this fails on any that
+      # is not a documented known mismatch (issue #407)
+      - name: Peer dependencies are met
+        run: yarn peers:check
+
       # The committed public OpenAPI spec must match the code (issue #273)
       - name: OpenAPI spec is up to date
         run: yarn workspace server openapi:check
