@@ -7,6 +7,11 @@ generated release notes; the full commit history lives in git.
 
 ## v0.2.0-beta.1 — unreleased
 
+- **npm SDK**: a CommonJS consumer (`require`, or TypeScript with `"module": "CommonJS"`)
+  now resolves the CommonJS declarations (`dist/index.d.cts`) instead of the ESM ones — the
+  `exports` map carries `types` per condition (issue #402). `publint` and
+  `@arethetypeswrong/cli` gate the packed tarball in CI and before every publish.
+
 - **SDK ergonomics** (issue #408), both clients: an opt-in `retry` of the `GET` reads on
   `429` / `5xx` honouring `Retry-After` (off by default, so request counts stay explicit), a
   versioned `User-Agent` (`vocab-bloom-hub-npm/<version>`, `vocab-bloom-hub-python/<version>`,

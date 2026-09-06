@@ -91,6 +91,12 @@ jobs:
       - name: Build SDK
         run: yarn workspace @vocab-bloom-hub/client build
 
+      # The dual-format package as npm consumers resolve it (issue #402):
+      # publint over the packed tarball and arethetypeswrong for the types
+      # each condition (import / require) hands out
+      - name: SDK package resolves for every consumer
+        run: yarn workspace @vocab-bloom-hub/client pack:check
+
       - name: Unit tests
         run: yarn test
 
