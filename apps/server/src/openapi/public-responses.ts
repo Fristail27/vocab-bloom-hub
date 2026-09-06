@@ -25,6 +25,8 @@ export const PUBLIC_ERROR_DESCRIPTIONS: Record<number, string> = {
 };
 
 export const PUBLIC_RESPONSES: Record<string, PublicResponseSpecT> = {
+  PublicSearchController_searchGet: { type: 'PublicSearchV1ResT', errors: [400, 429] },
+  PublicSearchController_searchDetailedGet: { type: 'PublicSearchDetailedV1ResT', errors: [400, 429] },
   PublicSearchController_search: { type: 'PublicSearchV1ResT', errors: [400, 429] },
   PublicSearchController_searchDetailed: { type: 'PublicSearchDetailedV1ResT', errors: [400, 429] },
   PublicWordsController_list: { type: 'PublicWordsV1ResT', errors: [400, 429] },

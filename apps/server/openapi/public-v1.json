@@ -75,8 +75,87 @@
       }
     },
     "/api/v1/search": {
+      "get": {
+        "description": "Tiers in relevance order: exact, phrasal, starts-with, phrases, ends-with, contains. When none matches, a trigram similarity tier answers typos (`meta.fuzzy: true`, `similarity` on every item; Postgres instances only). A term shorter than 3 characters searches the exact and prefix tiers only (`meta.short_term: true`). Cacheable: the answer carries `ETag`, `Last-Modified` and `Cache-Control` like every public GET.",
+        "operationId": "PublicSearchController_searchGet",
+        "parameters": [
+          {
+            "name": "search",
+            "required": true,
+            "in": "query",
+            "description": "The term to search for",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 256,
+              "example": "run",
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "description": "Restrict the answer to one entry type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "word",
+                "grammar_pattern",
+                "phrase"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSearchV1ResT"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Search dictionary entries (flat list, no meanings)",
+        "tags": [
+          "Public API v1"
+        ]
+      },
       "post": {
-        "description": "Tiers in relevance order: exact, phrasal, starts-with, phrases, ends-with, contains. When none matches, a trigram similarity tier answers typos (`meta.fuzzy: true`, `similarity` on every item; Postgres instances only). A term shorter than 3 characters searches the exact and prefix tiers only (`meta.short_term: true`).",
+        "description": "The same search as `GET /search` with the fields in a JSON body; not cacheable. Kept through the beta.",
         "operationId": "PublicSearchController_search",
         "parameters": [],
         "requestBody": {
@@ -121,14 +200,140 @@
             }
           }
         },
-        "summary": "Search dictionary entries (flat list, no meanings)",
+        "summary": "Search dictionary entries (flat list, no meanings) — the POST form",
         "tags": [
           "Public API v1"
         ]
       }
     },
     "/api/v1/search/detailed": {
+      "get": {
+        "description": "The GET form of the detailed search: the same fields as the POST body, in the query string; cacheable.",
+        "operationId": "PublicSearchController_searchDetailedGet",
+        "parameters": [
+          {
+            "name": "search",
+            "required": true,
+            "in": "query",
+            "description": "The term to search for",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 256,
+              "example": "run",
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "description": "Restrict the answer to one entry type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "word",
+                "grammar_pattern",
+                "phrase"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 20,
+              "default": 10,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 20,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "with_meanings",
+            "required": false,
+            "in": "query",
+            "description": "Join the meanings (with translations, synonyms, antonyms) of every item",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "with_translations",
+            "required": false,
+            "in": "query",
+            "description": "Join the short translations of every item",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "translation_languages",
+            "required": false,
+            "in": "query",
+            "description": "Keep only these translation languages (a repeated key); no value means all of them",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "ru"
+                ]
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSearchDetailedV1ResT"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Search dictionary entries with pagination, meanings and translations",
+        "tags": [
+          "Public API v1"
+        ]
+      },
       "post": {
+        "description": "The same search as `GET /search/detailed` with the fields in a JSON body; not cacheable. Kept through the beta.",
         "operationId": "PublicSearchController_searchDetailed",
         "parameters": [],
         "requestBody": {
@@ -173,7 +378,7 @@
             }
           }
         },
-        "summary": "Search dictionary entries with pagination, meanings and translations",
+        "summary": "Search dictionary entries with pagination, meanings and translations — the POST form",
         "tags": [
           "Public API v1"
         ]

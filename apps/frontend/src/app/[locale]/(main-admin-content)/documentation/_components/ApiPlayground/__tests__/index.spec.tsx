@@ -12,7 +12,7 @@ jest.mock('next-intl', () => ({
 
 jest.mock('@/core/api/EnApi', () => ({
   // the playground runs against the public prefix and shows the v1 envelope
-  EnApi: { publicSearch: jest.fn(), publicSearchDetailed: jest.fn(), publicGet: jest.fn() },
+  EnApi: { publicPost: jest.fn(), publicGet: jest.fn() },
 }));
 
 import { EnApi } from '@/core/api/EnApi';
@@ -56,19 +56,19 @@ describe('ApiPlayground (issue #245)', () => {
   });
 
   it('отправляет заполненные фильтры и показывает ответ в виде JSON', async () => {
-    (EnApi.publicSearch as jest.Mock).mockResolvedValue({ data: [makeWord(1, 'run')], meta: { count: 1 } });
+    (EnApi.publicPost as jest.Mock).mockResolvedValue({ data: [makeWord(1, 'run')], meta: { count: 1 } });
 
     render(<ApiPlayground endpoint={searchEndpoint} />);
     typeSearch('run');
     await send();
 
-    expect(EnApi.publicSearch).toHaveBeenCalledWith({ search: 'run', limit: 10 });
+    expect(EnApi.publicPost).toHaveBeenCalledWith('/v1/search', { search: 'run', limit: 10 });
     expect(screen.getByText(/"word": "run"/)).toBeInTheDocument();
     expect(screen.getByText(/"count": 1/)).toBeInTheDocument();
   });
 
   it('переключает ответ между JSON и таблицей', async () => {
-    (EnApi.publicSearch as jest.Mock).mockResolvedValue({ data: [makeWord(1, 'run')], meta: { count: 1 } });
+    (EnApi.publicPost as jest.Mock).mockResolvedValue({ data: [makeWord(1, 'run')], meta: { count: 1 } });
 
     render(<ApiPlayground endpoint={searchEndpoint} />);
     typeSearch('run');
@@ -83,7 +83,7 @@ describe('ApiPlayground (issue #245)', () => {
   });
 
   it('показывает ошибку сервера вместо ответа', async () => {
-    (EnApi.publicSearch as jest.Mock).mockResolvedValue({
+    (EnApi.publicPost as jest.Mock).mockResolvedValue({
       error: true,
       message: ['limit must not be greater than 100'],
     });

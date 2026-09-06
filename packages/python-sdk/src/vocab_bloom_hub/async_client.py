@@ -44,7 +44,7 @@ class AsyncVocabBloomClient:
     async def search(
         self, search: str, *, type: str | Enum | None = None, limit: int | None = None
     ) -> m.SearchResponse:
-        return await self._post("/search", {"search": search, "type": type, "limit": limit}, m.SearchResponse)
+        return await self._get("/search", {"search": search, "type": type, "limit": limit}, m.SearchResponse)
 
     async def search_detailed(
         self,
@@ -57,7 +57,7 @@ class AsyncVocabBloomClient:
         with_translations: bool | None = None,
         translation_languages: Iterable[str | Enum] | None = None,
     ) -> m.DetailedSearchResponse:
-        body = {
+        params = {
             "search": search,
             "type": type,
             "limit": limit,
@@ -66,7 +66,7 @@ class AsyncVocabBloomClient:
             "with_translations": with_translations,
             "translation_languages": translation_languages,
         }
-        return await self._post("/search/detailed", body, m.DetailedSearchResponse)
+        return await self._get("/search/detailed", params, m.DetailedSearchResponse)
 
     async def word(self, headword: str) -> m.HeadwordResponse:
         return await self._get(headword_path(headword), None, m.HeadwordResponse)

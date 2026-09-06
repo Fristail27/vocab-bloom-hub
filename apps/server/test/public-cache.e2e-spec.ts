@@ -161,6 +161,22 @@ describe('public API caching headers (e2e, issue #274)', () => {
     expect(revalidate.headers.etag).toMatch(WEAK_ETAG);
   });
 
+  it('caches the GET search like every other public GET (issue #396)', async () => {
+    const res = await request(server()).get('/api/v1/search?search=glim').expect(200);
+    expect(res.headers.etag).toMatch(WEAK_ETAG);
+    expect(res.headers['cache-control']).toBe('public, max-age=3600');
+    expect(Number.isNaN(Date.parse(res.headers['last-modified']))).toBe(false);
+    await request(server())
+      .get('/api/v1/search?search=glim')
+      .set('If-None-Match', res.headers.etag)
+      .expect(304);
+    const detailed = await request(server())
+      .get('/api/v1/search/detailed?search=glim&with_meanings=true')
+      .expect(200);
+    expect(detailed.headers.etag).toMatch(WEAK_ETAG);
+    expect(detailed.headers['cache-control']).toBe('public, max-age=3600');
+  });
+
   it('leaves the POST search reads without caching directives', async () => {
     const res = await request(server()).post('/api/v1/search').send({ search: 'glim' }).expect(200);
     expect(res.headers['cache-control']).toBeUndefined();

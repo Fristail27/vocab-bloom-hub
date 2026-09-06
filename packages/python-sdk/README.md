@@ -60,8 +60,8 @@ async with AsyncVocabBloomClient("https://dict.example.com") as client:
 
 | Method                                      | Endpoint                           | Answer                                                                                                         |
 | ------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `search(search, *, type, limit)`            | `POST /search`                     | `SearchResponse`                                                                                               |
-| `search_detailed(search, *, ...)`           | `POST /search/detailed`            | `DetailedSearchResponse`                                                                                       |
+| `search(search, *, type, limit)`            | `GET /search`                      | `SearchResponse`                                                                                               |
+| `search_detailed(search, *, ...)`           | `GET /search/detailed`             | `DetailedSearchResponse`                                                                                       |
 | `word(headword)`                            | `GET /words/{word}`                | `HeadwordResponse`                                                                                             |
 | `words_batch(words)`                        | `POST /words/batch`                | `WordsBatchResponse` — up to 50 headwords, one rate-limit unit; misses under `meta.not_found`                  |
 | `word_by_id(id)`                            | `GET /words/id/{id}`               | `WordResponse`                                                                                                 |

@@ -61,8 +61,12 @@ class VocabBloomClient:
     def search(
         self, search: str, *, type: str | Enum | None = None, limit: int | None = None
     ) -> m.SearchResponse:
-        """Flat search: relevance tiers, typo tolerance, no meanings joined."""
-        return self._post("/search", {"search": search, "type": type, "limit": limit}, m.SearchResponse)
+        """Flat search: relevance tiers, typo tolerance, no meanings joined.
+
+        Sent as ``GET`` with the fields in the query string, so the answer carries an
+        ETag and the client's cache revalidates it (issue #396).
+        """
+        return self._get("/search", {"search": search, "type": type, "limit": limit}, m.SearchResponse)
 
     def search_detailed(
         self,
@@ -75,8 +79,8 @@ class VocabBloomClient:
         with_translations: bool | None = None,
         translation_languages: Iterable[str | Enum] | None = None,
     ) -> m.DetailedSearchResponse:
-        """Paged search with meanings and translations on request."""
-        body = {
+        """Paged search with meanings and translations on request (``GET``, cacheable)."""
+        params = {
             "search": search,
             "type": type,
             "limit": limit,
@@ -85,7 +89,7 @@ class VocabBloomClient:
             "with_translations": with_translations,
             "translation_languages": translation_languages,
         }
-        return self._post("/search/detailed", body, m.DetailedSearchResponse)
+        return self._get("/search/detailed", params, m.DetailedSearchResponse)
 
     # -------------------------------------------------------------- reads
 

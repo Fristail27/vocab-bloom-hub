@@ -24,7 +24,7 @@ const syncUrl = (query: string) => {
   window.history.replaceState(null, '', url);
 };
 
-/** A search box over POST /api/v1/search; every hit links to its word page */
+/** A search box over GET /api/v1/search (cacheable, issue #396); every hit links to its word page */
 export const WordSearch = ({ initialTerm = '' }: { initialTerm?: string }) => {
   const t = useTranslations('word');
   const [term, setTerm] = useState(initialTerm);
@@ -33,11 +33,8 @@ export const WordSearch = ({ initialTerm = '' }: { initialTerm?: string }) => {
   const runSearch = async (query: string) => {
     setState({ kind: 'loading' });
     try {
-      const res = await fetch(`${browserApiBase()}/v1/search`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ search: query, limit: 20 }),
-      });
+      const params = new URLSearchParams({ search: query, limit: '20' });
+      const res = await fetch(`${browserApiBase()}/v1/search?${params}`);
       if (!res.ok) throw new Error(String(res.status));
       const { data, meta } = (await res.json()) as PublicSearchV1ResT;
       setState({ kind: 'results', items: data, fuzzy: meta.fuzzy });

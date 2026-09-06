@@ -39,10 +39,11 @@ describe('VocabBloomClient without a server (issue #275)', () => {
     expect((calls[0].init.headers as Record<string, string>).Accept).toBe('application/json');
   });
 
-  it('encodes headwords with spaces and posts search bodies as JSON', async () => {
+  it('encodes headwords with spaces and sends the search as a GET with the fields in the query (issue #396)', async () => {
     const { fetch, calls } = fakeFetch([
       () => json({ data: [], meta: { word: 'put up with', count: 0 } }),
       () => json({ data: [], meta: { count: 0, fuzzy: false, short_term: false } }),
+      () => json({ data: [], meta: { page: 1, limit: 10, has_more: false, fuzzy: false, short_term: false } }),
     ]);
     const client = new VocabBloomClient({
       baseUrl: 'http://localhost:3010',
@@ -52,9 +53,15 @@ describe('VocabBloomClient without a server (issue #275)', () => {
     await client.word('put up with');
     expect(calls[0].url).toBe('http://localhost:3010/api/v1/words/put%20up%20with');
     await client.search({ search: 'run', limit: 3 });
-    expect(calls[1].init.method).toBe('POST');
-    expect(calls[1].init.body).toBe(JSON.stringify({ search: 'run', limit: 3 }));
-    expect(calls[1].init.headers).toMatchObject({ 'Content-Type': 'application/json', 'X-App': 'test' });
+    expect(calls[1].init.method).toBe('GET');
+    expect(calls[1].url).toBe('http://localhost:3010/api/v1/search?search=run&limit=3');
+    expect(calls[1].init.body).toBeUndefined();
+    expect(calls[1].init.headers).toMatchObject({ 'X-App': 'test' });
+    await client.searchDetailed({ search: 'run', with_meanings: true, translation_languages: ['ru'] });
+    const url = new URL(calls[2].url);
+    expect(url.pathname).toBe('/api/v1/search/detailed');
+    expect(url.searchParams.get('with_meanings')).toBe('true');
+    expect(url.searchParams.getAll('translation_languages')).toEqual(['ru']);
   });
 
   it('posts a batch lookup as { words } (issue #397)', async () => {

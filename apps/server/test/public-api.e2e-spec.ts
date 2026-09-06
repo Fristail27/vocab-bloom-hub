@@ -100,6 +100,39 @@ describe('public API /api/v1 (e2e, issue #271)', () => {
     expect(detailed.body.data[0].meanings).toEqual([expect.objectContaining({ title: 'to shine unsteadily' })]);
   });
 
+  it('serves the search as GET with the same fields in the query string (issue #396)', async () => {
+    const posted = await request(server())
+      .post('/api/v1/search')
+      .send({ search: 'flick', limit: 5 })
+      .expect(200);
+    const got = await request(server()).get('/api/v1/search?search=flick&limit=5').expect(200);
+    expect(got.headers['x-api-version']).toBe('1');
+    expect(got.body).toEqual(posted.body);
+
+    const detailed = await request(server())
+      .get('/api/v1/search/detailed?search=flicker&with_meanings=true&translation_languages=ru&limit=5&page=1')
+      .expect(200);
+    expect(detailed.body.meta).toEqual({ page: 1, limit: 5, has_more: false, fuzzy: false, short_term: false });
+    expect(detailed.body.data[0].meanings).toEqual([expect.objectContaining({ title: 'to shine unsteadily' })]);
+    // the numbers and booleans arrive as text and are converted, so the
+    // answer matches the POST form field for field
+    const postedDetailed = await request(server())
+      .post('/api/v1/search/detailed')
+      .send({ search: 'flicker', with_meanings: true, translation_languages: ['ru'], limit: 5, page: 1 })
+      .expect(200);
+    expect(detailed.body).toEqual(postedDetailed.body);
+
+    // the query is validated like the body
+    await request(server()).get('/api/v1/search').expect(400);
+    await request(server()).get('/api/v1/search?search=').expect(400);
+    await request(server()).get('/api/v1/search?search=x&limit=many').expect(400);
+    await request(server()).get('/api/v1/search?search=x&type=nope').expect(400);
+    await request(server()).get('/api/v1/search?search=x&page=2').expect(400);
+    await request(server()).get('/api/v1/search/detailed?search=x&limit=21').expect(400);
+    await request(server()).get('/api/v1/search/detailed?search=x&with_meanings=maybe').expect(400);
+    await request(server()).get('/api/v1/search/detailed?search=x&translation_languages=xx').expect(400);
+  });
+
   it('rejects an empty and an oversized search term (issue #345)', async () => {
     await request(server()).post('/api/v1/search').send({ search: '' }).expect(400);
     const long = await request(server())
@@ -110,6 +143,9 @@ describe('public API /api/v1 (e2e, issue #271)', () => {
     await request(server())
       .post('/api/v1/search/detailed')
       .send({ search: 'x'.repeat(257) })
+      .expect(400);
+    await request(server())
+      .get(`/api/v1/search?search=${'x'.repeat(257)}`)
       .expect(400);
   });
 

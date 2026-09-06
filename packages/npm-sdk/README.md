@@ -46,8 +46,8 @@ for await (const word of client.iterateWords({ word_level: ['A1', 'A2'], with_me
 
 | Method                           | Endpoint                           | Answer                                                                                                         |
 | -------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `search(request)`                | `POST /search`                     | `SearchResponse`                                                                                               |
-| `searchDetailed(request)`        | `POST /search/detailed`            | `DetailedSearchResponse`                                                                                       |
+| `search(request)`                | `GET /search`                      | `SearchResponse`                                                                                               |
+| `searchDetailed(request)`        | `GET /search/detailed`             | `DetailedSearchResponse`                                                                                       |
 | `word(headword)`                 | `GET /words/{word}`                | `HeadwordResponse`                                                                                             |
 | `wordsBatch(words)`              | `POST /words/batch`                | `WordsBatchResponse` — up to 50 headwords, one rate-limit unit; misses under `meta.not_found`                  |
 | `wordById(id)`                   | `GET /words/id/{id}`               | `WordResponse`                                                                                                 |
