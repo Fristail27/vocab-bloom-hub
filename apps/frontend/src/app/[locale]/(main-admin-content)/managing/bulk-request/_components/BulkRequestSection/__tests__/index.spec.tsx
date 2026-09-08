@@ -190,9 +190,16 @@ describe('BulkRequestSection', () => {
   it('runs the filtered scope in the browser, sends one request per word and offers the jsonl download', async () => {
     fetchMock.mockImplementation(async (_url: string, init: RequestInit) => {
       // the default body: a fixed system message, the rendered prompt as the user message
-      const body = JSON.parse(String(init.body)) as { messages: { role: string; content: string }[] };
+      const body = JSON.parse(String(init.body)) as {
+        messages: { role: string; content: string }[];
+        thinking: unknown;
+        think: unknown;
+      };
       expect(body.messages[0].role).toBe('system');
       expect(body.messages[0].content).toContain('language API service');
+      // reasoning is switched off: DeepSeek's `thinking`, Ollama's `think`
+      expect(body.thinking).toEqual({ type: 'disabled' });
+      expect(body.think).toBe(false);
       const word = body.messages[1].content.match(/"([^"]+)"/)?.[1] ?? '?';
       return chatAnswer([`${word}-syn`]);
     });
@@ -409,6 +416,136 @@ describe('BulkRequestSection', () => {
       short_translation_id: 31,
       language: 'ru',
       is_correct: true,
+    });
+  });
+
+  it('generates short translations into another language from a preset, keeping the task across tables', async () => {
+    fetchMock.mockImplementation(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as { messages: { role: string; content: string }[] };
+      const prompt = body.messages[1].content;
+      // the row preset: the target language, the word and the existing Russian row to mirror
+      expect(prompt).toContain('into Spanish of the English verb "abandon"');
+      expect(prompt).toContain('into "ru": description "покидать (кратко)"');
+      return fakeResponse(
+        200,
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content:
+                  '{"language": "es", "description": "abandonar (breve)", "variants_of_words": ["abandonar", "dejar"]}',
+              },
+            },
+          ],
+        }),
+      );
+    });
+
+    renderSection();
+    await waitFor(() => expect(EnApi.listWords).toHaveBeenCalled());
+    // the untouched words prompt is its first preset; a preset click replaces the template
+    expect(screen.getByTestId('bulk-prompt-preset-synonyms')).toBeChecked();
+    fireEvent.click(screen.getByTestId('bulk-prompt-preset-short_translation_es'));
+    const wordsPrompt = (screen.getByTestId('bulk-prompt') as HTMLTextAreaElement).value;
+    expect(wordsPrompt).toContain('short translation into Spanish');
+    expect(wordsPrompt).not.toContain('{{description}}');
+    expect(screen.getByTestId('bulk-prompt-preset-short_translation_es')).toBeChecked();
+
+    // the same task on the short translations table mirrors the row instead
+    fireEvent.click(screen.getByTestId('bulk-source-short_translations'));
+    await waitFor(() => expect(EnApi.listShortTranslations).toHaveBeenCalledWith({ page: 1, limit: 50 }));
+    const rowsPrompt = (screen.getByTestId('bulk-prompt') as HTMLTextAreaElement).value;
+    expect(rowsPrompt).toContain('short translation into Spanish');
+    expect(rowsPrompt).toContain('"{{description}}"');
+    expect(screen.getByTestId('bulk-prompt-preset-short_translation_es')).toBeChecked();
+
+    // editing the template detaches it from every preset
+    fireEvent.change(screen.getByTestId('bulk-prompt'), { target: { value: `${rowsPrompt} Be brief.` } });
+    expect(screen.getByTestId('bulk-prompt-preset-short_translation_es')).not.toBeChecked();
+    fireEvent.click(screen.getByTestId('bulk-prompt-preset-short_translation_es'));
+    expect((screen.getByTestId('bulk-prompt') as HTMLTextAreaElement).value).toBe(rowsPrompt);
+
+    fireEvent.click(screen.getByTestId('bulk-next'));
+    await screen.findByText('покидать (кратко)');
+    fireEvent.click(screen.getByText('scope_filtered:1'));
+    fireEvent.click(screen.getByTestId('bulk-start'));
+
+    await screen.findByTestId('bulk-download-results');
+    fireEvent.click(screen.getByTestId('bulk-download-results'));
+    const text = await blobText(saveBlobSpy.mock.calls[0][0] as Blob);
+    // the line is a Spanish short translation row of the word: the answer's language
+    // overrides the source row's, the source row stays traceable by its id
+    expect(JSON.parse(text.trim())).toEqual({
+      word: 'abandon',
+      part_of_speech: 'verb',
+      short_translation_id: 31,
+      language: 'es',
+      description: 'abandonar (breve)',
+      variants_of_words: ['abandonar', 'dejar'],
+    });
+  });
+
+  it('generates meaning translations into another language from a preset, keeping the task across tables', async () => {
+    fetchMock.mockImplementation(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as { messages: { role: string; content: string }[] };
+      const prompt = body.messages[1].content;
+      // the row preset: the target language, the parent meaning and the existing Russian row to mirror
+      expect(prompt).toContain(
+        'into Spanish of the English verb "abandon" in the meaning "meaning of abandon"',
+      );
+      expect(prompt).toContain('into "ru": title "покидать", definition "покидать (def)"');
+      return fakeResponse(
+        200,
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content:
+                  '{"language": "es", "title": "abandonar", "definition": "dejar atrás", "variants_of_words": ["abandonar"]}',
+              },
+            },
+          ],
+        }),
+      );
+    });
+
+    renderSection();
+    await waitFor(() => expect(EnApi.listWords).toHaveBeenCalled());
+    // the meanings table writes the translation from the meaning's own columns
+    fireEvent.click(screen.getByTestId('bulk-source-meanings'));
+    await waitFor(() => expect(EnApi.listMeanings).toHaveBeenCalledWith({ page: 1, limit: 50 }));
+    fireEvent.click(screen.getByTestId('bulk-prompt-preset-meaning_translation_es'));
+    const meaningsPrompt = (screen.getByTestId('bulk-prompt') as HTMLTextAreaElement).value;
+    expect(meaningsPrompt).toContain('translation into Spanish');
+    expect(meaningsPrompt).toContain('in the meaning "{{title}}" ({{definition}})');
+
+    // the same task on the translations table mirrors the row instead
+    fireEvent.click(screen.getByTestId('bulk-source-translations'));
+    await waitFor(() => expect(EnApi.listMeaningTranslations).toHaveBeenCalledWith({ page: 1, limit: 50 }));
+    expect(screen.getByTestId('bulk-prompt-preset-meaning_translation_es')).toBeChecked();
+    expect((screen.getByTestId('bulk-prompt') as HTMLTextAreaElement).value).toContain(
+      'mirroring its existing translation',
+    );
+
+    fireEvent.click(screen.getByTestId('bulk-next'));
+    await screen.findByText('покидать');
+    fireEvent.click(screen.getByText('scope_filtered:1'));
+    fireEvent.click(screen.getByTestId('bulk-start'));
+
+    await screen.findByTestId('bulk-download-results');
+    fireEvent.click(screen.getByTestId('bulk-download-results'));
+    const text = await blobText(saveBlobSpy.mock.calls[0][0] as Blob);
+    // a Spanish translation row of the meaning: the answer's language overrides
+    // the source row's, meaning_id and translation_id keep the line traceable
+    expect(JSON.parse(text.trim())).toEqual({
+      word: 'abandon',
+      part_of_speech: 'verb',
+      meaning_id: 121,
+      translation_id: 21,
+      language: 'es',
+      title: 'abandonar',
+      definition: 'dejar atrás',
+      variants_of_words: ['abandonar'],
     });
   });
 

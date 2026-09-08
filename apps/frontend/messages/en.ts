@@ -236,6 +236,13 @@ export default {
     extra_headers_hint: 'One "Header-Name: value" per line, e.g. anthropic-version: 2023-06-01',
     prompt_template: 'Prompt template',
     prompt_template_hint: 'Placeholders: {placeholders}',
+    prompt_presets_hint:
+      'A preset fills the template with a ready-made task; an edited template belongs to no preset. The translation presets answer in the shape of a translation row (language, title, definition, variants_of_words for a meaning; language, description, variants_of_words for a short translation): on the words and meanings tables the translation is written from scratch, on the translations tables it mirrors the row, so filter the rows by the language to copy from.',
+    preset_synonyms: 'Synonyms',
+    preset_synonyms_antonyms: 'Synonyms and antonyms',
+    preset_check: 'Check the translation',
+    preset_short_translation: 'Short translation: {language}',
+    preset_meaning_translation: 'Meaning translation: {language}',
     body_template: 'Request body (JSON)',
     body_template_hint:
       "Sent as the POST body. Placeholders are substituted JSON-escaped; '{{'prompt'}}' is the rendered prompt template.",

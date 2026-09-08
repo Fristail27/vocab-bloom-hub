@@ -1,4 +1,5 @@
 import {
+  AvailableTranslationLanguagesE,
   EnMeaningListItemT,
   EnMeaningTranslationListItemT,
   EnShortTranslationListItemT,
@@ -31,6 +32,25 @@ export type SourceStateT =
   | { kind: SourceKindE.meanings; filter: MeaningsFilterT }
   | { kind: SourceKindE.translations; filter: TranslationsFilterT }
   | { kind: SourceKindE.short_translations; filter: ShortTranslationsFilterT };
+
+/**
+ * A ready-made prompt template of a source table. The first preset of a table
+ * is its default; the same id in two tables means the same task, so switching
+ * the table keeps the chosen task (e.g. the short translation into a language).
+ */
+export type PromptPresetT = {
+  id: string;
+  // the i18n key of the button label under bulk_request
+  labelKey:
+    | 'preset_synonyms'
+    | 'preset_synonyms_antonyms'
+    | 'preset_check'
+    | 'preset_short_translation'
+    | 'preset_meaning_translation';
+  // the target language of a per-language preset; goes into the label
+  language?: AvailableTranslationLanguagesE;
+  template: string;
+};
 
 export enum AuthHeaderModeE {
   bearer = 'bearer',

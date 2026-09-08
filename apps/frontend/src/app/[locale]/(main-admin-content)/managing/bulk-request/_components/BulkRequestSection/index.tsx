@@ -11,11 +11,11 @@ import { RunInputT, useBulkRun } from './hooks/useBulkRun';
 import { BulkItemT, BulkRequestConfigT, RunScopeE, RunStatusE, SourceKindE, SourceStateT } from './types';
 import {
   DEFAULT_CONFIG,
-  DEFAULT_PROMPT_TEMPLATES,
   DEFAULT_SOURCE_KIND,
   FAILURES_FILE_NAME,
   RECORDS_PAGE_SIZE,
   RESULTS_FILE_NAME,
+  promptAfterSourceSwitch,
 } from './constants';
 import { countActiveFilters, emptySource, listRecords } from './sources';
 import { parseResponsePath } from './utils/responseMappers';
@@ -55,15 +55,14 @@ export const BulkRequestSection: React.FC = () => {
   }, []);
 
   // switching the table drops the filter and the selection (ids belong to one
-  // table) and swaps the default prompt unless the admin has edited it
+  // table) and moves an unedited preset prompt to the new table
   const onSourceKindChange = React.useCallback((kind: SourceKindE) => {
     setSource((prev) => {
       if (prev.kind === kind) return prev;
-      setConfig((cfg) =>
-        cfg.promptTemplate === DEFAULT_PROMPT_TEMPLATES[prev.kind]
-          ? { ...cfg, promptTemplate: DEFAULT_PROMPT_TEMPLATES[kind] }
-          : cfg,
-      );
+      setConfig((cfg) => ({
+        ...cfg,
+        promptTemplate: promptAfterSourceSwitch(prev.kind, kind, cfg.promptTemplate),
+      }));
       return emptySource(kind);
     });
     setSelected(new Map());
