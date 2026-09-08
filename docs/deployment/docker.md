@@ -166,7 +166,7 @@ docker build -f apps/frontend/Dockerfile -t ghcr.io/fristail27/vocab-bloom-hub-f
 docker build -f apps/site/Dockerfile     -t ghcr.io/fristail27/vocab-bloom-hub-site:main     .
 ```
 
-All are multi-stage builds on `node:24-alpine`, built from the **repository root** (the
+All are multi-stage builds on `node:22-alpine` (the floor of `engines.node`), built from the **repository root** (the
 workspace install needs every `package.json`, and the frontend and the site import types from
 the server workspace):
 

@@ -1,6 +1,14 @@
 name: Setup workspace
 description: Install Node with yarn caching, activate Yarn 4 with a retry, restore node_modules and install dependencies
 
+# The default is the floor the project advertises (engines.node, issue
+# #439); the jobs that run Jest pass 24, the line its require(ESM) needs
+inputs:
+  node-version:
+    description: The Node.js version to install
+    required: false
+    default: '22'
+
 runs:
   using: composite
   steps:
@@ -13,7 +21,7 @@ runs:
     - name: Setup Node
       uses: actions/setup-node@v7
       with:
-        node-version: 24
+        node-version: ${{ inputs.node-version }}
         cache: yarn
 
     # setup-node swaps the Node installation, so the shims are enabled again
@@ -43,7 +51,7 @@ runs:
           node_modules
           apps/*/node_modules
           packages/*/node_modules
-        key: node-modules-${{ runner.os }}-node24-${{ hashFiles('yarn.lock') }}
+        key: node-modules-${{ runner.os }}-node${{ inputs.node-version }}-${{ hashFiles('yarn.lock') }}
 
     - name: Install dependencies
       shell: bash

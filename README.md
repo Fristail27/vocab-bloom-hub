@@ -26,7 +26,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/node-%3E%3D24-339933?logo=node.js&logoColor=white" alt="Node >= 24" />
+  <img src="https://img.shields.io/badge/node-%3E%3D22-339933?logo=node.js&logoColor=white" alt="Node >= 22" />
   <img src="https://img.shields.io/badge/yarn-4-2C8EBB?logo=yarn&logoColor=white" alt="Yarn 4" />
   <img src="https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white" alt="Next.js 16" />
@@ -131,7 +131,7 @@ The project is in **early development** (`0.x`). The first alpha is [released](h
 
 ## ✅ Prerequisites
 
-- **Node.js >= 24**
+- **Node.js >= 22.13** to run it; the Jest suites need 24.9+ (NestJS 12 is ESM-only and Jest's `require(ESM)` needs it)
 - **Yarn 4** (the repo pins the version via `packageManager`; enable it with `corepack enable`)
 - **PostgreSQL** — optional. Without `DATABASE_URL` the server falls back to a local `dev.sqlite` file.
 
