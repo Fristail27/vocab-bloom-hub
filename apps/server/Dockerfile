@@ -5,7 +5,7 @@
 # ADMIN_PASSWORD (docs/environment.md); listens on SERVER_PORT (3010).
 
 # --- deps: the whole workspace install, with the toolchain native modules need
-FROM node:24-alpine AS deps
+FROM node:22-alpine AS deps
 RUN apk add --no-cache python3 make g++
 WORKDIR /app
 RUN corepack enable
@@ -28,7 +28,7 @@ FROM deps AS prod-deps
 RUN yarn workspaces focus server --production
 
 # --- runtime
-FROM node:24-alpine AS runtime
+FROM node:22-alpine AS runtime
 # links the GHCR package to the repository; version and revision are added by CI
 LABEL org.opencontainers.image.source="https://github.com/Fristail27/vocab-bloom-hub" \
       org.opencontainers.image.description="Vocab Bloom Hub API (NestJS)" \

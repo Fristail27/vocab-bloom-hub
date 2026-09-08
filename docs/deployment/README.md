@@ -17,7 +17,7 @@ Postgres included). Either way a reverse proxy with TLS goes in front.
 
 ## What production requires
 
-- **Node.js ≥ 24** and Yarn 4 (`corepack enable`) on the host.
+- **Node.js ≥ 22.13** and Yarn 4 (`corepack enable`) on the host (CI builds, starts and probes the production build on 22).
 - **Postgres** — the only supported production database; the server refuses to start with
   `NODE_ENV=production` on SQLite. The full dictionary needs the indexes the migrations create
   (see [`../performance.md`](../performance.md)).

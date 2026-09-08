@@ -17,7 +17,7 @@
 
 ## Что нужно для production
 
-- **Node.js ≥ 24** и Yarn 4 (`corepack enable`) на хосте.
+- **Node.js ≥ 22.13** и Yarn 4 (`corepack enable`) на хосте (CI собирает, запускает и проверяет продакшен-сборку на 22).
 - **Postgres** — единственная поддерживаемая production-база; сервер отказывается стартовать с
   `NODE_ENV=production` на SQLite. Полному словарю нужны индексы, которые создают миграции
   (см. [`../performance.md`](../performance.md)).

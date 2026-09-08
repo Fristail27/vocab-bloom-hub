@@ -7,6 +7,13 @@ generated release notes; the full commit history lives in git.
 
 ## v0.2.0-beta.1 — unreleased
 
+- **Node.js 22 is enough to run it** (issue #439): the required version drops from 24 to
+  `>=22.13`, the oldest release every dependency accepts, so the current LTS line of most hosts
+  and distributions runs the project without a version manager. The Docker images are built on
+  `node:22-alpine`, and CI lints, typechecks, builds and boots the production build and runs the
+  browser and Python-SDK live tests on 22. The Jest suites stay on 24 (NestJS 12 is ESM-only and
+  Jest's `require(ESM)` needs Node 24.9+), so contributors running the unit tests still need 24.
+
 - **Fixes from the post-alpha review**: the admin UI's reads of the public prefix bypass the
   browser's HTTP cache (an edited or deleted word no longer lingers in the admin search for an
   hour); search and list items carry `base_phrasal` like the headword read; the detailed

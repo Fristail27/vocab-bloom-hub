@@ -76,6 +76,11 @@ jobs:
       - name: Typecheck browser e2e
         run: yarn workspace e2e typecheck
 
+  # The Jest suites run on Node 24 (issue #439): NestJS 12 and next-intl's
+  # message parser are ESM-only packages, and Jest's require(ESM) needs the
+  # synchronous vm module APIs of Node 24.9+. The project itself runs on the
+  # floor of engines.node (22): lint, typecheck, the Python SDK's live tests,
+  # the production smoke and the browser e2e use the setup default
   tests:
     name: tests
     runs-on: ubuntu-latest
@@ -87,6 +92,8 @@ jobs:
 
       - name: Setup workspace
         uses: ./.github/actions/setup
+        with:
+          node-version: 24
 
       - name: Build SDK
         run: yarn workspace @vocab-bloom-hub/client build
@@ -199,8 +206,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # Jest suites: Node 24, see the tests job
       - name: Setup workspace
         uses: ./.github/actions/setup
+        with:
+          node-version: 24
 
       - name: Apply migrations
         run: yarn workspace server migration:run

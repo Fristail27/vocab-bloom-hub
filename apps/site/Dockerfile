@@ -9,7 +9,7 @@
 # rendering (the word pages) reaches the API through API_INTERNAL_URL at runtime.
 
 # --- deps: the whole workspace install
-FROM node:24-alpine AS deps
+FROM node:22-alpine AS deps
 RUN apk add --no-cache python3 make g++
 WORKDIR /app
 RUN corepack enable
@@ -38,7 +38,7 @@ COPY apps/site apps/site
 RUN yarn workspace site exec next build
 
 # --- runtime: the standalone output only
-FROM node:24-alpine AS runtime
+FROM node:22-alpine AS runtime
 LABEL org.opencontainers.image.source="https://github.com/Fristail27/vocab-bloom-hub" \
       org.opencontainers.image.description="Vocab Bloom Hub website (Next.js): docs, API reference, playground, word pages" \
       org.opencontainers.image.licenses="MIT"
