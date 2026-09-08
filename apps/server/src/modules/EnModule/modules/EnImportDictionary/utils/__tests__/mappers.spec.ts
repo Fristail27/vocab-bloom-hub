@@ -279,13 +279,14 @@ describe('dataset word links: synonyms and antonyms (issues #259, #266)', () => 
 
   it('maps antonyms of every dataset line kind and tolerates lines without the key (issue #266)', () => {
     const word = makeDataSetWord();
-    word.meanings[0].antonyms = [
+    const meanings = word.meanings as NonNullable<typeof word.meanings>;
+    meanings[0].antonyms = [
       { word: 'walk', part_of_speech: EnPartOfSpeechE.verb },
-      'stand' as unknown as (typeof word.meanings)[number]['antonyms'][number],
+      'stand' as unknown as (typeof meanings)[number]['antonyms'][number],
     ];
     expect(mapWordFromSetToDB(word).meanings[0].antonyms).toEqual(['walk', 'stand']);
     // a dataset exported before #266 carries no antonyms key at all
-    delete (word.meanings[0] as Partial<(typeof word.meanings)[number]>).antonyms;
+    delete (meanings[0] as Partial<(typeof meanings)[number]>).antonyms;
     expect(mapWordFromSetToDB(word).meanings[0].antonyms).toEqual([]);
   });
 });

@@ -140,7 +140,7 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
     );
 
     const settingsService = { upsert: jest.fn() } as unknown as SettingsService;
-    service = new EnImportDictionaryService(ds.getRepository(EnWord), settingsService);
+    service = new EnImportDictionaryService(ds.getRepository(EnWord), new WordRowsService(ds), settingsService);
 
     await enService.addWord(makeWordBody('run'));
     // a phrasal pair so the export produces a phrasal-verbs linking line
@@ -228,15 +228,9 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
     expect(word.forms).toEqual([
       expect.objectContaining({ word: 'runs', form_of_word: EnWordFormsE.third_person_singular }),
     ]);
-    expect(word.meanings).toEqual([
-      expect.objectContaining({
-        title: 'to move fast',
-        synonyms: [],
-        antonyms: [],
-        translations: [expect.objectContaining({ title: 'бежать' })],
-      }),
-    ]);
-    expect(word.short_translations).toEqual([expect.objectContaining({ description: 'бежать' })]);
+    // the collections live in their own files (issue #442)
+    expect(word).not.toHaveProperty('meanings');
+    expect(word).not.toHaveProperty('short_translations');
 
     // system fields are stripped everywhere by cleanEntity
     const raw = JSON.stringify(lines);
@@ -245,22 +239,78 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
     expect(raw).not.toContain('"updateAt"');
   });
 
+  it('writes the meanings, their translations and the short translations as one line per row next to the key of the entry (issue #442)', () => {
+    const meanings = readJsonlLines('vocab-bloom-hub-en-meanings.jsonl');
+    // every entry of every file has one meaning; the lines follow the entry order
+    expect(meanings.map((l) => [l.word, l.part_of_speech, l.title])).toEqual([
+      ['give', EnPartOfSpeechE.verb, 'to move fast'],
+      ['give up', EnPartOfSpeechE.verb, 'to move fast'],
+      ['in the long run', EnPartOfSpeechE.phrase, 'eventually'],
+      ['run', EnPartOfSpeechE.verb, 'to move fast'],
+      ['would rather + verb', EnPartOfSpeechE.grammar_pattern, 'to move fast'],
+    ]);
+    const run = meanings.find((l) => l.word === 'run') as Record<string, unknown>;
+    expect(run).toEqual(
+      expect.objectContaining({
+        definition: 'to move fast on foot',
+        sort_order: 1,
+        synonyms: [],
+        antonyms: [],
+      }),
+    );
+    expect(run).not.toHaveProperty('translations');
+
+    const translations = readJsonlLines('vocab-bloom-hub-en-meaning-translations.jsonl');
+    // the phrase has no translations; the others carry the Russian one, keyed by the meaning
+    expect(
+      translations.map((l) => [l.word, l.meaning_sort_order, l.meaning_title, l.language, l.title]),
+    ).toEqual([
+      ['give', 1, 'to move fast', AvailableTranslationLanguagesE.ru, 'бежать'],
+      ['give up', 1, 'to move fast', AvailableTranslationLanguagesE.ru, 'бежать'],
+      ['run', 1, 'to move fast', AvailableTranslationLanguagesE.ru, 'бежать'],
+      ['would rather + verb', 1, 'to move fast', AvailableTranslationLanguagesE.ru, 'бежать'],
+    ]);
+    expect(translations[0]).toEqual(
+      expect.objectContaining({ part_of_speech: EnPartOfSpeechE.verb, definition: 'быстро перемещаться' }),
+    );
+
+    const shorts = readJsonlLines('vocab-bloom-hub-en-short-translations.jsonl');
+    expect(shorts.map((l) => [l.word, l.part_of_speech, l.language, l.description])).toEqual([
+      ['give', EnPartOfSpeechE.verb, AvailableTranslationLanguagesE.ru, 'бежать'],
+      ['give up', EnPartOfSpeechE.verb, AvailableTranslationLanguagesE.ru, 'бежать'],
+      ['in the long run', EnPartOfSpeechE.phrase, AvailableTranslationLanguagesE.ru, 'бежать'],
+      ['run', EnPartOfSpeechE.verb, AvailableTranslationLanguagesE.ru, 'бежать'],
+      ['would rather + verb', EnPartOfSpeechE.grammar_pattern, AvailableTranslationLanguagesE.ru, 'бежать'],
+    ]);
+    expect(shorts[0].variants_of_words).toEqual(['бежать']);
+
+    const raw = JSON.stringify([...meanings, ...translations, ...shorts]);
+    expect(raw).not.toContain('"id"');
+    expect(raw).not.toContain('"createdAt"');
+  });
+
   it('exports phrases and grammar patterns into their own NDJSON files', () => {
     const phrases = readJsonlLines('vocab-bloom-hub-en-phrases.jsonl');
     expect(phrases).toHaveLength(1);
     expect(phrases[0].phrase).toBe('in the long run');
     expect(phrases[0]).not.toHaveProperty('part_of_speech');
-    // synonyms are exported as word + part of speech, sorted by word; "run" is
-    // a verb here because the phrase has no verb sense and run's only base form is the verb
-    expect(phrases[0].meanings).toEqual([
+    // synonyms are exported in the meanings file as word + part of speech,
+    // sorted by word; "run" is a verb here because the phrase has no verb
+    // sense and run's only base form is the verb
+    const eventually = readJsonlLines('vocab-bloom-hub-en-meanings.jsonl').find(
+      (l) => l.word === 'in the long run',
+    );
+    expect(eventually).toEqual(
       expect.objectContaining({
+        part_of_speech: EnPartOfSpeechE.phrase,
+        title: 'eventually',
         synonyms: [
           { word: 'give up', part_of_speech: EnPartOfSpeechE.verb },
           { word: 'run', part_of_speech: EnPartOfSpeechE.verb },
         ],
         antonyms: [{ word: 'give', part_of_speech: EnPartOfSpeechE.verb }],
       }),
-    ]);
+    );
 
     const grammar = readJsonlLines('vocab-bloom-hub-en-grammar-patterns.jsonl');
     expect(grammar).toHaveLength(1);
@@ -295,6 +345,9 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
       'vocab-bloom-hub-en-phrasal-verbs.jsonl': { lines: 1 },
       'vocab-bloom-hub-en-grammar-patterns.jsonl': { lines: 1 },
       'vocab-bloom-hub-en-phrases.jsonl': { lines: 1 },
+      'vocab-bloom-hub-en-meanings.jsonl': { lines: 5 },
+      'vocab-bloom-hub-en-meaning-translations.jsonl': { lines: 4 },
+      'vocab-bloom-hub-en-short-translations.jsonl': { lines: 5 },
     });
   });
 

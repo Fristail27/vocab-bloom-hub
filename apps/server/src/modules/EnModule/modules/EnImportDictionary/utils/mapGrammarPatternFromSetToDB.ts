@@ -7,7 +7,7 @@ import {
   LanguageRegisterE,
 } from '../../../../../../types';
 import { getVersion } from '../../../../../../configuration';
-import { wordLinksFromDataSet } from './wordLinksFromDataSet';
+import { mapMeaningFromSetToDB } from './mapMeaningFromSetToDB';
 
 export const mapGrammarPatternFromSetToDB = (ph: DataSetGrammarPatternT): EnWordT => {
   return {
@@ -39,16 +39,9 @@ export const mapGrammarPatternFromSetToDB = (ph: DataSetGrammarPatternT): EnWord
     base_form: undefined,
     phrasal_variants: [],
     forms: [],
-    short_translations: ph.short_translations.map((s) => ({ id: 0, ...s })),
-    meanings: ph.meanings.map((m) => ({
-      ...m,
-      id: 0,
-      meaning_level: m.meaning_level || null,
-      language_register: m.language_register || LanguageRegisterE.formal,
-      area_variant: m.area_variant || EnAreaVariantsE.common,
-      synonyms: wordLinksFromDataSet(m.synonyms),
-      antonyms: wordLinksFromDataSet(m.antonyms),
-      translations: m.translations.map((t) => ({ id: 0, ...t })),
-    })),
+    // nested only in datasets published before #442; current datasets ship
+    // the collections in their own files
+    short_translations: (ph.short_translations ?? []).map((s) => ({ id: 0, ...s })),
+    meanings: (ph.meanings ?? []).map(mapMeaningFromSetToDB),
   };
 };

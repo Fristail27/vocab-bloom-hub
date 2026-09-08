@@ -154,7 +154,11 @@ const runExport = async (words: EnWordT[]): Promise<ExportRun> => {
   for (const w of words) await enService.addWord(w);
 
   const settingsService = { upsert: jest.fn() } as unknown as SettingsService;
-  const service = new EnImportDictionaryService(ds.getRepository(EnWord), settingsService);
+  const service = new EnImportDictionaryService(
+    ds.getRepository(EnWord),
+    new WordRowsService(ds),
+    settingsService,
+  );
 
   const progressRes = new FakeProgressRes();
   await service.exportDictionary(progressRes as unknown as Response);
@@ -231,8 +235,6 @@ describe('EnImportDictionaryService export ordering (issue #247)', () => {
     ) as {
       categories: string[];
       forms: { form_of_word: string; word: string }[];
-      meanings: { title: string; sort_order: number; examples: string[]; translations: { title: string }[] }[];
-      short_translations: { description: string; variants_of_words: string[] }[];
     };
 
     expect(run.categories).toEqual([CategoryE.business, CategoryE.sport]);
@@ -241,13 +243,45 @@ describe('EnImportDictionaryService export ordering (issue #247)', () => {
       EnWordFormsE.present_participle,
       EnWordFormsE.third_person_singular,
     ]);
-    expect(run.meanings.map((m) => m.title)).toEqual(['first', 'second']);
-    expect(run.meanings[1].translations.map((t) => t.title)).toEqual(['второй', 'другой']);
-    expect(run.short_translations.map((t) => t.description)).toEqual(['второй', 'первый']);
+  });
 
+  it('orders the collection files by the entry key, then by the natural keys of the rows (issue #442)', () => {
+    const isRunVerb = (l: Record<string, unknown>) =>
+      l.word === 'run' && l.part_of_speech === EnPartOfSpeechE.verb;
+
+    // the lines of every collection file follow the entry order of the entry files
+    const meaningWords = readLines(ordered, DATASET_FILE_NAMES.meanings).map((l) => [l.word, l.part_of_speech]);
+    expect(meaningWords.slice(0, 4)).toEqual([
+      ['colour', EnPartOfSpeechE.noun],
+      ['colour', EnPartOfSpeechE.noun],
+      ['give', EnPartOfSpeechE.verb],
+      ['give', EnPartOfSpeechE.verb],
+    ]);
+
+    const meanings = readLines(ordered, DATASET_FILE_NAMES.meanings).filter(isRunVerb) as unknown as {
+      title: string;
+      sort_order: number;
+      examples: string[];
+    }[];
+    expect(meanings.map((m) => m.title)).toEqual(['first', 'second']);
     // authored arrays are exported as stored
-    expect(run.meanings[0].examples).toEqual(['first example 2', 'first example 1']);
-    expect(run.short_translations[0].variants_of_words).toEqual(['я', 'а']);
+    expect(meanings[0].examples).toEqual(['first example 2', 'first example 1']);
+
+    const translations = readLines(ordered, DATASET_FILE_NAMES.meaningTranslations).filter(
+      isRunVerb,
+    ) as unknown as { meaning_title: string; meaning_sort_order: number; title: string }[];
+    expect(translations.map((t) => [t.meaning_sort_order, t.meaning_title, t.title])).toEqual([
+      [1, 'first', 'первый'],
+      [2, 'second', 'второй'],
+      [2, 'second', 'другой'],
+    ]);
+
+    const shorts = readLines(ordered, DATASET_FILE_NAMES.shortTranslations).filter(isRunVerb) as unknown as {
+      description: string;
+      variants_of_words: string[];
+    }[];
+    expect(shorts.map((t) => t.description)).toEqual(['второй', 'первый']);
+    expect(shorts[0].variants_of_words).toEqual(['я', 'а']);
   });
 
   it('sorts phrasal variants in the word line and in the phrasal-verbs linking file', () => {

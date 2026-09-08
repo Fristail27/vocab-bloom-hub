@@ -23,10 +23,34 @@ vocab-bloom-hub-en-words.jsonl
 vocab-bloom-hub-en-phrasal-verbs.jsonl
 vocab-bloom-hub-en-grammar-patterns.jsonl
 vocab-bloom-hub-en-phrases.jsonl
+vocab-bloom-hub-en-meanings.jsonl
+vocab-bloom-hub-en-meaning-translations.jsonl
+vocab-bloom-hub-en-short-translations.jsonl
 ```
 
-Only the `.jsonl` files you actually have are needed — at least one of them; phrases, grammar
-patterns and phrasal verbs are optional, and so is `manifest.json`. When the manifest is present
+The entry files (`words`, `phrases`, `grammar-patterns`) carry the entries themselves and their
+forms; `phrasal-verbs` is the linking map of base verbs to their phrasal variants. The
+collections are files of their own (issue #442), one line per row next to the key of its parent:
+
+| File                   | One line per                  | Key of the parent                                               |
+| ---------------------- | ----------------------------- | --------------------------------------------------------------- |
+| `meanings`             | meaning (with its links)      | `word`, `part_of_speech`                                        |
+| `meaning-translations` | translation of a meaning      | `word`, `part_of_speech`, `meaning_sort_order`, `meaning_title` |
+| `short-translations`   | short translation of an entry | `word`, `part_of_speech`                                        |
+
+Phrases and grammar patterns are keyed the same way, with `phrase` / `grammar_pattern` as the
+part of speech. The lines follow the order of the entry files, then the natural keys of the rows,
+so two exports of the same data are byte-identical. Datasets published before this layout nest
+`meanings` and `short_translations` inside the entry lines; the import still reads them.
+
+Only the `.jsonl` files you actually have are needed — at least one of them; every file but the
+words file is optional, and so is `manifest.json`. The collection files are imported after the
+entry files and go to the entries and meanings that exist by then, whether they came from this
+dataset or were there before: a file of translations alone — one language, say — loads into a
+dictionary that already holds the entries, and rows the dictionary already has (a meaning with the
+same sort order and title, a translation in the same language with the same title, a short
+translation in the same language with the same description) are skipped like duplicate entries.
+When the manifest is present
 its `version` is stored as _Your version_ after the import (and its synonym / antonym link counts
 refine the progress bar); without it the version stays unknown. The `license` and `attribution`
 fields an export writes into the manifest ([`DATA_LICENSE.md`](../DATA_LICENSE.md)) are carried
@@ -52,9 +76,10 @@ contains any file with an unknown name. OS artefacts (`.DS_Store`, `__MACOSX/`) 
    `manifest.json` or filled in by hand (version, optional synonym / antonym link counts).
 
 Equivalent API calls (the admin cookie or a Bearer token is required). The multipart fields are
-`archive` for the whole zip, or `words`, `phrasal_verbs`, `grammar_patterns`, `phrases` and
-`manifest` for the separate files; the text fields `version`, `synonym_links` and
-`antonym_links` stand in for (and override) a manifest file:
+`archive` for the whole zip, or `words`, `phrasal_verbs`, `grammar_patterns`, `phrases`,
+`meanings`, `meaning_translations`, `short_translations` and `manifest` for the separate files;
+the text fields `version`, `synonym_links` and `antonym_links` stand in for (and override) a
+manifest file:
 
 ```bash
 # the whole archive
@@ -63,6 +88,11 @@ curl -N -b cookies.txt -F archive=@vocab-bloom-hub-en-export.zip \
 
 # only the words, the version typed by hand
 curl -N -b cookies.txt -F words=@my-words.jsonl -F version=1.4.0 \
+  http://localhost:3010/api/en/dictionary/import/upload
+
+# translations only, for entries the dictionary already has
+curl -N -b cookies.txt -F short_translations=@es-short-translations.jsonl \
+  -F meaning_translations=@es-meaning-translations.jsonl \
   http://localhost:3010/api/en/dictionary/import/upload
 ```
 

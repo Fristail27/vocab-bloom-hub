@@ -25,7 +25,8 @@ Meanings link to other headwords as **synonyms and antonyms** (~509k and ~183k l
 `v0.1.0` revision, counted in `manifest.json` as `synonym_links` / `antonym_links`); the API
 serves them under every entry and as `/words/{word}/synonyms` / `/antonyms`.
 
-Both are exported into the dataset files (`words`, `phrases`, `grammar-patterns`). The bulk of
+Both are exported into the dataset with the meanings (the `meanings` file; before issue #442 the
+meanings were nested in the `words`, `phrases` and `grammar-patterns` lines). The bulk of
 the published revision comes from DeepSeek v4 Flash, with smaller batches from
 `deepseek/deepseek-v4-pro` and `x-ai/grok-4.1-fast`; early batches were labelled by hand, so the
 same model can appear under several spellings, and a few hundred records carry no label. The
@@ -45,7 +46,9 @@ the A1–B2 vocabulary is on the roadmap.
   carries two translation languages, Russian and Spanish (`GET /api/v1/meta` lists them under
   `available_languages`, issue #410); the published `v0.1.0` revision holds Russian only —
   Spanish arrives with a later revision, and `manifest.json` counts the rows per language
-  (`translations`).
+  (`translations`). Translations ship in files of their own (`meaning-translations`,
+  `short-translations`, [offline-import.md](./offline-import.md#dataset-format)), so a language
+  can be loaded on its own into an instance that already has the entries.
 - **Entry-level `language_register` is unreliable on words** — almost every word says `formal`
   because the field defaulted that way during generation. The per-sense register inside
   `meanings` is the meaningful one.

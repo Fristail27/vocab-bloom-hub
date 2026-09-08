@@ -73,7 +73,11 @@ const makeServices = (ds: DataSource) => {
     new WordRowsService(ds),
   );
   const settingsService = { upsert: jest.fn(async () => ({ success: true })) } as unknown as SettingsService;
-  const importService = new EnImportDictionaryService(ds.getRepository(EnWord), settingsService);
+  const importService = new EnImportDictionaryService(
+    ds.getRepository(EnWord),
+    new WordRowsService(ds),
+    settingsService,
+  );
   return { enService, importService };
 };
 
@@ -219,13 +223,16 @@ describe('synonyms and antonyms survive an export → import round trip (issues 
     expect(await fileDs.getRepository(EnMeaning).count()).toBe(8);
   });
 
-  it('exports every synonym with its part of speech', () => {
-    const words = readFileSync(path.join(runDir, DATASET_FILE_NAMES.words), 'utf-8')
+  // the links travel in the meanings file, one line per meaning (issue #442)
+  const readMeanings = () =>
+    readFileSync(path.join(runDir, DATASET_FILE_NAMES.meanings), 'utf-8')
       .trim()
       .split('\n')
-      .map((l) => JSON.parse(l) as { word: string; meanings: Array<{ title: string; synonyms: unknown[] }> });
-    const run = words.find((w) => w.word === 'run');
-    expect(run?.meanings.find((m) => m.title === 'run 1')?.synonyms).toEqual([
+      .map((l) => JSON.parse(l) as { word: string; title: string; synonyms: unknown[]; antonyms: unknown[] });
+
+  it('exports every synonym with its part of speech', () => {
+    const meanings = readMeanings();
+    expect(meanings.find((m) => m.word === 'run' && m.title === 'run 1')?.synonyms).toEqual([
       { word: 'dash', part_of_speech: EnPartOfSpeechE.noun },
       { word: 'in the long run', part_of_speech: EnPartOfSpeechE.phrase },
       { word: 'sprint', part_of_speech: EnPartOfSpeechE.verb },
@@ -233,14 +240,11 @@ describe('synonyms and antonyms survive an export → import round trip (issues 
   });
 
   it('exports every antonym with its part of speech (issue #266)', () => {
-    const words = readFileSync(path.join(runDir, DATASET_FILE_NAMES.words), 'utf-8')
-      .trim()
-      .split('\n')
-      .map((l) => JSON.parse(l) as { word: string; meanings: Array<{ title: string; antonyms: unknown[] }> });
-    expect(words.find((w) => w.word === 'walk')?.meanings[0]?.antonyms).toEqual([
+    const meanings = readMeanings();
+    expect(meanings.find((m) => m.word === 'walk')?.antonyms).toEqual([
       { word: 'in the long run', part_of_speech: EnPartOfSpeechE.phrase },
     ]);
-    expect(words.find((w) => w.word === 'run')?.meanings.map((m) => m.antonyms)).toEqual([
+    expect(meanings.filter((m) => m.word === 'run').map((m) => m.antonyms)).toEqual([
       [{ word: 'walk', part_of_speech: EnPartOfSpeechE.verb }],
       [],
     ]);

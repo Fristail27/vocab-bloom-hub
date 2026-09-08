@@ -9,6 +9,9 @@ export enum EnDictionaryImportPhasesE {
   linking_synonyms,
   linking_antonyms,
   unpacking_archive,
+  saving_meanings,
+  saving_meaning_translations,
+  saving_short_translations,
 }
 
 export const SYSTEM_FIELDS = ['id', 'createdAt', 'updateAt', 'updatedAt'];
@@ -16,12 +19,18 @@ export const SYSTEM_FIELDS = ['id', 'createdAt', 'updateAt', 'updatedAt'];
 // Every jsonl file is written in a deterministic order: lines by
 // (word, part_of_speech, area_variant) and every nested collection by its
 // natural keys, so re-exports of the same data are byte-identical. The exact
-// rules live in utils/sortForDataSet.ts (issue #247)
+// rules live in utils/sortForDataSet.ts (issue #247).
+// The entry files carry the entries themselves; the meanings, their
+// translations and the short translations are files of their own, one line
+// per row next to the key of its parent (issue #442)
 export const DATASET_FILE_NAMES = {
   words: 'vocab-bloom-hub-en-words.jsonl',
   phrasalVerbs: 'vocab-bloom-hub-en-phrasal-verbs.jsonl',
   grammarPatterns: 'vocab-bloom-hub-en-grammar-patterns.jsonl',
   phrases: 'vocab-bloom-hub-en-phrases.jsonl',
+  meanings: 'vocab-bloom-hub-en-meanings.jsonl',
+  meaningTranslations: 'vocab-bloom-hub-en-meaning-translations.jsonl',
+  shortTranslations: 'vocab-bloom-hub-en-short-translations.jsonl',
 } as const;
 
 export const MANIFEST_FILE_NAME = 'manifest.json';
@@ -55,6 +64,9 @@ export const UPLOAD_FILE_FIELDS = {
   phrasal_verbs: DATASET_FILE_NAMES.phrasalVerbs,
   grammar_patterns: DATASET_FILE_NAMES.grammarPatterns,
   phrases: DATASET_FILE_NAMES.phrases,
+  meanings: DATASET_FILE_NAMES.meanings,
+  meaning_translations: DATASET_FILE_NAMES.meaningTranslations,
+  short_translations: DATASET_FILE_NAMES.shortTranslations,
   manifest: MANIFEST_FILE_NAME,
 } as const;
 export type UploadFileFieldT = keyof typeof UPLOAD_FILE_FIELDS;

@@ -66,7 +66,7 @@ export const validateDatasetDir = async (dir: string, logger: Logger): Promise<D
     const unknownListed = listed.filter((name) => !DATASET_JSONL_NAMES.includes(name));
     if (unknownListed.length > 0) reject(`manifest lists unknown files ${unknownListed.join(', ')}`);
     // files the manifest lists but the dataset lacks are fine: an exported
-    // manifest names all four files, yet only the words file may be copied over
+    // manifest names every file, yet only the words file may be copied over
   }
 
   const counted: DatasetManifestT['files'] = {};

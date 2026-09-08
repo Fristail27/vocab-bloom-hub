@@ -32,6 +32,24 @@ export type EnMeaningDST = Omit<
 export type EnShortTranslationDST = Omit<EnShortTranslationT, 'id'>;
 export type EnWordFormDST = Omit<EnWordFormT, 'id'>;
 
+// The key of a base-form entry, as the collection files name their parent
+// (issue #442): the headword and its part of speech, unique among base
+// forms; phrases and grammar patterns carry their own part of speech here
+export type DataSetWordKeyT = { word: string; part_of_speech: EnPartOfSpeechE };
+
+// One line of the meanings file: the meaning's own columns and links next to
+// the key of its word; the translations live in their own file
+export type DataSetMeaningT = DataSetWordKeyT & Omit<EnMeaningDST, 'translations'>;
+// One line of the meaning-translations file: the translation next to the key
+// of its meaning — the word key plus the meaning's sort order and title,
+// unique within a word
+export type DataSetMeaningTranslationT = DataSetWordKeyT & {
+  meaning_sort_order: number;
+  meaning_title: string;
+} & EnMeaningTranslationDST;
+// One line of the short-translations file: the translation next to the word key
+export type DataSetShortTranslationT = DataSetWordKeyT & EnShortTranslationDST;
+
 export type DataSetWordT = Omit<
   EnWord,
   | 'createdAt'
@@ -58,8 +76,10 @@ export type DataSetWordT = Omit<
   language_register: LanguageRegisterE | '';
   verb___transitivity: EnVerbTransitivityE | '';
   verb___phrasal_object_pattern: EnPhrasalObjectPatternE | '';
-  meanings: EnMeaningDST[];
-  short_translations: EnShortTranslationDST[];
+  // datasets published before #442 nest the meanings and short translations
+  // in the word line; current datasets ship them in their own files
+  meanings?: EnMeaningDST[] | undefined;
+  short_translations?: EnShortTranslationDST[] | undefined;
   forms: EnWordFormDST[];
   base_phrasal: string;
   phrasal_variants: string[];
@@ -98,8 +118,8 @@ export type DataSetPhraseT = Omit<
   level: WordLevelE | '';
   area_variant: EnAreaVariantsE | '';
   language_register: LanguageRegisterE | '';
-  meanings: EnMeaningDST[];
-  short_translations: EnShortTranslationDST[];
+  meanings?: EnMeaningDST[] | undefined;
+  short_translations?: EnShortTranslationDST[] | undefined;
   version: string;
 };
 

@@ -1,8 +1,6 @@
 import { DataSetPhraseT } from '../../../../../../types/dictionaries/en/EnDataSetTypes';
 import { EnWord } from '../../../entities/en_word.entity';
-import { EnPartOfSpeechE } from '../../../../../../types';
-import { mapMeaningsForDS, mapShortTranslationForDS } from './prepareWordForDataSet';
-import { sortShortTranslationsForDS, sortStrings } from './sortForDataSet';
+import { sortStrings } from './sortForDataSet';
 
 export const preparePhraseForDataSet = (word: EnWord): DataSetPhraseT => {
   const { pattern: _p, form_of_word: _f, ...w } = word;
@@ -17,8 +15,6 @@ export const preparePhraseForDataSet = (word: EnWord): DataSetPhraseT => {
     level: w.word_level || '',
     is_obsolete: Boolean(w.is_obsolete),
     phrase: w.word.word,
-    meanings: mapMeaningsForDS(w.meanings, EnPartOfSpeechE.phrase),
-    short_translations: sortShortTranslationsForDS(w.short_translations.map(mapShortTranslationForDS)),
     version: w.version,
   };
 };
