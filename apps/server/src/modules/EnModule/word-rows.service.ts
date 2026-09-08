@@ -6,6 +6,7 @@ import { EnEntry } from './entities/en_entry.entity';
 import { EnMeaning } from './entities/en_meaning.entity';
 import { EnMeaningTranslation } from './entities/en_meaning_translation.entity';
 import { EnShortTranslation } from './entities/en_short_translation.entity';
+import { EnWordFormsE } from '../../../types';
 
 type PlainT = Record<string, unknown>;
 type RelationsT = FindOptionsRelations<EnWord>;
@@ -86,6 +87,11 @@ export class WordRowsService {
   // whether a relation option asks for the headword row (`{ word: true }`) of its rows
   private wantsEntry(option: unknown): boolean {
     return typeof option === 'object' && option !== null && Boolean((option as { word?: unknown }).word);
+  }
+
+  // whether a link option asks for the entry's word rows (`{ entries: true }`)
+  private wantsEntries(option: unknown): boolean {
+    return typeof option === 'object' && option !== null && Boolean((option as { entries?: unknown }).entries);
   }
 
   private groupBy<T>(rows: T[], key: (row: T) => unknown): Map<unknown, T[]> {
@@ -186,10 +192,10 @@ export class WordRowsService {
       const [translationsOf, synonymsOf, antonymsOf] = await Promise.all([
         nested.translations && meaningIds.length > 0 ? this.loadTranslations(translations, meaningIds) : null,
         nested.synonyms && meaningIds.length > 0
-          ? this.loadLinks(meanings, entries, 'synonyms', meaningIds)
+          ? this.loadLinks(meanings, entries, words, 'synonyms', meaningIds, this.wantsEntries(nested.synonyms))
           : null,
         nested.antonyms && meaningIds.length > 0
-          ? this.loadLinks(meanings, entries, 'antonyms', meaningIds)
+          ? this.loadLinks(meanings, entries, words, 'antonyms', meaningIds, this.wantsEntries(nested.antonyms))
           : null,
       ]);
       const groups = this.groupBy(meaningRows, (row) => row.owner);
@@ -274,12 +280,16 @@ export class WordRowsService {
     return groups;
   }
 
-  // the junction rows joined with the linked headword's entry row
+  // the junction rows joined with the linked headword's entry row; with
+  // `withEntries` each entry also carries its base-form word rows (`entries`),
+  // what the dataset export derives a link's part of speech from
   private async loadLinks(
     meanings: EntityMetadata,
     entries: EntityMetadata,
+    words: EntityMetadata,
     kind: 'synonyms' | 'antonyms',
     meaningIds: number[],
+    withEntries: boolean,
   ): Promise<Map<unknown, PlainT[]>> {
     const { table, owner, inverse } = this.junction(meanings, kind);
     const lq = this.dataSource
@@ -292,8 +302,29 @@ export class WordRowsService {
       .where(`${this.column('j', owner)} IN (:...ids)`, { ids: meaningIds })
       .orderBy(this.column('j', inverse), 'ASC')
       .getRawMany()) as PlainT[];
+    const linked = raw.map((r) => ({ owner: r.owner, entry: this.hydrate(entries, r, 'le') }));
+
+    if (withEntries && linked.length > 0) {
+      const wordFk = this.fk(words, 'word');
+      const names = [...new Set(linked.map((l) => l.entry.word as string))];
+      const bq = this.dataSource.createQueryBuilder(EnWord, 'lw').select([]);
+      this.selectScalars(bq, words, 'lw');
+      this.selectKey(bq, 'lw', wordFk);
+      const baseRows = (await bq
+        .where(`${this.column('lw', wordFk)} IN (:...names)`, { names })
+        .andWhere(`${this.column('lw', 'form_of_word')} = :baseForm`, { baseForm: EnWordFormsE.base_form })
+        .orderBy(this.column('lw', 'id'), 'ASC')
+        .getRawMany()) as PlainT[];
+      // the rows carry no `word` relation, exactly as find() leaves them
+      const rowsOf = this.groupBy(
+        baseRows.map((r) => ({ headword: r[`lw_${wordFk}`], row: this.hydrate(words, r, 'lw') })),
+        (r) => r.headword,
+      );
+      for (const l of linked) l.entry.entries = (rowsOf.get(l.entry.word) ?? []).map((r) => r.row);
+    }
+
     const groups = new Map<unknown, PlainT[]>();
-    for (const r of raw) groups.set(r.owner, [...(groups.get(r.owner) ?? []), this.hydrate(entries, r, 'le')]);
+    for (const l of linked) groups.set(l.owner, [...(groups.get(l.owner) ?? []), l.entry]);
     return groups;
   }
 

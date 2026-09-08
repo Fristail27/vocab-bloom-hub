@@ -17,7 +17,6 @@ import {
   sortFormsForDS,
   sortMeaningTranslationsForDS,
   sortMeaningsForDS,
-  sortShortTranslationsForDS,
   sortStrings,
   sortWordLinksForDS,
 } from './sortForDataSet';
@@ -65,7 +64,8 @@ export const mapMeaningForDS = (m: EnMeaning, partOfSpeech: EnPartOfSpeechE): En
     synonyms: mapWordLinksForDS(m.synonyms, partOfSpeech),
     antonyms: mapWordLinksForDS(m.antonyms, partOfSpeech),
     categories: sortStrings(m.categories),
-    translations: sortMeaningTranslationsForDS(m.translations.map(mapMeaningTranslationsForDS)),
+    // absent when the entry was loaded without the translations (the meanings file)
+    translations: sortMeaningTranslationsForDS((m.translations ?? []).map(mapMeaningTranslationsForDS)),
   };
 };
 
@@ -119,8 +119,6 @@ export const prepareWordForDataSet = (word: EnWord): DataSetWordT => {
     word: w.word.word,
     base_phrasal: w.base_phrasal?.word.word || '',
     phrasal_variants: sortStrings(w.phrasal_variants?.map((v) => v.word.word)),
-    meanings: mapMeaningsForDS(w.meanings, w.part_of_speech),
-    short_translations: sortShortTranslationsForDS(w.short_translations.map(mapShortTranslationForDS)),
     forms: sortFormsForDS(w.forms.map(mapFormsForDS)),
     version: w.version,
   };

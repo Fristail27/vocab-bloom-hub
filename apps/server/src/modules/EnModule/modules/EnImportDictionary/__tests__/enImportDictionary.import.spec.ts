@@ -16,6 +16,7 @@ import { EnMeaning } from '../../../entities/en_meaning.entity';
 import { EnMeaningTranslation } from '../../../entities/en_meaning_translation.entity';
 import { EnShortTranslation } from '../../../entities/en_short_translation.entity';
 import { EnImportDictionaryService } from '../enImportDictionary.service';
+import { WordRowsService } from '../../../word-rows.service';
 import { SettingsService } from '../../../../SettingsModule/settings.service';
 import { DATASET_VERSION_SETTINGS_FIELD, EnDictionaryImportPhasesE } from '../constants';
 import { ErrorCodes } from '../../../../../../core/constants/error_codes';
@@ -134,7 +135,11 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
     });
     await ds.initialize();
 
-    service = new EnImportDictionaryService(ds.getRepository(EnWord), mockSettingsService);
+    service = new EnImportDictionaryService(
+      ds.getRepository(EnWord),
+      new WordRowsService(ds),
+      mockSettingsService,
+    );
   });
 
   afterAll(async () => {
@@ -567,6 +572,232 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
 
       const rows = await wordRowsOf('walk');
       expect(rows.map((r) => r.description)).toEqual(['v1']);
+    });
+  });
+
+  describe('collection files (issue #442)', () => {
+    const meaningLine = (
+      word: string,
+      part_of_speech: EnPartOfSpeechE,
+      title: string,
+      extra: Record<string, unknown> = {},
+    ) => ({
+      word,
+      part_of_speech,
+      title,
+      definition: `definition of ${title}`,
+      sort_order: 1,
+      is_obsolete: false,
+      examples: [],
+      area_variant: '',
+      language_register: '',
+      meaning_level: '',
+      categories: [],
+      synonyms: [],
+      antonyms: [],
+      ...extra,
+    });
+    const translationLine = (
+      word: string,
+      meaning_title: string,
+      language: AvailableTranslationLanguagesE,
+      title: string,
+      extra: Record<string, unknown> = {},
+    ) => ({
+      word,
+      part_of_speech: EnPartOfSpeechE.verb,
+      meaning_sort_order: 1,
+      meaning_title,
+      language,
+      title,
+      definition: `${title} (def)`,
+      variants_of_words: [title],
+      ...extra,
+    });
+    const shortLine = (word: string, language: AvailableTranslationLanguagesE, description: string) => ({
+      word,
+      part_of_speech: EnPartOfSpeechE.verb,
+      language,
+      description,
+      variants_of_words: [description],
+    });
+    const manifestOf = (files: Record<string, string>) =>
+      JSON.stringify({
+        version: '0.6.0',
+        files: Object.fromEntries(
+          Object.entries(files).map(([name, body]) => [
+            name,
+            { lines: body.split('\n').filter(Boolean).length },
+          ]),
+        ),
+      });
+    const mockSplitDataset = (files: Record<string, string>) =>
+      mockDatasetFiles({ 'manifest.json': manifestOf(files), ...files });
+
+    // the entry files carry no collections; every collection is a file of its own
+    const splitDataset = () => ({
+      'vocab-bloom-hub-en-words.jsonl': toNdjson([
+        makeSetWord('give'),
+        makeSetWord('give up', { verb___is_phrasal: true }),
+      ]),
+      'vocab-bloom-hub-en-phrases.jsonl': toNdjson([makeSetPhrase('in the long run')]),
+      'vocab-bloom-hub-en-meanings.jsonl': toNdjson([
+        meaningLine('give', EnPartOfSpeechE.verb, 'to hand over', {
+          synonyms: [{ word: 'in the long run', part_of_speech: EnPartOfSpeechE.phrase }],
+          antonyms: [{ word: 'give up', part_of_speech: EnPartOfSpeechE.verb }],
+        }),
+        meaningLine('give', EnPartOfSpeechE.verb, 'to yield', { sort_order: 2 }),
+        meaningLine('in the long run', EnPartOfSpeechE.phrase, 'eventually'),
+        // an entry the dictionary does not have: the line is skipped
+        meaningLine('ghost', EnPartOfSpeechE.noun, 'nowhere'),
+        // the same meaning twice: the second line is a duplicate
+        meaningLine('give', EnPartOfSpeechE.verb, 'to hand over'),
+      ]),
+      'vocab-bloom-hub-en-meaning-translations.jsonl': toNdjson([
+        translationLine('give', 'to hand over', AvailableTranslationLanguagesE.ru, 'давать'),
+        translationLine('give', 'to hand over', AvailableTranslationLanguagesE.es, 'dar'),
+        translationLine('give', 'to yield', AvailableTranslationLanguagesE.ru, 'уступать', {
+          meaning_sort_order: 2,
+        }),
+        // a meaning the dictionary does not have (wrong title): skipped
+        translationLine('give', 'to give away', AvailableTranslationLanguagesE.ru, 'отдавать'),
+      ]),
+      'vocab-bloom-hub-en-short-translations.jsonl': toNdjson([
+        shortLine('give', AvailableTranslationLanguagesE.ru, 'давать'),
+        shortLine('give', AvailableTranslationLanguagesE.es, 'dar'),
+        shortLine('ghost', AvailableTranslationLanguagesE.ru, 'призрак'),
+      ]),
+    });
+
+    const counts = async () => ({
+      meanings: await ds.getRepository(EnMeaning).count(),
+      translations: await ds.getRepository(EnMeaningTranslation).count(),
+      shorts: await ds.getRepository(EnShortTranslation).count(),
+    });
+
+    it('imports the meanings, their translations and the short translations from their own files', async () => {
+      mockSplitDataset(splitDataset());
+      const res = new FakeProgressRes();
+      await service.importDictionary({}, res as unknown as ExpressResponse);
+
+      expect(await counts()).toEqual({ meanings: 3, translations: 3, shorts: 2 });
+
+      const give = await ds
+        .getRepository(EnWord)
+        .createQueryBuilder('w')
+        .innerJoin('w.word', 'entry')
+        .leftJoinAndSelect('w.meanings', 'm')
+        .leftJoinAndSelect('m.translations', 't')
+        .leftJoinAndSelect('m.synonyms', 's')
+        .leftJoinAndSelect('m.antonyms', 'a')
+        .leftJoinAndSelect('w.short_translations', 'st')
+        .where('entry.word = :word', { word: 'give' })
+        .getOneOrFail();
+      const handOver = give.meanings.find((m) => m.title === 'to hand over');
+      // the links of a meaning line are resolved once every entry file is in
+      expect(handOver?.synonyms.map((e) => e.word)).toEqual(['in the long run']);
+      expect(handOver?.antonyms.map((e) => e.word)).toEqual(['give up']);
+      expect(handOver?.translations.map((t) => [t.language, t.title]).sort()).toEqual([
+        [AvailableTranslationLanguagesE.es, 'dar'],
+        [AvailableTranslationLanguagesE.ru, 'давать'],
+      ]);
+      expect(give.meanings.find((m) => m.title === 'to yield')?.translations.map((t) => t.title)).toEqual([
+        'уступать',
+      ]);
+      expect(give.short_translations.map((t) => [t.language, t.description]).sort()).toEqual([
+        [AvailableTranslationLanguagesE.es, 'dar'],
+        [AvailableTranslationLanguagesE.ru, 'давать'],
+      ]);
+
+      // every collection file is a stage of its own in the progress stream
+      const stages = new Set(res.chunks.map((c) => (JSON.parse(c) as ProgressChunk).stage));
+      expect(stages).toContain(EnDictionaryImportPhasesE.saving_meanings);
+      expect(stages).toContain(EnDictionaryImportPhasesE.saving_meaning_translations);
+      expect(stages).toContain(EnDictionaryImportPhasesE.saving_short_translations);
+    });
+
+    it('skips the rows the dictionary already has: a re-import adds nothing, a translations-only dataset adds its language', async () => {
+      mockSplitDataset(splitDataset());
+      await service.importDictionary({}, new FakeProgressRes() as unknown as ExpressResponse);
+      const before = await counts();
+
+      mockSplitDataset(splitDataset());
+      await service.importDictionary({}, new FakeProgressRes() as unknown as ExpressResponse);
+      expect(await counts()).toEqual(before);
+
+      // a dataset of translations only, for entries and meanings that exist
+      mockSplitDataset({
+        'vocab-bloom-hub-en-meaning-translations.jsonl': toNdjson([
+          translationLine('give', 'to yield', AvailableTranslationLanguagesE.es, 'ceder', {
+            meaning_sort_order: 2,
+          }),
+          // already there
+          translationLine('give', 'to hand over', AvailableTranslationLanguagesE.es, 'dar'),
+        ]),
+        'vocab-bloom-hub-en-short-translations.jsonl': toNdjson([
+          shortLine('give up', AvailableTranslationLanguagesE.es, 'rendirse'),
+          shortLine('give', AvailableTranslationLanguagesE.es, 'dar'),
+        ]),
+      });
+      await service.importDictionary({}, new FakeProgressRes() as unknown as ExpressResponse);
+      expect(await counts()).toEqual({
+        ...before,
+        translations: before.translations + 1,
+        shorts: before.shorts + 1,
+      });
+      const es = await ds
+        .getRepository(EnMeaningTranslation)
+        .findBy({ language: AvailableTranslationLanguagesE.es });
+      expect(es.map((t) => t.title).sort()).toEqual(['ceder', 'dar']);
+    });
+
+    it('keeps the collections of user-modified entries in update mode and counts them as kept', async () => {
+      mockSplitDataset(splitDataset());
+      await service.importDictionary({}, new FakeProgressRes() as unknown as ExpressResponse);
+      await ds.getRepository(EnEntry).update({ word: 'give up' }, { user_modified: true });
+
+      mockSplitDataset({
+        'vocab-bloom-hub-en-words.jsonl': toNdjson([
+          makeSetWord('give'),
+          makeSetWord('give up', { verb___is_phrasal: true }),
+        ]),
+        'vocab-bloom-hub-en-meanings.jsonl': toNdjson([
+          meaningLine('give', EnPartOfSpeechE.verb, 'to donate'),
+          meaningLine('give up', EnPartOfSpeechE.verb, 'to stop trying'),
+        ]),
+        'vocab-bloom-hub-en-short-translations.jsonl': toNdjson([
+          shortLine('give', AvailableTranslationLanguagesE.ru, 'дарить'),
+          shortLine('give up', AvailableTranslationLanguagesE.ru, 'сдаваться'),
+        ]),
+      });
+      const res = new FakeProgressRes();
+      await service.importDictionary({ update: true }, res as unknown as ExpressResponse);
+
+      const titlesOf = async (headword: string) =>
+        (
+          await ds
+            .getRepository(EnMeaning)
+            .createQueryBuilder('m')
+            .innerJoin('m.word', 'w')
+            .innerJoin('w.word', 'entry')
+            .where('entry.word = :word', { word: headword })
+            .getMany()
+        )
+          .map((m) => m.title)
+          .sort();
+      // "give" was replaced by the dataset: its meanings are the new file's
+      expect(await titlesOf('give')).toEqual(['to donate']);
+      // "give up" was edited by the admin: nothing from the files touched it
+      expect(await titlesOf('give up')).toEqual([]);
+      const shorts = await ds.getRepository(EnShortTranslation).find();
+      expect(shorts.map((t) => t.description).sort()).toEqual(['дарить']);
+
+      const finalChunk = JSON.parse(res.chunks[res.chunks.length - 1]) as ProgressChunk & {
+        kept_user_modified?: number;
+        updated_entries?: number;
+      };
+      expect(finalChunk.updated_entries).toBe(1);
+      expect(finalChunk.kept_user_modified).toBe(1);
     });
   });
 

@@ -8,7 +8,13 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import { DatasetManifestT, ImportDictionaryChunkT } from '../../../../../../types';
 import { ErrorCodes } from '../../../../../../core/constants/error_codes';
-import { DATASET_REFS_URL, datasetBaseUrl, EnDictionaryImportPhasesE, MANIFEST_FILE_NAME } from '../constants';
+import {
+  DATASET_FILE_NAMES,
+  DATASET_REFS_URL,
+  datasetBaseUrl,
+  EnDictionaryImportPhasesE,
+  MANIFEST_FILE_NAME,
+} from '../constants';
 import { parseManifest } from '../utils/parseManifest';
 import type { ImportProgressSink } from '../progress';
 import { AcquiredFileT, DatasetSource } from './types';
@@ -81,7 +87,14 @@ export const fetchDatasetRevisions = async (logger: Logger): Promise<string[]> =
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** An HTTP 4xx: the file is not there, another attempt would not change that */
-class PermanentDownloadError extends Error {}
+class PermanentDownloadError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
 
 /**
  * The published dataset on HuggingFace: every file is downloaded on demand
@@ -101,11 +114,33 @@ export class HuggingFaceDatasetSource implements DatasetSource {
     } = {},
   ) {}
 
-  readManifest(): Promise<DatasetManifestT | null> {
-    return fetchPublishedManifest(this.logger, this.options.revision);
+  // the manifest of the revision, once read; null when it could not be fetched
+  private manifest: DatasetManifestT | null | undefined;
+
+  async readManifest(): Promise<DatasetManifestT | null> {
+    this.manifest = await fetchPublishedManifest(this.logger, this.options.revision);
+    return this.manifest;
+  }
+
+  /**
+   * A file the revision does not carry is not an error: revisions published
+   * before #442 have no collection files, a revision may ship no phrases.
+   * The manifest says which files exist, so those are skipped without a
+   * request; without a manifest a 404 means the same for every file but the
+   * words file — a revision without words is no dataset at all.
+   */
+  private isAbsent(fileName: string, error: unknown): boolean {
+    if (this.manifest) return !(fileName in this.manifest.files);
+    return (
+      error instanceof PermanentDownloadError && error.status === 404 && fileName !== DATASET_FILE_NAMES.words
+    );
   }
 
   async acquireFile(fileName: string, progress: ImportProgressSink): Promise<AcquiredFileT> {
+    if (this.manifest && this.isAbsent(fileName, undefined)) {
+      this.logger.log(`Dataset file "${fileName}" is not part of this revision, skipping it`);
+      return { path: '', temporary: false };
+    }
     if (!existsSync(this.dir)) mkdirSync(this.dir, { recursive: true });
     const filePath = path.join(this.dir, fileName);
     const attempts = this.options.attempts ?? DOWNLOAD_ATTEMPTS;
@@ -117,6 +152,10 @@ export class HuggingFaceDatasetSource implements DatasetSource {
         return { path: filePath, temporary: true };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
+        if (this.isAbsent(fileName, error)) {
+          this.logger.log(`Dataset file "${fileName}" is not part of this revision (${message}), skipping it`);
+          return { path: '', temporary: false };
+        }
         if (attempt >= attempts || error instanceof PermanentDownloadError) {
           this.logger.error(
             `Failed to download dataset file "${fileName}" after ${attempt} attempts: ${message}`,
@@ -156,7 +195,7 @@ export class HuggingFaceDatasetSource implements DatasetSource {
       if (!response.ok || !response.body) {
         const message = `HTTP ${response.status}`;
         throw response.status >= 400 && response.status < 500
-          ? new PermanentDownloadError(message)
+          ? new PermanentDownloadError(message, response.status)
           : new Error(message);
       }
 

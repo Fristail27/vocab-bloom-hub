@@ -13,7 +13,7 @@ import { AuditActionE, AuditEntityTypeE, AuditTriggerE } from '../../../../../ty
 import { AuditService } from '../../../AuditModule/audit.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MetricsService } from '../../../MetricsModule/metrics.service';
-import { EntityManager, FindOptionsRelations, FindOptionsWhere, In, Not, Repository } from 'typeorm';
+import { EntityManager, FindOptionsRelations, In, Repository } from 'typeorm';
 import * as yazl from 'yazl';
 import { randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream, existsSync, mkdirSync } from 'node:fs';
@@ -28,10 +28,12 @@ import { EnEntry } from '../../entities/en_entry.entity';
 import { EnMeaning } from '../../entities/en_meaning.entity';
 import { EnMeaningTranslation } from '../../entities/en_meaning_translation.entity';
 import { EnShortTranslation } from '../../entities/en_short_translation.entity';
+import { WordRowsService } from '../../word-rows.service';
 import { normalizeWordLinks, WORD_LINK_KINDS, WordLinkKindT } from '../../utils/normalizeWordLinks';
 import { resolveBaseFormHeadwords } from '../../utils/findBaseFormHeadwords';
 import { ImportDictionaryReq, ImportDictionarySourceDTO } from './dto/ImportDictionaryReq.dto';
 import {
+  AvailableTranslationLanguagesE,
   DatasetManifestT,
   EnEntryTypesE,
   EnPartOfSpeechE,
@@ -58,16 +60,25 @@ import {
 import {
   cleanEntity,
   compareExportLineKeys,
+  ExportLineKeyT,
   mapGrammarPatternFromSetToDB,
+  mapMeaningFromSetToDB,
   mapWordFromSetToDB,
   prepareGrammarPatternForDataSet,
+  prepareMeaningsForDataSet,
+  prepareMeaningTranslationsForDataSet,
   preparePhraseForDataSet,
+  prepareShortTranslationsForDataSet,
   prepareWordForDataSet,
   sortStrings,
 } from './utils';
 import {
   DataSetGrammarPatternT,
+  DataSetMeaningT,
+  DataSetMeaningTranslationT,
   DataSetPhraseT,
+  DataSetShortTranslationT,
+  DataSetWordKeyT,
   DataSetWordT,
 } from '../../../../../types/dictionaries/en/EnDataSetTypes';
 import { mapPhraseFromSetToDB } from './utils/mapPhraseFromSetToDB';
@@ -104,8 +115,27 @@ const LINK_STAGES: Record<WordLinkKindT, EnDictionaryImportPhasesE> = {
   antonyms: EnDictionaryImportPhasesE.linking_antonyms,
 };
 const linkKey = (meaningId: number, word: string): string => `${meaningId}\u0000${word}`;
+// the key of a meaning within its word, unique by construction of the export (issue #442)
+const meaningKey = (wordId: number, sortOrder: number, title: string): string =>
+  `${wordId}\u0000${sortOrder}\u0000${title}`;
+
+/**
+ * One file of the export (issue #442): the entries it walks, in the order
+ * of the file, the relations each entry is loaded with and the lines one
+ * entry contributes (none, one, or one per row of a collection)
+ */
+type ExportStageT = {
+  path: string;
+  stage: EnDictionaryImportPhasesE;
+  keys: ExportLineKeyT[];
+  relations: FindOptionsRelations<EnWord>;
+  prepare: (word: EnWord) => unknown[];
+};
 
 const EXPORT_TTL_MS = 15 * 60 * 1000;
+// Entries are exported in batches of this size: one statement per relation
+// over the batch's ids (WordRowsService), never a join across the collections
+const EXPORT_BATCH_SIZE = 200;
 // Dataset lines are imported in transactional chunks of this size; each chunk
 // costs a handful of bulk queries instead of ~26 queries per line
 const IMPORT_CHUNK_SIZE = 500;
@@ -147,6 +177,8 @@ export class EnImportDictionaryService implements OnModuleDestroy {
   constructor(
     @InjectRepository(EnWord)
     private readonly enWordsRep: Repository<EnWord>,
+    // the export reads its entries the way every full read does (issue #424)
+    private readonly wordRows: WordRowsService,
 
     private readonly settingsService: SettingsService,
     @Optional() private readonly metrics?: MetricsService,
@@ -798,6 +830,295 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     );
   }
 
+  private async saveMeanings(
+    source: DatasetSource,
+    progress: ImportProgressSink,
+    allLength: number,
+    plusCount: () => number,
+    pendingLinks: PendingWordLinksT,
+    updateCtx?: UpdateModeContextT,
+  ): Promise<void> {
+    await this.streamJsonlImport<DataSetMeaningT>(
+      source,
+      progress,
+      DATASET_FILE_NAMES.meanings,
+      EnDictionaryImportPhasesE.saving_meanings,
+      allLength,
+      plusCount,
+      async (lines) => {
+        await this.bulkSaveMeanings(lines, pendingLinks, updateCtx);
+      },
+    );
+  }
+
+  private async saveMeaningTranslations(
+    source: DatasetSource,
+    progress: ImportProgressSink,
+    allLength: number,
+    plusCount: () => number,
+    updateCtx?: UpdateModeContextT,
+  ): Promise<void> {
+    await this.streamJsonlImport<DataSetMeaningTranslationT>(
+      source,
+      progress,
+      DATASET_FILE_NAMES.meaningTranslations,
+      EnDictionaryImportPhasesE.saving_meaning_translations,
+      allLength,
+      plusCount,
+      async (lines) => {
+        await this.bulkSaveMeaningTranslations(lines, updateCtx);
+      },
+    );
+  }
+
+  private async saveShortTranslations(
+    source: DatasetSource,
+    progress: ImportProgressSink,
+    allLength: number,
+    plusCount: () => number,
+    updateCtx?: UpdateModeContextT,
+  ): Promise<void> {
+    await this.streamJsonlImport<DataSetShortTranslationT>(
+      source,
+      progress,
+      DATASET_FILE_NAMES.shortTranslations,
+      EnDictionaryImportPhasesE.saving_short_translations,
+      allLength,
+      plusCount,
+      async (lines) => {
+        await this.bulkSaveShortTranslations(lines, updateCtx);
+      },
+    );
+  }
+
+  /**
+   * The base-form ids of the entries a chunk of collection lines belongs to
+   * (issue #442), keyed like the lines name them. Lines of entries the
+   * dictionary does not have are skipped with a warning; in update mode the
+   * entries the admin edited keep their content, so their lines are skipped
+   * too (the same rule the entry files follow) and they count as kept.
+   */
+  private async resolveLineWords(
+    em: EntityManager,
+    lines: DataSetWordKeyT[],
+    updateCtx: UpdateModeContextT | undefined,
+    label: string,
+  ): Promise<Map<string, number>> {
+    const { chunked, wordKey } = EnImportDictionaryService;
+    const names = [...new Set(lines.map((l) => l.word))];
+    const idByKey = new Map<string, number>();
+    (await this.selectWordRows(em, names))
+      .filter((r) => r.form === EnWordFormsE.base_form)
+      .forEach((r) => idByKey.set(wordKey(r.word, r.pos, r.form), r.id));
+
+    if (updateCtx) {
+      for (const batch of chunked(names, SQL_PARAMS_CHUNK)) {
+        const rows = await em.getRepository(EnEntry).find({ where: { word: In(batch), user_modified: true } });
+        for (const row of rows) {
+          updateCtx.kept.add(row.word);
+          for (const pos of Object.values(EnPartOfSpeechE)) {
+            idByKey.delete(wordKey(row.word, pos, EnWordFormsE.base_form));
+          }
+        }
+      }
+    }
+
+    let unknown = 0;
+    for (const line of lines) {
+      if (!idByKey.has(wordKey(line.word, line.part_of_speech, EnWordFormsE.base_form))) unknown++;
+    }
+    if (unknown > 0) {
+      this.logger.warn(
+        `Skipped ${unknown} ${label} of entries missing in the dictionary or kept as user-modified`,
+      );
+    }
+    return idByKey;
+  }
+
+  private async selectMeaningRows(
+    em: EntityManager,
+    wordIds: number[],
+  ): Promise<Array<{ id: number; word: number; sort_order: number; title: string }>> {
+    const rows: Array<{ id: number; word: number; sort_order: number; title: string }> = [];
+    for (const batch of EnImportDictionaryService.chunked(wordIds, SQL_PARAMS_CHUNK)) {
+      const raw = await em
+        .getRepository(EnMeaning)
+        .createQueryBuilder('m')
+        .select('m.id', 'id')
+        .addSelect('m.word', 'word')
+        .addSelect('m.sort_order', 'sort_order')
+        .addSelect('m.title', 'title')
+        .where('m.word IN (:...batch)', { batch })
+        .getRawMany<{ id: number; word: number; sort_order: number; title: string }>();
+      rows.push(...raw);
+    }
+    return rows;
+  }
+
+  /**
+   * Saves a chunk of the meanings file (issue #442): every line goes to its
+   * entry, a meaning the entry already has (same sort order and title) is
+   * skipped like a duplicate entry line, the links are collected for the
+   * linking stages the same way nested meanings collect them.
+   */
+  private async bulkSaveMeanings(
+    lines: DataSetMeaningT[],
+    pendingLinks: PendingWordLinksT,
+    updateCtx?: UpdateModeContextT,
+  ): Promise<void> {
+    const { wordKey } = EnImportDictionaryService;
+    await this.enWordsRep.manager.transaction(async (em) => {
+      const idByKey = await this.resolveLineWords(em, lines, updateCtx, 'meanings');
+      const seen = new Set<string>();
+      (await this.selectMeaningRows(em, [...new Set(idByKey.values())])).forEach((r) =>
+        seen.add(meaningKey(r.word, r.sort_order, r.title)),
+      );
+
+      let skipped = 0;
+      for (const line of lines) {
+        const wordId = idByKey.get(wordKey(line.word, line.part_of_speech, EnWordFormsE.base_form));
+        if (wordId === undefined) continue;
+        const { word: _word, part_of_speech: _pos, ...meaningLine } = line;
+        const meaning = mapMeaningFromSetToDB(meaningLine);
+        const key = meaningKey(wordId, meaning.sort_order, meaning.title);
+        if (seen.has(key)) {
+          skipped++;
+          continue;
+        }
+        seen.add(key);
+
+        const { id: _id, translations: _translations, synonyms, antonyms, ...rest } = meaning;
+        const res = await em.getRepository(EnMeaning).insert({ ...rest, word: { id: wordId } as EnWord });
+        const meaningId = res.identifiers[0]?.id as number;
+        for (const kind of WORD_LINK_KINDS) {
+          const words = normalizeWordLinks(kind === 'synonyms' ? synonyms : antonyms, line.word);
+          if (words.length > 0) pendingLinks[kind].push({ meaningId, headword: line.word, words });
+        }
+      }
+      if (skipped > 0) this.logger.log(`Skipped ${skipped} duplicate meaning lines in this chunk`);
+    });
+  }
+
+  /**
+   * Saves a chunk of the meaning-translations file (issue #442): a line is
+   * matched to its meaning by the word key plus the meaning's sort order and
+   * title; a translation the meaning already has in that language with that
+   * title is skipped. A file of one language loads into a dictionary that
+   * already holds the others.
+   */
+  private async bulkSaveMeaningTranslations(
+    lines: DataSetMeaningTranslationT[],
+    updateCtx?: UpdateModeContextT,
+  ): Promise<void> {
+    const { chunked, wordKey } = EnImportDictionaryService;
+    await this.enWordsRep.manager.transaction(async (em) => {
+      const idByKey = await this.resolveLineWords(em, lines, updateCtx, 'meaning translations');
+      const wordIds = [...new Set(idByKey.values())];
+      const meaningIdByKey = new Map<string, number>();
+      (await this.selectMeaningRows(em, wordIds)).forEach((r) =>
+        meaningIdByKey.set(meaningKey(r.word, r.sort_order, r.title), r.id),
+      );
+
+      const seen = new Set<string>();
+      const meaningIds = [...meaningIdByKey.values()];
+      for (const batch of chunked(meaningIds, SQL_PARAMS_CHUNK)) {
+        const rows = await em
+          .getRepository(EnMeaningTranslation)
+          .createQueryBuilder('t')
+          .select('t.meaning', 'meaning')
+          .addSelect('t.language', 'language')
+          .addSelect('t.title', 'title')
+          .where('t.meaning IN (:...batch)', { batch })
+          .getRawMany<{ meaning: number; language: string; title: string }>();
+        rows.forEach((r) => seen.add(`${r.meaning}\u0000${r.language}\u0000${r.title}`));
+      }
+
+      const toInsert = [];
+      let skipped = 0;
+      let unknown = 0;
+      for (const line of lines) {
+        const wordId = idByKey.get(wordKey(line.word, line.part_of_speech, EnWordFormsE.base_form));
+        if (wordId === undefined) continue;
+        const meaningId = meaningIdByKey.get(meaningKey(wordId, line.meaning_sort_order, line.meaning_title));
+        if (meaningId === undefined) {
+          unknown++;
+          continue;
+        }
+        const key = `${meaningId}\u0000${line.language}\u0000${line.title}`;
+        if (seen.has(key)) {
+          skipped++;
+          continue;
+        }
+        seen.add(key);
+        toInsert.push({
+          language: line.language as AvailableTranslationLanguagesE,
+          title: line.title,
+          definition: line.definition,
+          variants_of_words: line.variants_of_words ?? [],
+          meaning: { id: meaningId } as EnMeaning,
+        });
+      }
+      for (const batch of chunked(toInsert, SQL_PARAMS_CHUNK)) {
+        await em.getRepository(EnMeaningTranslation).insert(batch);
+      }
+      if (unknown > 0)
+        this.logger.warn(`Skipped ${unknown} meaning translations of meanings missing in the dictionary`);
+      if (skipped > 0) this.logger.log(`Skipped ${skipped} duplicate meaning translation lines in this chunk`);
+    });
+  }
+
+  /**
+   * Saves a chunk of the short-translations file (issue #442): a line goes to
+   * its entry; a short translation the entry already has in that language
+   * with that description is skipped.
+   */
+  private async bulkSaveShortTranslations(
+    lines: DataSetShortTranslationT[],
+    updateCtx?: UpdateModeContextT,
+  ): Promise<void> {
+    const { chunked, wordKey } = EnImportDictionaryService;
+    await this.enWordsRep.manager.transaction(async (em) => {
+      const idByKey = await this.resolveLineWords(em, lines, updateCtx, 'short translations');
+      const wordIds = [...new Set(idByKey.values())];
+
+      const seen = new Set<string>();
+      for (const batch of chunked(wordIds, SQL_PARAMS_CHUNK)) {
+        const rows = await em
+          .getRepository(EnShortTranslation)
+          .createQueryBuilder('s')
+          .select('s.word', 'word')
+          .addSelect('s.language', 'language')
+          .addSelect('s.description', 'description')
+          .where('s.word IN (:...batch)', { batch })
+          .getRawMany<{ word: number; language: string; description: string }>();
+        rows.forEach((r) => seen.add(`${r.word}\u0000${r.language}\u0000${r.description}`));
+      }
+
+      const toInsert = [];
+      let skipped = 0;
+      for (const line of lines) {
+        const wordId = idByKey.get(wordKey(line.word, line.part_of_speech, EnWordFormsE.base_form));
+        if (wordId === undefined) continue;
+        const key = `${wordId}\u0000${line.language}\u0000${line.description}`;
+        if (seen.has(key)) {
+          skipped++;
+          continue;
+        }
+        seen.add(key);
+        toInsert.push({
+          language: line.language as AvailableTranslationLanguagesE,
+          description: line.description,
+          variants_of_words: line.variants_of_words ?? [],
+          word: { id: wordId } as EnWord,
+        });
+      }
+      for (const batch of chunked(toInsert, SQL_PARAMS_CHUNK)) {
+        await em.getRepository(EnShortTranslation).insert(batch);
+      }
+      if (skipped > 0) this.logger.log(`Skipped ${skipped} duplicate short translation lines in this chunk`);
+    });
+  }
+
   /**
    * Opens the dataset source named by the request. Every check that can
    * reject the request (unknown path, malformed dataset) runs here, before
@@ -975,6 +1296,11 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       await this.savePhrasalVerbs(source, progress, allLength, plusCount);
       await this.saveGrammarPatterns(source, progress, allLength, plusCount, pendingLinks, updateCtx);
       await this.savePhrases(source, progress, allLength, plusCount, pendingLinks, updateCtx);
+      // the collection files (issue #442) come after every entry file: a
+      // meaning may belong to a phrase, a translation to a meaning of any file
+      await this.saveMeanings(source, progress, allLength, plusCount, pendingLinks, updateCtx);
+      await this.saveMeaningTranslations(source, progress, allLength, plusCount, updateCtx);
+      await this.saveShortTranslations(source, progress, allLength, plusCount, updateCtx);
       await this.linkPendingWords(
         progress,
         pendingLinks,
@@ -1035,63 +1361,70 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     return dir;
   }
 
-  private async exportEntities<T>(
-    outPath: string,
+  /**
+   * The natural key of every base-form entry, in the order the files list
+   * their lines: (word, part of speech, area variant), sorted in JS so the
+   * order depends neither on the ids nor on the database collation (issue
+   * #247). Loaded once per export as plain rows; every stage walks a subset.
+   */
+  private async loadExportKeys(): Promise<ExportLineKeyT[]> {
+    const keys = await this.enWordsRep
+      .createQueryBuilder('w')
+      .innerJoin('w.word', 'entry')
+      .select('w.id', 'id')
+      .addSelect('entry.word', 'word')
+      .addSelect('w.part_of_speech', 'part_of_speech')
+      .addSelect('w.area_variant', 'area_variant')
+      .where('w.form_of_word = :baseForm', { baseForm: EnWordFormsE.base_form })
+      .getRawMany<ExportLineKeyT>();
+    return keys.map((k) => ({ ...k, id: Number(k.id) })).sort(compareExportLineKeys);
+  }
+
+  /**
+   * Writes one file of the export: the entries of the stage in batches, each
+   * batch loaded with the stage's relations through WordRowsService — one
+   * statement per relation over the batch's ids, no join across collections
+   * and no entity hydration (issue #442) — and every line `prepare` derives
+   * from an entry, cleaned of the system fields. Returns the line count.
+   */
+  private async exportEntities(
+    stage: ExportStageT,
     total: number,
     processedSoFar: () => number,
     addProcessed: (n: number) => void,
-    stage: EnDictionaryImportPhasesE,
-    whereExtra: FindOptionsWhere<EnWord>,
-    relations: FindOptionsRelations<EnWord>,
-    // prepare may return null to skip a record (e.g. verbs without phrasal variants)
-    prepare: (word: EnWord) => T | null,
     onProgress: (percent: number, stage: EnDictionaryImportPhasesE) => void,
   ): Promise<number> {
-    const outStream = createWriteStream(outPath, { encoding: 'utf-8' });
-    const batchSize = 200;
+    const outStream = createWriteStream(stage.path, { encoding: 'utf-8' });
     let written = 0;
 
     try {
-      // Lines are written in natural-key order (word, part of speech, area
-      // variant), not in id order: the ids differ between databases and the
-      // published files must not depend on them (issue #247). The keys are
-      // sorted in JS so the order does not depend on the DB collation either.
-      const keys = await this.enWordsRep.find({
-        select: { id: true, part_of_speech: true, area_variant: true, word: { word: true } },
-        relations: { word: true },
-        where: { form_of_word: EnWordFormsE.base_form, ...whereExtra },
-      });
-      const orderedKeys = keys
-        .map((k) => ({
-          id: k.id,
-          word: k.word.word,
-          part_of_speech: k.part_of_speech,
-          area_variant: k.area_variant,
-        }))
-        .sort(compareExportLineKeys);
-
-      for (let offset = 0; offset < orderedKeys.length; offset += batchSize) {
-        const chunk = orderedKeys.slice(offset, offset + batchSize);
-        const rows = await this.enWordsRep.find({ where: { id: In(chunk.map((k) => k.id)) }, relations });
+      for (let offset = 0; offset < stage.keys.length; offset += EXPORT_BATCH_SIZE) {
+        const chunk = stage.keys.slice(offset, offset + EXPORT_BATCH_SIZE);
+        const rows = await this.wordRows.load(
+          chunk.map((k) => k.id),
+          stage.relations,
+        );
         const rowsById = new Map(rows.map((row) => [row.id, row]));
 
         for (const key of chunk) {
           const word = rowsById.get(key.id);
           if (!word) continue;
-          const prepared = prepare(word);
-          if (prepared === null) continue;
-          const cleaned = cleanEntity(prepared);
-          outStream.write(JSON.stringify(cleaned) + '\n');
-          written++;
+          for (const line of stage.prepare(word)) {
+            outStream.write(JSON.stringify(cleanEntity(line)) + '\n');
+            written++;
+          }
         }
 
         addProcessed(chunk.length);
-
-        onProgress(total > 0 ? Math.min(100, (processedSoFar() / total) * 100) : 100, stage);
+        onProgress(total > 0 ? Math.min(100, (processedSoFar() / total) * 100) : 100, stage.stage);
+        // the tiny pause lets the progress stream flush
         await new Promise((r) => setTimeout(r, 1));
       }
     } catch (error) {
-      this.logger.error(`Export stage "${stage}" failed`, error instanceof Error ? error.stack : String(error));
+      this.logger.error(
+        `Export stage "${stage.stage}" failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
       outStream.close();
       throw new InternalServerErrorException(ErrorCodes.internal_server_error);
     }
@@ -1104,10 +1437,91 @@ export class EnImportDictionaryService implements OnModuleDestroy {
   }
 
   /**
-   * Собирает 4 jsonl-файла и manifest.json во временной папке, упаковывает
-   * их в zip, регистрирует архив под exportId и возвращает этот id.
-   * Сам процесс идёт через res-стрим (NDJSON прогресс), а скачивание —
-   * отдельным GET-запросом на /export/download/:exportId.
+   * The files of one export (issue #442), each with the entries it walks:
+   * the entry files (words, phrases, grammar patterns) carry the entries
+   * themselves and the forms; the phrasal-verbs file the linking map the
+   * import replays; the meanings, meaning translations and short translations
+   * are one line per row next to the key of their entry, so no stage assembles
+   * the whole tree of a word and the cost of every file is linear in its rows,
+   * whatever the number of translation languages.
+   */
+  private exportStages(runDir: string, keys: ExportLineKeyT[]): ExportStageT[] {
+    const isEntryOf = (parts: EnPartOfSpeechE[]) => (k: ExportLineKeyT) =>
+      parts.includes(k.part_of_speech as EnPartOfSpeechE);
+    const phrases = isEntryOf([EnPartOfSpeechE.phrase]);
+    const grammarPatterns = isEntryOf([EnPartOfSpeechE.grammar_pattern]);
+    const verbs = isEntryOf([EnPartOfSpeechE.verb]);
+    const words = (k: ExportLineKeyT) => !phrases(k) && !grammarPatterns(k);
+    const file = (name: string) => path.join(runDir, name);
+
+    return [
+      {
+        path: file(DATASET_FILE_NAMES.words),
+        stage: EnDictionaryImportPhasesE.saving_words,
+        keys: keys.filter(words),
+        relations: {
+          base_phrasal: { word: true },
+          phrasal_variants: { word: true },
+          word: true,
+          forms: { word: true },
+        },
+        prepare: (w) => [prepareWordForDataSet(w)],
+      },
+      // the linking map the import replays in savePhrasalVerbs: one line per
+      // base verb that has phrasal variants
+      {
+        path: file(DATASET_FILE_NAMES.phrasalVerbs),
+        stage: EnDictionaryImportPhasesE.saving_phrasal_verbs,
+        keys: keys.filter(verbs),
+        relations: { word: true, phrasal_variants: { word: true } },
+        prepare: (w) =>
+          w.phrasal_variants?.length
+            ? [{ word: w.word.word, phrasal_variants: sortStrings(w.phrasal_variants.map((v) => v.word.word)) }]
+            : [],
+      },
+      {
+        path: file(DATASET_FILE_NAMES.phrases),
+        stage: EnDictionaryImportPhasesE.saving_phrases,
+        keys: keys.filter(phrases),
+        relations: { word: true },
+        prepare: (w) => [preparePhraseForDataSet(w)],
+      },
+      {
+        path: file(DATASET_FILE_NAMES.grammarPatterns),
+        stage: EnDictionaryImportPhasesE.saving_grammar_patterns,
+        keys: keys.filter(grammarPatterns),
+        relations: { word: true },
+        prepare: (w) => [prepareGrammarPatternForDataSet(w)],
+      },
+      {
+        path: file(DATASET_FILE_NAMES.meanings),
+        stage: EnDictionaryImportPhasesE.saving_meanings,
+        keys,
+        relations: { word: true, meanings: { synonyms: { entries: true }, antonyms: { entries: true } } },
+        prepare: prepareMeaningsForDataSet,
+      },
+      {
+        path: file(DATASET_FILE_NAMES.meaningTranslations),
+        stage: EnDictionaryImportPhasesE.saving_meaning_translations,
+        keys,
+        relations: { word: true, meanings: { translations: true } },
+        prepare: prepareMeaningTranslationsForDataSet,
+      },
+      {
+        path: file(DATASET_FILE_NAMES.shortTranslations),
+        stage: EnDictionaryImportPhasesE.saving_short_translations,
+        keys,
+        relations: { word: true, short_translations: true },
+        prepare: prepareShortTranslationsForDataSet,
+      },
+    ];
+  }
+
+  /**
+   * Writes the dataset files and manifest.json into a temporary folder,
+   * packs them into a zip, registers the archive under an exportId and
+   * reports it. The run streams NDJSON progress through `res`; the download
+   * is a separate GET on /export/download/:exportId.
    */
   async exportDictionary(res: Response): Promise<void> {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
@@ -1118,23 +1532,15 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     const tmpDir = this.getExportTmpDir();
     const runDir = path.join(tmpDir, exportId);
     mkdirSync(runDir, { recursive: true });
-
-    const wordsPath = path.join(runDir, DATASET_FILE_NAMES.words);
-    const phrasalVerbsPath = path.join(runDir, DATASET_FILE_NAMES.phrasalVerbs);
-    const phrasesPath = path.join(runDir, DATASET_FILE_NAMES.phrases);
-    const grammarPath = path.join(runDir, DATASET_FILE_NAMES.grammarPatterns);
     const manifestPath = path.join(runDir, MANIFEST_FILE_NAME);
     const zipPath = path.join(tmpDir, `${exportId}.zip`);
 
     const startedAt = Date.now();
-    // the phrasal-verbs stage walks the base verbs a second time, so they
-    // count into the progress total twice
-    const baseTotal = await this.enWordsRep.count({ where: { form_of_word: EnWordFormsE.base_form } });
-    const verbTotal = await this.enWordsRep.count({
-      where: { form_of_word: EnWordFormsE.base_form, part_of_speech: EnPartOfSpeechE.verb },
-    });
-    const total = baseTotal + verbTotal;
-    this.logger.log(`Dictionary export ${exportId} started: ${baseTotal} base records to export`);
+    const keys = await this.loadExportKeys();
+    const stages = this.exportStages(runDir, keys);
+    // every stage walks its entries once; the total is what the progress counts
+    const total = stages.reduce((sum, stage) => sum + stage.keys.length, 0);
+    this.logger.log(`Dictionary export ${exportId} started: ${keys.length} base records to export`);
 
     let processed = 0;
     const addProcessed = (n: number) => (processed += n);
@@ -1146,73 +1552,15 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     this.metrics?.transferStarted('export');
 
     try {
-      const wordsLines = await this.exportEntities(
-        wordsPath,
-        total,
-        () => processed,
-        addProcessed,
-        EnDictionaryImportPhasesE.saving_words,
-        { part_of_speech: Not(In([EnPartOfSpeechE.phrase, EnPartOfSpeechE.grammar_pattern])) },
-        {
-          base_phrasal: { word: true },
-          phrasal_variants: { word: true },
-          word: true,
-          forms: { word: true },
-          short_translations: true,
-          meanings: { translations: true, synonyms: { entries: true }, antonyms: { entries: true } },
-        },
-        prepareWordForDataSet,
-        emit,
-      );
-
-      // The linking map the import replays in savePhrasalVerbs: one line per
-      // base verb that has phrasal variants
-      const phrasalVerbsLines = await this.exportEntities(
-        phrasalVerbsPath,
-        total,
-        () => processed,
-        addProcessed,
-        EnDictionaryImportPhasesE.saving_phrasal_verbs,
-        { part_of_speech: EnPartOfSpeechE.verb },
-        { word: true, phrasal_variants: { word: true } },
-        (w) =>
-          w.phrasal_variants?.length
-            ? { word: w.word.word, phrasal_variants: sortStrings(w.phrasal_variants.map((v) => v.word.word)) }
-            : null,
-        emit,
-      );
-
-      const phrasesLines = await this.exportEntities(
-        phrasesPath,
-        total,
-        () => processed,
-        addProcessed,
-        EnDictionaryImportPhasesE.saving_phrases,
-        { part_of_speech: EnPartOfSpeechE.phrase },
-        {
-          word: true,
-          short_translations: true,
-          meanings: { translations: true, synonyms: { entries: true }, antonyms: { entries: true } },
-        },
-        preparePhraseForDataSet,
-        emit,
-      );
-
-      const grammarLines = await this.exportEntities(
-        grammarPath,
-        total,
-        () => processed,
-        addProcessed,
-        EnDictionaryImportPhasesE.saving_grammar_patterns,
-        { part_of_speech: EnPartOfSpeechE.grammar_pattern },
-        {
-          word: true,
-          short_translations: true,
-          meanings: { translations: true, synonyms: { entries: true }, antonyms: { entries: true } },
-        },
-        prepareGrammarPatternForDataSet,
-        emit,
-      );
+      const files: DatasetManifestT['files'] = {};
+      for (const stage of stages) {
+        const stageStartedAt = Date.now();
+        const lines = await this.exportEntities(stage, total, () => processed, addProcessed, emit);
+        files[path.basename(stage.path)] = { lines };
+        this.logger.log(
+          `Export stage "${EnDictionaryImportPhasesE[stage.stage]}" wrote ${lines} lines in ${Date.now() - stageStartedAt}ms`,
+        );
+      }
 
       // The manifest travels inside the archive, so the published dataset
       // always carries line counts matching its jsonl files (issue #159)
@@ -1224,17 +1572,12 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         synonym_links: await this.countExportedLinks('synonyms'),
         antonym_links: await this.countExportedLinks('antonyms'),
         translations: await this.countTranslationsByLanguage(),
-        files: {
-          [DATASET_FILE_NAMES.words]: { lines: wordsLines },
-          [DATASET_FILE_NAMES.phrasalVerbs]: { lines: phrasalVerbsLines },
-          [DATASET_FILE_NAMES.grammarPatterns]: { lines: grammarLines },
-          [DATASET_FILE_NAMES.phrases]: { lines: phrasesLines },
-        },
+        files,
       };
       await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf-8');
 
       emit(100, EnDictionaryImportPhasesE.packing_archive);
-      await this.zipFiles(zipPath, [wordsPath, phrasalVerbsPath, phrasesPath, grammarPath, manifestPath]);
+      await this.zipFiles(zipPath, [...stages.map((stage) => stage.path), manifestPath]);
 
       const timeout = setTimeout(() => this.cleanupExport(exportId), EXPORT_TTL_MS);
       timeout.unref();
@@ -1255,13 +1598,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       this.metrics?.transferFinished('export', 'failure');
       throw error;
     } finally {
-      await Promise.allSettled([
-        unlink(wordsPath),
-        unlink(phrasalVerbsPath),
-        unlink(phrasesPath),
-        unlink(grammarPath),
-        unlink(manifestPath),
-      ]);
+      await Promise.allSettled([...stages.map((stage) => unlink(stage.path)), unlink(manifestPath)]);
       res.end();
     }
   }

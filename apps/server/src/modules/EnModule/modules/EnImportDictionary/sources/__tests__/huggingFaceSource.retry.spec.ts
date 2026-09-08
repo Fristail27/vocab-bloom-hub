@@ -68,12 +68,56 @@ describe('HuggingFaceDatasetSource downloads (issue #268)', () => {
     }
   });
 
-  it('does not retry an HTTP 4xx: the file is not there', async () => {
+  it('does not retry an HTTP 4xx on the words file: the dataset is not there', async () => {
     fetchMock.mockResolvedValue(textResponse('nope', 404));
     const source = new HuggingFaceDatasetSource(logger, { attempts: 3, retryDelayMs: 0 });
     try {
-      await expect(source.acquireFile('x.jsonl', sink())).rejects.toThrow(InternalServerErrorException);
+      await expect(source.acquireFile('vocab-bloom-hub-en-words.jsonl', sink())).rejects.toThrow(
+        InternalServerErrorException,
+      );
       expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      await source.dispose();
+    }
+  });
+
+  it('treats a 404 on any other file as a file the revision does not carry (issue #442)', async () => {
+    fetchMock.mockResolvedValue(textResponse('nope', 404));
+    const source = new HuggingFaceDatasetSource(logger, { attempts: 3, retryDelayMs: 0 });
+    try {
+      await expect(source.acquireFile('vocab-bloom-hub-en-meanings.jsonl', sink())).resolves.toEqual({
+        path: '',
+        temporary: false,
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      // a 403 is still an error: the revision is there, the file is refused
+      fetchMock.mockResolvedValue(textResponse('nope', 403));
+      await expect(source.acquireFile('vocab-bloom-hub-en-meanings.jsonl', sink())).rejects.toThrow(
+        InternalServerErrorException,
+      );
+    } finally {
+      await source.dispose();
+    }
+  });
+
+  it('skips the files the manifest of the revision does not list, without a request (issue #442)', async () => {
+    fetchMock.mockResolvedValueOnce(
+      textResponse(
+        JSON.stringify({ version: '0.1.0', files: { 'vocab-bloom-hub-en-words.jsonl': { lines: 1 } } }),
+      ),
+    );
+    const source = new HuggingFaceDatasetSource(logger, { attempts: 3, retryDelayMs: 0 });
+    try {
+      expect(await source.readManifest()).toMatchObject({ version: '0.1.0' });
+      await expect(source.acquireFile('vocab-bloom-hub-en-meanings.jsonl', sink())).resolves.toEqual({
+        path: '',
+        temporary: false,
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      // a file the manifest lists is downloaded
+      fetchMock.mockResolvedValueOnce(textResponse('{"word":"a"}\n'));
+      const acquired = await source.acquireFile('vocab-bloom-hub-en-words.jsonl', sink());
+      expect(await readFile(acquired.path, 'utf8')).toBe('{"word":"a"}\n');
     } finally {
       await source.dispose();
     }

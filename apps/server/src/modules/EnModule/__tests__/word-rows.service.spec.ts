@@ -222,6 +222,24 @@ describe('WordRowsService (issue #424)', () => {
     expect(loaded[1].meanings[0]).not.toHaveProperty('synonyms');
   });
 
+  it('carries the base-form rows of the linked entries when a link asks for them (issue #442)', async () => {
+    const relations = { word: true, meanings: { synonyms: { entries: true }, antonyms: true } } as const;
+    const [run] = await loader.load([ids.run], relations);
+    const expected = (await findAll([ids.run], relations))[0];
+    // the same rows find() joins in, minus what only an entity carries
+    expect(
+      plain(run.meanings[0].synonyms.map((e) => e.entries.map((w) => [w.word, w.part_of_speech]))),
+    ).toEqual(
+      plain(expected.meanings[0].synonyms.map((e) => e.entries.map((w) => [w.word, w.part_of_speech]))),
+    );
+    expect(run.meanings[0].synonyms.map((e) => e.entries.map((w) => w.form_of_word))).toEqual([
+      [EnWordFormsE.base_form],
+      [EnWordFormsE.base_form],
+    ]);
+    // the antonyms were asked for without their rows
+    expect(run.meanings[1].antonyms[0]).not.toHaveProperty('entries');
+  });
+
   it('skips unknown ids and answers nothing for none', async () => {
     expect(await loader.load([], FULL_WORD_RELATIONS)).toEqual([]);
     expect((await loader.load([999_999, ids.run], { word: true })).map((row) => row.id)).toEqual([ids.run]);
