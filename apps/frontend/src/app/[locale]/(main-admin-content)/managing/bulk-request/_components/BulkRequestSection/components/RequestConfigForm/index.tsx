@@ -5,8 +5,22 @@ import { Input as AntdInput, InputNumber, Radio, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
 import { Input } from '@/core/ui/Input';
 import { Select } from '@/core/ui/Select';
-import { AuthHeaderModeE, BulkItemT, BulkRequestConfigT, ResponseMapperIdE, SourceKindE } from '../../types';
-import { MAX_CONCURRENCY, MAX_RETRIES, MIN_CONCURRENCY } from '../../constants';
+import { getTranslationsOptions } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/TranslationLanguageSelect/utils';
+import {
+  AuthHeaderModeE,
+  BulkItemT,
+  BulkRequestConfigT,
+  PromptPresetT,
+  ResponseMapperIdE,
+  SourceKindE,
+} from '../../types';
+import {
+  findPromptPreset,
+  MAX_CONCURRENCY,
+  MAX_RETRIES,
+  MIN_CONCURRENCY,
+  PROMPT_PRESETS,
+} from '../../constants';
 import { SOURCE_KINDS, SOURCE_PLACEHOLDERS, toTemplateVars } from '../../sources';
 import { buildRequestBody } from '../../utils/renderTemplate';
 import { parseResponsePath } from '../../utils/responseMappers';
@@ -52,12 +66,24 @@ export const RequestConfigForm: React.FC<RequestConfigFormP> = ({
   previewItem,
 }) => {
   const t = useTranslations('bulk_request');
+  const tWords = useTranslations('en_managing_words');
   const preview = React.useMemo(
     () => renderPreview(config, sourceKind, previewItem),
     [config, sourceKind, previewItem],
   );
   const placeholders = SOURCE_PLACEHOLDERS[sourceKind].map((p) => `{{${p}}}`).join(', ');
   const responsePathValid = parseResponsePath(config.responsePath) !== null;
+  // the preset the prompt still is; none once the admin has edited it
+  const activePreset = findPromptPreset(sourceKind, config.promptTemplate);
+  const languageLabels = getTranslationsOptions(tWords);
+  const presetLabel = (preset: PromptPresetT) =>
+    preset.language
+      ? t(preset.labelKey, { language: languageLabels.find((o) => o.value === preset.language)?.label ?? '' })
+      : t(preset.labelKey);
+  const applyPreset = (id: string) => {
+    const preset = PROMPT_PRESETS[sourceKind].find((p) => p.id === id);
+    if (preset) onChange({ promptTemplate: preset.template });
+  };
 
   return (
     <div className={styles.form}>
@@ -131,6 +157,18 @@ export const RequestConfigForm: React.FC<RequestConfigFormP> = ({
 
       <div className={styles.field}>
         <Text strong>{t('prompt_template')}</Text>
+        <Radio.Group
+          size="small"
+          value={activePreset?.id}
+          onChange={(e) => applyPreset(e.target.value as string)}
+          data-testid="bulk-prompt-presets"
+        >
+          {PROMPT_PRESETS[sourceKind].map((preset) => (
+            <Radio.Button key={preset.id} value={preset.id} data-testid={`bulk-prompt-preset-${preset.id}`}>
+              {presetLabel(preset)}
+            </Radio.Button>
+          ))}
+        </Radio.Group>
         <TextArea
           value={config.promptTemplate}
           autoSize={{ minRows: 2, maxRows: 8 }}
@@ -140,6 +178,7 @@ export const RequestConfigForm: React.FC<RequestConfigFormP> = ({
         <Text type="secondary" data-testid="bulk-placeholders">
           {t('prompt_template_hint', { placeholders })}
         </Text>
+        <Text type="secondary">{t('prompt_presets_hint')}</Text>
       </div>
 
       <div className={styles.field}>

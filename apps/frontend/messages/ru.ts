@@ -239,6 +239,13 @@ export default {
     extra_headers_hint: 'По одному «Header-Name: value» на строку, например anthropic-version: 2023-06-01',
     prompt_template: 'Шаблон промпта',
     prompt_template_hint: 'Плейсхолдеры: {placeholders}',
+    prompt_presets_hint:
+      'Пресет заполняет шаблон готовой задачей; отредактированный шаблон ни к какому пресету не относится. Пресеты перевода отвечают в форме строки перевода (language, title, definition, variants_of_words для значения; language, description, variants_of_words для краткого перевода): на таблицах слов и значений перевод пишется с нуля, на таблицах переводов — по образцу строки, поэтому отфильтруйте строки по языку, с которого переводить.',
+    preset_synonyms: 'Синонимы',
+    preset_synonyms_antonyms: 'Синонимы и антонимы',
+    preset_check: 'Проверить перевод',
+    preset_short_translation: 'Краткий перевод: {language}',
+    preset_meaning_translation: 'Перевод значения: {language}',
     body_template: 'Тело запроса (JSON)',
     body_template_hint:
       "Отправляется как тело POST. Плейсхолдеры подставляются с JSON-экранированием; '{{'prompt'}}' — отрендеренный шаблон промпта.",
