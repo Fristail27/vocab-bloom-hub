@@ -7,6 +7,16 @@ generated release notes; the full commit history lives in git.
 
 ## v0.2.0-beta.1 — unreleased
 
+- **French (`fr`) as a translation language** (issue #445): `AvailableTranslationLanguagesE`
+  gains `fr` the way it gained `es` — a migration widens both Postgres enum types, the admin
+  offers it (flag, label) wherever a translation is added, the public filters and
+  `available_languages` carry it, the spec and both SDKs are regenerated. The bulk-request
+  page gets the "Short translation: French" and "Meaning translation: French" presets, and its
+  output lines name a meaning by `meaning_sort_order` + `meaning_title` next to `meaning_id`
+  (the admin listing of meaning translations reports `meaning_sort_order` too), so a run's
+  jsonl loads as the meaning-translations file of the dataset. The data follows with a later
+  dataset revision.
+
 - **Node.js 22 is enough to run it** (issue #439): the required version drops from 24 to
   `>=22.13`, the oldest release every dependency accepts, so the current LTS line of most hosts
   and distributions runs the project without a version manager. The Docker images are built on

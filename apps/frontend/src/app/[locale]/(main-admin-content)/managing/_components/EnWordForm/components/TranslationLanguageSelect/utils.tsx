@@ -9,6 +9,7 @@ type LanguagePresentationT = { icons: Array<keyof typeof allIcons>; labelKey: Pa
 const TRANSLATION_LANGUAGE_PRESENTATION: Record<AvailableTranslationLanguagesE, LanguagePresentationT> = {
   [AvailableTranslationLanguagesE.ru]: { icons: ['rusFlag'], labelKey: 'translation_rus' },
   [AvailableTranslationLanguagesE.es]: { icons: ['esFlag'], labelKey: 'translation_es' },
+  [AvailableTranslationLanguagesE.fr]: { icons: ['frFlag'], labelKey: 'translation_fr' },
 };
 
 export const getTranslationsOptions = (t: TranslatorT) =>

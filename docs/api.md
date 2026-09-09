@@ -221,7 +221,7 @@ the terms of the data — `license` (the SPDX identifier, `"CC-BY-4.0"`), `licen
 and `counts` (entries, words, phrases, grammar patterns, word forms, meanings, meaning and short
 translations; the counts are refreshed at most once a minute), and `available_languages`
 (issue #394): `source`, the language of the headwords (`["en"]`), and `translations`, the
-languages a translation may carry on this build (`["ru", "es"]` since issue #410) — the values
+languages a translation may carry on this build (`["ru", "es", "fr"]` — issues #410, #445) — the values
 `?language=` accepts. They describe the schema, not the data: a language is listed whether or not a
 translation in it has been imported yet.
 

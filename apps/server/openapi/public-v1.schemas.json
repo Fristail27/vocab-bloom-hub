@@ -641,7 +641,8 @@
     "type": "string",
     "enum": [
       "ru",
-      "es"
+      "es",
+      "fr"
     ]
   },
   "PublicWordV1ShortTranslationT": {

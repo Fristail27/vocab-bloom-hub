@@ -111,6 +111,8 @@ export type EnMeaningTranslationListItemT = {
   part_of_speech: EnPartOfSpeechE;
   meaning_title: string;
   meaning_definition: string;
+  // with the title, the key of the meaning within its word in the dataset files (issue #442)
+  meaning_sort_order: number;
   language: AvailableTranslationLanguagesE;
   title: string;
   definition: string;
