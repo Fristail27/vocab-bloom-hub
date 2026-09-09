@@ -55,6 +55,10 @@ export type PaginatedListT<T> = {
   limit: number;
   total: number;
   has_more: boolean;
+  // the id of the last row of this page when there is a next one: pass it as
+  // `after` to read the next page without an OFFSET (the dictionary listings;
+  // the audit journal pages by number only)
+  next_after?: number | null;
 };
 
 export type ListWordsQueryT = ListWordsQueryDTO;

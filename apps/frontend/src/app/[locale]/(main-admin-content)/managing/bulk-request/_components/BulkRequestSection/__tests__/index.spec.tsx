@@ -341,7 +341,7 @@ describe('BulkRequestSection', () => {
     await screen.findByTestId('bulk-download-results');
     expect(screen.getByTestId('bulk-status').textContent).toBe('status_done:2/2/2/0');
     // the filtered scope was collected through the meanings endpoint, not the words one
-    expect(EnApi.listMeanings).toHaveBeenCalledWith({ page: 1, limit: 200 });
+    expect(EnApi.listMeanings).toHaveBeenCalledWith({ page: 1, limit: 200, after: 0 });
     expect(EnApi.listWords).not.toHaveBeenCalledWith(expect.objectContaining({ limit: 200 }));
 
     fireEvent.click(screen.getByTestId('bulk-download-results'));
@@ -424,7 +424,7 @@ describe('BulkRequestSection', () => {
 
     await screen.findByTestId('bulk-download-results');
     // the filtered scope was collected through the short translations endpoint
-    expect(EnApi.listShortTranslations).toHaveBeenCalledWith({ page: 1, limit: 200 });
+    expect(EnApi.listShortTranslations).toHaveBeenCalledWith({ page: 1, limit: 200, after: 0 });
     fireEvent.click(screen.getByTestId('bulk-download-results'));
     const text = await blobText(saveBlobSpy.mock.calls[0][0] as Blob);
     expect(JSON.parse(text.trim())).toEqual({
@@ -567,6 +567,34 @@ describe('BulkRequestSection', () => {
       definition: 'dejar atrás',
       variants_of_words: ['abandonar'],
     });
+  });
+
+  it('collects the filtered rows page after page by next_after, never by a deep page number', async () => {
+    fetchMock.mockImplementation(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as { messages: { role: string; content: string }[] };
+      const word = body.messages[1].content.match(/"([^"]+)"/)?.[1] ?? '?';
+      return chatAnswer([`${word}-syn`]);
+    });
+    // the table's first page, then the run's two keyset pages
+    const words = [makeItem(1, 'abandon'), makeItem(2, 'abide'), makeItem(3, 'able')];
+    (EnApi.listWords as jest.Mock).mockImplementation(async (query: { limit: number; after?: number }) => {
+      if (query.limit !== 200) return page(words);
+      return !query.after
+        ? { ...page(words.slice(0, 2), 3), has_more: true, next_after: 2 }
+        : { ...page(words.slice(2), 3), next_after: null };
+    });
+
+    renderSection();
+    await goToWords('https://api.example.com/v1/chat/completions');
+    fireEvent.click(screen.getByText('scope_filtered:3'));
+    fireEvent.click(screen.getByTestId('bulk-start'));
+
+    await screen.findByTestId('bulk-download-results');
+    expect(screen.getByTestId('bulk-status').textContent).toBe('status_done:3/3/3/0');
+    // the walk starts from row 0, never from the word-ordered first page
+    expect(EnApi.listWords).toHaveBeenCalledWith({ page: 1, limit: 200, after: 0 });
+    expect(EnApi.listWords).toHaveBeenCalledWith({ page: 2, limit: 200, after: 2 });
+    expect(EnApi.listWords).not.toHaveBeenCalledWith(expect.objectContaining({ page: 3 }));
   });
 
   it('reads the value to process from the response path and blocks an invalid path', async () => {

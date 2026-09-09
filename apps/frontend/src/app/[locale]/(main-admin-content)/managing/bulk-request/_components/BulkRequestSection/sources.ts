@@ -64,21 +64,28 @@ export const SOURCE_PLACEHOLDERS: Record<SourceKindE, readonly string[]> = {
 
 export const emptySource = (kind: SourceKindE): SourceStateT => ({ kind, filter: {} });
 
-/** Lists one page of the chosen table through our own API */
+/**
+ * Lists one page of the chosen table through our own API: a numbered page
+ * for the table, or the page after the row `after` (its id, from the
+ * previous answer's next_after) for a walk over every row — a keyset page
+ * the server reads without an OFFSET, whatever the depth
+ */
 export const listRecords = (
   source: SourceStateT,
   page: number,
   limit: number,
+  after?: number,
 ): Promise<PaginatedListT<BulkItemT> | ErrorResT> => {
+  const pagination = { page, limit, ...(after !== undefined && { after }) };
   switch (source.kind) {
     case SourceKindE.words:
-      return EnApi.listWords({ ...source.filter, page, limit });
+      return EnApi.listWords({ ...source.filter, ...pagination });
     case SourceKindE.meanings:
-      return EnApi.listMeanings({ ...source.filter, page, limit });
+      return EnApi.listMeanings({ ...source.filter, ...pagination });
     case SourceKindE.translations:
-      return EnApi.listMeaningTranslations({ ...source.filter, page, limit });
+      return EnApi.listMeaningTranslations({ ...source.filter, ...pagination });
     case SourceKindE.short_translations:
-      return EnApi.listShortTranslations({ ...source.filter, page, limit });
+      return EnApi.listShortTranslations({ ...source.filter, ...pagination });
   }
 };
 

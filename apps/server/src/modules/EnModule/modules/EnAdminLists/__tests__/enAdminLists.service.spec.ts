@@ -196,6 +196,58 @@ describe('EnAdminListsService (issue #249)', () => {
     expect(second).toMatchObject({ page: 2, total: 6, has_more: false });
   });
 
+  it('walks every listing by `after` (an id range, no OFFSET) over every row of the numbered pages', async () => {
+    const listings = [
+      { name: 'words', list: (q: { page?: number; limit: number; after?: number }) => service.listWords(q) },
+      {
+        name: 'meanings',
+        list: (q: { page?: number; limit: number; after?: number }) => service.listMeanings(q),
+      },
+      {
+        name: 'meaning translations',
+        list: (q: { page?: number; limit: number; after?: number }) => service.listMeaningTranslations(q),
+      },
+      {
+        name: 'short translations',
+        list: (q: { page?: number; limit: number; after?: number }) => service.listShortTranslations(q),
+      },
+    ];
+    for (const { name, list } of listings) {
+      const all = await list({ page: 1, limit: 200 });
+      expect(all.has_more).toBe(false);
+      expect(all.next_after).toBeNull();
+
+      // page by page after the last row of the previous page: every row once, in id order
+      const walked: number[] = [];
+      let after: number | undefined = 0;
+      for (let i = 0; i < 10; i++) {
+        const page = await list({ limit: 2, after });
+        expect(page).toMatchObject({ page: 1, limit: 2, total: all.total });
+        walked.push(...page.items.map((item) => item.id));
+        if (!page.has_more) {
+          expect(page.next_after).toBeNull();
+          break;
+        }
+        expect(page.next_after).toBe(page.items[page.items.length - 1]?.id);
+        after = page.next_after as number;
+      }
+      const ascending = [...walked].sort((a, b) => a - b);
+      expect({ name, ids: walked }).toEqual({ name, ids: ascending });
+      expect({ name, ids: ascending }).toEqual({
+        name,
+        ids: all.items.map((item) => item.id).sort((a, b) => a - b),
+      });
+    }
+  });
+
+  it('answers an empty last page for an `after` past every row', async () => {
+    expect(await service.listWords({ limit: 2, after: 999_999 })).toMatchObject({
+      items: [],
+      has_more: false,
+      next_after: null,
+    });
+  });
+
   it('maps every column plus the meanings / short translations counters', async () => {
     const res = await service.listWords({ part_of_speech: [EnPartOfSpeechE.verb], search: 'run' });
 

@@ -11,7 +11,15 @@ export const toBoolean = ({ value }: { value: unknown }) =>
 export const LIST_MAX_LIMIT = 200;
 export const LIST_DEFAULT_LIMIT = 50;
 
-/** Pagination shared by the admin listings (GET /api/en/words, /meanings, /meaning-translations) */
+/**
+ * Pagination shared by the admin listings (GET /api/en/words, /meanings,
+ * /meaning-translations, /short-translations): numbered pages, ordered by
+ * word, for the tables, or `after` — the id of the last row of the previous
+ * page — for a walk over every row matching the filter. A walk goes in id
+ * order of the listing's table: `id > after`, one index range per page
+ * whatever the depth, where a numbered page past 50k rows sorts the whole
+ * table again (the listing's sort key spans three tables, no index covers it).
+ */
 export class PaginationQueryDTO {
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()
@@ -27,4 +35,14 @@ export class PaginationQueryDTO {
   @Min(1)
   @Max(LIST_MAX_LIMIT)
   limit?: number = LIST_DEFAULT_LIMIT;
+
+  @ApiPropertyOptional({
+    description:
+      'The id of the last row of the previous page (0 for the first page of a walk): the rows after it in id order are answered and `page` is ignored',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  after?: number;
 }

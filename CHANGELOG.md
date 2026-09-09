@@ -7,6 +7,17 @@ generated release notes; the full commit history lives in git.
 
 ## v0.2.0-beta.1 — unreleased
 
+- **Bulk request walks the rows without an OFFSET**: the admin listings (`GET /api/en/words`,
+  `/meanings`, `/meaning-translations`, `/short-translations`) take `after`, the id of the last
+  row of the previous page, and answer `next_after`; the rows after it come in id order, one
+  index range per page, so collecting every row matching a filter no longer sorts the whole
+  table per page (on the full dictionary the 285th page of 200 short translations sorted 230k
+  rows in a parallel plan and ran the Docker Postgres out of shared memory). The listings run
+  their queries without parallel workers on Postgres (`SET LOCAL max_parallel_workers_per_gather
+= 0` per request), so a numbered page and its count never depend on the container's `/dev/shm`
+  either. The numbered pages of the tables are unchanged. The bundled Postgres of
+  `docker-compose.yml` gets `shm_size: 256m` as well (`docs/deployment/docker.md`).
+
 - **French (`fr`) as a translation language** (issue #445): `AvailableTranslationLanguagesE`
   gains `fr` the way it gained `es` — a migration widens both Postgres enum types, the admin
   offers it (flag, label) wherever a translation is added, the public filters and

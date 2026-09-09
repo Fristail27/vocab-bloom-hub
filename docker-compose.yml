@@ -24,6 +24,11 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-vocab_bloom}
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    # Postgres puts the dynamic shared memory of parallel queries into
+    # /dev/shm, which Docker caps at 64 MB by default: a parallel hash join or
+    # sort over the full dictionary then fails with "could not resize shared
+    # memory segment … No space left on device" (SQLSTATE 53100)
+    shm_size: 256m
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
       interval: 5s
