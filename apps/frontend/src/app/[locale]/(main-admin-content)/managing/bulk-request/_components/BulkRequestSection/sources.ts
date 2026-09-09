@@ -1,4 +1,5 @@
 import {
+  EnMeaningListItemT,
   EnMeaningTranslationListItemT,
   EnShortTranslationListItemT,
   ErrorResT,
@@ -93,13 +94,25 @@ export const toIdentity = (kind: SourceKindE, item: BulkItemT): RunIdentityT => 
   switch (kind) {
     case SourceKindE.words:
       return base;
-    case SourceKindE.meanings:
-      return { ...base, meaning_id: item.id };
+    // a meaning is named the way the dataset files name it (issue #442): by
+    // its sort order and title within the word, so a line of translations
+    // loads as a line of vocab-bloom-hub-en-meaning-translations.jsonl
+    case SourceKindE.meanings: {
+      const meaning = item as EnMeaningListItemT;
+      return {
+        ...base,
+        meaning_id: meaning.id,
+        meaning_sort_order: meaning.sort_order,
+        meaning_title: meaning.title,
+      };
+    }
     case SourceKindE.translations: {
       const translation = item as EnMeaningTranslationListItemT;
       return {
         ...base,
         meaning_id: translation.meaning_id,
+        meaning_sort_order: translation.meaning_sort_order,
+        meaning_title: translation.meaning_title,
         translation_id: translation.id,
         language: translation.language,
       };

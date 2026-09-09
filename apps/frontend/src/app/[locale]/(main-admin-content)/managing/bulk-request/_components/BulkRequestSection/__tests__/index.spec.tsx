@@ -76,6 +76,7 @@ const makeTranslation = (id: number, word: string, title: string): EnMeaningTran
   part_of_speech: EnPartOfSpeechE.verb,
   meaning_title: `meaning of ${word}`,
   meaning_definition: `to ${word}`,
+  meaning_sort_order: 1,
   language: AvailableTranslationLanguagesE.ru,
   title,
   definition: `${title} (def)`,
@@ -351,8 +352,22 @@ describe('BulkRequestSection', () => {
         .split('\n')
         .map((l) => JSON.parse(l)),
     ).toEqual([
-      { word: 'abandon', part_of_speech: 'verb', meaning_id: 11, synonyms: ['leave-syn'] },
-      { word: 'abandon', part_of_speech: 'verb', meaning_id: 12, synonyms: ['stop-syn'] },
+      {
+        word: 'abandon',
+        part_of_speech: 'verb',
+        meaning_id: 11,
+        meaning_sort_order: 0,
+        meaning_title: 'leave',
+        synonyms: ['leave-syn'],
+      },
+      {
+        word: 'abandon',
+        part_of_speech: 'verb',
+        meaning_id: 12,
+        meaning_sort_order: 0,
+        meaning_title: 'stop',
+        synonyms: ['stop-syn'],
+      },
     ]);
   });
 
@@ -380,6 +395,8 @@ describe('BulkRequestSection', () => {
       word: 'abandon',
       part_of_speech: 'verb',
       meaning_id: 121,
+      meaning_sort_order: 1,
+      meaning_title: 'meaning of abandon',
       translation_id: 21,
       language: 'ru',
       is_correct: true,
@@ -535,12 +552,15 @@ describe('BulkRequestSection', () => {
     await screen.findByTestId('bulk-download-results');
     fireEvent.click(screen.getByTestId('bulk-download-results'));
     const text = await blobText(saveBlobSpy.mock.calls[0][0] as Blob);
-    // a Spanish translation row of the meaning: the answer's language overrides
-    // the source row's, meaning_id and translation_id keep the line traceable
+    // a Spanish translation row of the meaning, named the way the dataset's
+    // meaning-translations file names it (issue #442): the answer's language
+    // overrides the source row's, meaning_id and translation_id keep the line traceable
     expect(JSON.parse(text.trim())).toEqual({
       word: 'abandon',
       part_of_speech: 'verb',
       meaning_id: 121,
+      meaning_sort_order: 1,
+      meaning_title: 'meaning of abandon',
       translation_id: 21,
       language: 'es',
       title: 'abandonar',

@@ -8,4 +8,5 @@ export const FlagByAreaEnum = {
   // the translation languages (AvailableTranslationLanguagesE), by their code
   ru: 'rusFlag',
   es: 'esFlag',
+  fr: 'frFlag',
 };

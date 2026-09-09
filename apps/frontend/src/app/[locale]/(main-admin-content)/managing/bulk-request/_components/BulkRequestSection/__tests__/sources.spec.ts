@@ -75,6 +75,7 @@ const translation: EnMeaningTranslationListItemT = {
   part_of_speech: EnPartOfSpeechE.verb,
   meaning_title: 'stop trying',
   meaning_definition: 'to stop doing something',
+  meaning_sort_order: 0,
   language: AvailableTranslationLanguagesE.ru,
   title: 'сдаваться',
   definition: 'перестать пытаться',
@@ -142,15 +143,21 @@ describe('sources', () => {
 
   it('opens every output line with the ids needed to trace the row', () => {
     expect(toIdentity(SourceKindE.words, word)).toEqual({ word: 'give up', part_of_speech: 'verb' });
+    // a meaning is also named the way the dataset files name it (issue #442):
+    // sort order + title within the word, so the line loads as a dataset row
     expect(toIdentity(SourceKindE.meanings, meaning)).toEqual({
       word: 'give up',
       part_of_speech: 'verb',
       meaning_id: 10,
+      meaning_sort_order: 0,
+      meaning_title: 'stop trying',
     });
     expect(toIdentity(SourceKindE.translations, translation)).toEqual({
       word: 'give up',
       part_of_speech: 'verb',
       meaning_id: 10,
+      meaning_sort_order: 0,
+      meaning_title: 'stop trying',
       translation_id: 100,
       language: 'ru',
     });

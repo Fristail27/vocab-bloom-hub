@@ -313,6 +313,7 @@ export class EnAdminListsService {
       part_of_speech: row.meaning.word.part_of_speech,
       meaning_title: row.meaning.title,
       meaning_definition: row.meaning.definition,
+      meaning_sort_order: row.meaning.sort_order,
       language: row.language,
       title: row.title,
       definition: row.definition,

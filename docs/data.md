@@ -43,10 +43,10 @@ the A1–B2 vocabulary is on the roadmap.
   use the data as ground truth for evaluating other dictionaries or as a citable source of
   English usage.
 - **Translations are generated too** and have not been reviewed by a translator. The schema
-  carries two translation languages, Russian and Spanish (`GET /api/v1/meta` lists them under
-  `available_languages`, issue #410); the published `v0.1.0` revision holds Russian only —
-  Spanish arrives with a later revision, and `manifest.json` counts the rows per language
-  (`translations`). Translations ship in files of their own (`meaning-translations`,
+  carries three translation languages, Russian, Spanish and French (`GET /api/v1/meta` lists
+  them under `available_languages`, issues #410 and #445); the published `v0.1.0` revision holds
+  Russian only — Spanish and French arrive with later revisions, and `manifest.json` counts the
+  rows per language (`translations`). Translations ship in files of their own (`meaning-translations`,
   `short-translations`, [offline-import.md](./offline-import.md#dataset-format)), so a language
   can be loaded on its own into an instance that already has the entries.
 - **Entry-level `language_register` is unreliable on words** — almost every word says `formal`

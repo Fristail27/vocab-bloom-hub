@@ -20,6 +20,7 @@ export const FAILURES_FILE_NAME = 'vocab-bloom-hub-bulk-request-failures.jsonl';
 export const PROMPT_LANGUAGE_NAMES: Record<AvailableTranslationLanguagesE, string> = {
   [AvailableTranslationLanguagesE.ru]: 'Russian',
   [AvailableTranslationLanguagesE.es]: 'Spanish',
+  [AvailableTranslationLanguagesE.fr]: 'French',
 };
 
 const TRANSLATION_LANGUAGES = Object.values(AvailableTranslationLanguagesE);

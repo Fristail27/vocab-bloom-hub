@@ -66,6 +66,7 @@ class SearchV1ReqDTO(BaseModel):
 class TranslationLanguage(Enum):
     ru = "ru"
     es = "es"
+    fr = "fr"
 
 
 class SearchDetailedV1ReqDTO(BaseModel):
@@ -207,6 +208,7 @@ class PublicSearchDetailedV1MetaT(BaseModel):
 class AvailableTranslationLanguagesE(Enum):
     ru = "ru"
     es = "es"
+    fr = "fr"
 
 
 class PublicWordV1ShortTranslationT(BaseModel):

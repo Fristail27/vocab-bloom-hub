@@ -404,6 +404,7 @@ export default {
     translation_language: 'Language of translation',
     translation_rus: 'Russian',
     translation_es: 'Spanish',
+    translation_fr: 'French',
     translation_desc: 'Word Description Translation',
     translation_variants: 'Possible Direct Translations',
     translation_short_meaning: 'Short translation of meaning',
