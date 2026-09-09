@@ -10,7 +10,7 @@ statistics, content notes).
 ## Where the data comes from
 
 Every entry is produced by an **LLM-assisted pipeline** — a model is asked for the entry
-(transcription, CEFR level, senses with definitions and examples, Russian translations,
+(transcription, CEFR level, senses with definitions and examples, translations,
 inflected forms), the answer is stored in the Hub database, and the database is what gets
 exported and published. Nothing is scraped or copied from other dictionaries.
 

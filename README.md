@@ -258,7 +258,7 @@ Planned directions, in no particular order (see the [issues](https://github.com/
 
 - Semantic search and a semantic network on top of the dictionary (next major version)
 - Word relations graph beyond synonyms and antonyms: hypernyms/hyponyms, collocations
-- More source languages besides English, and translations into languages other than Russian
+- More source languages besides English, and more translation languages beyond Russian, Spanish and French
 - Published linguistic datasets built from the dictionary
 
 ---
