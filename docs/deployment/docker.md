@@ -78,12 +78,12 @@ applies its migrations on start and rollback is the backup
 
 ## What is in `docker-compose.yml`
 
-| Service    | Image                                                        | Notes                                                                                                                                                                           |
-| ---------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `postgres` | `postgres:17-alpine` (profile `db`)                          | Data in the named volume `postgres-data`; `pg_isready` healthcheck; `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` from `.env`; skipped for an external database (below) |
-| `server`   | `ghcr.io/…/vocab-bloom-hub-server:${VBH_TAG}`                | Retries the database for a minute, runs pending migrations on start, listens on `3010`; `./imports` is mounted as `DICTIONARY_IMPORT_DIR` (read-only)                           |
-| `frontend` | `ghcr.io/…/vocab-bloom-hub-frontend:${VBH_TAG}`              | The standalone Next.js build on `3000`; server-side rendering reaches the API at `http://server:3010/api` (`API_INTERNAL_URL`)                                                  |
-| `site`     | `ghcr.io/…/vocab-bloom-hub-site:${VBH_TAG}` (profile `site`) | The project website on `3020` — see [below](#the-website); the word pages reach the API at `http://server:3010/api` (`API_INTERNAL_URL`)                                        |
+| Service    | Image                                                        | Notes                                                                                                                                                                                                         |
+| ---------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `postgres` | `postgres:17-alpine` (profile `db`)                          | Data in the named volume `postgres-data`; `pg_isready` healthcheck; `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` from `.env`; `shm_size: 256m` (see below); skipped for an external database (below) |
+| `server`   | `ghcr.io/…/vocab-bloom-hub-server:${VBH_TAG}`                | Retries the database for a minute, runs pending migrations on start, listens on `3010`; `./imports` is mounted as `DICTIONARY_IMPORT_DIR` (read-only)                                                         |
+| `frontend` | `ghcr.io/…/vocab-bloom-hub-frontend:${VBH_TAG}`              | The standalone Next.js build on `3000`; server-side rendering reaches the API at `http://server:3010/api` (`API_INTERNAL_URL`)                                                                                |
+| `site`     | `ghcr.io/…/vocab-bloom-hub-site:${VBH_TAG}` (profile `site`) | The project website on `3020` — see [below](#the-website); the word pages reach the API at `http://server:3010/api` (`API_INTERNAL_URL`)                                                                      |
 
 Host ports come from `SERVER_PORT` / `FRONT_PORT` / `SITE_PORT` in `.env` (defaults `3010` /
 `3000` / `3020`); inside the containers the apps always listen on `3010` / `3000` / `3020`.
@@ -102,6 +102,13 @@ is never used. The admin cookie is `secure` whenever the login came over https (
 proxy, with `TRUST_PROXY=1`).
 
 ### Bundled or external Postgres
+
+The bundled service raises the container's `/dev/shm` to 256 MB (`shm_size`). Postgres keeps the
+dynamic shared memory of parallel queries there, and Docker's default of 64 MB is too small for a
+parallel hash join or sort over the full dictionary: the query fails with
+`could not resize shared memory segment … No space left on device` (SQLSTATE 53100). A Postgres of
+your own in a container needs the same (`--shm-size=256m`), or `dynamic_shared_memory_type = mmap`
+in its configuration.
 
 The `postgres` service is the compose profile **`db`**. `.env.example` sets `COMPOSE_PROFILES=db`,
 so `docker compose up` starts it and the server connects to it with the `POSTGRES_*`

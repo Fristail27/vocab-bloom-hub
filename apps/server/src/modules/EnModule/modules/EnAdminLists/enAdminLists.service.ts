@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository, SelectQueryBuilder } from 'typeorm';
+import { In, QueryRunner, Repository, SelectQueryBuilder } from 'typeorm';
 import { EnWord } from '../../entities/en_word.entity';
 import { EnMeaning } from '../../entities/en_meaning.entity';
 import { EnMeaningTranslation } from '../../entities/en_meaning_translation.entity';
@@ -26,7 +26,7 @@ import { escapeLike } from '../EnSearch/utils/escapeLike';
 import { bytewise } from '../../utils/bytewise';
 import { normalizeWordLinks } from '../../utils/normalizeWordLinks';
 
-type PageT = { page: number; limit: number };
+type PageT = { page: number; limit: number; after?: number | undefined };
 type WordLinksT = { synonyms: string[]; antonyms: string[] };
 const EMPTY_LINKS: WordLinksT = { synonyms: [], antonyms: [] };
 
@@ -53,11 +53,74 @@ export class EnAdminListsService {
   ) {}
 
   private pageOf(query: PaginationQueryDTO): PageT {
-    return { page: query.page ?? 1, limit: query.limit ?? LIST_DEFAULT_LIMIT };
+    return {
+      page: query.after === undefined ? (query.page ?? 1) : 1,
+      limit: query.limit ?? LIST_DEFAULT_LIMIT,
+      after: query.after,
+    };
   }
 
-  private paginated<T>(items: T[], { page, limit }: PageT, total: number): PaginatedListT<T> {
-    return { items, page, limit, total, has_more: page * limit < total };
+  /**
+   * Applies the page to a query ordered for the listing: an OFFSET for a
+   * numbered page, or — for the page after a row — `id > after` in id order
+   * of the listing's own table. The listing's sort key spans three tables
+   * (entry.word, the word, the row), which no index covers: a keyset
+   * predicate over it still scans and sorts everything, so a walk over every
+   * row goes by the row id instead, one index range per page whatever the
+   * depth. The order of a walk is the id order, not the listing's. One row
+   * past the limit is read to answer has_more without a count of the rest.
+   */
+  private applyPage<T extends object>(qb: SelectQueryBuilder<T>, page: PageT, idColumn: string): void {
+    if (page.after !== undefined) {
+      qb.andWhere(`${idColumn} > :after`, { after: page.after })
+        .orderBy(idColumn, 'ASC')
+        .offset(0)
+        .limit(page.limit + 1);
+    } else {
+      qb.offset((page.page - 1) * page.limit).limit(page.limit);
+    }
+  }
+
+  /** Cuts the extra row of a walk page and shapes the answer; a numbered page derives has_more from the total */
+  private paginated<T extends { id: number }>(rows: T[], page: PageT, total: number): PaginatedListT<T> {
+    const has_more = page.after === undefined ? page.page * page.limit < total : rows.length > page.limit;
+    const items = rows.slice(0, page.limit);
+    const last = items[items.length - 1];
+    return {
+      items,
+      page: page.page,
+      limit: page.limit,
+      total,
+      has_more,
+      next_after: has_more && last ? last.id : null,
+    };
+  }
+
+  /**
+   * Runs the queries of one listing without parallel workers on Postgres.
+   * A parallel hash join or sort over the full dictionary keeps its state in
+   * dynamic shared memory — /dev/shm, 64 MB in a container by default — and
+   * fails with "could not resize shared memory segment" (SQLSTATE 53100);
+   * the single-process plans of these listings fit work_mem. SET LOCAL
+   * ends with the transaction, so nothing leaks into the pool.
+   */
+  private async withoutParallelWorkers<T>(run: (runner: QueryRunner | undefined) => Promise<T>): Promise<T> {
+    const connection = this.enWordsRep.manager.connection;
+    if (connection.options.type !== 'postgres') return run(undefined);
+    const runner = connection.createQueryRunner();
+    await runner.connect();
+    await runner.startTransaction();
+    try {
+      await runner.query('SET LOCAL max_parallel_workers_per_gather = 0');
+      const result = await run(runner);
+      await runner.commitTransaction();
+      return result;
+    } catch (error) {
+      await runner.rollbackTransaction().catch(() => {});
+      throw error;
+    } finally {
+      await runner.release();
+    }
   }
 
   /** Filters shared by every listing: word prefix and part of speech of the owning word */
@@ -140,53 +203,57 @@ export class EnAdminListsService {
   async listWords(query: ListWordsQueryDTO): Promise<EnWordsListT> {
     const page = this.pageOf(query);
 
-    const qb = this.enWordsRep
-      .createQueryBuilder('w')
-      .innerJoinAndSelect('w.word', 'entry')
-      .where('w.form_of_word = :baseForm', { baseForm: EnWordFormsE.base_form });
-    this.applyWordsListFilters(qb, query);
+    return this.withoutParallelWorkers(async (runner) => {
+      const qb = this.enWordsRep
+        .createQueryBuilder('w', runner)
+        .innerJoinAndSelect('w.word', 'entry')
+        .where('w.form_of_word = :baseForm', { baseForm: EnWordFormsE.base_form });
+      this.applyWordsListFilters(qb, query);
 
-    const total = await qb.clone().getCount();
+      const total = await qb.clone().getCount();
 
-    const meaningsCount = qb
-      .subQuery()
-      .select('COUNT(*)')
-      .from(EnMeaning, 'mc')
-      .where('mc.word = w.id')
-      .getQuery();
-    const shortTranslationsCount = qb
-      .subQuery()
-      .select('COUNT(*)')
-      .from(EnShortTranslation, 'stc')
-      .where('stc.word = w.id')
-      .getQuery();
+      const meaningsCount = qb
+        .subQuery()
+        .select('COUNT(*)')
+        .from(EnMeaning, 'mc')
+        .where('mc.word = w.id')
+        .getQuery();
+      const shortTranslationsCount = qb
+        .subQuery()
+        .select('COUNT(*)')
+        .from(EnShortTranslation, 'stc')
+        .where('stc.word = w.id')
+        .getQuery();
 
-    // The only join is a many-to-one, so raw OFFSET/LIMIT is safe here and
-    // avoids the distinct-subquery pagination TypeORM uses for skip/take
-    const { entities, raw } = await qb
-      .addSelect(meaningsCount, 'meanings_count')
-      .addSelect(shortTranslationsCount, 'short_translations_count')
-      .orderBy('entry.word', 'ASC')
-      .addOrderBy('w.part_of_speech', 'ASC')
-      .addOrderBy('w.id', 'ASC')
-      .offset((page.page - 1) * page.limit)
-      .limit(page.limit)
-      .getRawAndEntities<{ w_id: number; meanings_count: unknown; short_translations_count: unknown }>();
+      // The only join is a many-to-one, so raw OFFSET/LIMIT is safe here and
+      // avoids the distinct-subquery pagination TypeORM uses for skip/take
+      qb.addSelect(meaningsCount, 'meanings_count')
+        .addSelect(shortTranslationsCount, 'short_translations_count')
+        .orderBy('entry.word', 'ASC')
+        .addOrderBy('w.part_of_speech', 'ASC')
+        .addOrderBy('w.id', 'ASC');
+      this.applyPage(qb, page, 'w.id');
+      const { entities, raw } = await qb.getRawAndEntities<{
+        w_id: number;
+        meanings_count: unknown;
+        short_translations_count: unknown;
+      }>();
 
-    const countsById = new Map(
-      raw.map((r) => [
-        Number(r.w_id),
-        { meanings: toCount(r.meanings_count), short_translations: toCount(r.short_translations_count) },
-      ]),
-    );
+      const countsById = new Map(
+        raw.map((r) => [
+          Number(r.w_id),
+          { meanings: toCount(r.meanings_count), short_translations: toCount(r.short_translations_count) },
+        ]),
+      );
 
-    return this.paginated(
-      entities.map((row) =>
-        this.mapWord(row, countsById.get(row.id) ?? { meanings: 0, short_translations: 0 }),
-      ),
-      page,
-      total,
-    );
+      return this.paginated(
+        entities.map((row) =>
+          this.mapWord(row, countsById.get(row.id) ?? { meanings: 0, short_translations: 0 }),
+        ),
+        page,
+        total,
+      );
+    });
   }
 
   // ------------------------------------------------------------- meanings
@@ -264,42 +331,42 @@ export class EnAdminListsService {
   async listMeanings(query: ListMeaningsQueryDTO): Promise<EnMeaningsListT> {
     const page = this.pageOf(query);
 
-    const qb = this.enMeaningsRep
-      .createQueryBuilder('m')
-      .innerJoinAndSelect('m.word', 'w')
-      .innerJoinAndSelect('w.word', 'entry');
-    this.applyMeaningsListFilters(qb, query);
+    return this.withoutParallelWorkers(async (runner) => {
+      const qb = this.enMeaningsRep
+        .createQueryBuilder('m', runner)
+        .innerJoinAndSelect('m.word', 'w')
+        .innerJoinAndSelect('w.word', 'entry');
+      this.applyMeaningsListFilters(qb, query);
 
-    const total = await qb.clone().getCount();
+      const total = await qb.clone().getCount();
 
-    const translationsCount = qb
-      .subQuery()
-      .select('COUNT(*)')
-      .from(EnMeaningTranslation, 'mtc')
-      .where('mtc.meaning = m.id')
-      .getQuery();
+      const translationsCount = qb
+        .subQuery()
+        .select('COUNT(*)')
+        .from(EnMeaningTranslation, 'mtc')
+        .where('mtc.meaning = m.id')
+        .getQuery();
 
-    const { entities, raw } = await qb
-      .addSelect(translationsCount, 'translations_count')
-      .orderBy('entry.word', 'ASC')
-      .addOrderBy('w.part_of_speech', 'ASC')
-      .addOrderBy('w.id', 'ASC')
-      .addOrderBy('m.sort_order', 'ASC')
-      .addOrderBy('m.id', 'ASC')
-      .offset((page.page - 1) * page.limit)
-      .limit(page.limit)
-      .getRawAndEntities<{ m_id: number; translations_count: unknown }>();
+      qb.addSelect(translationsCount, 'translations_count')
+        .orderBy('entry.word', 'ASC')
+        .addOrderBy('w.part_of_speech', 'ASC')
+        .addOrderBy('w.id', 'ASC')
+        .addOrderBy('m.sort_order', 'ASC')
+        .addOrderBy('m.id', 'ASC');
+      this.applyPage(qb, page, 'm.id');
+      const { entities, raw } = await qb.getRawAndEntities<{ m_id: number; translations_count: unknown }>();
 
-    const countsById = new Map(raw.map((r) => [Number(r.m_id), toCount(r.translations_count)]));
-    const linksById = await this.loadWordLinksByMeaningId(entities.map((row) => row.id));
+      const countsById = new Map(raw.map((r) => [Number(r.m_id), toCount(r.translations_count)]));
+      const linksById = await this.loadWordLinksByMeaningId(entities.slice(0, page.limit).map((row) => row.id));
 
-    return this.paginated(
-      entities.map((row) =>
-        this.mapMeaning(row, countsById.get(row.id) ?? 0, linksById.get(row.id) ?? EMPTY_LINKS),
-      ),
-      page,
-      total,
-    );
+      return this.paginated(
+        entities.map((row) =>
+          this.mapMeaning(row, countsById.get(row.id) ?? 0, linksById.get(row.id) ?? EMPTY_LINKS),
+        ),
+        page,
+        total,
+      );
+    });
   }
 
   // ------------------------------------------------------- meaning translations
@@ -325,35 +392,35 @@ export class EnAdminListsService {
   async listMeaningTranslations(query: ListMeaningTranslationsQueryDTO): Promise<EnMeaningTranslationsListT> {
     const page = this.pageOf(query);
 
-    const qb = this.enMeaningTranslationsRep
-      .createQueryBuilder('tr')
-      .innerJoinAndSelect('tr.meaning', 'm')
-      .innerJoinAndSelect('m.word', 'w')
-      .innerJoinAndSelect('w.word', 'entry');
-    this.applyWordFilters(qb, query);
-    if (query.language?.length) {
-      qb.andWhere('tr.language IN (:...languages)', { languages: query.language });
-    }
+    return this.withoutParallelWorkers(async (runner) => {
+      const qb = this.enMeaningTranslationsRep
+        .createQueryBuilder('tr', runner)
+        .innerJoinAndSelect('tr.meaning', 'm')
+        .innerJoinAndSelect('m.word', 'w')
+        .innerJoinAndSelect('w.word', 'entry');
+      this.applyWordFilters(qb, query);
+      if (query.language?.length) {
+        qb.andWhere('tr.language IN (:...languages)', { languages: query.language });
+      }
 
-    const total = await qb.clone().getCount();
+      const total = await qb.clone().getCount();
 
-    const rows = await qb
-      .orderBy('entry.word', 'ASC')
-      .addOrderBy('w.part_of_speech', 'ASC')
-      .addOrderBy('w.id', 'ASC')
-      .addOrderBy('m.sort_order', 'ASC')
-      .addOrderBy('m.id', 'ASC')
-      .addOrderBy('tr.language', 'ASC')
-      .addOrderBy('tr.id', 'ASC')
-      .offset((page.page - 1) * page.limit)
-      .limit(page.limit)
-      .getMany();
+      qb.orderBy('entry.word', 'ASC')
+        .addOrderBy('w.part_of_speech', 'ASC')
+        .addOrderBy('w.id', 'ASC')
+        .addOrderBy('m.sort_order', 'ASC')
+        .addOrderBy('m.id', 'ASC')
+        .addOrderBy('tr.language', 'ASC')
+        .addOrderBy('tr.id', 'ASC');
+      this.applyPage(qb, page, 'tr.id');
+      const rows = await qb.getMany();
 
-    return this.paginated(
-      rows.map((row) => this.mapMeaningTranslation(row)),
-      page,
-      total,
-    );
+      return this.paginated(
+        rows.map((row) => this.mapMeaningTranslation(row)),
+        page,
+        total,
+      );
+    });
   }
 
   // --------------------------------------------------------- short translations
@@ -374,31 +441,31 @@ export class EnAdminListsService {
   async listShortTranslations(query: ListShortTranslationsQueryDTO): Promise<EnShortTranslationsListT> {
     const page = this.pageOf(query);
 
-    const qb = this.enShortTranslationsRep
-      .createQueryBuilder('st')
-      .innerJoinAndSelect('st.word', 'w')
-      .innerJoinAndSelect('w.word', 'entry');
-    this.applyWordFilters(qb, query);
-    if (query.language?.length) {
-      qb.andWhere('st.language IN (:...languages)', { languages: query.language });
-    }
+    return this.withoutParallelWorkers(async (runner) => {
+      const qb = this.enShortTranslationsRep
+        .createQueryBuilder('st', runner)
+        .innerJoinAndSelect('st.word', 'w')
+        .innerJoinAndSelect('w.word', 'entry');
+      this.applyWordFilters(qb, query);
+      if (query.language?.length) {
+        qb.andWhere('st.language IN (:...languages)', { languages: query.language });
+      }
 
-    const total = await qb.clone().getCount();
+      const total = await qb.clone().getCount();
 
-    const rows = await qb
-      .orderBy('entry.word', 'ASC')
-      .addOrderBy('w.part_of_speech', 'ASC')
-      .addOrderBy('w.id', 'ASC')
-      .addOrderBy('st.language', 'ASC')
-      .addOrderBy('st.id', 'ASC')
-      .offset((page.page - 1) * page.limit)
-      .limit(page.limit)
-      .getMany();
+      qb.orderBy('entry.word', 'ASC')
+        .addOrderBy('w.part_of_speech', 'ASC')
+        .addOrderBy('w.id', 'ASC')
+        .addOrderBy('st.language', 'ASC')
+        .addOrderBy('st.id', 'ASC');
+      this.applyPage(qb, page, 'st.id');
+      const rows = await qb.getMany();
 
-    return this.paginated(
-      rows.map((row) => this.mapShortTranslation(row)),
-      page,
-      total,
-    );
+      return this.paginated(
+        rows.map((row) => this.mapShortTranslation(row)),
+        page,
+        total,
+      );
+    });
   }
 }

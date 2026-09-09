@@ -145,6 +145,34 @@ describe('admin listings GET /api/en/words, /meanings, /meaning-translations, /s
     expect(body).toMatchObject({ page: 1, limit: 1, total: 1, has_more: false });
   });
 
+  it('walks the rows after an id in id order and answers next_after, with the page number ignored', async () => {
+    const all = (await request(server()).get('/api/en/words').set(auth).query({ limit: 200 }).expect(200))
+      .body as EnWordsListT;
+    const ids = all.items.map((i) => i.id).sort((a, b) => a - b);
+    expect(ids.length).toBeGreaterThan(1);
+
+    const first = (
+      await request(server()).get('/api/en/words').set(auth).query({ limit: 1, after: 0, page: 7 }).expect(200)
+    ).body as EnWordsListT;
+    expect(first).toMatchObject({ page: 1, limit: 1, total: all.total, has_more: true, next_after: ids[0] });
+    expect(first.items.map((i) => i.id)).toEqual([ids[0]]);
+
+    const next = (
+      await request(server())
+        .get('/api/en/words')
+        .set(auth)
+        .query({ limit: 1, after: first.next_after })
+        .expect(200)
+    ).body as EnWordsListT;
+    expect(next.items.map((i) => i.id)).toEqual([ids[1]]);
+
+    const past = (
+      await request(server()).get('/api/en/words').set(auth).query({ limit: 1, after: 999999 }).expect(200)
+    ).body as EnWordsListT;
+    expect(past).toMatchObject({ items: [], has_more: false, next_after: null });
+    await request(server()).get('/api/en/words').set(auth).query({ after: -1 }).expect(400);
+  });
+
   it('rejects unknown query keys and invalid values', async () => {
     await request(server()).get('/api/en/words').set(auth).query({ sort: 'word' }).expect(400);
     await request(server()).get('/api/en/words').set(auth).query({ generated: 'maybe' }).expect(400);

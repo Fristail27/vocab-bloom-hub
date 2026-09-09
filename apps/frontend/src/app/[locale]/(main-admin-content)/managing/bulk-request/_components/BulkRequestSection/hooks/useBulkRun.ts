@@ -91,9 +91,13 @@ export const useBulkRun = () => {
 
       const collected: BulkItemT[] = [];
       setLoadedRecords({ loaded: 0, total: input.total });
+      // a walk over every row in id order: from row 0, then after the last
+      // row of the previous page (an index range, no OFFSET); the page
+      // number only matters to a server that answers no next_after
+      let after: number | undefined = 0;
       for (let page = 1; ; page++) {
         if (signal.aborted) return null;
-        const res = await listRecords(input.source, page, RUN_COLLECT_PAGE_SIZE);
+        const res = await listRecords(input.source, page, RUN_COLLECT_PAGE_SIZE, after);
         if ('error' in res) {
           setLoadError(res.message);
           return null;
@@ -101,6 +105,7 @@ export const useBulkRun = () => {
         collected.push(...res.items);
         setLoadedRecords({ loaded: collected.length, total: res.total });
         if (!res.has_more) break;
+        after = res.next_after ?? undefined;
       }
       return collected;
     },

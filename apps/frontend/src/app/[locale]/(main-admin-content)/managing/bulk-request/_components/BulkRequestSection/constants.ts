@@ -6,7 +6,7 @@ export const RECORDS_PAGE_SIZE = 50;
 // equals LIST_MAX_LIMIT on the server
 export const RUN_COLLECT_PAGE_SIZE = 200;
 export const MIN_CONCURRENCY = 1;
-export const MAX_CONCURRENCY = 1000;
+export const MAX_CONCURRENCY = 2500;
 export const MAX_RETRIES = 5;
 // how many failures the panel renders; the full list is always downloadable
 export const FAILURES_PREVIEW_LIMIT = 100;
