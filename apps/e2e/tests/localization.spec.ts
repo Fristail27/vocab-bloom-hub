@@ -7,6 +7,12 @@ test.describe('localization', () => {
 
     await page.goto('/ru/managing');
     await expect(page.getByText('Поиск в словаре')).toBeVisible();
+
+    // the locales of issue #450
+    await page.goto('/es/managing');
+    await expect(page.getByText('Búsqueda en el diccionario')).toBeVisible();
+    await page.goto('/de/managing');
+    await expect(page.getByText('Wörterbuchsuche')).toBeVisible();
   });
 
   test('the root path redirects to the default locale', async ({ page }) => {

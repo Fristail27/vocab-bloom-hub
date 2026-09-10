@@ -81,7 +81,7 @@ The project is in **early development** (`0.x`). The first alpha is [released](h
 
 ## ✨ Features
 
-- **Admin UI** (English / Russian interface) with three areas:
+- **Admin UI** (English, Russian, Spanish, French, Portuguese and German interface) with three areas:
   - _Managing_ — create and edit English words, their meanings, translations, synonyms, antonyms and short translations;
   - _Statistics_ — an overview of the dictionary contents;
   - _Documentation_ — in-app reference for the data model.

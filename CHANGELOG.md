@@ -7,6 +7,13 @@ generated release notes; the full commit history lives in git.
 
 ## v0.2.0-beta.1 — unreleased
 
+- **Spanish, French, Portuguese and German interfaces** (issue #450): the admin UI and the
+  website speak six languages — `InterfaceLanguageEnum` gains `es`, `fr`, `pt`, `de`, with a
+  message catalog per locale in `apps/frontend/messages` and `apps/site/messages` (LLM-drafted
+  from the English one), the language switch and `hreflang` alternates follow the list, and the
+  parity spec checks every catalog against English (keys and ICU arguments). The website's
+  documentation stays English with the Russian pages where they exist.
+
 - **German (`de`) and Portuguese (`pt`) as translation languages** (issue #449), the way Spanish
   and French were added: `AvailableTranslationLanguagesE` gains both, one migration widens both
   Postgres enum types, the admin offers them (flags, labels), the public filters and
