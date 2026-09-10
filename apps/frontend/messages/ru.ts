@@ -408,6 +408,8 @@ export default {
     translation_rus: 'Русский',
     translation_es: 'Испанский',
     translation_fr: 'Французский',
+    translation_de: 'Немецкий',
+    translation_pt: 'Португальский',
     translation_desc: 'Перевод описания слова',
     translation_variants: 'Варианты прямого перевода',
     translation_short_meaning: 'Короткий перевод значения',

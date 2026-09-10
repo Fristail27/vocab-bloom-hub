@@ -67,6 +67,8 @@ class TranslationLanguage(Enum):
     ru = "ru"
     es = "es"
     fr = "fr"
+    de = "de"
+    pt = "pt"
 
 
 class SearchDetailedV1ReqDTO(BaseModel):
@@ -209,6 +211,8 @@ class AvailableTranslationLanguagesE(Enum):
     ru = "ru"
     es = "es"
     fr = "fr"
+    de = "de"
+    pt = "pt"
 
 
 class PublicWordV1ShortTranslationT(BaseModel):

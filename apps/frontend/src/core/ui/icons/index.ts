@@ -5,6 +5,8 @@ import { InternationalFlag } from './colorful/InternationalFlag';
 import { RussianFlag } from '@/core/ui/icons/colorful/RussianFlag';
 import { SpanishFlag } from '@/core/ui/icons/colorful/SpanishFlag';
 import { FrenchFlag } from '@/core/ui/icons/colorful/FrenchFlag';
+import { GermanFlag } from '@/core/ui/icons/colorful/GermanFlag';
+import { PortugueseFlag } from '@/core/ui/icons/colorful/PortugueseFlag';
 import { Home } from '@/core/ui/icons/mono/Home';
 import { Managing } from '@/core/ui/icons/mono/Managing';
 
@@ -16,6 +18,8 @@ export default {
   rusFlag: RussianFlag,
   esFlag: SpanishFlag,
   frFlag: FrenchFlag,
+  deFlag: GermanFlag,
+  ptFlag: PortugueseFlag,
   home: Home,
   managing: Managing,
 };

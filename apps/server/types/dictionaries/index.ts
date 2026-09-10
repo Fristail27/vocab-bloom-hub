@@ -30,7 +30,8 @@ export enum CategoryE {
 }
 
 // The languages a translation may carry (issue #410 added Spanish, #445
-// French; #394 made every consumer treat the value as data). Adding one: a
+// French, #449 German and Portuguese; #394 made every consumer treat the
+// value as data). Adding one: a
 // Postgres migration widening both `..._language_enum` types, a flag + label
 // in the admin (TranslationLanguageSelect, FlagByAreaEnum), its English name
 // in the bulk-request PROMPT_LANGUAGE_NAMES, the spec and both SDKs regenerated
@@ -38,4 +39,6 @@ export enum AvailableTranslationLanguagesE {
   ru = 'ru',
   es = 'es',
   fr = 'fr',
+  de = 'de',
+  pt = 'pt',
 }

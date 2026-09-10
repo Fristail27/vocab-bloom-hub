@@ -292,7 +292,9 @@
                 "enum": [
                   "ru",
                   "es",
-                  "fr"
+                  "fr",
+                  "de",
+                  "pt"
                 ]
               }
             }
@@ -1026,7 +1028,9 @@
                 "enum": [
                   "ru",
                   "es",
-                  "fr"
+                  "fr",
+                  "de",
+                  "pt"
                 ]
               }
             }
@@ -1587,7 +1591,9 @@
               "enum": [
                 "ru",
                 "es",
-                "fr"
+                "fr",
+                "de",
+                "pt"
               ]
             }
           }
@@ -2261,7 +2267,9 @@
         "enum": [
           "ru",
           "es",
-          "fr"
+          "fr",
+          "de",
+          "pt"
         ]
       },
       "PublicWordV1ShortTranslationT": {

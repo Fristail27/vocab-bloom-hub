@@ -21,6 +21,9 @@ export const PROMPT_LANGUAGE_NAMES: Record<AvailableTranslationLanguagesE, strin
   [AvailableTranslationLanguagesE.ru]: 'Russian',
   [AvailableTranslationLanguagesE.es]: 'Spanish',
   [AvailableTranslationLanguagesE.fr]: 'French',
+  [AvailableTranslationLanguagesE.de]: 'German',
+  // one code for Portuguese; the prompts ask for the Brazilian usage (issue #449)
+  [AvailableTranslationLanguagesE.pt]: 'Brazilian Portuguese',
 };
 
 const TRANSLATION_LANGUAGES = Object.values(AvailableTranslationLanguagesE);
