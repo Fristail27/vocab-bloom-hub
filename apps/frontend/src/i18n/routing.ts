@@ -3,6 +3,6 @@ import { defineRouting } from 'next-intl/routing';
 import { InterfaceLanguageEnum } from '@/types/common';
 
 export const routing = defineRouting({
-  locales: [InterfaceLanguageEnum.en, InterfaceLanguageEnum.ru],
+  locales: Object.values(InterfaceLanguageEnum),
   defaultLocale: InterfaceLanguageEnum.en,
 });

@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 
+import { routing } from '@/i18n/routing';
+
 /**
  * The public origin of this site, for absolute URLs in the sitemap, robots.txt
  * and the social cards (NEXT_PUBLIC_SITE_URL, inlined at build time)
@@ -25,5 +27,8 @@ export const pageMeta = (title: string, description?: string): Metadata => ({
  */
 export const localeAlternates = (locale: string, path: string): Metadata['alternates'] => ({
   canonical: `/${locale}${path}`,
-  languages: { en: `/en${path}`, ru: `/ru${path}`, 'x-default': `/en${path}` },
+  languages: {
+    ...Object.fromEntries(routing.locales.map((candidate) => [candidate, `/${candidate}${path}`])),
+    'x-default': `/${routing.defaultLocale}${path}`,
+  },
 });
