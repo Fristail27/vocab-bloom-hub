@@ -7,6 +7,13 @@ generated release notes; the full commit history lives in git.
 
 ## v0.2.0-beta.1 — unreleased
 
+- **German (`de`) and Portuguese (`pt`) as translation languages** (issue #449), the way Spanish
+  and French were added: `AvailableTranslationLanguagesE` gains both, one migration widens both
+  Postgres enum types, the admin offers them (flags, labels), the public filters and
+  `available_languages` carry them, the spec and both SDKs are regenerated, and the bulk-request
+  page gets the "German" and "Portuguese" presets (the Portuguese prompts ask for the Brazilian
+  usage). The data follows with later dataset revisions.
+
 - **Bulk request walks the rows without an OFFSET**: the admin listings (`GET /api/en/words`,
   `/meanings`, `/meaning-translations`, `/short-translations`) take `after`, the id of the last
   row of the previous page, and answer `next_after`; the rows after it come in id order, one

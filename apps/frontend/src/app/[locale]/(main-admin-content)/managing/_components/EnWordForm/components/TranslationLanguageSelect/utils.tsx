@@ -10,6 +10,8 @@ const TRANSLATION_LANGUAGE_PRESENTATION: Record<AvailableTranslationLanguagesE, 
   [AvailableTranslationLanguagesE.ru]: { icons: ['rusFlag'], labelKey: 'translation_rus' },
   [AvailableTranslationLanguagesE.es]: { icons: ['esFlag'], labelKey: 'translation_es' },
   [AvailableTranslationLanguagesE.fr]: { icons: ['frFlag'], labelKey: 'translation_fr' },
+  [AvailableTranslationLanguagesE.de]: { icons: ['deFlag'], labelKey: 'translation_de' },
+  [AvailableTranslationLanguagesE.pt]: { icons: ['ptFlag'], labelKey: 'translation_pt' },
 };
 
 export const getTranslationsOptions = (t: TranslatorT) =>

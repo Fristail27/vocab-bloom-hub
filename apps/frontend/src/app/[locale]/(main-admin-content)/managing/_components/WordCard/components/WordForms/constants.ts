@@ -9,4 +9,6 @@ export const FlagByAreaEnum = {
   ru: 'rusFlag',
   es: 'esFlag',
   fr: 'frFlag',
+  de: 'deFlag',
+  pt: 'ptFlag',
 };

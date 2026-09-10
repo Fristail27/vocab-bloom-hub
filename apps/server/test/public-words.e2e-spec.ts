@@ -610,7 +610,7 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
           short_translations: 2,
         },
         // issue #394: the language dimension of the instance; #410 added Spanish
-        available_languages: { source: ['en'], translations: ['ru', 'es', 'fr'] },
+        available_languages: { source: ['en'], translations: ['ru', 'es', 'fr', 'de', 'pt'] },
       });
     });
 
