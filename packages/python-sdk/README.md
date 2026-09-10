@@ -1,6 +1,6 @@
 # vocab-bloom-hub
 
-Typed Python client for the public read-only API of a [Vocab Bloom Hub](https://github.com/Fristail27/vocab-bloom-hub) instance — an English dictionary with IPA, CEFR levels, sense-level definitions, examples, Russian translations and inflected forms, served under `/api/v1`.
+Typed Python client for the public read-only API of a [Vocab Bloom Hub](https://github.com/Fristail27/vocab-bloom-hub) instance — an English dictionary with IPA, CEFR levels, sense-level definitions, examples, translations (Russian, Spanish, French) and inflected forms, served under `/api/v1`.
 
 - Sync (`VocabBloomClient`) and async (`AsyncVocabBloomClient`) on `httpx`; one method per endpoint.
 - pydantic models generated from the server's OpenAPI document — the types cannot drift from the API.
