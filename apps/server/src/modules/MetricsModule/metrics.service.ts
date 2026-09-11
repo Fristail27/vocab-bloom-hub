@@ -104,7 +104,7 @@ export class MetricsService implements OnModuleDestroy {
   // monitorEventLoopDelay histogram enabled for the life of the process,
   // which holds the event loop open; it is captured here to be disabled on
   // shutdown (tests boot and close the application many times)
-  private readonly eventLoopHistograms: perfHooks.IntervalHistogram[] = [];
+  private readonly eventLoopHistograms: perfHooks.ELDHistogram[] = [];
 
   constructor(
     private readonly statistics: EnStatisticsService,
