@@ -3,7 +3,7 @@ import { WordRowsService } from '../../../word-rows.service';
 
 import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { DataSource } from 'typeorm';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -27,7 +27,7 @@ import { EnMeaningService } from '../../EnMeaning/enMeaning.service';
 import { EnMeaningTranslationService } from '../../EnMeaningTranslation/enMeaningTranslation.service';
 import { EnImportDictionaryService } from '../enImportDictionary.service';
 import { SettingsService } from '../../../../SettingsModule/settings.service';
-import { DATASET_FILE_NAMES } from '../constants';
+import { DATASET_FILE_NAMES, translationFileName } from '../constants';
 import {
   AvailableTranslationLanguagesE,
   CategoryE,
@@ -208,7 +208,16 @@ describe('EnImportDictionaryService export ordering (issue #247)', () => {
       .map((l) => JSON.parse(l) as Record<string, unknown>);
 
   it('produces byte-identical jsonl files regardless of the insertion order', () => {
-    for (const fileName of Object.values(DATASET_FILE_NAMES)) {
+    const written = readdirSync(ordered.runDir)
+      .filter((name) => name.endsWith('.jsonl'))
+      .sort();
+    expect(
+      readdirSync(shuffled.runDir)
+        .filter((name) => name.endsWith('.jsonl'))
+        .sort(),
+    ).toEqual(written);
+    expect(written).toContain(translationFileName('meaningTranslations', AvailableTranslationLanguagesE.ru));
+    for (const fileName of written) {
       expect(readFile(shuffled, fileName)).toBe(readFile(ordered, fileName));
     }
   });
@@ -267,16 +276,20 @@ describe('EnImportDictionaryService export ordering (issue #247)', () => {
     // authored arrays are exported as stored
     expect(meanings[0].examples).toEqual(['first example 2', 'first example 1']);
 
-    const translations = readLines(ordered, DATASET_FILE_NAMES.meaningTranslations).filter(
-      isRunVerb,
-    ) as unknown as { meaning_title: string; meaning_sort_order: number; title: string }[];
+    const translations = readLines(
+      ordered,
+      translationFileName('meaningTranslations', AvailableTranslationLanguagesE.ru),
+    ).filter(isRunVerb) as unknown as { meaning_title: string; meaning_sort_order: number; title: string }[];
     expect(translations.map((t) => [t.meaning_sort_order, t.meaning_title, t.title])).toEqual([
       [1, 'first', 'первый'],
       [2, 'second', 'второй'],
       [2, 'second', 'другой'],
     ]);
 
-    const shorts = readLines(ordered, DATASET_FILE_NAMES.shortTranslations).filter(isRunVerb) as unknown as {
+    const shorts = readLines(
+      ordered,
+      translationFileName('shortTranslations', AvailableTranslationLanguagesE.ru),
+    ).filter(isRunVerb) as unknown as {
       description: string;
       variants_of_words: string[];
     }[];

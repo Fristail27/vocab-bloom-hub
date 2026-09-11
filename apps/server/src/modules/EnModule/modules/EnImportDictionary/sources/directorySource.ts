@@ -4,7 +4,7 @@ import { readdir, readFile, rm, stat } from 'node:fs/promises';
 import * as path from 'node:path';
 import { DatasetManifestT } from '../../../../../../types';
 import { ErrorCodes } from '../../../../../../core/constants/error_codes';
-import { DATASET_FILE_NAMES, DATASET_KNOWN_FILE_NAMES, MANIFEST_FILE_NAME } from '../constants';
+import { DATASET_KNOWN_FILE_NAMES, MANIFEST_FILE_NAME } from '../constants';
 import { parseManifest } from '../utils/parseManifest';
 import { AcquiredFileT, DatasetSource } from './types';
 
@@ -12,7 +12,9 @@ import { AcquiredFileT, DatasetSource } from './types';
 const isJunkFile = (name: string): boolean =>
   name === '.DS_Store' || name === 'Thumbs.db' || name.startsWith('._');
 
-const DATASET_JSONL_NAMES: readonly string[] = Object.values(DATASET_FILE_NAMES);
+const DATASET_JSONL_NAMES: readonly string[] = DATASET_KNOWN_FILE_NAMES.filter((name) =>
+  name.endsWith('.jsonl'),
+);
 
 /** Non-blank lines of a jsonl file — what the import will actually process */
 export const countJsonlLines = (filePath: string): Promise<number> =>

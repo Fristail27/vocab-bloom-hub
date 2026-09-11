@@ -46,8 +46,8 @@ the A1–B2 vocabulary is on the roadmap.
   carries five translation languages, Russian, Spanish, French, German and Portuguese
   (`GET /api/v1/meta` lists them under `available_languages`, issues #410, #445, #449); the
   published `v0.1.0` revision holds Russian only — the others arrive with later revisions, and
-  `manifest.json` counts the rows per language (`translations`). Translations ship in files of their own (`meaning-translations`,
-  `short-translations`, [offline-import.md](./offline-import.md#dataset-format)), so a language
+  `manifest.json` counts the rows per language (`translations`). Translations ship in files of their own, one per language
+  (`meaning-translations.<lang>`, `short-translations.<lang>`, [offline-import.md](./offline-import.md#dataset-format)), so a language
   can be loaded on its own into an instance that already has the entries.
 - **Entry-level `language_register` is unreliable on words** — almost every word says `formal`
   because the field defaulted that way during generation. The per-sense register inside

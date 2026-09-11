@@ -1,3 +1,5 @@
+import { AvailableTranslationLanguagesE } from '../../../../../types';
+
 export enum EnDictionaryImportPhasesE {
   saving_words,
   saving_phrasal_verbs,
@@ -22,7 +24,13 @@ export const SYSTEM_FIELDS = ['id', 'createdAt', 'updateAt', 'updatedAt'];
 // rules live in utils/sortForDataSet.ts (issue #247).
 // The entry files carry the entries themselves; the meanings, their
 // translations and the short translations are files of their own, one line
-// per row next to the key of its parent (issue #442)
+// per row next to the key of its parent (issue #442). The translations ship
+// one file per language (`…-meaning-translations.<lang>.jsonl`,
+// `…-short-translations.<lang>.jsonl`, see translationFileName): a file of
+// one language stays a manageable size and loads on its own. The combined
+// `meaningTranslations` / `shortTranslations` names are what exports between
+// #442 and the split wrote; the import still reads them, the export no longer
+// writes them
 export const DATASET_FILE_NAMES = {
   words: 'vocab-bloom-hub-en-words.jsonl',
   phrasalVerbs: 'vocab-bloom-hub-en-phrasal-verbs.jsonl',
@@ -33,12 +41,29 @@ export const DATASET_FILE_NAMES = {
   shortTranslations: 'vocab-bloom-hub-en-short-translations.jsonl',
 } as const;
 
+export type TranslationFileKindT = 'meaningTranslations' | 'shortTranslations';
+export const TRANSLATION_FILE_KINDS: readonly TranslationFileKindT[] = [
+  'meaningTranslations',
+  'shortTranslations',
+];
+
+/** The dataset file of one translation language: the combined name with the language before the extension */
+export const translationFileName = (
+  kind: TranslationFileKindT,
+  language: AvailableTranslationLanguagesE,
+): string => DATASET_FILE_NAMES[kind].replace(/\.jsonl$/, `.${language}.jsonl`);
+
+/** The per-language translation files of a kind, in the order of the languages */
+export const translationFileNames = (kind: TranslationFileKindT): string[] =>
+  Object.values(AvailableTranslationLanguagesE).map((language) => translationFileName(kind, language));
+
 export const MANIFEST_FILE_NAME = 'manifest.json';
 
 // Every file a dataset may contain; anything else in a local directory or an
 // uploaded archive is rejected before the import starts (issue #269)
 export const DATASET_KNOWN_FILE_NAMES: readonly string[] = [
   ...Object.values(DATASET_FILE_NAMES),
+  ...TRANSLATION_FILE_KINDS.flatMap((kind) => translationFileNames(kind)),
   MANIFEST_FILE_NAME,
 ];
 
@@ -57,19 +82,36 @@ export const DATASET_REFS_URL = `https://huggingface.co/api/datasets/${DATASET_R
 // disk; the published dataset zips are a few tens of megabytes
 export const MAX_UPLOAD_BYTES = 512 * 1024 * 1024;
 // Multipart fields of the upload endpoint: one archive, or the dataset files
-// in their own slots so the uploaded file's own name does not matter
+// in their own slots so the uploaded file's own name does not matter; the
+// translations have a slot per language (`meaning_translations_<lang>`,
+// `short_translations_<lang>`)
 export const UPLOAD_ARCHIVE_FIELD = 'archive';
-export const UPLOAD_FILE_FIELDS = {
+export const UPLOAD_FILE_FIELDS: Readonly<Record<string, string>> = {
   words: DATASET_FILE_NAMES.words,
   phrasal_verbs: DATASET_FILE_NAMES.phrasalVerbs,
   grammar_patterns: DATASET_FILE_NAMES.grammarPatterns,
   phrases: DATASET_FILE_NAMES.phrases,
   meanings: DATASET_FILE_NAMES.meanings,
-  meaning_translations: DATASET_FILE_NAMES.meaningTranslations,
-  short_translations: DATASET_FILE_NAMES.shortTranslations,
+  ...Object.fromEntries(
+    Object.values(AvailableTranslationLanguagesE).flatMap((language) => [
+      [`meaning_translations_${language}`, translationFileName('meaningTranslations', language)],
+      [`short_translations_${language}`, translationFileName('shortTranslations', language)],
+    ]),
+  ),
   manifest: MANIFEST_FILE_NAME,
-} as const;
+};
 export type UploadFileFieldT = keyof typeof UPLOAD_FILE_FIELDS;
+/** The translation slot of a language, or null for any other upload field */
+export const translationUploadField = (
+  field: string,
+): { kind: 'meaning_translations' | 'short_translations'; language: AvailableTranslationLanguagesE } | null => {
+  const match = /^(meaning_translations|short_translations)_([a-z]+)$/.exec(field);
+  if (!match || !(Object.values(AvailableTranslationLanguagesE) as string[]).includes(match[2])) return null;
+  return {
+    kind: match[1] as 'meaning_translations' | 'short_translations',
+    language: match[2] as AvailableTranslationLanguagesE,
+  };
+};
 // A single unpacked dataset file may not exceed this (zip-bomb guard)
 export const MAX_DATASET_FILE_BYTES = 2 * 1024 * 1024 * 1024;
 

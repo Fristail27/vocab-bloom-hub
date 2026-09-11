@@ -3,9 +3,11 @@ import { Button, Radio, Typography, Upload } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { useTranslations } from 'next-intl';
 import {
+  translationUploadField,
   UPLOAD_FILE_FIELDS,
   UploadFileFieldT,
 } from 'server/src/modules/EnModule/modules/EnImportDictionary/constants';
+import { getTranslationsOptions } from '@/app/[locale]/(main-admin-content)/managing/_components/EnWordForm/components/TranslationLanguageSelect/utils';
 import { Input } from '@/core/ui/Input';
 import { ManifestModeE, ManualManifestT, SlotFilesT } from '../../types';
 import styles from './styles.module.scss';
@@ -35,13 +37,24 @@ type SlotP = {
   disabled: boolean;
 };
 
-// One upload slot: the slot decides what the file is, its own name does not matter
+// One upload slot: the slot decides what the file is, its own name does not
+// matter. The translations have a slot per language, labelled with the
+// language's name (`file_meaning_translations_lang` / `file_short_translations_lang`)
 const Slot: React.FC<SlotP> = ({ slot, file, accept, onChange, disabled }) => {
   const t = useTranslations('import_dictionary');
+  const tWords = useTranslations('en_managing_words');
+  const translation = translationUploadField(slot);
+  const label = translation
+    ? t(`file_${translation.kind}_lang`, {
+        language:
+          getTranslationsOptions(tWords).find((o) => o.value === translation.language)?.label ??
+          translation.language,
+      })
+    : t(`file_${slot}`);
   return (
     <div className={styles.slot} data-testid={`slot-${slot}`}>
       <Text strong className={styles.slotLabel}>
-        {t(`file_${slot}`)}
+        {label}
       </Text>
       <Upload
         accept={accept}

@@ -653,19 +653,24 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
         // the same meaning twice: the second line is a duplicate
         meaningLine('give', EnPartOfSpeechE.verb, 'to hand over'),
       ]),
-      'vocab-bloom-hub-en-meaning-translations.jsonl': toNdjson([
+      // the translations: one file per language
+      'vocab-bloom-hub-en-meaning-translations.ru.jsonl': toNdjson([
         translationLine('give', 'to hand over', AvailableTranslationLanguagesE.ru, 'давать'),
-        translationLine('give', 'to hand over', AvailableTranslationLanguagesE.es, 'dar'),
         translationLine('give', 'to yield', AvailableTranslationLanguagesE.ru, 'уступать', {
           meaning_sort_order: 2,
         }),
         // a meaning the dictionary does not have (wrong title): skipped
         translationLine('give', 'to give away', AvailableTranslationLanguagesE.ru, 'отдавать'),
       ]),
-      'vocab-bloom-hub-en-short-translations.jsonl': toNdjson([
+      'vocab-bloom-hub-en-meaning-translations.es.jsonl': toNdjson([
+        translationLine('give', 'to hand over', AvailableTranslationLanguagesE.es, 'dar'),
+      ]),
+      'vocab-bloom-hub-en-short-translations.ru.jsonl': toNdjson([
         shortLine('give', AvailableTranslationLanguagesE.ru, 'давать'),
-        shortLine('give', AvailableTranslationLanguagesE.es, 'dar'),
         shortLine('ghost', AvailableTranslationLanguagesE.ru, 'призрак'),
+      ]),
+      'vocab-bloom-hub-en-short-translations.es.jsonl': toNdjson([
+        shortLine('give', AvailableTranslationLanguagesE.es, 'dar'),
       ]),
     });
 
@@ -727,14 +732,14 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
 
       // a dataset of translations only, for entries and meanings that exist
       mockSplitDataset({
-        'vocab-bloom-hub-en-meaning-translations.jsonl': toNdjson([
+        'vocab-bloom-hub-en-meaning-translations.es.jsonl': toNdjson([
           translationLine('give', 'to yield', AvailableTranslationLanguagesE.es, 'ceder', {
             meaning_sort_order: 2,
           }),
           // already there
           translationLine('give', 'to hand over', AvailableTranslationLanguagesE.es, 'dar'),
         ]),
-        'vocab-bloom-hub-en-short-translations.jsonl': toNdjson([
+        'vocab-bloom-hub-en-short-translations.es.jsonl': toNdjson([
           shortLine('give up', AvailableTranslationLanguagesE.es, 'rendirse'),
           shortLine('give', AvailableTranslationLanguagesE.es, 'dar'),
         ]),
@@ -751,6 +756,30 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
       expect(es.map((t) => t.title).sort()).toEqual(['ceder', 'dar']);
     });
 
+    it('still reads the combined translation files of exports before the per-language split', async () => {
+      mockSplitDataset({
+        'vocab-bloom-hub-en-words.jsonl': toNdjson([makeSetWord('give')]),
+        'vocab-bloom-hub-en-meanings.jsonl': toNdjson([
+          meaningLine('give', EnPartOfSpeechE.verb, 'to hand over'),
+        ]),
+        // every language in one file, the way exports between #442 and the split wrote it
+        'vocab-bloom-hub-en-meaning-translations.jsonl': toNdjson([
+          translationLine('give', 'to hand over', AvailableTranslationLanguagesE.ru, 'давать'),
+          translationLine('give', 'to hand over', AvailableTranslationLanguagesE.es, 'dar'),
+        ]),
+        'vocab-bloom-hub-en-short-translations.jsonl': toNdjson([
+          shortLine('give', AvailableTranslationLanguagesE.ru, 'давать'),
+          shortLine('give', AvailableTranslationLanguagesE.es, 'dar'),
+        ]),
+        // and a per-language file next to it, read as well
+        'vocab-bloom-hub-en-short-translations.fr.jsonl': toNdjson([
+          shortLine('give', AvailableTranslationLanguagesE.fr, 'donner'),
+        ]),
+      });
+      await service.importDictionary({}, new FakeProgressRes() as unknown as ExpressResponse);
+      expect(await counts()).toEqual({ meanings: 1, translations: 2, shorts: 3 });
+    });
+
     it('keeps the collections of user-modified entries in update mode and counts them as kept', async () => {
       mockSplitDataset(splitDataset());
       await service.importDictionary({}, new FakeProgressRes() as unknown as ExpressResponse);
@@ -765,7 +794,7 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
           meaningLine('give', EnPartOfSpeechE.verb, 'to donate'),
           meaningLine('give up', EnPartOfSpeechE.verb, 'to stop trying'),
         ]),
-        'vocab-bloom-hub-en-short-translations.jsonl': toNdjson([
+        'vocab-bloom-hub-en-short-translations.ru.jsonl': toNdjson([
           shortLine('give', AvailableTranslationLanguagesE.ru, 'дарить'),
           shortLine('give up', AvailableTranslationLanguagesE.ru, 'сдаваться'),
         ]),

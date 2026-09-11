@@ -16,7 +16,7 @@ import { MetricsService } from '../../../MetricsModule/metrics.service';
 import { EntityManager, FindOptionsRelations, In, Repository } from 'typeorm';
 import * as yazl from 'yazl';
 import { randomUUID } from 'node:crypto';
-import { createReadStream, createWriteStream, existsSync, mkdirSync } from 'node:fs';
+import { createReadStream, createWriteStream, existsSync, mkdirSync, WriteStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import { stat, unlink, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
@@ -56,6 +56,8 @@ import {
   EnDictionaryImportPhasesE,
   LEGACY_DATASET_TOTAL_LINES,
   MANIFEST_FILE_NAME,
+  translationFileName,
+  translationFileNames,
 } from './constants';
 import {
   cleanEntity,
@@ -125,12 +127,16 @@ const meaningKey = (wordId: number, sortOrder: number, title: string): string =>
  * entry contributes (none, one, or one per row of a collection)
  */
 type ExportStageT = {
-  path: string;
   stage: EnDictionaryImportPhasesE;
   keys: ExportLineKeyT[];
   relations: FindOptionsRelations<EnWord>;
   prepare: (word: EnWord) => unknown[];
+  // the files the stage writes: a line goes to the first one whose `keep`
+  // accepts it (the translations: one file per language); a file nothing
+  // was written to is not created
+  files: Array<{ path: string; keep: (line: unknown) => boolean }>;
 };
+const EVERY_LINE = () => true;
 
 const EXPORT_TTL_MS = 15 * 60 * 1000;
 // Entries are exported in batches of this size: one statement per relation
@@ -858,17 +864,23 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     plusCount: () => number,
     updateCtx?: UpdateModeContextT,
   ): Promise<void> {
-    await this.streamJsonlImport<DataSetMeaningTranslationT>(
-      source,
-      progress,
+    // the combined file of exports before the split, then one file per language
+    for (const fileName of [
       DATASET_FILE_NAMES.meaningTranslations,
-      EnDictionaryImportPhasesE.saving_meaning_translations,
-      allLength,
-      plusCount,
-      async (lines) => {
-        await this.bulkSaveMeaningTranslations(lines, updateCtx);
-      },
-    );
+      ...translationFileNames('meaningTranslations'),
+    ]) {
+      await this.streamJsonlImport<DataSetMeaningTranslationT>(
+        source,
+        progress,
+        fileName,
+        EnDictionaryImportPhasesE.saving_meaning_translations,
+        allLength,
+        plusCount,
+        async (lines) => {
+          await this.bulkSaveMeaningTranslations(lines, updateCtx);
+        },
+      );
+    }
   }
 
   private async saveShortTranslations(
@@ -878,17 +890,22 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     plusCount: () => number,
     updateCtx?: UpdateModeContextT,
   ): Promise<void> {
-    await this.streamJsonlImport<DataSetShortTranslationT>(
-      source,
-      progress,
+    for (const fileName of [
       DATASET_FILE_NAMES.shortTranslations,
-      EnDictionaryImportPhasesE.saving_short_translations,
-      allLength,
-      plusCount,
-      async (lines) => {
-        await this.bulkSaveShortTranslations(lines, updateCtx);
-      },
-    );
+      ...translationFileNames('shortTranslations'),
+    ]) {
+      await this.streamJsonlImport<DataSetShortTranslationT>(
+        source,
+        progress,
+        fileName,
+        EnDictionaryImportPhasesE.saving_short_translations,
+        allLength,
+        plusCount,
+        async (lines) => {
+          await this.bulkSaveShortTranslations(lines, updateCtx);
+        },
+      );
+    }
   }
 
   /**
@@ -1179,6 +1196,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     const source = await openUploadedDatasetSource(files, manual, this.logger);
     const names = Object.values(files)
       .flat()
+      .filter((f) => f !== undefined)
       .map((f) => `"${f.originalname}"`);
     await this.importFrom(
       source,
@@ -1393,9 +1411,18 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     processedSoFar: () => number,
     addProcessed: (n: number) => void,
     onProgress: (percent: number, stage: EnDictionaryImportPhasesE) => void,
-  ): Promise<number> {
-    const outStream = createWriteStream(stage.path, { encoding: 'utf-8' });
-    let written = 0;
+  ): Promise<Map<string, number>> {
+    const streams = new Map<string, WriteStream>();
+    const written = new Map<string, number>();
+    const streamOf = (filePath: string): WriteStream => {
+      let stream = streams.get(filePath);
+      if (!stream) {
+        stream = createWriteStream(filePath, { encoding: 'utf-8' });
+        streams.set(filePath, stream);
+        written.set(filePath, 0);
+      }
+      return stream;
+    };
 
     try {
       for (let offset = 0; offset < stage.keys.length; offset += EXPORT_BATCH_SIZE) {
@@ -1410,8 +1437,10 @@ export class EnImportDictionaryService implements OnModuleDestroy {
           const word = rowsById.get(key.id);
           if (!word) continue;
           for (const line of stage.prepare(word)) {
-            outStream.write(JSON.stringify(cleanEntity(line)) + '\n');
-            written++;
+            const file = stage.files.find((candidate) => candidate.keep(line));
+            if (!file) continue;
+            streamOf(file.path).write(JSON.stringify(cleanEntity(line)) + '\n');
+            written.set(file.path, (written.get(file.path) ?? 0) + 1);
           }
         }
 
@@ -1425,13 +1454,15 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         `Export stage "${stage.stage}" failed`,
         error instanceof Error ? error.stack : String(error),
       );
-      outStream.close();
+      for (const stream of streams.values()) stream.close();
       throw new InternalServerErrorException(ErrorCodes.internal_server_error);
     }
 
-    await new Promise<void>((resolve, reject) => {
-      outStream.end((err?: Error) => (err ? reject(err) : resolve()));
-    });
+    for (const stream of streams.values()) {
+      await new Promise<void>((resolve, reject) => {
+        stream.end((err?: Error) => (err ? reject(err) : resolve()));
+      });
+    }
 
     return written;
   }
@@ -1453,10 +1484,15 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     const verbs = isEntryOf([EnPartOfSpeechE.verb]);
     const words = (k: ExportLineKeyT) => !phrases(k) && !grammarPatterns(k);
     const file = (name: string) => path.join(runDir, name);
+    const perLanguage = (kind: 'meaningTranslations' | 'shortTranslations') =>
+      Object.values(AvailableTranslationLanguagesE).map((language) => ({
+        path: file(translationFileName(kind, language)),
+        keep: (line: unknown) => (line as { language?: string }).language === language,
+      }));
 
     return [
       {
-        path: file(DATASET_FILE_NAMES.words),
+        files: [{ path: file(DATASET_FILE_NAMES.words), keep: EVERY_LINE }],
         stage: EnDictionaryImportPhasesE.saving_words,
         keys: keys.filter(words),
         relations: {
@@ -1470,7 +1506,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       // the linking map the import replays in savePhrasalVerbs: one line per
       // base verb that has phrasal variants
       {
-        path: file(DATASET_FILE_NAMES.phrasalVerbs),
+        files: [{ path: file(DATASET_FILE_NAMES.phrasalVerbs), keep: EVERY_LINE }],
         stage: EnDictionaryImportPhasesE.saving_phrasal_verbs,
         keys: keys.filter(verbs),
         relations: { word: true, phrasal_variants: { word: true } },
@@ -1480,35 +1516,37 @@ export class EnImportDictionaryService implements OnModuleDestroy {
             : [],
       },
       {
-        path: file(DATASET_FILE_NAMES.phrases),
+        files: [{ path: file(DATASET_FILE_NAMES.phrases), keep: EVERY_LINE }],
         stage: EnDictionaryImportPhasesE.saving_phrases,
         keys: keys.filter(phrases),
         relations: { word: true },
         prepare: (w) => [preparePhraseForDataSet(w)],
       },
       {
-        path: file(DATASET_FILE_NAMES.grammarPatterns),
+        files: [{ path: file(DATASET_FILE_NAMES.grammarPatterns), keep: EVERY_LINE }],
         stage: EnDictionaryImportPhasesE.saving_grammar_patterns,
         keys: keys.filter(grammarPatterns),
         relations: { word: true },
         prepare: (w) => [prepareGrammarPatternForDataSet(w)],
       },
       {
-        path: file(DATASET_FILE_NAMES.meanings),
+        files: [{ path: file(DATASET_FILE_NAMES.meanings), keep: EVERY_LINE }],
         stage: EnDictionaryImportPhasesE.saving_meanings,
         keys,
         relations: { word: true, meanings: { synonyms: { entries: true }, antonyms: { entries: true } } },
         prepare: prepareMeaningsForDataSet,
       },
+      // the translations: one file per language of the enum, a line goes to
+      // the file of its language; a language without rows leaves no file
       {
-        path: file(DATASET_FILE_NAMES.meaningTranslations),
+        files: perLanguage('meaningTranslations'),
         stage: EnDictionaryImportPhasesE.saving_meaning_translations,
         keys,
         relations: { word: true, meanings: { translations: true } },
         prepare: prepareMeaningTranslationsForDataSet,
       },
       {
-        path: file(DATASET_FILE_NAMES.shortTranslations),
+        files: perLanguage('shortTranslations'),
         stage: EnDictionaryImportPhasesE.saving_short_translations,
         keys,
         relations: { word: true, short_translations: true },
@@ -1555,10 +1593,14 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       const files: DatasetManifestT['files'] = {};
       for (const stage of stages) {
         const stageStartedAt = Date.now();
-        const lines = await this.exportEntities(stage, total, () => processed, addProcessed, emit);
-        files[path.basename(stage.path)] = { lines };
+        const written = await this.exportEntities(stage, total, () => processed, addProcessed, emit);
+        let lines = 0;
+        for (const [filePath, count] of written) {
+          files[path.basename(filePath)] = { lines: count };
+          lines += count;
+        }
         this.logger.log(
-          `Export stage "${EnDictionaryImportPhasesE[stage.stage]}" wrote ${lines} lines in ${Date.now() - stageStartedAt}ms`,
+          `Export stage "${EnDictionaryImportPhasesE[stage.stage]}" wrote ${lines} lines into ${written.size} file(s) in ${Date.now() - stageStartedAt}ms`,
         );
       }
 
@@ -1577,7 +1619,10 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf-8');
 
       emit(100, EnDictionaryImportPhasesE.packing_archive);
-      await this.zipFiles(zipPath, [...stages.map((stage) => stage.path), manifestPath]);
+      await this.zipFiles(zipPath, [
+        ...Object.keys(files).map((name) => path.join(runDir, name)),
+        manifestPath,
+      ]);
 
       const timeout = setTimeout(() => this.cleanupExport(exportId), EXPORT_TTL_MS);
       timeout.unref();
@@ -1598,7 +1643,10 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       this.metrics?.transferFinished('export', 'failure');
       throw error;
     } finally {
-      await Promise.allSettled([...stages.map((stage) => unlink(stage.path)), unlink(manifestPath)]);
+      await Promise.allSettled([
+        ...stages.flatMap((stage) => stage.files.map((file) => unlink(file.path))),
+        unlink(manifestPath),
+      ]);
       res.end();
     }
   }

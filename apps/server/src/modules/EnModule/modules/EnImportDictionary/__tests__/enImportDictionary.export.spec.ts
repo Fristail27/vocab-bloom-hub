@@ -260,7 +260,9 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
     );
     expect(run).not.toHaveProperty('translations');
 
-    const translations = readJsonlLines('vocab-bloom-hub-en-meaning-translations.jsonl');
+    // one file per language: the dictionary has Russian rows only, so one file
+    const translations = readJsonlLines('vocab-bloom-hub-en-meaning-translations.ru.jsonl');
+    expect(existsSync(path.join(runDir, 'vocab-bloom-hub-en-meaning-translations.es.jsonl'))).toBe(false);
     // the phrase has no translations; the others carry the Russian one, keyed by the meaning
     expect(
       translations.map((l) => [l.word, l.meaning_sort_order, l.meaning_title, l.language, l.title]),
@@ -274,7 +276,7 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
       expect.objectContaining({ part_of_speech: EnPartOfSpeechE.verb, definition: 'быстро перемещаться' }),
     );
 
-    const shorts = readJsonlLines('vocab-bloom-hub-en-short-translations.jsonl');
+    const shorts = readJsonlLines('vocab-bloom-hub-en-short-translations.ru.jsonl');
     expect(shorts.map((l) => [l.word, l.part_of_speech, l.language, l.description])).toEqual([
       ['give', EnPartOfSpeechE.verb, AvailableTranslationLanguagesE.ru, 'бежать'],
       ['give up', EnPartOfSpeechE.verb, AvailableTranslationLanguagesE.ru, 'бежать'],
@@ -346,8 +348,8 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
       'vocab-bloom-hub-en-grammar-patterns.jsonl': { lines: 1 },
       'vocab-bloom-hub-en-phrases.jsonl': { lines: 1 },
       'vocab-bloom-hub-en-meanings.jsonl': { lines: 5 },
-      'vocab-bloom-hub-en-meaning-translations.jsonl': { lines: 4 },
-      'vocab-bloom-hub-en-short-translations.jsonl': { lines: 5 },
+      'vocab-bloom-hub-en-meaning-translations.ru.jsonl': { lines: 4 },
+      'vocab-bloom-hub-en-short-translations.ru.jsonl': { lines: 5 },
     });
   });
 

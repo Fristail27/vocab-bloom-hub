@@ -24,19 +24,24 @@ vocab-bloom-hub-en-phrasal-verbs.jsonl
 vocab-bloom-hub-en-grammar-patterns.jsonl
 vocab-bloom-hub-en-phrases.jsonl
 vocab-bloom-hub-en-meanings.jsonl
-vocab-bloom-hub-en-meaning-translations.jsonl
-vocab-bloom-hub-en-short-translations.jsonl
+vocab-bloom-hub-en-meaning-translations.<lang>.jsonl   # one per language: .ru, .es, .fr, .de, .pt
+vocab-bloom-hub-en-short-translations.<lang>.jsonl
 ```
 
 The entry files (`words`, `phrases`, `grammar-patterns`) carry the entries themselves and their
 forms; `phrasal-verbs` is the linking map of base verbs to their phrasal variants. The
 collections are files of their own (issue #442), one line per row next to the key of its parent:
 
-| File                   | One line per                  | Key of the parent                                               |
-| ---------------------- | ----------------------------- | --------------------------------------------------------------- |
-| `meanings`             | meaning (with its links)      | `word`, `part_of_speech`                                        |
-| `meaning-translations` | translation of a meaning      | `word`, `part_of_speech`, `meaning_sort_order`, `meaning_title` |
-| `short-translations`   | short translation of an entry | `word`, `part_of_speech`                                        |
+| File                          | One line per                  | Key of the parent                                               |
+| ----------------------------- | ----------------------------- | --------------------------------------------------------------- |
+| `meanings`                    | meaning (with its links)      | `word`, `part_of_speech`                                        |
+| `meaning-translations.<lang>` | translation of a meaning      | `word`, `part_of_speech`, `meaning_sort_order`, `meaning_title` |
+| `short-translations.<lang>`   | short translation of an entry | `word`, `part_of_speech`                                        |
+
+The translations are one file per language (`<lang>` is a member of `available_languages`), so a
+file stays a manageable size and a language loads on its own; a language without rows has no
+file. Exports made before this split wrote one combined `meaning-translations.jsonl` /
+`short-translations.jsonl` for every language — the import still reads those.
 
 Phrases and grammar patterns are keyed the same way, with `phrase` / `grammar_pattern` as the
 part of speech. The lines follow the order of the entry files, then the natural keys of the rows,
@@ -77,7 +82,8 @@ contains any file with an unknown name. OS artefacts (`.DS_Store`, `__MACOSX/`) 
 
 Equivalent API calls (the admin cookie or a Bearer token is required). The multipart fields are
 `archive` for the whole zip, or `words`, `phrasal_verbs`, `grammar_patterns`, `phrases`,
-`meanings`, `meaning_translations`, `short_translations` and `manifest` for the separate files;
+`meanings`, `meaning_translations_<lang>`, `short_translations_<lang>` (one slot per language, e.g.
+`short_translations_es`) and `manifest` for the separate files;
 the text fields `version`, `synonym_links` and `antonym_links` stand in for (and override) a
 manifest file:
 
@@ -91,8 +97,8 @@ curl -N -b cookies.txt -F words=@my-words.jsonl -F version=1.4.0 \
   http://localhost:3010/api/en/dictionary/import/upload
 
 # translations only, for entries the dictionary already has
-curl -N -b cookies.txt -F short_translations=@es-short-translations.jsonl \
-  -F meaning_translations=@es-meaning-translations.jsonl \
+curl -N -b cookies.txt -F short_translations_es=@es-short-translations.jsonl \
+  -F meaning_translations_es=@es-meaning-translations.jsonl \
   http://localhost:3010/api/en/dictionary/import/upload
 ```
 
