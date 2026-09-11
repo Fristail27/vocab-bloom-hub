@@ -18,7 +18,10 @@ export type UploadedFilesByFieldT = Partial<
 /** Manifest values typed by hand instead of (or on top of) an uploaded manifest.json */
 export type ManualManifestT = Partial<Pick<DatasetManifestT, 'version' | 'synonym_links' | 'antonym_links'>>;
 
-const allFiles = (files: UploadedFilesByFieldT): UploadedFileT[] => Object.values(files).flat();
+const allFiles = (files: UploadedFilesByFieldT): UploadedFileT[] =>
+  Object.values(files)
+    .flat()
+    .filter((file): file is UploadedFileT => file !== undefined);
 
 /**
  * Opens what the admin uploaded as a dataset source: either one archive in

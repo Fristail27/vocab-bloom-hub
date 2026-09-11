@@ -7,6 +7,14 @@ generated release notes; the full commit history lives in git.
 
 ## v0.2.0-beta.1 — unreleased
 
+- **One translation file per language in the dataset**: the export writes
+  `vocab-bloom-hub-en-meaning-translations.<lang>.jsonl` and
+  `vocab-bloom-hub-en-short-translations.<lang>.jsonl` for every language that has rows instead
+  of one combined file each (with five languages the combined files had grown past 100 MB); the
+  import reads the per-language files and still the combined ones of earlier exports; the
+  _Separate files_ tab and `POST /api/en/dictionary/import/upload` have a slot per language
+  (`meaning_translations_<lang>`, `short_translations_<lang>`).
+
 - **Spanish, French, Portuguese and German interfaces** (issue #450): the admin UI and the
   website speak six languages — `InterfaceLanguageEnum` gains `es`, `fr`, `pt`, `de`, with a
   message catalog per locale in `apps/frontend/messages` and `apps/site/messages` (LLM-drafted

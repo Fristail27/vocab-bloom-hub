@@ -3,7 +3,7 @@ import { WordRowsService } from '../../../word-rows.service';
 
 import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { DataSource } from 'typeorm';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -174,12 +174,11 @@ describe('synonyms and antonyms survive an export → import round trip (issues 
     for (const entry of pending.values()) clearTimeout(entry.timeout);
 
     // serve the exported files to the import of a fresh database
+    // every file the export wrote (the translations one per language) plus the manifest
     const files: Record<string, string> = Object.fromEntries(
-      [...Object.values(DATASET_FILE_NAMES), MANIFEST_FILE_NAME].map((name) => [
-        name,
-        readFileSync(path.join(runDir, name), 'utf-8'),
-      ]),
+      readdirSync(runDir).map((name) => [name, readFileSync(path.join(runDir, name), 'utf-8')]),
     );
+    expect(Object.keys(files)).toContain(MANIFEST_FILE_NAME);
     jest.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const fileName = String(input).split('/').pop() as string;
       const body = files[fileName];
