@@ -271,6 +271,8 @@ export default async function WordPage({ params }: WordPageP) {
           <Link href={`/playground?endpoint=get-words-word`}>{t('try_in_playground')}</Link>
           {' · '}
           <Link href="/docs/data-license">{t('license_note')}</Link>
+          {' · '}
+          <Link href="/docs/data">{t('ai_note')}</Link>
         </p>
         <WordSearch />
       </div>

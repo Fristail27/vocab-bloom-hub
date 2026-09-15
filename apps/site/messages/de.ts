@@ -164,6 +164,9 @@ export default {
     from_api: 'Diese Seite ist',
     try_in_playground: 'probier es im Playground',
     license_note: 'Daten unter CC BY 4.0',
+    ai_note: 'KI-generiert, kann Fehler enthalten',
+    report_license_note:
+      'Eine vom Betreiber übernommene Korrektur wird Teil der Wörterbuchdaten, veröffentlicht unter CC BY 4.0.',
     report_button: 'Fehler melden',
     report_hint:
       'Stimmt etwas an „{word}“ nicht — eine Bedeutung, eine Übersetzung, eine Form? Sag es dem Betreiber dieses Wörterbuchs; die Meldung landet in seiner Moderationswarteschlange.',
