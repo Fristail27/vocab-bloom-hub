@@ -163,6 +163,7 @@ def test_etag_cache_revalidates_and_answers_304_from_it() -> None:
             "license": "CC-BY-4.0",
             "license_url": "u",
             "attribution": "a",
+            "notice": "n",
             "counts": {
                 k: 0
                 for k in [

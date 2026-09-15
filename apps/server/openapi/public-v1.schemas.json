@@ -1206,6 +1206,9 @@
       "attribution": {
         "type": "string"
       },
+      "notice": {
+        "type": "string"
+      },
       "counts": {
         "$ref": "#/components/schemas/PublicDatasetCountsV1T"
       },
@@ -1220,6 +1223,7 @@
       "license",
       "license_url",
       "attribution",
+      "notice",
       "counts",
       "available_languages"
     ]

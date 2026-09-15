@@ -49,6 +49,7 @@ export class PublicMetaService {
       license: DATA_LICENSE.spdx,
       license_url: DATA_LICENSE.url,
       attribution: DATA_LICENSE.attribution,
+      notice: DATA_LICENSE.notice,
       counts,
       // the schema, not the data: the languages a translation may carry on
       // this build, whether or not one has been imported yet (issue #394)

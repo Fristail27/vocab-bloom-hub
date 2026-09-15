@@ -193,6 +193,9 @@ export default {
     from_api: 'Эта страница —',
     try_in_playground: 'попробовать в плейграунде',
     license_note: 'данные под CC BY 4.0',
+    ai_note: 'сгенерировано ИИ, возможны ошибки',
+    report_license_note:
+      'Принятая владельцем правка становится частью данных словаря и публикуется под CC BY 4.0.',
   },
   footer: {
     code_license: 'Код: MIT',

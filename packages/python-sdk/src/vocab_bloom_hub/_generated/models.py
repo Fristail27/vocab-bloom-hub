@@ -391,6 +391,7 @@ class PublicMetaV1T(BaseModel):
     license: str
     license_url: str
     attribution: str
+    notice: str
     counts: PublicDatasetCountsV1T
     available_languages: PublicAvailableLanguagesV1T
 
