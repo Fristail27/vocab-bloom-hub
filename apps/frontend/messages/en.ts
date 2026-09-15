@@ -271,7 +271,7 @@ export default {
     filter_word_level: 'CEFR level',
     filter_language_register: 'Language register',
     filter_generated: 'AI generated',
-    filter_generated_by_model: 'Source model',
+    filter_generated_by_model: 'Source model (contains)',
     filter_version: 'Version',
     filter_is_obsolete: 'Obsolete',
     filter_has_meanings: 'Has meanings',

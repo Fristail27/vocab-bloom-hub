@@ -18,6 +18,7 @@ import {
   PaginatedListT,
 } from '../../../../../types';
 import { ListWordsQueryDTO } from './dto/ListWordsQuery.dto';
+import { escapeLike } from '../EnSearch/utils/escapeLike';
 import { ListMeaningsQueryDTO } from './dto/ListMeaningsQuery.dto';
 import { ListMeaningTranslationsQueryDTO } from './dto/ListMeaningTranslationsQuery.dto';
 import { ListShortTranslationsQueryDTO } from './dto/ListShortTranslationsQuery.dto';
@@ -150,8 +151,12 @@ export class EnAdminListsService {
     if (query.language_register?.length) {
       qb.andWhere('w.language_register IN (:...registers)', { registers: query.language_register });
     }
-    if (query.generated_by_model !== undefined) {
-      qb.andWhere('w.generated_by_model = :model', { model: query.generated_by_model });
+    // Model labels were typed by hand in early batches ("Grok", "Grok by xAI",
+    // "x-ai/grok-4.1-fast" name one model), so the filter matches a substring,
+    // case-insensitively; "grok" finds every spelling.
+    const model = query.generated_by_model?.trim().toLowerCase();
+    if (model) {
+      qb.andWhere(`LOWER(w.generated_by_model) LIKE :model ESCAPE '\\'`, { model: `%${escapeLike(model)}%` });
     }
     if (query.version !== undefined) {
       qb.andWhere('w.version = :version', { version: query.version });

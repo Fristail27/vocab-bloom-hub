@@ -299,6 +299,16 @@ describe('EnAdminListsService (issue #249)', () => {
     expect(await words({ version: '2.0.0' })).toEqual(['abandon:verb']);
   });
 
+  it('matches generated_by_model as a case-insensitive substring with LIKE wildcards escaped', async () => {
+    // hand-typed labels name one model in several spellings; a fragment finds them all
+    expect(await words({ generated_by_model: 'MODEL' })).toEqual(['run:verb']);
+    expect(await words({ generated_by_model: ' odel-a ' })).toEqual(['run:verb']);
+    expect(await words({ generated_by_model: 'model_a' })).toEqual([]);
+    expect(await words({ generated_by_model: '%' })).toEqual([]);
+    // blank input is no filter, like an omitted one
+    expect(await words({ generated_by_model: '  ' })).toEqual(await words({}));
+  });
+
   it('filters by is_obsolete', async () => {
     expect(await words({ is_obsolete: true })).toEqual(['abandon:verb']);
     expect(await words({ is_obsolete: false })).toEqual([

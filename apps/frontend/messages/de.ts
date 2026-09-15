@@ -276,7 +276,7 @@ export default {
     filter_word_level: 'GER-Niveau',
     filter_language_register: 'Sprachregister',
     filter_generated: 'KI-generiert',
-    filter_generated_by_model: 'Quellmodell',
+    filter_generated_by_model: 'Quellmodell (enthält)',
     filter_version: 'Version',
     filter_is_obsolete: 'Veraltet',
     filter_has_meanings: 'Hat Bedeutungen',

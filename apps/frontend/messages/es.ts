@@ -276,7 +276,7 @@ export default {
     filter_word_level: 'Nivel MCER',
     filter_language_register: 'Registro lingüístico',
     filter_generated: 'Generado por IA',
-    filter_generated_by_model: 'Modelo de origen',
+    filter_generated_by_model: 'Modelo de origen (contiene)',
     filter_version: 'Versión',
     filter_is_obsolete: 'Obsoleto',
     filter_has_meanings: 'Tiene significados',

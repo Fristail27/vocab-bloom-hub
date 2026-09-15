@@ -274,7 +274,7 @@ export default {
     filter_word_level: 'Уровень CEFR',
     filter_language_register: 'Регистр',
     filter_generated: 'Сгенерировано ИИ',
-    filter_generated_by_model: 'Модель-источник',
+    filter_generated_by_model: 'Модель-источник (содержит)',
     filter_version: 'Версия',
     filter_is_obsolete: 'Устаревшее',
     filter_has_meanings: 'Есть значения',

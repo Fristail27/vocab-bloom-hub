@@ -274,7 +274,7 @@ export default {
     filter_word_level: 'Nível QECR',
     filter_language_register: 'Registro linguístico',
     filter_generated: 'Gerado por IA',
-    filter_generated_by_model: 'Modelo de origem',
+    filter_generated_by_model: 'Modelo de origem (contém)',
     filter_version: 'Versão',
     filter_is_obsolete: 'Obsoleto',
     filter_has_meanings: 'Tem significados',

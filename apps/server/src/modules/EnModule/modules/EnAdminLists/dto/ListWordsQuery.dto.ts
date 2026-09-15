@@ -48,7 +48,10 @@ export class ListWordsQueryDTO extends PaginationQueryDTO {
   @IsBoolean()
   generated?: boolean;
 
-  @ApiPropertyOptional({ description: 'Exact match of generated_by_model' })
+  @ApiPropertyOptional({
+    description:
+      'Case-insensitive substring of generated_by_model ("grok" matches every spelling of a Grok label)',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(128)
