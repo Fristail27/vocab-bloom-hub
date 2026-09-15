@@ -658,6 +658,7 @@ export interface components {
       license: string;
       license_url: string;
       attribution: string;
+      notice: string;
       counts: components['schemas']['PublicDatasetCountsV1T'];
       available_languages: components['schemas']['PublicAvailableLanguagesV1T'];
     };

@@ -597,6 +597,7 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
         license: 'CC-BY-4.0',
         license_url: 'https://creativecommons.org/licenses/by/4.0/',
         attribution: expect.stringContaining('CC BY 4.0'),
+        notice: expect.stringContaining('language models'),
         counts: {
           // headwords: sprint, run, ran, running, abandon, put up with
           entries: 6,
