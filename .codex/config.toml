@@ -1,0 +1,6 @@
+# Project-level Codex config (applies in trusted projects). MCP servers shared by every agent
+# are described in AGENTS.md ("Agent tooling").
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp"]
+env_vars = ["CONTEXT7_API_KEY"]

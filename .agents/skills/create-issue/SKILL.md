@@ -1,11 +1,10 @@
 ---
-description: Draft and create a GitHub issue using the project's issue templates
-argument-hint: <short description of the bug or feature, in any language>
+name: create-issue
+description: Draft and create a GitHub issue in Fristail27/vocab-bloom-hub using the project's issue templates. Use when asked to file, open or create an issue, bug report or feature request; the argument is a short description of the bug or feature, in any language.
 ---
 
-Create a GitHub issue in `Fristail27/vocab-bloom-hub` based on this request:
-
-$ARGUMENTS
+Create a GitHub issue in `Fristail27/vocab-bloom-hub` based on the user's request — the text
+given with the skill invocation (or the surrounding conversation when nothing was passed).
 
 Follow these steps exactly:
 
@@ -59,12 +58,14 @@ EOF
 
 (For bug reports use the bug template's labels and field headings: `### Affected package`, `### Description`, `### Steps to reproduce`, `### Expected behavior`, `### Package version`, `### Logs / screenshots`.)
 
-If `gh` is not installed, use Chrome browser automation instead:
+If `gh` is not installed and a browser automation tool is available, use it instead:
 
 1. Open `https://github.com/Fristail27/vocab-bloom-hub/issues/new?template=<template file>` in a new tab.
-2. Fill the title and each textarea with `form_input`; set the dropdown by clicking it and choosing the option.
-3. Take a screenshot, verify all fields are filled, then click **Create**.
+2. Fill the title and each textarea; set the dropdown by clicking it and choosing the option.
+3. Verify all fields are filled (screenshot when the tool can take one), then click **Create**.
 4. Confirm the issue page loaded, note the issue number, and close the tab.
+
+Without either, give the user the prefilled URL and the complete body to paste.
 
 ## 5. Report back
 

@@ -161,8 +161,9 @@ full plan of the first release lives in
 
 1. **The release PR.** Bump the version everywhere with the only tool allowed to touch it —
    `node scripts/bump-version.mjs <version>` (six files; a CI test keeps them equal) — and
-   curate the new `CHANGELOG.md` entry (the `/release-changelog <version>` Claude Code command
-   in `.claude/commands/` assembles the draft from everything merged since the previous tag).
+   curate the new `CHANGELOG.md` entry (the `release-changelog` agent skill in
+   `.agents/skills/` — `/release-changelog <version>` in Claude Code, Cursor, Copilot or Codex —
+   assembles the draft from everything merged since the previous tag).
    Merge on green CI.
 2. **The tag — the whole release.** On the merged `main`:
    `git tag -a v<version> -m "..." && git push origin v<version>`.
