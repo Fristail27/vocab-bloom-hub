@@ -59,6 +59,7 @@ import {
   ListMeaningTranslationsResT,
   ListShortTranslationsQueryT,
   ListShortTranslationsResT,
+  ListWordModelsResT,
   ListWordsQueryT,
   ListWordsResT,
   SearchDetailedReqT,
@@ -124,6 +125,11 @@ export class EnApi extends AbstractBaseApi {
   // Admin listings with filters and pagination (bulk-request page, issue #249)
   static async listWords(query: ListWordsQueryT): Promise<ListWordsResT> {
     return this.get<ListWordsResT>(`${this.baseURL}/en/words`, { query: { ...query } });
+  }
+
+  /** Every generated_by_model label with its number of words, for the source-model filter */
+  static async listWordModels(): Promise<ListWordModelsResT> {
+    return this.get<ListWordModelsResT>(`${this.baseURL}/en/words/models`);
   }
 
   static async listMeanings(query: ListMeaningsQueryT): Promise<ListMeaningsResT> {

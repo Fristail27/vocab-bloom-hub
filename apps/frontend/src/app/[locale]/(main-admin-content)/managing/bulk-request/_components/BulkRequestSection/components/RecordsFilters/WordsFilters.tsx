@@ -5,7 +5,7 @@ import { Button } from 'antd';
 import { useTranslations } from 'next-intl';
 import { EnAreaVariantsE, EnPartOfSpeechE, LanguageRegisterE, WordLevelE } from 'server/types';
 import { WordsFilterT } from '../../types';
-import { DebouncedInput, EnumMultiSelect, enumOptions, TriStateSelect } from './shared';
+import { DebouncedInput, EnumMultiSelect, enumOptions, ModelAutoComplete, TriStateSelect } from './shared';
 import styles from './styles.module.scss';
 
 type WordsFiltersP = {
@@ -67,11 +67,17 @@ export const WordsFilters: React.FC<WordsFiltersP> = ({ value, onChange }) => {
           value={value.generated}
           onChange={(generated) => patch({ generated })}
         />
-        <DebouncedInput
+        <TriStateSelect
+          label={t('filter_has_model')}
+          value={value.has_model}
+          onChange={(has_model) => patch({ has_model })}
+        />
+        <ModelAutoComplete
           key={`model-${resetKey}`}
           label={t('filter_generated_by_model')}
           value={value.generated_by_model}
           onCommit={(generated_by_model) => patch({ generated_by_model })}
+          testId="filter-model"
         />
         <DebouncedInput
           key={`version-${resetKey}`}

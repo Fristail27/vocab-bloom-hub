@@ -277,6 +277,7 @@ export default {
     filter_language_register: 'Sprachregister',
     filter_generated: 'KI-generiert',
     filter_generated_by_model: 'Quellmodell (enthält)',
+    filter_has_model: 'Hat Quellmodell',
     filter_version: 'Version',
     filter_is_obsolete: 'Veraltet',
     filter_has_meanings: 'Hat Bedeutungen',

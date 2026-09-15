@@ -10,6 +10,7 @@ import {
   EnMeaningsListT,
   EnMeaningTranslationsListT,
   EnShortTranslationsListT,
+  EnWordModelsT,
   EnWordsListT,
 } from '../../../../../types';
 
@@ -21,6 +22,12 @@ import {
 @Controller('/api/en')
 export class EnAdminListsController {
   constructor(private readonly enAdminListsService: EnAdminListsService) {}
+
+  @UseGuards(AdminGuard)
+  @Get('words/models')
+  async listWordModels(): Promise<EnWordModelsT> {
+    return this.enAdminListsService.listWordModels();
+  }
 
   @UseGuards(AdminGuard)
   @Get('words')

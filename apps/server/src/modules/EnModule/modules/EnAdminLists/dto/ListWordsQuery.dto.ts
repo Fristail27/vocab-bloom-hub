@@ -57,6 +57,15 @@ export class ListWordsQueryDTO extends PaginationQueryDTO {
   @MaxLength(128)
   generated_by_model?: string;
 
+  @ApiPropertyOptional({
+    type: Boolean,
+    description: 'true: only words with a generated_by_model label, false: only words without one',
+  })
+  @IsOptional()
+  @Transform(toBoolean)
+  @IsBoolean()
+  has_model?: boolean;
+
   @ApiPropertyOptional({ description: 'Exact match of the record version' })
   @IsOptional()
   @IsString()

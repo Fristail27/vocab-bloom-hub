@@ -23,6 +23,12 @@
     flex: 1 1 260px;
   }
 
+  .autocomplete {
+    display: flex;
+    flex-direction: column;
+    min-width: 220px;
+  }
+
   .reset {
     align-self: flex-end;
   }

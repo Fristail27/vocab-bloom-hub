@@ -13,12 +13,12 @@ import {
   EnShortTranslationListItemT,
   EnShortTranslationsListT,
   EnWordListItemT,
+  EnWordModelsT,
   EnWordsListT,
   EnWordFormsE,
   PaginatedListT,
 } from '../../../../../types';
 import { ListWordsQueryDTO } from './dto/ListWordsQuery.dto';
-import { escapeLike } from '../EnSearch/utils/escapeLike';
 import { ListMeaningsQueryDTO } from './dto/ListMeaningsQuery.dto';
 import { ListMeaningTranslationsQueryDTO } from './dto/ListMeaningTranslationsQuery.dto';
 import { ListShortTranslationsQueryDTO } from './dto/ListShortTranslationsQuery.dto';
@@ -158,6 +158,12 @@ export class EnAdminListsService {
     if (model) {
       qb.andWhere(`LOWER(w.generated_by_model) LIKE :model ESCAPE '\\'`, { model: `%${escapeLike(model)}%` });
     }
+    // an empty string is "no label" too: early imports wrote '' instead of NULL
+    if (query.has_model !== undefined) {
+      qb.andWhere(
+        `${query.has_model ? 'NOT ' : ''}(w.generated_by_model IS NULL OR w.generated_by_model = '')`,
+      );
+    }
     if (query.version !== undefined) {
       qb.andWhere('w.version = :version', { version: query.version });
     }
@@ -202,6 +208,26 @@ export class EnAdminListsService {
       meanings_count: counts.meanings,
       short_translations_count: counts.short_translations,
     };
+  }
+
+  /**
+   * Every distinct generated_by_model label of the base-form words with the
+   * number of words behind it, most frequent first; NULL and '' are one
+   * "no label" row. Feeds the source-model filter of the bulk-request page,
+   * where the hand-typed spellings of one model have to be visible to be found.
+   */
+  async listWordModels(): Promise<EnWordModelsT> {
+    const rows = await this.enWordsRep
+      .createQueryBuilder('w')
+      .select("COALESCE(w.generated_by_model, '')", 'model')
+      .addSelect('COUNT(*)', 'count')
+      .where('w.form_of_word = :baseForm', { baseForm: EnWordFormsE.base_form })
+      .groupBy("COALESCE(w.generated_by_model, '')")
+      .getRawMany<{ model: string; count: string | number }>();
+    const items = rows
+      .map((row) => ({ model: row.model || null, count: Number(row.count) }))
+      .sort((a, b) => b.count - a.count || ((a.model ?? '') < (b.model ?? '') ? -1 : 1));
+    return { items };
   }
 
   /** Base-form words with their meanings / short translations counters */

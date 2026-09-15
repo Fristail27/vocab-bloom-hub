@@ -12,6 +12,7 @@ import {
   EnMeaningTranslationsListT,
   EnPartOfSpeechE,
   EnShortTranslationsListT,
+  EnWordModelsT,
   EnWordsListT,
   WordLevelE,
 } from '../../../../../../types';
@@ -21,10 +22,11 @@ describe('EnAdminListsController (issue #249)', () => {
   const mockService: jest.Mocked<
     Pick<
       EnAdminListsService,
-      'listWords' | 'listMeanings' | 'listMeaningTranslations' | 'listShortTranslations'
+      'listWords' | 'listWordModels' | 'listMeanings' | 'listMeaningTranslations' | 'listShortTranslations'
     >
   > = {
     listWords: jest.fn(),
+    listWordModels: jest.fn(),
     listMeanings: jest.fn(),
     listMeaningTranslations: jest.fn(),
     listShortTranslations: jest.fn(),
@@ -49,6 +51,18 @@ describe('EnAdminListsController (issue #249)', () => {
 
     await expect(controller.listWords(query)).resolves.toBe(result);
     expect(mockService.listWords).toHaveBeenCalledWith(query);
+  });
+
+  it('serves the model labels from the service', async () => {
+    const result: EnWordModelsT = {
+      items: [
+        { model: 'model-a', count: 2 },
+        { model: null, count: 1 },
+      ],
+    };
+    mockService.listWordModels.mockResolvedValue(result);
+
+    await expect(controller.listWordModels()).resolves.toBe(result);
   });
 
   it('delegates the meanings query', async () => {
@@ -81,6 +95,7 @@ describe('EnAdminListsController (issue #249)', () => {
   it('protects every listing with the AdminGuard', () => {
     for (const handler of [
       controller.listWords,
+      controller.listWordModels,
       controller.listMeanings,
       controller.listMeaningTranslations,
       controller.listShortTranslations,

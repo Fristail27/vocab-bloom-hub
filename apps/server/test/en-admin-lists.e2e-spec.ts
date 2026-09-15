@@ -14,11 +14,12 @@ import { createJwt } from '../core/utils/auth';
 import {
   AvailableTranslationLanguagesE,
   EnAreaVariantsE,
-  EnMeaningsListT,
   EnMeaningTranslationsListT,
+  EnMeaningsListT,
   EnPartOfSpeechE,
   EnShortTranslationsListT,
   EnWordFormsE,
+  EnWordModelsT,
   EnWordsListT,
 } from '../types';
 
@@ -118,6 +119,19 @@ describe('admin listings GET /api/en/words, /meanings, /meaning-translations, /s
 
   it('is admin-only', async () => {
     await request(server()).get('/api/en/words').expect(401);
+    await request(server()).get('/api/en/words/models').expect(401);
+  });
+
+  // 'words/models' must not be taken for the word id of GET /api/en/:id either
+  it('lists the model labels with their counts at GET /api/en/words/models', async () => {
+    const res = await request(server()).get('/api/en/words/models').set(auth).expect(200);
+    const body = res.body as EnWordModelsT;
+
+    expect(body.items.reduce((sum, i) => sum + i.count, 0)).toBe(3);
+    expect(body.items).toEqual(
+      [...body.items].sort((a, b) => b.count - a.count || ((a.model ?? '') < (b.model ?? '') ? -1 : 1)),
+    );
+    expect(body.items.every((i) => i.model === null || typeof i.model === 'string')).toBe(true);
   });
 
   // EnController serves GET /api/en/:id; the listing controller must win the route match

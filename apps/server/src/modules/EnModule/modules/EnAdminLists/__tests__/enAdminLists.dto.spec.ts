@@ -53,12 +53,14 @@ describe('ListWordsQueryDTO (issue #249)', () => {
         is_obsolete: 'false',
         has_meanings: 'true',
         has_short_translations: 'false',
+        has_model: 'false',
       }),
     ).resolves.toMatchObject({
       generated: true,
       is_obsolete: false,
       has_meanings: true,
       has_short_translations: false,
+      has_model: false,
     });
     await expect(validate({ generated: 'yes' })).rejects.toThrow(BadRequestException);
     await expect(validate({ has_meanings: '1' })).rejects.toThrow(BadRequestException);

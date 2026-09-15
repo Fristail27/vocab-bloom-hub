@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { App } from 'antd';
 import {
   AvailableTranslationLanguagesE,
@@ -21,6 +21,7 @@ jest.mock('next-intl', () => ({
 jest.mock('@/core/api/EnApi', () => ({
   EnApi: {
     listWords: jest.fn(),
+    listWordModels: jest.fn(),
     listMeanings: jest.fn(),
     listMeaningTranslations: jest.fn(),
     listShortTranslations: jest.fn(),
@@ -150,6 +151,13 @@ describe('BulkRequestSection', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (EnApi.listWords as jest.Mock).mockResolvedValue(page(words));
+    (EnApi.listWordModels as jest.Mock).mockResolvedValue({
+      items: [
+        { model: null, count: 5 },
+        { model: 'x-ai/grok-4.1-fast', count: 3 },
+        { model: 'Grok', count: 1 },
+      ],
+    });
     (EnApi.listMeanings as jest.Mock).mockResolvedValue(page(meanings));
     (EnApi.listMeaningTranslations as jest.Mock).mockResolvedValue(page(translations));
     (EnApi.listShortTranslations as jest.Mock).mockResolvedValue(page(shortTranslations));
@@ -308,6 +316,29 @@ describe('BulkRequestSection', () => {
 
     fireEvent.click(screen.getByText('filters_panel'));
     await screen.findByTestId('filter-search');
+  });
+
+  it('offers the existing model labels under the source-model filter and sends the typed fragment', async () => {
+    renderSection();
+    await goToWords('https://api.example.com/v1');
+    expect(EnApi.listWordModels).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText('filters_panel'));
+    // antd puts the test id on the wrapper; the editable element is its combobox
+    const input = within(await screen.findByTestId('filter-model')).getByRole('combobox');
+    await waitFor(() => expect(EnApi.listWordModels).toHaveBeenCalledTimes(1));
+
+    // every spelling of the model is listed with its count; "no label" is not a label
+    fireEvent.mouseDown(input);
+    fireEvent.change(input, { target: { value: 'gro' } });
+    await screen.findByText('x-ai/grok-4.1-fast (3)');
+    expect(screen.getByText('Grok (1)')).toBeInTheDocument();
+    expect(screen.queryByText(/null/)).not.toBeInTheDocument();
+
+    // the fragment itself is the filter, matched by the server as a substring
+    await waitFor(() =>
+      expect(EnApi.listWords).toHaveBeenCalledWith({ page: 1, limit: 50, generated_by_model: 'gro' }),
+    );
   });
 
   it('switches the source table: loads meanings, swaps the default prompt and the placeholders, and traces lines by meaning_id', async () => {

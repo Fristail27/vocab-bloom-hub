@@ -82,6 +82,12 @@ export type EnWordListItemT = {
 export type EnWordsListT = PaginatedListT<EnWordListItemT>;
 export type ListWordsResT = EnWordsListT | ErrorResT;
 
+// GET /api/en/words/models: every generated_by_model label of the base-form
+// words with its number of words, most frequent first; `null` = no label
+export type EnWordModelItemT = { model: string | null; count: number };
+export type EnWordModelsT = { items: EnWordModelItemT[] };
+export type ListWordModelsResT = EnWordModelsT | ErrorResT;
+
 export type ListMeaningsQueryT = ListMeaningsQueryDTO;
 // a meaning next to the word it belongs to
 export type EnMeaningListItemT = {

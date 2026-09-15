@@ -277,6 +277,7 @@ export default {
     filter_language_register: 'Registro lingüístico',
     filter_generated: 'Generado por IA',
     filter_generated_by_model: 'Modelo de origen (contiene)',
+    filter_has_model: 'Tiene modelo de origen',
     filter_version: 'Versión',
     filter_is_obsolete: 'Obsoleto',
     filter_has_meanings: 'Tiene significados',

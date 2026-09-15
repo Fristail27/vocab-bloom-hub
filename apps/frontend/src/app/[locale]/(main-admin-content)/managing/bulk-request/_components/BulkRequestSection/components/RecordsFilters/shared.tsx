@@ -1,7 +1,10 @@
 'use client';
 
 import React from 'react';
+import { AutoComplete, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
+import { EnWordModelItemT } from 'server/types';
+import { EnApi } from '@/core/api/EnApi';
 import { Input } from '@/core/ui/Input';
 import { Select } from '@/core/ui/Select';
 import { useDebounced } from '@/core/hooks';
@@ -92,3 +95,57 @@ export const EnumMultiSelect = <T extends string>({
 );
 
 export const enumOptions = <T extends string>(values: T[]) => values.map((v) => ({ value: v, label: v }));
+
+type ModelAutoCompleteP = {
+  label: string;
+  value: string | undefined;
+  onCommit: (next: string | undefined) => void;
+  testId?: string | undefined;
+};
+
+/**
+ * The source-model filter: a text the server matches as a substring, with the
+ * labels that exist in the dictionary (and their word counts) offered under
+ * it, so the hand-typed spellings of one model are visible and one fragment —
+ * "grok" — can be chosen to cover all of them. The labels are loaded once,
+ * when the filters are shown.
+ */
+export const ModelAutoComplete: React.FC<ModelAutoCompleteP> = ({ label, value, onCommit, testId }) => {
+  const [text, setText] = React.useState(value ?? '');
+  const [models, setModels] = React.useState<EnWordModelItemT[]>([]);
+  const debounced = useDebounced(text, 400);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    EnApi.listWordModels().then((res) => {
+      if (!cancelled && !('error' in res)) setModels(res.items.filter((item) => item.model !== null));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  React.useEffect(() => {
+    const next = debounced.trim() || undefined;
+    if (next !== value) onCommit(next);
+    // only the debounced text may trigger this effect
+  }, [debounced]);
+
+  const needle = text.trim().toLowerCase();
+  const options = models
+    .filter((item) => !needle || item.model!.toLowerCase().includes(needle))
+    .map((item) => ({ value: item.model!, label: `${item.model} (${item.count})` }));
+
+  return (
+    <div className={styles.autocomplete}>
+      <Typography.Text strong>{label}</Typography.Text>
+      <AutoComplete
+        value={text}
+        options={options}
+        onChange={(next: string) => setText(next ?? '')}
+        allowClear
+        data-testid={testId}
+      />
+    </div>
+  );
+};

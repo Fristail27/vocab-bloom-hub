@@ -156,8 +156,16 @@ describe('EnAdminListsService (issue #249)', () => {
       word: 'colour',
       area_variant: EnAreaVariantsE.british,
       language_register: LanguageRegisterE.informal,
+      // early imports wrote '' instead of NULL for "no label"
+      generated_by_model: '',
     });
-    await seed({ word: 'quickly', part_of_speech: EnPartOfSpeechE.adverb, generated: true });
+    // the same model under another hand-typed spelling (issue #457)
+    await seed({
+      word: 'quickly',
+      part_of_speech: EnPartOfSpeechE.adverb,
+      generated: true,
+      generated_by_model: 'Model-A',
+    });
     await seed({ word: 'in the long run', part_of_speech: EnPartOfSpeechE.phrase, short_translations: 2 });
   });
 
@@ -295,18 +303,38 @@ describe('EnAdminListsService (issue #249)', () => {
       'in the long run:phrase',
       'run:noun',
     ]);
-    expect(await words({ generated_by_model: 'model-a' })).toEqual(['run:verb']);
+    expect(await words({ generated_by_model: 'model-a' })).toEqual(['quickly:adverb', 'run:verb']);
     expect(await words({ version: '2.0.0' })).toEqual(['abandon:verb']);
   });
 
   it('matches generated_by_model as a case-insensitive substring with LIKE wildcards escaped', async () => {
     // hand-typed labels name one model in several spellings; a fragment finds them all
-    expect(await words({ generated_by_model: 'MODEL' })).toEqual(['run:verb']);
-    expect(await words({ generated_by_model: ' odel-a ' })).toEqual(['run:verb']);
+    expect(await words({ generated_by_model: 'MODEL' })).toEqual(['quickly:adverb', 'run:verb']);
+    expect(await words({ generated_by_model: ' odel-a ' })).toEqual(['quickly:adverb', 'run:verb']);
     expect(await words({ generated_by_model: 'model_a' })).toEqual([]);
     expect(await words({ generated_by_model: '%' })).toEqual([]);
     // blank input is no filter, like an omitted one
     expect(await words({ generated_by_model: '  ' })).toEqual(await words({}));
+  });
+
+  it('filters by has_model, treating an empty label like a missing one', async () => {
+    expect(await words({ has_model: true })).toEqual(['quickly:adverb', 'run:verb']);
+    expect(await words({ has_model: false })).toEqual([
+      'abandon:verb',
+      'colour:noun',
+      'in the long run:phrase',
+      'run:noun',
+    ]);
+  });
+
+  it('lists the distinct model labels of the base forms with their counts, most frequent first', async () => {
+    await expect(service.listWordModels()).resolves.toEqual({
+      items: [
+        { model: null, count: 4 },
+        { model: 'Model-A', count: 1 },
+        { model: 'model-a', count: 1 },
+      ],
+    });
   });
 
   it('filters by is_obsolete', async () => {
