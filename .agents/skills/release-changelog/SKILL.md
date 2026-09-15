@@ -1,11 +1,12 @@
 ---
-description: Assemble the curated CHANGELOG entry for a release from everything merged since the previous tag
-argument-hint: <version, e.g. 0.2.0-beta.1>
+name: release-changelog
+description: Assemble the curated CHANGELOG.md entry for a vocab-bloom-hub release from everything merged since the previous tag. Use when preparing a release PR; the argument is the version being released, e.g. 0.2.0-beta.1.
 ---
 
-Assemble the `CHANGELOG.md` entry for release version $ARGUMENTS of vocab-bloom-hub. This is the
-curation step of the release PR (CONTRIBUTING.md#releasing): the command drafts, the human reviews —
-never write the file before the draft is confirmed.
+Assemble the `CHANGELOG.md` entry for the release version given by the user (`<version>` below,
+e.g. `0.2.0-beta.1`; ask for it when it was not passed) of vocab-bloom-hub. This is the curation
+step of the release PR (CONTRIBUTING.md#releasing): the skill drafts, the human reviews — never
+write the file before the draft is confirmed.
 
 Follow these steps exactly:
 
@@ -28,7 +29,7 @@ documentation worth announcing. When in doubt, keep it and let the review decide
 
 Read the top of `CHANGELOG.md` and match it exactly:
 
-- Section header `## v$ARGUMENTS — unreleased`, inserted above the previous release's section.
+- Section header `## v<version> — unreleased`, inserted above the previous release's section.
 - One short theme sentence first — what this release is about, not a list.
 - Then curated bullets of the form `- **Area**: what changed, written for a reader of the release` —
   reader-facing sentences, not commit messages; no PR numbers; group related changes into one bullet.
@@ -44,6 +45,6 @@ corrections, then edit `CHANGELOG.md`. Do not commit unless asked.
 ## 5. Remind the rest of the release PR
 
 The changelog is one third of the release PR. After writing, remind that the same PR needs
-`node scripts/bump-version.mjs $ARGUMENTS` (the only tool allowed to touch the version),
+`node scripts/bump-version.mjs <version>` (the only tool allowed to touch the version),
 `yarn workspace server openapi:generate`, and `uv lock` in `packages/python-sdk` — and that after the
-merge the release is one tag push: `git tag -a v$ARGUMENTS && git push origin v$ARGUMENTS`.
+merge the release is one tag push: `git tag -a v<version> && git push origin v<version>`.
