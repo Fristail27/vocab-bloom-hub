@@ -77,6 +77,15 @@ Before submitting a pull request:
 - Avoid unrelated changes in the same PR
 - Update documentation if needed
 
+### Licensing of contributions
+
+There is no contributor agreement to sign. By opening a pull request you agree that your
+contribution is licensed under the terms of what it changes: code and documentation under the
+[MIT license](./LICENSE), dictionary data — an entry edited in the admin UI, a correction sent
+through _Report a mistake_ on a word page and applied by the owner, a dataset revision — under
+[CC BY 4.0](./DATA_LICENSE.md). Keep the model label (`generated_by_model`) truthful on data
+you generate: every record names the model behind it, see [`docs/data.md`](./docs/data.md).
+
 ### Documentation languages
 
 English is the source language of the documentation. A page may have a Russian version next

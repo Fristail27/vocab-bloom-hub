@@ -48,24 +48,24 @@ public, max-age=<PUBLIC_API_CACHE_MAX_AGE>`; условные запросы о�
 Каждый успешный ответ — конверт: полезная нагрузка под `data`, пагинация и счётчики под
 `meta`. Типы ответов — в `apps/server/types/public/v1/index.ts`.
 
-| Метод  | Путь                                | Query / тело                                                                                           | Ответ                                                                                           |
-| ------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| `GET`  | `/api/v1/search`                    | `search`, `type?`, `limit?`                                                                            | `{ data: PublicSearchWordV1T[], meta: { count, fuzzy, short_term } }`                           |
-| `GET`  | `/api/v1/search/detailed`           | `search`, `type?`, `limit?`, `page?`, `with_meanings?`, `with_translations?`, `translation_languages?` | `{ data: PublicWordV1T[], meta: { page, limit, has_more, fuzzy, short_term } }`                 |
-| `POST` | `/api/v1/search`                    | `{ search, type?, limit? }` — тот же поиск, не кэшируется                                              | `{ data: PublicSearchWordV1T[], meta: { count, fuzzy, short_term } }`                           |
-| `POST` | `/api/v1/search/detailed`           | `{ search, type?, limit?, page?, with_meanings?, with_translations?, translation_languages? }`         | `{ data: PublicWordV1T[], meta: { page, limit, has_more, fuzzy, short_term } }`                 |
-| `GET`  | `/api/v1/words/{word}`              | —                                                                                                      | `{ data: PublicWordV1T[], meta: { word, count } }`                                              |
-| `POST` | `/api/v1/words/batch`               | `{ words: string[] }` (1–50)                                                                           | `{ data: { word, count, entries: PublicWordV1T[] }[], meta: { count, not_found } }`             |
-| `GET`  | `/api/v1/words/{word}/meanings`     | —                                                                                                      | `{ data: PublicMeaningV1T[], meta: { word, count } }`                                           |
-| `GET`  | `/api/v1/words/{word}/translations` | `language?`                                                                                            | `{ data: { short_translations, meaning_translations }, meta }`                                  |
-| `GET`  | `/api/v1/words/{word}/forms`        | —                                                                                                      | `{ data: PublicWordFormV1T[], meta: { word, count } }`                                          |
-| `GET`  | `/api/v1/words/{word}/synonyms`     | —                                                                                                      | `{ data: PublicWordLinkV1T[], meta: { word, count } }`                                          |
-| `GET`  | `/api/v1/words/{word}/antonyms`     | —                                                                                                      | `{ data: PublicWordLinkV1T[], meta: { word, count } }`                                          |
-| `GET`  | `/api/v1/words/id/{id}`             | —                                                                                                      | `{ data: PublicWordV1T }`                                                                       |
-| `GET`  | `/api/v1/words`                     | фильтры, `cursor?`, `limit?`, `with_meanings?`, `with_translations?`                                   | `{ data: PublicWordV1T[], meta: { limit, has_more, next_cursor } }`                             |
-| `GET`  | `/api/v1/random`                    | фильтры                                                                                                | `{ data: PublicWordV1T }`                                                                       |
-| `GET`  | `/api/v1/meta`                      | —                                                                                                      | `{ data: { api_version, app_version, dataset_version, license, counts, available_languages } }` |
-| `POST` | `/api/v1/suggestions`               | `{ headword, word_id?, message?, kind?, edits? }`                                                      | `201 { data: { id, status } }`                                                                  |
+| Метод  | Путь                                | Query / тело                                                                                           | Ответ                                                                                                   |
+| ------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `GET`  | `/api/v1/search`                    | `search`, `type?`, `limit?`                                                                            | `{ data: PublicSearchWordV1T[], meta: { count, fuzzy, short_term } }`                                   |
+| `GET`  | `/api/v1/search/detailed`           | `search`, `type?`, `limit?`, `page?`, `with_meanings?`, `with_translations?`, `translation_languages?` | `{ data: PublicWordV1T[], meta: { page, limit, has_more, fuzzy, short_term } }`                         |
+| `POST` | `/api/v1/search`                    | `{ search, type?, limit? }` — тот же поиск, не кэшируется                                              | `{ data: PublicSearchWordV1T[], meta: { count, fuzzy, short_term } }`                                   |
+| `POST` | `/api/v1/search/detailed`           | `{ search, type?, limit?, page?, with_meanings?, with_translations?, translation_languages? }`         | `{ data: PublicWordV1T[], meta: { page, limit, has_more, fuzzy, short_term } }`                         |
+| `GET`  | `/api/v1/words/{word}`              | —                                                                                                      | `{ data: PublicWordV1T[], meta: { word, count } }`                                                      |
+| `POST` | `/api/v1/words/batch`               | `{ words: string[] }` (1–50)                                                                           | `{ data: { word, count, entries: PublicWordV1T[] }[], meta: { count, not_found } }`                     |
+| `GET`  | `/api/v1/words/{word}/meanings`     | —                                                                                                      | `{ data: PublicMeaningV1T[], meta: { word, count } }`                                                   |
+| `GET`  | `/api/v1/words/{word}/translations` | `language?`                                                                                            | `{ data: { short_translations, meaning_translations }, meta }`                                          |
+| `GET`  | `/api/v1/words/{word}/forms`        | —                                                                                                      | `{ data: PublicWordFormV1T[], meta: { word, count } }`                                                  |
+| `GET`  | `/api/v1/words/{word}/synonyms`     | —                                                                                                      | `{ data: PublicWordLinkV1T[], meta: { word, count } }`                                                  |
+| `GET`  | `/api/v1/words/{word}/antonyms`     | —                                                                                                      | `{ data: PublicWordLinkV1T[], meta: { word, count } }`                                                  |
+| `GET`  | `/api/v1/words/id/{id}`             | —                                                                                                      | `{ data: PublicWordV1T }`                                                                               |
+| `GET`  | `/api/v1/words`                     | фильтры, `cursor?`, `limit?`, `with_meanings?`, `with_translations?`                                   | `{ data: PublicWordV1T[], meta: { limit, has_more, next_cursor } }`                                     |
+| `GET`  | `/api/v1/random`                    | фильтры                                                                                                | `{ data: PublicWordV1T }`                                                                               |
+| `GET`  | `/api/v1/meta`                      | —                                                                                                      | `{ data: { api_version, app_version, dataset_version, license, notice, counts, available_languages } }` |
+| `POST` | `/api/v1/suggestions`               | `{ headword, word_id?, message?, kind?, edits? }`                                                      | `201 { data: { id, status } }`                                                                          |
 
 Каждый эндпоинт и его параметры описаны и на страницах _Documentation_ внутри админки, где
 можно выполнить живой запрос к текущей базе. Машиночитаемый контракт —
@@ -92,7 +92,9 @@ public, max-age=<PUBLIC_API_CACHE_MAX_AGE>`; условные запросы о�
 Заголовочное слово должно существовать в словаре. У эндпоинта собственный rate limit —
 `SUGGESTIONS_RATE_LIMIT`, по умолчанию `5/3600` (пять сообщений в час с клиента), отдельный от
 общего бюджета `/api/v1`, — и он отвечает `503 suggestion_queue_full`, когда админа ждут 500
-сообщений. См. [`data.md`](./data.md#reporting-errors).
+сообщений. См. [`data.md`](./data.md#reporting-errors). Предложение, которое админ применил,
+становится частью данных словаря и распространяется вместе с ними под лицензией данных, CC BY
+4.0 ([`DATA_LICENSE.md`](../DATA_LICENSE.md)); страницы слов говорят об этом рядом с формой.
 
 ```bash
 curl 'http://localhost:3010/api/v1/search?search=run&limit=5'
@@ -216,7 +218,9 @@ rung, runner, …; префикс фразы сохраняет пробелы);
 в последний раз, `null` для данных, созданных на месте или импортированных без манифеста),
 условия использования данных — `license` (идентификатор SPDX, `"CC-BY-4.0"`), `license_url` и
 `attribution` (строка, которую потребитель обязан показывать, см.
-[`DATA_LICENSE.md`](../DATA_LICENSE.md)), — `counts` (записи, слова, фразы, грамматические
+[`DATA_LICENSE.md`](../DATA_LICENSE.md)), `notice` (уведомление о происхождении, которое стоит
+передать читателям: данные сгенерированы языковыми моделями и не проверены людьми,
+[`data.md`](./data.md)), — `counts` (записи, слова, фразы, грамматические
 шаблоны, словоформы, значения, переводы значений и краткие переводы; счётчики обновляются не
 чаще раза в минуту) и `available_languages` (issue #394): `source`, язык заголовочных слов
 (`["en"]`), и `translations`, языки, которые может нести перевод в этой сборке (`["ru", "es", "fr", "de", "pt"]`, issues #449, #445 и

@@ -26,11 +26,16 @@ Meanings link to other headwords as **synonyms and antonyms** (~509k and ~183k l
 serves them under every entry and as `/words/{word}/synonyms` / `/antonyms`.
 
 Both are exported into the dataset with the meanings (the `meanings` file; before issue #442 the
-meanings were nested in the `words`, `phrases` and `grammar-patterns` lines). The bulk of
-the published revision comes from DeepSeek v4 Flash, with smaller batches from
-`deepseek/deepseek-v4-pro` and `x-ai/grok-4.1-fast`; early batches were labelled by hand, so the
-same model can appear under several spellings, and a few hundred records carry no label. The
-exact numbers for a revision are on the dataset card.
+meanings were nested in the `words`, `phrases` and `grammar-patterns` lines). The published
+data is generated with DeepSeek models — the bulk with DeepSeek v4 Flash, smaller batches with
+`deepseek/deepseek-v4-pro`; early batches were labelled by hand, so the same model can appear
+under several spellings. The exact numbers for a revision are on the dataset card. Only models
+whose terms are compatible with the data license are used — why that rules some providers out
+is recorded in [`DATA_LICENSE.md`](../DATA_LICENSE.md#provenance).
+
+**Tell your readers.** The terms of the generating models ask that end users know the text is
+AI-generated and may be wrong. `GET /api/v1/meta` carries the line to show as `notice`, the
+word pages of the website show it next to the license note, and so does the dataset card.
 
 **Human review** so far is spot-checking and targeted fixes through the admin UI; there is no
 systematic reviewed subset yet, so treat every entry as machine-generated. A review pass over
@@ -96,7 +101,8 @@ next export):
   before/after diff on the _Suggestions_ page and applies it in one click (the change goes
   through the normal edit flow: audited, and the entry is marked as the owner's). The loop
   stays inside the instance deliberately: its dictionary may hold the owner's edits the
-  published dataset does not have.
+  published dataset does not have. An applied correction is dictionary data like the rest and
+  is published under CC BY 4.0 — the form says so.
 - **Against the published dataset itself** (a wrong definition, translation, level or missing
   word in what HuggingFace serves) →
   [open an issue](https://github.com/Fristail27/vocab-bloom-hub/issues) with the bug template,
@@ -107,11 +113,11 @@ next export):
 
 ## Where the terms are exposed
 
-| Place                           | What it carries                                                     |
-| ------------------------------- | ------------------------------------------------------------------- |
-| `manifest.json` of every export | `license: "CC-BY-4.0"`, `attribution`                               |
-| `GET /api/v1/meta`              | `license`, `license_url`, `attribution` (see [`api.md`](api.md))    |
-| Admin → _Export dictionary_     | License name, link and attribution line next to the download        |
-| HuggingFace dataset card        | `license: cc-by-4.0` front matter, `LICENSE`, `NOTICE`, this notice |
+| Place                           | What it carries                                                            |
+| ------------------------------- | -------------------------------------------------------------------------- |
+| `manifest.json` of every export | `license: "CC-BY-4.0"`, `attribution`                                      |
+| `GET /api/v1/meta`              | `license`, `license_url`, `attribution`, `notice` (see [`api.md`](api.md)) |
+| Admin → _Export dictionary_     | License name, link and attribution line next to the download               |
+| HuggingFace dataset card        | `license: cc-by-4.0` front matter, `LICENSE`, `NOTICE`, this notice        |
 
 All of them read `DATA_LICENSE` from `apps/server/core/constants/data_license.ts`.
