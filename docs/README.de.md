@@ -114,7 +114,7 @@ curl -s localhost:3010/api/v1/words/run     # das Wörterbuch antwortet
 
 > [!TIP]
 > Um ein Release statt des Entwicklungs-Builds `main` zu pinnen, setzen Sie
-> `VBH_TAG=0.1.0-alpha.3` in der `.env`. Um die Website (Dokumentation, API-Referenz, Playground,
+> `VBH_TAG=0.2.0-beta.1` in der `.env`. Um die Website (Dokumentation, API-Referenz, Playground,
 > Wortseiten) auf <http://localhost:3020> hinzuzufügen, setzen Sie `COMPOSE_PROFILES=db,site`.
 
 ### 2. Aus dem Repository starten

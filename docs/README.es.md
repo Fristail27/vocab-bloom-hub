@@ -113,7 +113,7 @@ curl -s localhost:3010/api/v1/words/run     # el diccionario responde
 ```
 
 > [!TIP]
-> Para fijar una versión en lugar de la compilación `main`, pon `VBH_TAG=0.1.0-alpha.3` en `.env`.
+> Para fijar una versión en lugar de la compilación `main`, pon `VBH_TAG=0.2.0-beta.1` en `.env`.
 > Para añadir el sitio web (documentación, referencia de la API, playground, páginas de palabras)
 > en <http://localhost:3020>, pon `COMPOSE_PROFILES=db,site`.
 

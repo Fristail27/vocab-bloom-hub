@@ -113,7 +113,7 @@ curl -s localhost:3010/api/v1/words/run     # le dictionnaire répond
 ```
 
 > [!TIP]
-> Pour épingler une version au lieu de la construction `main`, mettez `VBH_TAG=0.1.0-alpha.3` dans
+> Pour épingler une version au lieu de la construction `main`, mettez `VBH_TAG=0.2.0-beta.1` dans
 > `.env`. Pour ajouter le site web (documentation, référence de l’API, bac à sable, pages de mots)
 > sur <http://localhost:3020>, mettez `COMPOSE_PROFILES=db,site`.
 

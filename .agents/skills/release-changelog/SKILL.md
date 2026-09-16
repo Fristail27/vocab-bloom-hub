@@ -29,13 +29,14 @@ documentation worth announcing. When in doubt, keep it and let the review decide
 
 Read the top of `CHANGELOG.md` and match it exactly:
 
-- Section header `## v<version> — unreleased`, inserted above the previous release's section.
+- Section header `## v<version> — <date>`, inserted above the previous release's section, where the
+  date is the day the tag will be pushed (ask when it is not today).
 - One short theme sentence first — what this release is about, not a list.
 - Then curated bullets of the form `- **Area**: what changed, written for a reader of the release` —
   reader-facing sentences, not commit messages; no PR numbers; group related changes into one bullet.
 - Wrap lines at ~100 characters like the rest of the file.
-- If the previous section still says `— unreleased` but its tag exists, replace `unreleased` with the
-  tag date from step 1 (the recipe dates a section in the _next_ release PR).
+- If an older section still says `— unreleased` and its tag exists, replace `unreleased` with the tag
+  date (`git log -1 --format=%ad --date=format:%Y-%m-%d <tag>`).
 
 ## 4. Review before writing
 
@@ -46,5 +47,6 @@ corrections, then edit `CHANGELOG.md`. Do not commit unless asked.
 
 The changelog is one third of the release PR. After writing, remind that the same PR needs
 `node scripts/bump-version.mjs <version>` (the only tool allowed to touch the version),
-`yarn workspace server openapi:generate`, and `uv lock` in `packages/python-sdk` — and that after the
-merge the release is one tag push: `git tag -a v<version> && git push origin v<version>`.
+`yarn workspace server openapi:generate`, `uv lock` in `packages/python-sdk`, and `VBH_TAG=<version>`
+in `.env.example`, `docs/deployment/docker.md` and the install sections of the READMEs — and that
+after the merge the release is one tag push: `git tag -a v<version> && git push origin v<version>`.

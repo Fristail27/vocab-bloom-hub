@@ -5,7 +5,7 @@ the admin UI, the website and both SDKs; the published dataset keeps its own ver
 (`manifest.version`), bumped at the next export after a release. Entries are curated from the
 generated release notes; the full commit history lives in git.
 
-## v0.2.0-beta.1 — unreleased
+## v0.2.0-beta.1 — 2026-09-17
 
 The first beta: the public search settles on `GET` and a stable ordering, the dictionary speaks
 five translation languages and the interfaces six, every full read is several times faster, and
