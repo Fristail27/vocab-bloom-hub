@@ -11,14 +11,36 @@ name: release
 # Secrets. The very first npm publish is manual (npm attaches a trusted
 # publisher only to an existing package); PyPI's pending publisher covers the
 # first one.
+#
+# "Run workflow" (workflow_dispatch) repeats the publishes of an existing tag
+# from the workflow file on main — for a publish job that failed on the tag
+# push, since a re-run would use the workflow as it was at that tag. The
+# Release itself is created on the tag push only.
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'The release tag to publish (v0.2.0-beta.1)'
+        required: true
+        type: string
+      npm:
+        description: 'Publish @vocab-bloom-hub/client to npm'
+        type: boolean
+        default: true
+      pypi:
+        description: 'Publish vocab-bloom-hub to PyPI'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
   guard:
@@ -28,20 +50,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       # the six version fields are kept equal by CI (version-sync.spec.ts);
       # here the tag itself is checked against them before anything publishes
       - name: Release tag equals the package version
         run: |
           version="$(node -p "require('./package.json').version")"
-          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
-            echo "::error::release tag $GITHUB_REF_NAME does not match package.json version $version"
+          if [ "$RELEASE_TAG" != "v$version" ]; then
+            echo "::error::release tag $RELEASE_TAG does not match package.json version $version"
             exit 1
           fi
 
   npm:
     name: publish @vocab-bloom-hub/client to npm
     needs: guard
+    if: github.event_name == 'push' || inputs.npm
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: npm
@@ -51,9 +76,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
+      # the SDK's live suite boots the NestJS server, which is ESM-only: Jest
+      # needs Node 24.9+ for require(esm), the same as the test jobs of CI
       - name: Setup workspace
         uses: ./.github/actions/setup
+        with:
+          node-version: 24
 
       - name: Generated types are up to date
         run: yarn workspace @vocab-bloom-hub/client generate:check
@@ -75,8 +106,8 @@ jobs:
       - name: Publish
         working-directory: packages/npm-sdk
         run: |
-          case "$GITHUB_REF_NAME" in
-            *-*) channel="${GITHUB_REF_NAME#*-}"; channel="${channel%%.*}" ;;
+          case "$RELEASE_TAG" in
+            *-*) channel="${RELEASE_TAG#*-}"; channel="${channel%%.*}" ;;
             *) channel=latest ;;
           esac
           npm publish --tag "$channel"
@@ -84,6 +115,7 @@ jobs:
   pypi:
     name: publish vocab-bloom-hub to PyPI
     needs: guard
+    if: github.event_name == 'push' || inputs.pypi
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: pypi
@@ -93,6 +125,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v7
@@ -124,6 +158,7 @@ jobs:
     # only the guard: the Release (the notes) must appear even when a publish
     # job fails — expected once, on the very first npm publish (see the header)
     needs: guard
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -131,6 +166,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       # categories of the generated notes live in .github/release.yml;
       # a hyphen in the tag (v0.1.0-alpha.1) marks the Release a prerelease
@@ -139,5 +176,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           prerelease=''
-          case "$GITHUB_REF_NAME" in *-*) prerelease='--prerelease' ;; esac
-          gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes $prerelease
+          case "$RELEASE_TAG" in *-*) prerelease='--prerelease' ;; esac
+          gh release create "$RELEASE_TAG" --verify-tag --generate-notes $prerelease

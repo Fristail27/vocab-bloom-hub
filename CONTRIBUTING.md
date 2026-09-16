@@ -251,6 +251,9 @@ repeatable part of a release:
    (categories in `.github/release.yml`; a hyphen in the tag marks it a prerelease).
    A prerelease publishes to npm under its channel dist-tag (`alpha`, `beta`, …), never
    `latest` — npm refuses a bare `npm publish` of a prerelease version.
+   A publish job that failed on the tag push is repeated from the Actions tab: _release_ →
+   _Run workflow_ with the tag (the npm and PyPI checkboxes pick the jobs); a plain re-run
+   would use the workflow file as it was at that tag.
    The **first npm publish is manual** (`npm publish --tag <channel>` from `packages/npm-sdk`; npm attaches a
    trusted publisher only to an existing package — configure it right after, workflow
    `release.yml`, environment `npm`, then re-run the failed npm job). PyPI's pending
