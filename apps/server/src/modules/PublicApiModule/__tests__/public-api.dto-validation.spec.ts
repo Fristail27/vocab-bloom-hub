@@ -43,6 +43,12 @@ describe('public API v1 query DTOs (issue #272)', () => {
     });
   });
 
+  it('treats an empty cursor as no cursor (issue #440)', async () => {
+    const dto = build(ListWordsV1QueryDTO, { cursor: '' });
+    expect(await validate(dto)).toEqual([]);
+    expect(dto.cursor).toBeUndefined();
+  });
+
   it('rejects values outside the enums and the limit range', async () => {
     const wrongEnum = await validate(build(WordFiltersV1QueryDTO, { word_level: 'Z9' }));
     expect(wrongEnum.map((e) => e.property)).toEqual(['word_level']);

@@ -508,16 +508,10 @@ export default {
     public_endpoints: 'Endpoints públicos',
     endpoint_search_get: 'Busca básica',
     endpoint_search_detailed_get: 'Busca detalhada',
-    endpoint_search: 'Busca básica (forma POST)',
-    endpoint_search_detailed: 'Busca detalhada (forma POST)',
     desc_search_get:
       'Busca verbetes do dicionário e responde com uma lista plana de palavras sem significados nem traduções, com os campos na query string. A resposta traz ETag, Last-Modified e Cache-Control como todo GET público, então pode ficar atrás de uma CDN e ser compartilhada como link. Os resultados são ordenados por qualidade da correspondência: a exata primeiro, depois phrasal verbs, verbetes que começam com o termo, frases, verbetes que terminam com ele e qualquer outra ocorrência. Quando nada corresponde, um nível de similaridade por trigramas responde a erros de digitação: meta.fuzzy é true e cada item traz similarity (0–1) — apenas em instâncias com Postgres. Um termo de um ou dois caracteres busca só nos níveis exato e de prefixo (meta.short_term é true).',
     desc_search_detailed_get:
       'A mesma busca com paginação, que além disso pode incluir os significados e suas traduções; os campos vão na query string (translation_languages como chave repetida) e a resposta é cacheável. Como cada item pode trazer dados incluídos, tanto o tamanho da página quanto a profundidade da paginação têm limites mais rígidos do que na busca básica.',
-    desc_search:
-      'A forma POST da busca básica: os mesmos campos em um corpo JSON, a mesma resposta, mas os caches HTTP nunca a armazenam. Mantida durante a beta; integrações novas devem usar a forma GET. Os resultados são ordenados por qualidade da correspondência: a exata primeiro, depois phrasal verbs, verbetes que começam com o termo, frases, verbetes que terminam com ele e qualquer outra ocorrência. Quando nada corresponde, um nível de similaridade por trigramas responde a erros de digitação: meta.fuzzy é true e cada item traz similarity (0–1) — apenas em instâncias com Postgres. Um termo de um ou dois caracteres busca só nos níveis exato e de prefixo (meta.short_term é true).',
-    desc_search_detailed:
-      'A forma POST da busca detalhada: os mesmos campos em um corpo JSON, a mesma resposta, não cacheável; mantida durante a beta. Além disso pode incluir os significados e suas traduções. Como cada item pode trazer dados incluídos, tanto o tamanho da página quanto a profundidade da paginação têm limites mais rígidos do que na busca básica.',
     endpoint_word: 'Consulta de verbete',
     endpoint_words_batch: 'Consulta de verbetes em lote',
     endpoint_word_meanings: 'Significados de um verbete',

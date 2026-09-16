@@ -1,7 +1,7 @@
 import { rewriteRepoUrl } from '../links';
 
 const slugs: Record<string, string> = {
-  'README.md': 'overview',
+  'README.md': 'getting-started',
   'docs/environment.md': 'environment',
   'docs/deployment/docker.md': 'deployment/docker',
   'DATA_LICENSE.md': 'data-license',
@@ -27,6 +27,41 @@ describe('rewriteRepoUrl (links between the repository Markdown files)', () => {
   it('keeps the anchor', () => {
     expect(rewriteRepoUrl('./docker.md#quick-start', 'docs/deployment/README.md', 'en', slugForFile)).toBe(
       '/en/docs/deployment/docker#quick-start',
+    );
+  });
+
+  it('sends an anchored link to the locale of the linked file when the page would render another language', () => {
+    const files: Record<string, Record<string, string>> = {
+      environment: { en: 'docs/environment.md', ru: 'docs/environment.ru.md' },
+      'deployment/docker': { en: 'docs/deployment/docker.md' },
+      'getting-started': { en: 'README.md', ru: 'docs/README.ru.md', de: 'docs/README.de.md' },
+    };
+    const rendered = (slug: string, locale: string) => files[slug]?.[locale] ?? files[slug]?.en ?? '';
+    const withRu: Record<string, string> = {
+      ...slugs,
+      'docs/environment.ru.md': 'environment',
+      'docs/README.ru.md': 'getting-started',
+    };
+    const resolve = (file: string) => withRu[file];
+    // an English guide read under /ru: the Russian environment page has no English heading
+    expect(
+      rewriteRepoUrl('./environment.md#database-driver-locking', 'docs/migrations.md', 'ru', resolve, rendered),
+    ).toBe('/en/docs/environment#database-driver-locking');
+    // the same link without an anchor stays in the reader's locale
+    expect(rewriteRepoUrl('./environment.md', 'docs/migrations.md', 'ru', resolve, rendered)).toBe(
+      '/ru/docs/environment',
+    );
+    // a page rendered in English under /ru anyway keeps the anchor in place
+    expect(
+      rewriteRepoUrl('./docker.md#quick-start', 'docs/deployment/README.md', 'ru', resolve, rendered),
+    ).toBe('/ru/docs/deployment/docker#quick-start');
+    // a Russian page linking the Russian file: its own locale
+    expect(rewriteRepoUrl('./environment.ru.md#фиксация', 'docs/api.ru.md', 'ru', resolve, rendered)).toBe(
+      '/ru/docs/environment#фиксация',
+    );
+    // CONTRIBUTING.md (English) read under /de: the German README has no #native-start
+    expect(rewriteRepoUrl('./README.md#native-start', 'CONTRIBUTING.md', 'de', resolve, rendered)).toBe(
+      '/en/docs/getting-started#native-start',
     );
   });
 

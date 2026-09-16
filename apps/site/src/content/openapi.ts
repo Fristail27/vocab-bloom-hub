@@ -70,16 +70,47 @@ export const endpointSlug = (method: string, path: string): string => {
   return `${method}-${rest || 'root'}`.toLowerCase();
 };
 
-/** Every operation of the document, in the document's order */
+// the reference and the playground list the service endpoints first, then the
+// reads, then the writes; inside a group, this order — the rest as the document has them
+const SERVICE_PATHS = ['/api/v1/meta', '/api/v1/openapi.json'];
+const READ_ORDER = [
+  '/api/v1/search',
+  '/api/v1/search/detailed',
+  '/api/v1/words/{word}',
+  '/api/v1/words/{word}/meanings',
+  '/api/v1/words/{word}/translations',
+  '/api/v1/words/{word}/forms',
+  '/api/v1/words/{word}/synonyms',
+  '/api/v1/words/{word}/antonyms',
+  '/api/v1/words/id/{id}',
+  '/api/v1/words',
+  '/api/v1/random',
+];
+const WRITE_ORDER = ['/api/v1/words/batch', '/api/v1/suggestions'];
+
+const endpointRank = ({ method, path }: EndpointT): [number, number] => {
+  if (SERVICE_PATHS.includes(path)) return [0, SERVICE_PATHS.indexOf(path)];
+  const group = method === 'GET' ? 1 : 2;
+  const order = method === 'GET' ? READ_ORDER : WRITE_ORDER;
+  const index = order.indexOf(path);
+
+  return [group, index === -1 ? order.length : index];
+};
+
+/** Every operation of the document: the service endpoints, then the reads, then the writes */
 export const listEndpoints = (spec: OpenApiSpecT): EndpointT[] =>
-  Object.entries(spec.paths).flatMap(([path, methods]) =>
-    Object.entries(methods).map(([method, operation]) => ({
-      method: method.toUpperCase() as HttpMethodT,
-      path,
-      slug: endpointSlug(method, path),
-      operation: operation as OperationT,
-    })),
-  );
+  Object.entries(spec.paths)
+    .flatMap(([path, methods]) =>
+      Object.entries(methods).map(([method, operation]) => ({
+        method: method.toUpperCase() as HttpMethodT,
+        path,
+        slug: endpointSlug(method, path),
+        operation: operation as OperationT,
+      })),
+    )
+    .map((endpoint, index) => ({ endpoint, index, rank: endpointRank(endpoint) }))
+    .sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1] || a.index - b.index)
+    .map(({ endpoint }) => endpoint);
 
 export const refName = ($ref: string): string => $ref.split('/').pop() ?? $ref;
 

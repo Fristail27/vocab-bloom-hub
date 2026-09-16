@@ -9,24 +9,38 @@ import { EnSearchService } from '../enSearch.service';
 type QbMock = {
   innerJoin: jest.Mock;
   innerJoinAndSelect: jest.Mock;
+  leftJoin: jest.Mock;
   leftJoinAndSelect: jest.Mock;
+  select: jest.Mock;
+  addSelect: jest.Mock;
   where: jest.Mock;
   andWhere: jest.Mock;
+  groupBy: jest.Mock;
+  orderBy: jest.Mock;
+  addOrderBy: jest.Mock;
   take: jest.Mock;
   limit: jest.Mock;
   getMany: jest.Mock;
+  getRawMany: jest.Mock;
 };
 
 const createQbMock = (): QbMock => {
   const qb = {} as QbMock;
   qb.innerJoin = jest.fn(() => qb);
   qb.innerJoinAndSelect = jest.fn(() => qb);
+  qb.leftJoin = jest.fn(() => qb);
   qb.leftJoinAndSelect = jest.fn(() => qb);
+  qb.select = jest.fn(() => qb);
+  qb.addSelect = jest.fn(() => qb);
   qb.where = jest.fn(() => qb);
   qb.andWhere = jest.fn(() => qb);
+  qb.groupBy = jest.fn(() => qb);
+  qb.orderBy = jest.fn(() => qb);
+  qb.addOrderBy = jest.fn(() => qb);
   qb.take = jest.fn(() => qb);
   qb.limit = jest.fn(() => qb);
   qb.getMany = jest.fn(async () => []);
+  qb.getRawMany = jest.fn(async () => []);
   return qb;
 };
 
@@ -52,16 +66,16 @@ describe('EnSearchService', () => {
     );
   });
 
+  // every LIKE tier binds its types the same way; the any-matches tier runs last
   const getIncludedTypesFromAnyMatchesTier = () => {
+    let last: EnEntryTypesE[] | undefined;
     for (const qb of qbMocks) {
       for (const call of qb.andWhere.mock.calls) {
         const [condition, params] = call as [string, { includedTypes?: EnEntryTypesE[] }];
-        if (condition.includes('entry.type IN')) {
-          return params.includedTypes;
-        }
+        if (condition.includes('entry.type IN')) last = params.includedTypes;
       }
     }
-    return undefined;
+    return last;
   };
 
   it('ограничивает тир anyMatches переданным type (issue #169)', async () => {

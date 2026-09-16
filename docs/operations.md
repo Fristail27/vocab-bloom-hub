@@ -2,11 +2,11 @@
 
 What an operator needs to know on day two: what holds the state of an instance, what to back
 up and when, what a code upgrade does to the database and how to roll it back, and how a
-dictionary update differs from a code update (issue #282).
+dictionary update differs from a code update.
 
-Postgres is an external service. _How_ to dump, restore or schedule backups — `pg_dump` /
-`pg_restore`, cron, the snapshot feature of a managed provider — is Postgres and hosting
-documentation, not covered here. This page only says _what_ to back up and _when_.
+> [!NOTE]
+> This page says _what_ to back up and _when_; the `pg_dump` / `pg_restore` commands, for the
+> bundled database and for any other, are in [`database.md`](./database.md#backups).
 
 ## What holds state
 
@@ -28,9 +28,9 @@ needed to bring an instance back:
   folder ([`offline-import.md`](./offline-import.md)) — it is a source, not state, and can be
   re-created from the dataset.
 
-Use the standard Postgres tooling (`pg_dump -Fc` of the database, or the backups of the provider
-hosting it) on whatever schedule matches how often the dictionary is edited. A dictionary that is
-imported once and never edited needs a backup once — after the import.
+Back it up on whatever schedule matches how often the dictionary is edited — a dictionary
+imported once and never edited needs one backup, after the import
+([`database.md`](./database.md#backups)).
 
 ## Database backup vs dictionary export
 
@@ -52,19 +52,20 @@ database backup when you want to be able to _go back_. The data terms of an expo
 ## Upgrading the code
 
 On start the server applies every pending migration shipped with its version, then serves
-requests ([`migrations.md`](./migrations.md#how-migrations-run-on-deployment)). Deploying is
+requests ([`database.md`](./database.md#the-schema-migrations)). Deploying is
 therefore just: ship the new version and restart. Two consequences follow:
 
 1. **The database becomes bound to the new version.** Once a migration has run, the previous
    version of the code no longer matches the schema and is not expected to work against it.
-2. **A failed migration stops the server** deliberately (fail-fast, inside a transaction) — the
-   database is left at the last applied migration and the service is down until the problem is
-   fixed or the backup is restored.
+2. **A failed migration stops the server** deliberately (fail-fast; every pending migration of
+   a start runs in one transaction, so a failure rolls the whole batch back) — the database is
+   left as the previous version left it and the service is down until the problem is fixed or
+   the backup is restored.
 
 The procedure:
 
 ```bash
-# 1. back up the database with your Postgres tooling (pg_dump -Fc ... / provider snapshot)
+# 1. back up the database (pg_dump -Fc / a provider snapshot — database.md#backups)
 # 2. see what the new version is about to apply (optional)
 DATABASE_URL=... yarn workspace server migration:show
 # 3. deploy: new code, yarn install --immutable, rebuild both apps, restart the processes
@@ -73,16 +74,18 @@ DATABASE_URL=... yarn workspace server migration:show
 #    migration:show lists nothing pending, GET /api/health returns the new version
 ```
 
-**Rollback = restore the pre-upgrade backup and start the previous version.** That is the only
-supported way back. `migration:revert` exists for development; migrations are not guaranteed to
-be reversible (some drop or rewrite data), and a revert does not undo the edits made in the admin
-UI after the upgrade — which is why the backup is taken _right before_ the restart.
+> [!CAUTION]
+> **Rollback = restore the pre-upgrade backup and start the previous version.** That is the only
+> supported way back. `migration:revert` exists for development; migrations are not guaranteed to
+> be reversible (some drop or rewrite data), and a revert does not undo the edits made in the
+> admin UI after the upgrade — which is why the backup is taken _right before_ the restart.
 
 Upgrades that do not ship a migration (`migration:show` lists nothing pending) do not touch the
 schema; rolling those back is just starting the previous build again.
 
-The frontend has no state of its own, but `NEXT_PUBLIC_*` values are inlined at build time — a
-frontend rebuild is part of every upgrade ([`deployment/README.md`](./deployment/README.md)).
+> [!IMPORTANT]
+> The frontend has no state of its own, but `NEXT_PUBLIC_*` values are inlined at build time — a
+> frontend rebuild is part of every upgrade ([`deployment/README.md`](./deployment/README.md)).
 
 ## Dataset updates vs code updates
 
@@ -93,7 +96,7 @@ dictionary; loading a newer dataset never changes the code.
 
 The import page shows both versions side by side — _Your version_ (`en_dataset_version` from
 the settings) against _Latest version_ (the published `manifest.json`) — and offers two ways to
-load a newer dataset (issue #328):
+load a newer dataset:
 
 - **Update the dictionary** — the one-click update, shown when the versions differ. It runs the
   import in **update mode** (`POST /api/en/dictionary/import` with `update: true`): every entry
@@ -117,7 +120,7 @@ content, everything else follows the dataset. It is visible:
 
 - on the word card in the admin UI (the _Modified by you_ tag) and in every word answer of the
   admin API (`user_modified` on `GET /api/en/{id}`; the public `/api/v1` projection does not
-  carry editorial state, issue #392);
+  carry editorial state);
 - in the _History_ page — the edit that set it is an audit row like any other.
 
 _Return to the official version_ on the word card (or `PATCH
@@ -131,12 +134,10 @@ replaces the entry with the dataset again. Two caveats:
 
 ## Sizing
 
-The full English dictionary (~330 k words, ~300 k entries) takes about **0.5 GB** in Postgres,
-tables and indexes together; a compressed `pg_dump -Fc` of it is a fraction of that. Plan for
-the database, the working space Postgres needs for index builds during migrations, and the
-backups you keep.
+The full English dictionary takes about **0.9 GB** in Postgres, tables and indexes together; a
+compressed `pg_dump -Fc` of it is about 150 MB. Plan for the database, the working space Postgres
+needs for index builds during migrations, and the backups you keep. The breakdown by table and the
+row counts: [`database.md`](./database.md#size).
 
-**SQLite is development-only.** The server refuses to start on SQLite with `NODE_ENV=production`;
-it has no migrations (`synchronize: true` reshapes the schema on every entity change), none of
-the indexes the full dictionary needs ([`performance.md`](./performance.md)), and no
-`migration:*` commands. A `dev.sqlite` file is not something to back up or upgrade.
+SQLite is development-only — nothing to back up or upgrade, and the server refuses it with
+`NODE_ENV=production` ([`database.md`](./database.md#sqlite-for-development)).

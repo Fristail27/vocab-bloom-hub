@@ -12,7 +12,7 @@ import { publicCacheControl, weakEtagOf } from '../../core/utils/http-cache';
  * the JSON body and `Last-Modified` from the dictionary's newest change.
  * Express compares them with `If-None-Match` / `If-Modified-Since` while
  * sending and answers `304 Not Modified` without a body when they match.
- * POST reads (the search) are left alone: HTTP caches do not store them.
+ * POST requests (the batch lookup, a suggestion) are left alone: HTTP caches do not store them.
  */
 @Injectable()
 export class PublicCacheInterceptor implements NestInterceptor {

@@ -14,8 +14,9 @@ import {
   resolveClientPath,
 } from '../utils';
 
-const searchEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.search)!;
-const detailedEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.search_detailed)!;
+const searchEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.search_get)!;
+const detailedEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.search_detailed_get)!;
+const batchEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.words_batch)!;
 const wordEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.word)!;
 const wordsEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.words)!;
 
@@ -42,8 +43,6 @@ describe('buildRequestBody', () => {
   });
 
   it('разбивает текстовый список на массив строк (batch, issue #397)', () => {
-    const batchEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.words_batch)!;
-
     expect(buildRequestBody(batchEndpoint.params, { words: ' run, ran ,put up with,\n' })).toEqual({
       words: ['run', 'ran', 'put up with'],
     });
@@ -59,14 +58,11 @@ describe('buildRequestBody', () => {
 
 describe('buildCurlSnippet', () => {
   it('собирает POST-пример с телом запроса', () => {
-    const snippet = buildCurlSnippet(detailedEndpoint, 'http://localhost:3010/api', {
-      search: 'run',
-      limit: 10,
-    });
+    const snippet = buildCurlSnippet(batchEndpoint, 'http://localhost:3010/api', { words: ['run', 'ran'] });
 
-    expect(snippet).toContain(`curl -X POST 'http://localhost:3010/api/v1/search/detailed'`);
+    expect(snippet).toContain(`curl -X POST 'http://localhost:3010/api/v1/words/batch'`);
     expect(snippet).toContain(`-H 'Content-Type: application/json'`);
-    expect(snippet).toContain(`-d '{"search":"run","limit":10}'`);
+    expect(snippet).toContain(`-d '{"words":["run","ran"]}'`);
   });
 
   it('переносит параметры GET-примера в строку запроса, а не в тело', () => {
@@ -163,9 +159,9 @@ describe('DOCUMENTED_ENDPOINTS', () => {
   });
 
   it('находит метод по сегменту маршрута', () => {
-    // the bare slug is the GET form; the POST form has its own (issue #396)
-    expect(getEndpointBySlug('search-detailed')?.key).toBe(ApiEndpointKeyE.search_detailed_get);
-    expect(getEndpointBySlug('search-detailed-post')).toBe(detailedEndpoint);
+    expect(getEndpointBySlug('search-detailed')).toBe(detailedEndpoint);
+    // the POST forms of the alpha are gone with their slugs (issue #440)
+    expect(getEndpointBySlug('search-detailed-post')).toBeUndefined();
     expect(getEndpointBySlug('word-by-id')?.key).toBe(ApiEndpointKeyE.word_by_id);
     expect(getEndpointBySlug('unknown')).toBeUndefined();
   });

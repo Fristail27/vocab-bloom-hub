@@ -8,11 +8,9 @@ type PathsT = Record<string, Record<string, { operationId: string }>>;
 // Every public operation has a client method (issue #275): a new endpoint
 // in the spec fails here until the SDK covers it
 const METHOD_BY_OPERATION: Record<string, keyof VocabBloomClient> = {
-  // the client sends the GET form; the POST form is the same search (issue #396)
+  // the searches are GET reads (issue #396); their POST forms were removed (issue #440)
   PublicSearchController_searchGet: 'search',
   PublicSearchController_searchDetailedGet: 'searchDetailed',
-  PublicSearchController_search: 'search',
-  PublicSearchController_searchDetailed: 'searchDetailed',
   PublicWordsController_list: 'words',
   PublicWordsController_byId: 'wordById',
   PublicWordsController_byHeadword: 'word',

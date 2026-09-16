@@ -31,10 +31,11 @@ describe('trigram search (Postgres, issue #278)', () => {
   let app: INestApplication<App>;
   const auth = { Authorization: '' };
   const server = () => app.getHttpServer();
-  const search = (body: object) =>
+  // the search is a GET read (issues #396, #440): the fields go into the query string
+  const search = (query: Record<string, string | number | boolean>) =>
     request(server())
-      .post('/api/v1/search')
-      .send(body)
+      .get('/api/v1/search')
+      .query(query)
       .expect(200)
       .then((res) => res.body as PublicSearchV1ResT);
 
@@ -85,10 +86,7 @@ describe('trigram search (Postgres, issue #278)', () => {
     });
     expect([...scores].sort((a, b) => b - a)).toEqual(scores);
 
-    const detailed = await request(server())
-      .post('/api/v1/search/detailed')
-      .send({ search: 'lanquage' })
-      .expect(200);
+    const detailed = await request(server()).get('/api/v1/search/detailed?search=lanquage').expect(200);
     const body = detailed.body as PublicSearchDetailedV1ResT;
     // a loaded dictionary has more than a page of similar headwords; an empty one does not
     expect(body.meta).toMatchObject({ page: 1, limit: 10, fuzzy: true });

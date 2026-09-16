@@ -9,12 +9,12 @@ Typed client for the public read-only API of a [Vocab Bloom Hub](https://github.
 ## Install
 
 ```bash
-npm install @vocab-bloom-hub/client
+npm install @vocab-bloom-hub/client@alpha
 ```
 
-Prereleases publish under the `alpha` dist-tag — pin the channel with
-`npm install @vocab-bloom-hub/client@alpha` (while no stable release exists,
-`latest` points at the newest alpha too).
+Prereleases publish under the `alpha` dist-tag, so the channel has to be named while no
+stable release exists — a bare `npm install @vocab-bloom-hub/client` resolves `latest`, which
+does not follow the alphas. From the first stable release `latest` is the one to install.
 
 ## Quick start
 
@@ -24,8 +24,8 @@ import { VocabBloomClient, NotFoundError } from '@vocab-bloom-hub/client';
 const client = new VocabBloomClient({ baseUrl: 'https://dict.example.com' });
 
 // search: relevance tiers, typo tolerance
-const { data, meta } = await client.search({ search: 'recieve' });
-console.log(meta.fuzzy, data[0].word); // true "receive"
+const { data, meta } = await client.search({ search: 'definately' });
+console.log(meta.fuzzy, data[0].word); // true "definitely"
 
 // a headword with every part of speech, forms, meanings and translations
 try {
@@ -64,7 +64,7 @@ for await (const word of client.iterateWords({ word_level: ['A1', 'A2'], with_me
 | `openapi()`                      | `GET /openapi.json`                     | the OpenAPI 3 document                                                                                         |
 | `suggest(request)`               | `POST /suggestions`                     | `SuggestionCreatedResponse` — files a reader report (or an edit proposal) into the instance's moderation queue |
 
-Every method resolves to the `{ data, meta }` envelope the API answers with and takes an optional last argument `{ signal, headers, timeoutMs }`. The request and response types (`Word`, `Meaning`, `SearchRequest`, `ListWordsQuery`, …) are exported, and so are the raw generated `paths` / `components` / `operations` for anything not aliased. The contract itself — tiers, filters, cursor pagination, caching — is documented in the server's [`docs/api.md`](https://github.com/Fristail27/vocab-bloom-hub/blob/main/docs/api.md).
+Every method resolves to the `{ data, meta }` envelope the API answers with and takes an optional last argument `{ signal, headers, timeoutMs }`. The request and response types (`Word`, `Meaning`, `SearchRequest`, `ListWordsQuery`, …) are exported — the request types of the `GET` reads are their query strings, so a `SearchRequest` is `{ search, type?, limit? }` — and so are the raw generated `paths` / `components` / `operations` for anything not aliased. The contract itself — tiers, filters, cursor pagination, caching — is documented in the server's [`docs/api.md`](https://github.com/Fristail27/vocab-bloom-hub/blob/main/docs/api.md).
 
 ### Options
 

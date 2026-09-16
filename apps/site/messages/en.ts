@@ -17,6 +17,7 @@ export default {
     hero_title: 'A dictionary you can run next to your app',
     hero_text:
       'Vocab Bloom Hub is a self-hosted English dictionary — 300 000 entries with meanings, examples, inflected forms and translations into Russian, Spanish, French, German and Portuguese — behind a public read-only API, with SDKs, an admin UI and a published dataset. One command to install, MIT for the code, CC BY 4.0 for the data.',
+    cta_getting_started: 'Getting started',
     cta_start: 'Install with Docker',
     cta_api: 'API reference',
     cta_playground: 'Try the API',
@@ -55,11 +56,6 @@ export default {
       'The code is MIT. The dictionary data — served by the API, exported as datasets, published on HuggingFace — is CC BY 4.0: free to use and adapt, commercially too, with attribution. It is largely LLM-generated and not verified by humans; read what that means before relying on it.',
     data_link: 'About the data',
     license_link: 'Data license',
-    status_title: 'Project status',
-    status_text:
-      'Early development, 0.x: the dictionary, the admin UI and the import/export pipeline work today; the API contract may still change between releases.',
-    roadmap_title: 'Roadmap',
-    roadmap_link: 'Open issues',
   },
   docs: {
     title: 'Documentation',
@@ -68,11 +64,20 @@ export default {
     on_this_page: 'On this page',
     english_only: 'This page is available in English only.',
     edit_on_github: 'Edit this page on GitHub',
+    callouts: {
+      note: 'Note',
+      tip: 'Tip',
+      important: 'Important',
+      warning: 'Warning',
+      caution: 'Caution',
+    },
     sections: {
       start: 'Getting started',
       deployment: 'Deployment',
+      database: 'Database',
       operations: 'Operations',
-      api: 'API and SDKs',
+      api: 'API',
+      sdk: 'SDKs',
       data: 'Data',
       project: 'Project',
     },
@@ -202,6 +207,7 @@ export default {
     data_license: 'Data: CC BY 4.0',
     issues: 'Issues',
     discussions: 'Discussions',
+    release_notes: 'Release notes',
     made_by: 'Vocab Bloom Hub by Alexey Ryzhov',
   },
   error: {

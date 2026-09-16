@@ -17,12 +17,10 @@ import styles from './styles.module.scss';
 const { Text } = Typography;
 
 // Requests go through the regular api client against the public prefix, so
-// the docs show exactly what a consumer gets — envelope included. The POST
-// endpoints have typed clients; every GET read goes through one generic call
+// the docs show exactly what a consumer gets — envelope included. The two POST
+// endpoints have typed clients; every GET read (the searches included, issue
+// #396) goes through one generic call
 const POST_RUNNERS: Partial<Record<ApiEndpointKeyE, (body: ParamValuesT) => Promise<unknown>>> = {
-  // the POST forms of the search; their GET forms are plain GET reads (issue #396)
-  [ApiEndpointKeyE.search]: (body) => EnApi.publicPost('/v1/search', body),
-  [ApiEndpointKeyE.search_detailed]: (body) => EnApi.publicPost('/v1/search/detailed', body),
   [ApiEndpointKeyE.words_batch]: (body) => EnApi.publicPost('/v1/words/batch', body),
   // files a real report into this instance's moderation queue (issue #349)
   [ApiEndpointKeyE.suggestions]: (body) => EnApi.publicPost('/v1/suggestions', body),

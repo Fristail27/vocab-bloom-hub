@@ -1,3 +1,5 @@
+import { version as packageVersion } from '../../package.json';
+
 import type { Metadata } from 'next';
 
 import { routing } from '@/i18n/routing';
@@ -32,3 +34,6 @@ export const localeAlternates = (locale: string, path: string): Metadata['altern
     'x-default': `/${routing.defaultLocale}${path}`,
   },
 });
+
+/** The version of this build of the site — the monorepo version, bumped by scripts/bump-version.mjs */
+export const SITE_VERSION: string = packageVersion;

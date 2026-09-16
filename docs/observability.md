@@ -1,11 +1,39 @@
 # Observability: metrics and logs
 
-The server exposes a Prometheus exposition at `METRICS_PATH` (default `/metrics`) when
-`METRICS_ENABLED=true` (issue #281). It answers the two questions an operator has about a
-running instance — _can it take my traffic?_ and _why is it slow since yesterday?_ — with
-numbers that logs cannot give cheaply: request rate and latency per route, error rate, which
-search tier answers, how the dictionary grows, what an import is doing, how busy the Postgres
-pool is. The [logs](#logs) below carry the rest: what happened to one request, with what error.
+Two things tell you how a running instance is doing:
+
+- **Metrics** — numbers over time: requests per second and their latency per route, the error
+  rate, which search tier answers, how big the dictionary is, what an import is doing, how busy
+  the Postgres pool is. They answer _can it take my traffic?_ and _why is it slow since
+  yesterday?_
+- **Logs** — one line per event, every request included, on stdout. They answer _what happened
+  to this one request, with which error?_ ([Logs](#logs) below).
+
+## How the monitoring works
+
+Three parts, each doing one job:
+
+1. **The server** counts things as it runs and publishes the counters as a text page at
+   `/metrics`. Open it in a browser and you see lines like
+   `http_requests_total{method="GET",route="/api/v1/search",status="200"} 1523`. Nothing is
+   stored here: it is the current value of every counter, and the page is off until
+   `METRICS_ENABLED=true`.
+2. **Prometheus** is a database for those numbers. Every 15 s it fetches (_scrapes_) that
+   page, stamps the values with the time and keeps them, so "requests per second over the
+   last hour" becomes a question it can answer. It has a small UI of its own (port 9090) for
+   ad-hoc queries in its query language, PromQL.
+3. **Grafana** draws the graphs. It asks Prometheus for the numbers and shows them on
+   dashboards; this repository ships one dashboard with the panels an operator needs, and
+   Grafana loads it at start.
+
+The server needs neither of the other two to run. Three ways to have them, from the least to
+the most work:
+
+| Setup                                                           | What you do                                                                                                                                                                     | For                                           |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| **Nothing**                                                     | leave `METRICS_ENABLED` off (the default); read the logs                                                                                                                        | a small instance                              |
+| **The bundled stack** ([below](#prometheus--grafana-in-docker)) | one `docker compose` command with an overlay file: Prometheus, Grafana and a ready dashboard start next to the instance, on localhost                                           | a self-hosted server, a look at a slow search |
+| **Your own Prometheus**                                         | set `METRICS_ENABLED=true`, add the server to your scrape config, import the dashboard file, keep `/metrics` off the internet ([Enabling and scraping](#enabling-and-scraping)) | a company setup with monitoring already there |
 
 ## Enabling and scraping
 
@@ -14,10 +42,13 @@ METRICS_ENABLED=true
 METRICS_PATH=/metrics
 ```
 
+> [!WARNING]
+> The endpoint **must not be reachable from the internet** — it lists routes, versions and
+> traffic.
+
 The endpoint lives outside both API surfaces (`/api/v1`, the admin prefixes): no
 authentication, no rate limit, `Cache-Control: no-store`, `text/plain` in the Prometheus text
-format. It is off by default and **must not be reachable from the internet** — it lists routes,
-versions and traffic. Behind the reverse proxy of
+format. It is off by default. Behind the reverse proxy of
 [`deployment/reverse-proxy.md`](./deployment/reverse-proxy.md) either do not route it at all
 (Prometheus scrapes the server's port directly, on the private network) or fence it like the
 admin prefixes:
@@ -30,7 +61,9 @@ location = /metrics { allow 10.0.0.0/8; deny all; proxy_pass http://vbh_server; 
 @metrics path /metrics
 handle @metrics {
 	@scraper remote_ip 10.0.0.0/8
-	handle @scraper { reverse_proxy 127.0.0.1:3010 }
+	handle @scraper {
+		reverse_proxy 127.0.0.1:3010
+	}
 	respond 404
 }
 ```
@@ -47,8 +80,10 @@ scrape_configs:
 
 ## Prometheus + Grafana in Docker
 
-A ready-made local stack ships next to the main compose file (issue #331) — optional, never
-part of the default stack:
+A ready-made local stack ships next to the main compose file — optional, never
+part of the default stack. `docker-compose.observability.yml` is an _overlay_: a second compose
+file merged over the first, which adds two services and sets `METRICS_ENABLED=true` on the
+server. Start the instance with both files instead of one:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
@@ -68,32 +103,44 @@ That starts, on localhost only:
   event loop lag. The dashboard is a committed file
   (`observability/grafana/dashboards/vocab-bloom-hub.json`), versioned with the code.
 
-The overlay also sets `METRICS_ENABLED=true` for the `server` service, so the one command
-above is all that is needed. Stopping is the mirror image — add the same `-f` flags to
+Stopping is the mirror image — add the same `-f` flags to
 `docker compose down`; the named volumes `prometheus-data` and `grafana-data` keep the metric
 history and Grafana state across restarts.
 
-To watch an instance running elsewhere instead, point the scrape target in
-`observability/prometheus.yml` at that host (over a private network — the endpoint must stay
-off the internet, see above) and start only the two observability services:
-`docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d prometheus grafana`.
+**An instance that does not run in this compose** — the native start (`yarn start`, systemd,
+PM2) or a server on another machine — takes two steps instead of one:
 
-**Target DOWN with `connection refused`?** The scrape fails while the server is not listening
-yet — most often the server container cannot reach its database and keeps restarting (check
-`docker compose logs server`). The usual cause in a development checkout: the root `.env` holds
-a development `DATABASE_URL` pointing at `localhost` — inside a container that is the container
-itself ([`deployment/docker.md`](./deployment/docker.md#what-is-in-docker-composeyml)). Run the
-stack against the bundled Postgres without editing `.env`:
+1. Turn the metrics on in that instance's `.env` and restart it: `METRICS_ENABLED=true`. Check
+   with `curl localhost:3010/metrics`.
+2. Point Prometheus at it. In `observability/prometheus.yml` replace the target `server:3010`
+   with the instance's address — `host.docker.internal:3010` for a server running on the
+   Docker host itself, `10.0.0.5:3010` for another machine on the private network (never a
+   public address, see above) — and start only the two monitoring services:
 
-```bash
-COMPOSE_PROFILES=db DATABASE_URL= docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
-```
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d prometheus grafana
+   ```
 
-(shell variables override the `.env` values: the empty `DATABASE_URL` falls back to the bundled
-database, the profile starts it) — or point the container at the host's database with
-`DATABASE_URL=postgres://…@host.docker.internal:5432/… docker compose …`. A target that is
-`down` only briefly right after `up -d` is normal: the server answers `/metrics` once its
-migrations and startup are done.
+Already running a Prometheus? Skip the compose file: add the instance to its scrape config
+and import `observability/grafana/dashboards/vocab-bloom-hub.json` into your Grafana.
+
+> [!TIP]
+> **Target DOWN with `connection refused`?** The scrape fails while the server is not listening
+> yet — most often the server container cannot reach its database and keeps restarting (check
+> `docker compose logs server`). The usual cause in a development checkout: the root `.env` holds
+> a development `DATABASE_URL` pointing at `localhost` — inside a container that is the container
+> itself ([`deployment/docker.md`](./deployment/docker.md#what-is-in-docker-composeyml)). Run the
+> stack against the bundled Postgres without editing `.env`:
+>
+> ```bash
+> COMPOSE_PROFILES=db DATABASE_URL= docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+> ```
+>
+> (shell variables override the `.env` values: the empty `DATABASE_URL` falls back to the bundled
+> database, the profile starts it) — or point the container at the host's database with
+> `DATABASE_URL=postgres://…@host.docker.internal:5432/… docker compose …`. A target that is
+> `down` only briefly right after `up -d` is normal: the server answers `/metrics` once its
+> migrations and startup are done.
 
 ## Metrics
 
@@ -133,7 +180,7 @@ no route is labelled `unmatched`. The metrics endpoint itself is not counted.
 | `vbh_dictionary_transfer_progress_percent` | gauge   | `kind`, `stage`      | Progress of the running transfer, with its stage (`saving_words`, `linking_synonyms`, …)                                                                                                      |
 | `vbh_db_pool_connections`                  | gauge   | `state`              | Postgres pool: `total`, `idle`, `waiting` clients; absent on SQLite                                                                                                                           |
 
-The tier counter is the tuning signal for the search (issues #278, #292): a growing `fuzzy`
+The tier counter is the tuning signal for the search: a growing `fuzzy`
 share means users misspell more than the substring tiers catch, a large `none` share means the
 dictionary lacks what they look for.
 
@@ -163,7 +210,7 @@ vbh_dictionary_transfer_in_progress == 1 and changes(vbh_dictionary_transfer_pro
 The server writes its log to **stdout**, one line per event, and nothing else: where the lines
 end up is the process manager's business — `docker compose logs -f server` (Docker keeps them
 in `/var/lib/docker/containers/…/*-json.log`), `journalctl -u vocab-bloom-hub-server` under
-systemd, pm2's files. `LOG_FORMAT` picks their shape (issue #280):
+systemd, pm2's files. `LOG_FORMAT` picks their shape:
 
 - **`json`** — the default with `NODE_ENV=production`, so in the Docker images: one JSON object
   per line, what a log collector reads without parsing rules;
@@ -171,7 +218,8 @@ systemd, pm2's files. `LOG_FORMAT` picks their shape (issue #280):
   terminal, `[10:00:01.234] INFO: [Bootstrap] Server listening on port 3010`.
 
 `LOG_LEVEL` is the minimum level, in Nest's names — `verbose` / `debug` / `log` / `warn` /
-`error` / `fatal` (pino's `trace` and `info` are accepted too); `log` by default. Both are read
+`error` / `fatal` (pino's `trace` and `info` are accepted too); `log` by default, `debug` with
+`NODE_ENV=development`. Both are read
 at start: change them in `.env` and restart the server (`docker compose up -d server` recreates
 the container with the new environment).
 
@@ -199,10 +247,11 @@ header. An `X-Request-Id` that comes in — from the reverse proxy
 in nginx) or from a client — is reused when it is 1–128 characters of `A-Z a-z 0-9 . _ -`, so
 the proxy's access log and the server's lines share one id; anything else is replaced.
 
-Not logged: `GET /api/health`, `GET /api/ready` and `METRICS_PATH` — polled every few seconds.
-Never logged: the `Authorization` header, the `Cookie` header (the admin `bearer`), `Set-Cookie`.
-The request line carries no headers but the user agent, and pino's redaction masks those three
-should a request object ever be logged by hand.
+> [!NOTE]
+> Not logged: `GET /api/health`, `GET /api/ready` and `METRICS_PATH` — polled every few seconds.
+> Never logged: the `Authorization` header, the `Cookie` header (the admin `bearer`), `Set-Cookie`.
+> The request line carries no headers but the user agent, and pino's redaction masks those three
+> should a request object ever be logged by hand.
 
 ### Reading them
 

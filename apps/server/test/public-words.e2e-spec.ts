@@ -21,13 +21,14 @@ import {
   PublicHeadwordTranslationsV1ResT,
   PublicHeadwordV1ResT,
   PublicMetaV1ResT,
+  PublicSearchV1ResT,
   PublicWordsBatchV1ResT,
   PublicWordsV1ResT,
   PublicWordV1ResT,
   PublicWordV1T,
   WordLevelE,
 } from '../types';
-import { encodeWordCursor } from '../src/modules/PublicApiModule/utils/cursor';
+import { encodeWordCursor, wordListFingerprint } from '../src/modules/PublicApiModule/utils/cursor';
 
 const E2E_USERNAME = 'e2e-admin';
 const E2E_PASSWORD = 'e2e-password';
@@ -476,9 +477,55 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
 
     it('keeps the cursor stable across the two entries of one headword', async () => {
       // a cursor right on "run" (verb): the next page starts with "run" (noun)
-      const cursor = encodeWordCursor({ word: 'run', id: ids.runVerb });
+      const cursor = encodeWordCursor({ word: 'run', id: ids.runVerb, filters: wordListFingerprint({}) });
       const body = await list(`?cursor=${encodeURIComponent(cursor)}`);
       expect(keys(body)).toEqual(['run:noun', 'sprint:verb']);
+    });
+
+    it('binds the cursor to its filters and reads an empty cursor as the first page (issue #440)', async () => {
+      const first = await list('?limit=2&part_of_speech=verb');
+      const cursor = encodeURIComponent(first.meta.next_cursor as string);
+      // the same filters, in another order of the query string: the next page
+      expect(keys(await list(`?part_of_speech=verb&cursor=${cursor}&limit=2`))).toEqual(['sprint:verb']);
+      // other filters: the cursor names a position in another listing
+      const foreign = await request(server()).get(`/api/v1/words?cursor=${cursor}`).expect(400);
+      expectPublicError(foreign.body, 400, 'invalid_cursor');
+      const narrowed = await request(server())
+        .get(`/api/v1/words?part_of_speech=verb&word_level=B2&cursor=${cursor}`)
+        .expect(400);
+      expectPublicError(narrowed.body, 400, 'invalid_cursor');
+      // nothing after `cursor=` is no cursor
+      expect(keys(await list('?cursor=&limit=2'))).toEqual(['abandon:verb', 'put up with:phrase']);
+    });
+
+    it('folds the case of a headword that keeps its capitals — a grammar pattern (issue #440)', async () => {
+      const id = await addWord({
+        word: 'When it comes to ...',
+        part_of_speech: EnPartOfSpeechE.grammar_pattern,
+        form_of_word: EnWordFormsE.base_form,
+        area_variant: EnAreaVariantsE.common,
+        meanings: [],
+      });
+      try {
+        // sorted among the w's, not before "abandon"
+        expect(keys(await list())).toEqual([
+          'abandon:verb',
+          'put up with:phrase',
+          'run:verb',
+          'run:noun',
+          'sprint:verb',
+          'When it comes to ...:grammar_pattern',
+        ]);
+        expect(keys(await list('?search=wh'))).toEqual(['When it comes to ...:grammar_pattern']);
+        expect(keys(await list('?search=WHEN%20IT'))).toEqual(['When it comes to ...:grammar_pattern']);
+        // the headword read and the search find it by the lower-case spelling, and answer the stored one
+        const read = await request(server()).get('/api/v1/words/when%20it%20comes%20to%20...').expect(200);
+        expect((read.body as PublicHeadwordV1ResT).data[0].word).toBe('When it comes to ...');
+        const found = await request(server()).get('/api/v1/search?search=when%20it').expect(200);
+        expect((found.body as PublicSearchV1ResT).data.map((w) => w.word)).toEqual(['When it comes to ...']);
+      } finally {
+        await request(server()).delete(`/api/en/${id}`).set(auth).expect(200);
+      }
     });
 
     it('filters by the word columns, OR-ing the values of one filter', async () => {

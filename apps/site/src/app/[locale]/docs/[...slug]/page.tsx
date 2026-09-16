@@ -6,7 +6,8 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Markdown } from '@/components/Markdown';
 import { Toc } from '@/components/Toc';
 import { renderMarkdown } from '@/content/markdown';
-import { DOC_PAGES, docFile, docTitle, findDocBySlug } from '@/content/registry';
+import { extractSection } from '@/content/sections';
+import { DOC_PAGES, docFile, docTitle, findDocBySlug, translatedDocFile } from '@/content/registry';
 import { readRepoFile, REPO_BLOB_URL } from '@/content/repo';
 import { localeAlternates, pageMeta } from '@/core/site';
 import { routing } from '@/i18n/routing';
@@ -39,8 +40,23 @@ export default async function DocPage({ params }: DocPageP) {
 
   const t = await getTranslations('docs');
   const file = docFile(page, locale);
-  const rendered = await renderMarkdown(readRepoFile(file), { fromFile: file, locale });
-  const englishOnly = locale !== InterfaceLanguageEnum.en && !page.ruFile;
+  const source = readRepoFile(file);
+  const markdown = page.extract ? extractSection(source, page.extract) : source;
+  // a section the registry names must exist in every translation: fail the build, not the reader
+  if (markdown === null)
+    throw new Error(`${file} has no section matching ${String(page.extract)} (docs page "${page.slug}")`);
+  const rendered = await renderMarkdown(markdown, {
+    fromFile: file,
+    locale,
+    callouts: {
+      note: t('callouts.note'),
+      tip: t('callouts.tip'),
+      important: t('callouts.important'),
+      warning: t('callouts.warning'),
+      caution: t('callouts.caution'),
+    },
+  });
+  const englishOnly = locale !== InterfaceLanguageEnum.en && !translatedDocFile(page, locale);
 
   return (
     <div className={styles.content}>

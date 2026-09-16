@@ -512,16 +512,10 @@ export default {
     public_endpoints: 'Points de terminaison publics',
     endpoint_search_get: 'Recherche simple',
     endpoint_search_detailed_get: 'Recherche détaillée',
-    endpoint_search: 'Recherche simple (forme POST)',
-    endpoint_search_detailed: 'Recherche détaillée (forme POST)',
     desc_search_get:
       "Recherche des entrées du dictionnaire et répond par une liste plate de mots sans sens ni traductions, avec les champs dans la chaîne de requête. La réponse porte ETag, Last-Modified et Cache-Control comme tout GET public, elle peut donc passer par un CDN et être partagée comme lien. Les résultats sont classés par qualité de correspondance : la correspondance exacte d'abord, puis les phrasal verbs, les entrées commençant par le terme, les expressions, celles qui se terminent par lui et toute autre occurrence. Quand rien ne correspond, un niveau de similarité par trigrammes répond aux fautes de frappe : meta.fuzzy vaut true et chaque élément porte similarity (0–1) — instances Postgres uniquement. Un terme d'un ou deux caractères ne cherche que dans les niveaux exact et préfixe (meta.short_term vaut true).",
     desc_search_detailed_get:
       'La même recherche avec pagination, qui peut en plus joindre les sens et leurs traductions ; les champs passent dans la chaîne de requête (translation_languages en clé répétée) et la réponse est cacheable. Comme chaque élément peut porter des données jointes, la taille de page et la profondeur de pagination sont plafonnées plus strictement que dans la recherche simple.',
-    desc_search:
-      "La forme POST de la recherche simple : les mêmes champs dans un corps JSON, la même réponse, mais les caches HTTP ne la conservent jamais. Conservée pendant la bêta ; les nouvelles intégrations devraient utiliser la forme GET. Les résultats sont classés par qualité de correspondance : la correspondance exacte d'abord, puis les phrasal verbs, les entrées commençant par le terme, les expressions, celles qui se terminent par lui et toute autre occurrence. Quand rien ne correspond, un niveau de similarité par trigrammes répond aux fautes de frappe : meta.fuzzy vaut true et chaque élément porte similarity (0–1) — instances Postgres uniquement. Un terme d'un ou deux caractères ne cherche que dans les niveaux exact et préfixe (meta.short_term vaut true).",
-    desc_search_detailed:
-      'La forme POST de la recherche détaillée : les mêmes champs dans un corps JSON, la même réponse, non cacheable ; conservée pendant la bêta. Elle peut en plus joindre les sens et leurs traductions. Comme chaque élément peut porter des données jointes, la taille de page et la profondeur de pagination sont plafonnées plus strictement que dans la recherche simple.',
     endpoint_word: "Consultation d'une entrée",
     endpoint_words_batch: "Consultation d'entrées par lot",
     endpoint_word_meanings: "Sens d'une entrée",

@@ -8,27 +8,29 @@ A single `.env` file at the **repository root** is used by both apps:
 
 **`ENV_FILE`** names another file, for a build that runs outside the repository tree or keeps its
 secrets under `/etc`: `ENV_FILE=/etc/vocab-bloom-hub/.env yarn start`. The server logs which file
-it loaded and exits with code 1 when an explicitly named file cannot be read (a missing default
-is only a warning: the variables may come from the process environment). Use an absolute path —
-the server resolves a relative one from its working directory, the frontend scripts from
-`apps/frontend`. Variables already present in the process environment always win over the file
-(dotenv never overrides them).
+it loaded and exits with code 1 when an explicitly named file cannot be read (a missing default is
+only a warning: the variables may come from the process environment).
 
-In deployments without an `.env` file the variables can come from the process environment; the
-server logs a warning when the root `.env` could not be loaded.
+> [!NOTE]
+> Variables already present in the process environment always win over the file (dotenv never
+> overrides them).
+
+> [!IMPORTANT]
+> Use an absolute path — the server resolves a relative one from its working directory, the
+> frontend scripts from `apps/frontend`.
 
 ## Variables
 
-> **Renamed in #261:** the admin credentials used to be `USERNAME` / `PASSWORD`. They are now
-> `ADMIN_USERNAME` / `ADMIN_PASSWORD`; the old names are not read anymore, so update existing
-> `.env` files and deployment configs. The rename avoids the collision with the `USERNAME`
-> variable that most operating systems set to the current system user.
+> [!NOTE]
+> The admin credentials were once `USERNAME` / `PASSWORD`; only `ADMIN_USERNAME` /
+> `ADMIN_PASSWORD` are read now (a bare `USERNAME` collides with the variable most operating
+> systems set to the current user).
 
 | Variable                     | Required          | Default                                                         | Used by                | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | ---------------------------- | ----------------- | --------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ADMIN_USERNAME`             | **yes**           | —                                                               | server                 | Admin login. Together with `ADMIN_PASSWORD` it derives the login-proof key and the JWT signing secret (see [authentication.md](./authentication.md)).                                                                                                                                                                                                                                                                                                                                                                                 |
 | `ADMIN_PASSWORD`             | **yes**           | —                                                               | server                 | Admin password. The server refuses to start when it is missing or blank.                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `DATABASE_URL`               | **in production** | SQLite fallback (dev only)                                      | server                 | Database URL; the scheme selects the driver. `postgres://user:pass@host:5432/db` (or `postgresql://`) runs Postgres with the schema managed by migrations (see [migrations.md](./migrations.md)). `sqlite:<path>` (e.g. `sqlite:./my.sqlite`, `sqlite::memory:`) runs better-sqlite3 with `synchronize` — used by the browser e2e tests for an isolated database. Any other scheme fails startup. When absent in development, TypeORM falls back to `dev.sqlite` at the repo root.                                                    |
+| `DATABASE_URL`               | **in production** | SQLite fallback (dev only)                                      | server                 | Database URL; the scheme selects the driver. `postgres://user:pass@host:5432/db` (or `postgresql://`) runs Postgres with the schema managed by migrations (see [database.md](./database.md)). `sqlite:<path>` (e.g. `sqlite:./my.sqlite`, `sqlite::memory:`) runs better-sqlite3 with `synchronize` — used by the browser e2e tests for an isolated database. Any other scheme fails startup. When absent in development, TypeORM falls back to `dev.sqlite` at the repo root.                                                        |
 | `DB_POOL_SIZE`               | no                | `10`                                                            | server                 | Maximum connections in the Postgres pool (the pg driver's `max`; ignored on SQLite — it has no pool). Raise it when the pool metrics (`vbh_db_pool_connections`, see [observability.md](./observability.md)) show clients waiting; on a managed Postgres keep `replicas × DB_POOL_SIZE` under the instance's connection limit, leaving headroom for migrations and ad-hoc sessions. A whole number, at least 1; anything else fails startup.                                                                                          |
 | `DB_POOL_IDLE_TIMEOUT`       | no                | `10`                                                            | server                 | Seconds an idle Postgres pool connection is kept before it is closed (the pg driver's `idleTimeoutMillis`). `0` keeps idle connections open forever. Whole seconds; anything else fails startup.                                                                                                                                                                                                                                                                                                                                      |
 | `SERVER_PORT`                | no                | `3010`                                                          | server, frontend, site | Port the NestJS API listens on. The frontend and site also read it as the fallback target of their `/api/*` forwarding route (`core/apiProxy.ts`) when `API_INTERNAL_URL` is unset.                                                                                                                                                                                                                                                                                                                                                   |
@@ -47,8 +49,8 @@ server logs a warning when the root `.env` could not be loaded.
 | `ADMIN_API_ENABLED`          | no                | `true`                                                          | server                 | Serves the admin surface (`/api/en`, `/api/settings`, `/api/auth`). `false` makes those routes answer `404` (public-only instance); disabling both surfaces fails startup.                                                                                                                                                                                                                                                                                                                                                            |
 | `PUBLIC_API_RATE_LIMIT`      | no                | `100/60`                                                        | server                 | Requests per client IP allowed on the whole `/api/v1` prefix, as `<requests>/<seconds>`. A batch lookup counts as one request. Anything else fails startup.                                                                                                                                                                                                                                                                                                                                                                           |
 | `PUBLIC_API_CACHE_MAX_AGE`   | no                | `3600`                                                          | server                 | Seconds a shared cache (browser, CDN, reverse proxy) may keep a public GET answer: `Cache-Control: public, max-age=<value>` on every successful `/api/v1` GET. `0` sends `public, no-cache` (revalidate on each use; the `ETag` makes that a bodiless `304`). Anything but a non-negative integer fails startup. See [api.md](./api.md#caching).                                                                                                                                                                                      |
-| `SUGGESTIONS_RATE_LIMIT`     | no                | `5/3600`                                                        | server                 | Reports per client allowed on `POST /api/v1/suggestions` (the _Report a mistake_ form of the word pages, issue #327), as `<requests>/<seconds>` — a budget separate from `PUBLIC_API_RATE_LIMIT`. Anything else fails startup. See [api.md](./api.md#endpoints).                                                                                                                                                                                                                                                                      |
-| `DICTIONARY_IMPORT_DIR`      | no                | — (server-side datasets disabled)                               | server                 | Folder the dictionary import may read datasets from (zip archives or dataset folders in the export format, one level deep), e.g. a mounted volume. Paths in import requests are resolved inside it only. Unset, the _From file_ tab of the import page offers uploads only. See [offline-import.md](./offline-import.md).                                                                                                                                                                                                             |
+| `SUGGESTIONS_RATE_LIMIT`     | no                | `5/3600`                                                        | server                 | Reports per client allowed on `POST /api/v1/suggestions` (the _Report a mistake_ form of the word pages), as `<requests>/<seconds>` — a budget separate from `PUBLIC_API_RATE_LIMIT`. Anything else fails startup. See [api.md](./api.md#endpoints).                                                                                                                                                                                                                                                                                  |
+| `DICTIONARY_IMPORT_DIR`      | no                | — (server-side datasets disabled)                               | server                 | Folder the dictionary import may read datasets from (zip archives or dataset folders in the export format, one level deep), e.g. a mounted volume. Paths in import requests are resolved inside it only. Unset, the _Archive_ tab of the import page offers the upload only, no server-side list. See [offline-import.md](./offline-import.md).                                                                                                                                                                                       |
 | `DICTIONARY_AUTO_IMPORT`     | no                | `false` (`true` in `docker-compose.yml`)                        | server                 | Load the dictionary by itself on first start: when no dataset version is recorded in the settings, the server imports the newest dataset in `DICTIONARY_IMPORT_DIR` or, without one, the published dataset from HuggingFace — in the background, with progress in the log; `GET /api/ready` answers `503 importing` meanwhile and `503 import_failed` after a failure (the next start retries). A recorded version means nothing happens. See [deployment/docker.md](./deployment/docker.md#first-start-the-dictionary-loads-itself). |
 | `DICTIONARY_DATASET_VERSION` | no                | — (the moving `main`)                                           | server                 | Pins the automatic first-start import to one revision of the published dataset: a version tag of the HuggingFace repo (each published revision is tagged with its `manifest.version`, see [data.md](./data.md#dataset-versions)), a branch or a commit sha. Manual imports pick a revision on the import page instead.                                                                                                                                                                                                                |
 | `LOG_LEVEL`                  | no                | `debug` in development, else `log`                              | server                 | Minimum server log level: `verbose` / `debug` / `log` / `warn` / `error` / `fatal` (pino's `trace` / `info` accepted too). Unknown values fall back to the default. See [observability.md](./observability.md#logs).                                                                                                                                                                                                                                                                                                                  |
@@ -56,7 +58,7 @@ server logs a warning when the root `.env` could not be loaded.
 | `ENV_FILE`                   | no                | the root `.env`                                                 | both                   | Path of the environment file to load instead of the repository root `.env` (absolute path). The server exits when the named file cannot be read; see above.                                                                                                                                                                                                                                                                                                                                                                           |
 | `AUDIT_RETENTION_DAYS`       | no                | `90`                                                            | server                 | Days the journal of admin changes is kept (the _History_ page, `GET /api/en/audit`); older rows are deleted on start and daily. `0` keeps them forever. Whole days; anything else fails startup.                                                                                                                                                                                                                                                                                                                                      |
 | `SHUTDOWN_TIMEOUT`           | no                | `30`                                                            | server                 | Seconds a graceful stop may take after SIGTERM / SIGINT: the listener closes, requests in flight finish, the database pool closes. Past the budget the server logs `forcing exit` and exits with code 1 instead of waiting for the process manager's SIGKILL. Whole seconds, at least 1; anything else fails startup. See [deployment/README.md](./deployment/README.md#stopping-and-restarting).                                                                                                                                     |
-| `NODE_ENV`                   | no                | —                                                               | both                   | `development` enables debug logging; `production` makes the auth cookie `secure`, requires a `postgres://` `DATABASE_URL` and disables the Swagger UI at `/api`. Schema management does not depend on it: SQLite always synchronizes, Postgres always uses migrations.                                                                                                                                                                                                                                                                |
+| `NODE_ENV`                   | no                | —                                                               | both                   | `development` enables debug logging and `pretty` logs; `production` requires a `postgres://` `DATABASE_URL`, disables the Swagger UI at `/api`, logs JSON and warns at every admin login that arrives over plain http (the cookie is `secure` whenever the request came over https, in any mode). Schema management does not depend on it: SQLite always synchronizes, Postgres always uses migrations.                                                                                                                               |
 
 ## Startup validation
 
@@ -77,10 +79,13 @@ The server validates its configuration before Nest is created (`assertRequiredCo
   `SUGGESTIONS_RATE_LIMIT`, `DB_POOL_SIZE`, `DB_POOL_IDLE_TIMEOUT` hold values that do not
   parse.
 
-The resolved database driver is logged at startup:
-`Database: Postgres (DATABASE_URL)` or `better-sqlite3 (<path>)`; on Postgres the next line
-reports the resolved pool settings (`Database pool: up to N connections …`). Changing the pool
-variables requires a server restart — they are read once, when the pool is created.
+The resolved database driver is logged at startup: `Database: Postgres (DATABASE_URL)` or
+`better-sqlite3 (<path>)`; on Postgres the next line reports the resolved pool settings
+(`Database pool: up to N connections …`).
+
+> [!NOTE]
+> Changing the pool variables requires a server restart — they are read once, when the pool is
+> created.
 
 ## Database driver locking
 
@@ -93,37 +98,7 @@ were imported before the environment was loaded (e.g. a custom entry point that 
 
 ## Example `.env`
 
-```dotenv
-SERVER_PORT=3010
-FRONT_PORT=3000
-NODE_ENV=development
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=change-me
-# Optional in development (falls back to dev.sqlite), required in production.
-# The scheme picks the driver: postgres://... or an explicit sqlite:<path>
-DATABASE_URL=postgres://user:password@localhost:5432/vocab_bloom
-NEXT_PUBLIC_BASE_API_URL=http://localhost:3010/api
-# Optional, defaults to the admin UI and the website on this host (FRONT_PORT, SITE_PORT):
-CORS_ORIGINS=http://localhost:3000
-# Behind a reverse proxy only: how many proxy hops set X-Forwarded-For (docs/deployment/reverse-proxy.md)
-# TRUST_PROXY=1
-# Postgres pool: max connections and idle timeout in seconds (defaults shown;
-# keep replicas × DB_POOL_SIZE under a managed instance's connection limit)
-# DB_POOL_SIZE=10
-# DB_POOL_IDLE_TIMEOUT=10
-# Graceful stop budget in seconds after SIGTERM (docs/deployment/README.md)
-# SHUTDOWN_TIMEOUT=30
-# Log lines: json (one object per line, the production default) or pretty; minimum level (docs/observability.md)
-# LOG_FORMAT=json
-# LOG_LEVEL=log
-# Prometheus metrics (docs/observability.md); off by default, keep the endpoint private
-# METRICS_ENABLED=true
-# METRICS_PATH=/metrics
-# Optional: folder with dataset archives the import page can pick from
-DICTIONARY_IMPORT_DIR=/data/dictionary-imports
-# Optional: which API surfaces to serve, the public rate limit and cache max-age (defaults shown)
-PUBLIC_API_ENABLED=true
-ADMIN_API_ENABLED=true
-PUBLIC_API_RATE_LIMIT=100/60
-PUBLIC_API_CACHE_MAX_AGE=3600
-```
+The template is [`.env.example`](../.env.example) at the repository root: what `docker compose`
+needs, with every optional variable commented out next to its default. The minimal files for a
+native production start and for development are in the README's
+[getting started](../README.md#3-run-without-docker).

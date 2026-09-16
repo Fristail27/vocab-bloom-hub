@@ -15,7 +15,8 @@ release is the **latest one** (Docker images on GHCR, `@vocab-bloom-hub/client` 
 
 ## Reporting a vulnerability
 
-Please **do not open a public issue** for anything you believe is a security problem.
+> [!WARNING]
+> Please **do not open a public issue** for anything you believe is a security problem.
 
 Use GitHub's private vulnerability reporting instead: **Security → Report a vulnerability** on
 this repository ([direct link](https://github.com/Fristail27/vocab-bloom-hub/security/advisories/new)).

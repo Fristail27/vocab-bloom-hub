@@ -12,7 +12,11 @@ export class HeadwordTranslationsV1QueryDTO {
     description: 'Translation languages; no value means all of them',
   })
   @IsOptional()
-  @Transform(toArray)
+  // `?language=` with nothing after it means every language, like an omitted key
+  @Transform(({ value }: { value: unknown }) => {
+    const values = toArray({ value }).filter((v) => v !== '');
+    return values.length ? values : undefined;
+  })
   @IsArray()
   @IsEnum(AvailableTranslationLanguagesE, { each: true })
   language?: AvailableTranslationLanguagesE[];

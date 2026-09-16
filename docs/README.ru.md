@@ -5,11 +5,11 @@
 <h1 align="center">Vocab Bloom Hub</h1>
 
 <p align="center">
-  Модульная open-source платформа для работы с лексическими данными: словари, лингвистические датасеты и инструменты обработки языка.
+  Самостоятельно размещаемый английский словарь: 300 000 записей со значениями, примерами, формами, переводами и связями между словами за публичным API, админка, две SDK, сайт и открытый датасет.
 </p>
 
 <p align="center">
-  <a href="../README.md">English</a> | <strong>Русский</strong>
+  <a href="../README.md">🇺🇸 EN</a> | <strong>🇷🇺 RU</strong> | <a href="README.es.md">🇪🇸 ES</a> | <a href="README.fr.md">🇫🇷 FR</a> | <a href="README.pt.md">🇵🇹 PT</a> | <a href="README.de.md">🇩🇪 DE</a>
 </p>
 
 <p align="center">
@@ -39,248 +39,155 @@
 
 ---
 
-## 📑 Содержание
+## 📖 Что это
 
-- [Обзор](#-обзор)
-- [Статус проекта](#-статус-проекта)
-- [Возможности](#-возможности)
-- [Технологии](#-технологии)
-- [Структура репозитория](#-структура-репозитория)
-- [Требования](#-требования)
-- [Быстрый старт](#-быстрый-старт)
-- [Скрипты](#-скрипты)
-- [Конфигурация](#️-конфигурация)
-- [Деплой](#-деплой)
-- [Документация](#-документация)
-- [Roadmap](#️-roadmap)
-- [Участие в разработке](#-участие-в-разработке)
-- [Сообщество](#-сообщество)
-- [Лицензия](#-лицензия)
+Сервер словаря, который вы запускаете у себя. В комплекте данные, API для чтения, админка для
+правки и SDK, чтобы строить поверх.
 
----
+**Словарь**
 
-## 🚀 Обзор
+- 89 000 английских слов и 26 000 фраз, 161 000 значений с определениями и примерами
+- транскрипция IPA, уровень CEFR, пометы регистра и предметной области, словоформы
+- связи синонимов и антонимов между словами, фразовые глаголы привязаны к базовому глаголу
+- переводы на русский, испанский, французский, немецкий и португальский
+- открытые данные: [CC BY 4.0](../DATA_LICENSE.md), опубликованы на HuggingFace, загружаются в
+  пустой экземпляр при первом запуске; сгенерированы языковыми моделями, людьми не проверены
 
-**Vocab Bloom Hub** — система на основе монорепозитория для построения современной лексической и лингвистической платформы.
+**API** — `/api/v1`, только чтение, без ключей
 
-Проект вдохновлён структурами вроде WordNet и ставит целью предоставить:
+- поиск с тирами релевантности и допуском опечаток; слово со всем, что к нему привязано
+- отфильтрованные списки с курсорной пагинацией, случайная запись, пакетный поиск до 50 слов
+- rate limit на клиента, каждый ответ кэшируется с ETag, OpenAPI-документ для генерации клиентов
 
-- 📖 Многоязычную словарную базу данных
-- 🔎 Быстрый лексический поиск
-- 🔗 Граф связей между словами (синонимы, антонимы, гиперонимы и т. д.)
-- 📊 Лингвистические датасеты и инструменты
-- 🧠 SDK для Python и Node.js
+**SDK** — сгенерированы из этого OpenAPI-документа
 
----
+- Node.js / TypeScript: `npm install @vocab-bloom-hub/client@alpha`
+- Python: `pip install --pre vocab-bloom-hub` (синхронный, асинхронный, помощник для pandas)
 
-## 🚧 Статус проекта
+**Админка** — шесть языков интерфейса
 
-Проект находится на **ранней стадии разработки** (`0.x`). Первая альфа [выпущена](https://github.com/Fristail27/vocab-bloom-hub/releases): Docker-образы на GHCR, SDK в npm и PyPI, датасет с тегом на HuggingFace. Английский словарь, админ-панель и импорт/экспорт уже пригодны к использованию, но контракт API может меняться между релизами без периода устаревания. Следите за [issues](https://github.com/Fristail27/vocab-bloom-hub/issues) и [pull requests](https://github.com/Fristail27/vocab-bloom-hub/pulls), чтобы видеть, над чем идёт работа.
+- правка слов, значений, переводов и связей; каждое изменение в журнале аудита
+- модерация исправлений, которые читатели присылают со страниц слов
+- массовые запросы к языковой модели по отфильтрованному срезу словаря
+- импорт и экспорт всего словаря датасетом, онлайн или из файла
 
----
+**Сайт** — документация, справочник API, площадка для запросов, публичные страницы слов
 
-## ✨ Возможности
+**Под капотом** — PostgreSQL (SQLite для разработки), Docker-образы, миграции при старте, пробы
+готовности, метрики Prometheus, JSON-логи.
 
-- **Админ-панель** (интерфейс на английском, русском, испанском, французском, португальском и немецком) с тремя разделами:
-  - _Managing_ — создание и редактирование английских слов, их значений, переводов, синонимов, антонимов и кратких переводов;
-  - _Statistics_ — сводка по содержимому словаря;
-  - _Documentation_ — встроенный справочник по модели данных.
-- **REST API** с документацией Swagger/OpenAPI: публичный read-only версионированный префикс `/api/v1` для приложений-потребителей — поиск (кэшируемый `GET`), слово со значениями, формами, переводами, синонимами и антонимами, пакетный поиск, списки с фильтрами и курсорной пагинацией, случайное слово; без логина, с лимитом запросов, каждый `GET` кэшируется по ETag — и админский API, защищённый единственным админским логином (httpOnly JWT-cookie или Bearer-токен) — см. [`api.md`](api.md).
-- **Node.js / TypeScript SDK** для публичного API — [`@vocab-bloom-hub/client`](../packages/npm-sdk/README.md): типизированные методы по эндпоинтам, итерация по курсору и по страницам, типизированные ошибки, ETag-кэш, опциональные повторы запросов, версионированный `User-Agent`; ESM и CommonJS, типы генерируются из закоммиченного OpenAPI-документа — `npm install @vocab-bloom-hub/client`.
-- **Python SDK** — [`vocab-bloom-hub`](../packages/python-sdk/README.md): sync + async клиенты, pydantic-модели из того же спека, опции на запрос, опциональные повторы, `words_dataframe()` для ноутбуков — `pip install --pre vocab-bloom-hub`.
-- **Импорт / экспорт словаря** в виде NDJSON-датасетов (`POST /api/en/dictionary/import`, `GET /api/en/dictionary/export`) — весь словарь можно версионировать, передавать и переносить между окружениями, в том числе офлайн: из загруженного архива или папки на сервере (см. [`offline-import.md`](offline-import.md)).
-- **Веб-сайт** — [`apps/site`](../apps/site): документация, отрендеренная из этого репозитория, справочник публичного API из OpenAPI-документа, живой playground и страницы слов поверх работающего экземпляра; профиль `site` в `docker-compose.yml`.
-- **Поиск** по словам, значениям и переводам.
-- **PostgreSQL** в production с миграциями TypeORM, применяемыми при старте, и **SQLite** без настройки для локальной разработки и тестов.
-- **Общие типы API** — фронтенд импортирует типы запросов/ответов и коды ошибок напрямую из workspace `server`, поэтому приложения не расходятся.
-- **Контроль качества** — ESLint, Prettier, проверка типов, unit-, API- (SQLite и Postgres) и браузерные e2e-тесты запускаются в CI на каждый pull request, плюс порог покрытия сервера и аудит зависимостей; CodeQL сканирует `main`.
-
----
-
-## 🧰 Технологии
-
-| Слой         | Технологии                                                                                |
-| ------------ | ----------------------------------------------------------------------------------------- |
-| Фронтенд     | [Next.js 16](https://nextjs.org/) (App Router), React, Ant Design, Sass-модули, next-intl |
-| Бэкенд       | [NestJS 12](https://nestjs.com/), TypeORM, Swagger (OpenAPI)                              |
-| База данных  | PostgreSQL (production) / SQLite через better-sqlite3 (разработка)                        |
-| Тестирование | Jest, Supertest, Playwright                                                               |
-| Инструменты  | TypeScript, Yarn 4 workspaces, ESLint 10, Prettier, Husky + lint-staged, Dependabot       |
-
----
-
-## 🧱 Структура репозитория
-
-```txt
-.
-├── apps/
-│   ├── site/       → Next.js сайт проекта: документация, справочник API, плейграунд, страницы слов (en/ru)
-│   ├── frontend/   → Админ-панель на Next.js (локали en/ru)
-│   ├── server/     → API на NestJS; также экспортирует общие типы (types/) и константы (core/), которые использует фронтенд
-│   └── e2e/        → Браузерные тесты Playwright: поднимают оба приложения на изолированной SQLite-базе
-├── packages/npm-sdk → @vocab-bloom-hub/client, Node.js / TypeScript SDK публичного API
-├── packages/python-sdk → vocab-bloom-hub, Python SDK публичного API (uv, httpx, pydantic)
-├── docs/           → Подробная документация (деплой, эксплуатация, наблюдаемость, производительность, окружение, API, аутентификация, миграции, офлайн-импорт, данные) и этот README на русском
-├── eslint/         → Общие части конфигурации ESLint (base / next / nest)
-├── .github/        → CI-воркфлоу, шаблоны issue/PR, Dependabot, CODEOWNERS
-├── .env            → Единый файл окружения для обоих приложений (не коммитится)
-└── package.json    → Скрипты корневого workspace
-```
-
----
-
-## ✅ Требования
-
-- **Node.js >= 22.13** для запуска; тестам на Jest нужен 24.9+ (NestJS 12 — ESM-only, и `require(ESM)` в Jest требует его)
-- **Yarn 4** (версия зафиксирована в `packageManager`; включите через `corepack enable`)
-- **PostgreSQL** — необязательно. Без `DATABASE_URL` сервер использует локальный файл `dev.sqlite`.
+> [!NOTE]
+> Статус: `0.x`, первая альфа выпущена; API может меняться между релизами.
 
 ---
 
 ## ⚡ Быстрый старт
 
+Три пути, от самого быстрого к самому гибкому. Все заканчиваются админкой на
+<http://localhost:3000>, API на <http://localhost:3010> и загруженным словарём.
+
+### 1. Запуск готовых образов
+
+Без клонирования — одна папка, два файла, Docker:
+
+```bash
+mkdir vocab-bloom-hub && cd vocab-bloom-hub
+curl -fsSLO https://raw.githubusercontent.com/Fristail27/vocab-bloom-hub/main/docker-compose.yml
+curl -fsSL  https://raw.githubusercontent.com/Fristail27/vocab-bloom-hub/main/.env.example -o .env
+```
+
+Откройте `.env` и задайте два пароля: `ADMIN_PASSWORD` (вход в админку) и `POSTGRES_PASSWORD`
+(встроенная база). Затем:
+
+```bash
+docker compose up -d
+```
+
+Первый запуск скачивает словарь и импортирует его — несколько минут. `GET /api/ready`
+отвечает `503`, пока идёт загрузка, и `200` после; затем войдите с `ADMIN_USERNAME` /
+`ADMIN_PASSWORD` из `.env`.
+
+```bash
+curl -s localhost:3010/api/ready            # {"status":"ok"}
+curl -s localhost:3010/api/v1/words/run     # словарь отвечает
+```
+
+> [!TIP]
+> Чтобы закрепить релиз вместо сборки `main`, задайте `VBH_TAG=0.1.0-alpha.3` в `.env`. Чтобы
+> добавить сайт (документация, справочник API, площадка, страницы слов) на
+> <http://localhost:3020>, задайте `COMPOSE_PROFILES=db,site`.
+
+### 2. Запуск из репозитория
+
+Тот же compose-файл, собранный из исходников — для форка или неопубликованного изменения:
+
+```bash
+git clone https://github.com/Fristail27/vocab-bloom-hub.git
+cd vocab-bloom-hub
+cp .env.example .env                           # те же два пароля
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+```
+
+### 3. Запуск без Docker
+
+Продуктовый запуск прямо на машине: Node.js 22.13+, Yarn 4 (`corepack enable`) и доступный
+Postgres ([`docs/database.md`](database.md)).
+
 ```bash
 git clone https://github.com/Fristail27/vocab-bloom-hub.git
 cd vocab-bloom-hub
 yarn install
+printf 'NODE_ENV=production\nDATABASE_URL=postgres://user:password@localhost:5432/vocab_bloom\nADMIN_USERNAME=admin\nADMIN_PASSWORD=change-me\nNEXT_PUBLIC_BASE_API_URL=http://localhost:3010/api\nDICTIONARY_AUTO_IMPORT=true\n' > .env
+yarn build && yarn start                       # API :3010, админка :3000; словарь загрузится сам при первом запуске
+yarn site:build && yarn start:site             # сайт :3020, по желанию, в другом терминале
 ```
 
-Создайте файл `.env` в корне репозитория. Минимальная конфигурация для разработки:
+За доменом и TLS, под systemd или PM2: [`docs/deployment/`](deployment/README.md).
 
-```dotenv
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=change-me
-NODE_ENV=development
-NEXT_PUBLIC_BASE_API_URL=http://localhost:3010/api
-```
+### Для разработки
 
-Затем запустите оба приложения:
+База не нужна: без `DATABASE_URL` сервер использует локальный файл SQLite, а все приложения
+перезапускаются при изменениях.
 
 ```bash
-yarn dev
+printf 'NODE_ENV=development\nADMIN_USERNAME=admin\nADMIN_PASSWORD=change-me\nNEXT_PUBLIC_BASE_API_URL=http://localhost:3010/api\n' > .env
+yarn dev                                       # API :3010, админка :3000, сайт :3020
 ```
 
-- Админ-панель: <http://localhost:3000> (страница входа — `/en/login` или `/ru/login`)
-- API: <http://localhost:3010>
-- Swagger UI: <http://localhost:3010/api> (отключён в production)
+> [!IMPORTANT]
+> Словарь загружается через _Import dictionary_ в админке.
 
-Войдите с логином и паролем из `ADMIN_USERNAME` / `ADMIN_PASSWORD` вашего `.env`. Полный список переменных, включая настройку Postgres, — в [`environment.md`](environment.md).
+Всё остальное для контрибьюторов: [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
-> **Совет:** SQLite-фолбэк автоматически синхронизирует схему с сущностями, поэтому можно менять модель данных без написания миграций. Переключайтесь на Postgres (и миграции), когда изменение готово, — см. [`migrations.md`](migrations.md).
+### Дальше
 
----
-
-## 📜 Скрипты
-
-Все команды выполняются из корня репозитория.
-
-| Команда                              | Что делает                                                                                              |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| `yarn dev`                           | Запуск API, админ-панели и сайта вместе (в режиме watch)                                                |
-| `yarn server:dev` / `yarn front:dev` | Только API (порт `SERVER_PORT`, по умолчанию 3010) или только UI (порт `FRONT_PORT`, по умолчанию 3000) |
-| `yarn site:dev` / `yarn start:site`  | Сайт: dev-сервер / запуск production-сборки (порт `SITE_PORT`, по умолчанию 3020)                       |
-| `yarn test`                          | Все unit-тесты (сервер, фронтенд, сайт, npm SDK)                                                        |
-| `yarn jest --selectProjects server`  | Только серверные тесты (или `frontend`, `site`, `sdk`)                                                  |
-| `yarn workspace server test:cov`     | Unit-тесты сервера с покрытием; CI падает ниже порогов из `apps/server/jest.config.ts`                  |
-| `yarn workspace server test:e2e`     | Серверные e2e-тесты (Supertest на SQLite в памяти)                                                      |
-| `yarn e2e` / `yarn e2e:ui`           | Браузерные e2e: production-сборка фронтенда + Playwright (API :3011, UI :3001)                          |
-| `yarn e2e:site`                      | Браузерные e2e сайта (API :3012, сайт :3021)                                                            |
-| `yarn lint` / `yarn lint:fix`        | ESLint                                                                                                  |
-| `yarn format` / `yarn format:check`  | Prettier                                                                                                |
-| `yarn check`                         | `lint` + `format:check` + `peers:check` (незакрытые peer-зависимости) — запускайте перед открытием PR   |
-
-Миграции базы данных (только Postgres, нужен `DATABASE_URL`):
-
-```bash
-DATABASE_URL=postgres://... yarn workspace server migration:generate src/db/migrations/MyChange
-DATABASE_URL=postgres://... yarn workspace server migration:run      # также migration:revert / migration:show
-```
-
----
-
-## ⚙️ Конфигурация
-
-Единый `.env` в корне репозитория используется обоими приложениями. Основные переменные:
-
-| Переменная                 | Обязательна  | Описание                                                                          |
-| -------------------------- | ------------ | --------------------------------------------------------------------------------- |
-| `ADMIN_USERNAME`           | да           | Логин администратора                                                              |
-| `ADMIN_PASSWORD`           | да           | Пароль администратора; без него сервер не стартует                                |
-| `DATABASE_URL`             | в production | `postgres://user:pass@host:5432/db` или `sqlite:<path>`; в dev — фолбэк на SQLite |
-| `SERVER_PORT`              | нет (3010)   | Порт API                                                                          |
-| `FRONT_PORT`               | нет (3000)   | Порт админ-панели                                                                 |
-| `NEXT_PUBLIC_BASE_API_URL` | нет (`/api`) | Базовый URL API для браузера; встраивается на этапе сборки                        |
-| `CORS_ORIGINS`             | нет          | Разрешённые origin через запятую                                                  |
-| `LOG_LEVEL`                | нет          | `verbose` / `debug` / `log` / `warn` / `error` / `fatal`                          |
-| `LOG_FORMAT`               | нет          | `json` (объект на строку; по умолчанию в production) или `pretty` (терминал)      |
-| `NODE_ENV`                 | нет          | `production` требует Postgres, делает auth-cookie `secure` и отключает Swagger    |
-
-Полный справочник со значениями по умолчанию и правилами проверки при старте: [`environment.md`](environment.md).
-
----
-
-## 🚢 Деплой
-
-Два поддерживаемых варианта, оба за reverse proxy, который терминирует TLS и направляет `/api/*` на сервер, а всё остальное — на фронтенд (auth-cookie помечена `secure`, когда вход выполнен по https).
-
-**Docker** — скачать `docker-compose.yml` и `.env.example` (как `.env`, задать пароли), `docker compose up -d`: Postgres, API и админка из опубликованных образов `ghcr.io/fristail27/vocab-bloom-hub-server` / `-frontend` (`main` — dev-сборки, или закрепите релиз: `VBH_TAG=0.1.0-alpha.3`), опубликованы на localhost; словарь загружается сам при первом старте (`DICTIONARY_AUTO_IMPORT`, прогресс виден в `/api/ready`). Руководство: [`deployment/docker.md`](deployment/docker.md).
-
-**Нативный Node.js:**
-
-1. Задайте окружение: `NODE_ENV=production`, `DATABASE_URL` со схемой `postgres://`, надёжные `ADMIN_USERNAME` / `ADMIN_PASSWORD`, `NEXT_PUBLIC_BASE_API_URL` и `CORS_ORIGINS` с публичным origin, `TRUST_PROXY=1`.
-2. `yarn build`, затем `yarn start` (или `yarn start:server` / `yarn start:front` под systemd или PM2 — примеры файлов в руководстве); неприменённые миграции выполняются при старте сервера. `ENV_FILE` указывает на файл окружения вне репозитория; `GET /api/health` и `GET /api/ready` — пробы; SIGTERM останавливает сервер аккуратно.
-3. Поставьте впереди Caddy или nginx — готовые к адаптации конфиги, профили экспозиции (публичный словарь + приватная админка) и чеклист безопасности — в руководстве.
-
-Полное руководство: [`deployment/`](deployment/README.md) → [`reverse-proxy.md`](deployment/reverse-proxy.md).
-
----
-
-## 📚 Документация
-
-- [`deployment/`](deployment/README.md) — сборка и запуск в production, пробы, аккуратная остановка, systemd / PM2; [`docker.md`](deployment/docker.md): три образа и `docker compose` с Postgres; [`reverse-proxy.md`](deployment/reverse-proxy.md): TLS, конфиги Caddy / nginx, профили экспозиции, приватная админка
-- [`operations.md`](operations.md) — эксплуатация инстанса: где хранится состояние и что бэкапить, бэкап базы vs экспорт словаря, обновление и откат, обновление датасета vs обновление кода, размер базы
-- [`environment.md`](environment.md) — все переменные окружения, выбор драйвера БД, проверки при старте
-- [`authentication.md`](authentication.md) — как устроены вход единственного администратора, login proof и JWT-cookie
-- [`migrations.md`](migrations.md) — процесс работы с миграциями TypeORM для Postgres, деплой и решение проблем
-- [`offline-import.md`](offline-import.md) — перенос словаря между инстансами без интернета (экспорт → копирование → импорт из файла)
-- [`observability.md`](observability.md) — метрики Prometheus и структурированные JSON-логи: включение эндпоинта, как держать его приватным, все метрики, поля лога и request id, отправка логов в систему сбора
-- [`performance.md`](performance.md) — задержки горячих чтений на полном словаре (Postgres vs SQLite), индексы за ними, бенчмарк и guard планов запросов
-- [`api.md`](api.md) — контракт публичного `/api/v1` (конверт, ошибки, лимит запросов, кэширование, экспорт OpenAPI) и переключатели public-only / admin-only
-- [`data.md`](data.md) — откуда берутся данные словаря (сгенерированы LLM, `generated_by_model`), известные ограничения, как сообщать об ошибках; условия использования — в [`DATA_LICENSE.md`](../DATA_LICENSE.md)
-- [`../README.md`](../README.md) — этот README на английском
-- Swagger UI по адресу `/api` на запущенном сервере — актуальный справочник API; публичный контракт в формате OpenAPI: [`apps/server/openapi/public-v1.json`](../apps/server/openapi/public-v1.json) или `GET /api/v1/openapi.json`
-
-Документация в `docs/` ведётся на английском; у части страниц есть русская версия рядом (`<имя>.ru.md`: [`api.ru.md`](api.ru.md), [`environment.ru.md`](environment.ru.md), [`deployment/README.ru.md`](deployment/README.ru.md)), сайт показывает её под `/ru`.
-
----
-
-## 🗺️ Roadmap
-
-Планируемые направления без строгого порядка (актуальное состояние — в [issues](https://github.com/Fristail27/vocab-bloom-hub/issues)):
-
-- Семантический поиск и семантическая сеть поверх словаря (следующая мажорная версия)
-- Граф связей между словами помимо синонимов и антонимов: гиперонимы/гипонимы, коллокации
-- Другие исходные языки помимо английского и новые языки перевода помимо русского, испанского, французского, немецкого и португальского
-- Публикация лингвистических датасетов, собранных из словаря
+- На сервер: [`docs/deployment/`](deployment/README.ru.md) — TLS и обратный прокси, systemd /
+  PM2, обновления.
+- База данных: [`docs/database.md`](database.md) — требования к Postgres, миграции, бэкапы,
+  размер.
+- Все настройки: [`docs/environment.md`](environment.ru.md).
+- Метрики и логи: [`docs/observability.md`](observability.md) — Prometheus и Grafana одной
+  командой или свои.
+- Чтение данных: [`docs/api.md`](api.ru.md), SDK для [Node.js](../packages/npm-sdk/README.md)
+  и [Python](../packages/python-sdk/README.md).
 
 ---
 
 ## 🤝 Участие в разработке
 
-Вклад приветствуется! Ознакомьтесь с [`CONTRIBUTING.md`](../CONTRIBUTING.md) (именование веток, сообщения коммитов, чеклист PR) и [Кодексом поведения](../CODE_OF_CONDUCT.md).
-
-Нашли ошибку или есть идея? Откройте [issue](https://github.com/Fristail27/vocab-bloom-hub/issues/new/choose) — шаблоны подскажут, что заполнить. Каждый pull request проверяется в CI (lint, форматирование, типы, тесты), поэтому сначала запустите `yarn check && yarn test` локально.
-
----
-
-## 💬 Сообщество
-
-- [GitHub Discussions](https://github.com/Fristail27/vocab-bloom-hub/discussions) — вопросы, идеи, show & tell
-- [Issues](https://github.com/Fristail27/vocab-bloom-hub/issues) — сообщения об ошибках и запросы функций
+Вклад приветствуется. В [`CONTRIBUTING.md`](../CONTRIBUTING.md) — процесс (имена веток,
+сообщения коммитов, чеклист PR), стек технологий и структура репозитория, все скрипты,
+указатель документации и roadmap; [Кодекс поведения](../CODE_OF_CONDUCT.md) действует для
+любого взаимодействия. Нашли баг или есть идея? Откройте
+[issue](https://github.com/Fristail27/vocab-bloom-hub/issues/new/choose) — шаблоны подскажут.
 
 ---
 
 ## 📄 Лицензия
 
 - **Код** — [MIT](../LICENSE) © Alexey Ryzhov (Fristail27)
-- **Данные словаря** (выгрузки, публичный API, датасет на HuggingFace) — [CC BY 4.0](../DATA_LICENSE.md): свободное использование и переработка, в том числе коммерческие, с указанием источника. Данные в основном сгенерированы LLM и не проверены людьми — см. [`data.md`](data.md), прежде чем на них полагаться.
+- **Данные словаря** (выгрузки, публичный API, датасет на HuggingFace) — [CC BY 4.0](../DATA_LICENSE.md): свободное использование и переработка, в том числе коммерческие, с указанием источника.
+
+> [!IMPORTANT]
+> Данные в основном сгенерированы LLM и не проверены людьми — см. [`data.md`](data.md), прежде чем
+> на них полагаться.

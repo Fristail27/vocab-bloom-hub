@@ -23,7 +23,7 @@ import { ListMeaningTranslationsQueryDTO } from './dto/ListMeaningTranslationsQu
 import { ListShortTranslationsQueryDTO } from './dto/ListShortTranslationsQuery.dto';
 import { LIST_DEFAULT_LIMIT, PaginationQueryDTO } from './dto/PaginationQuery.dto';
 import { escapeLike } from '../EnSearch/utils/escapeLike';
-import { bytewise } from '../../utils/bytewise';
+import { foldedWord } from '../../utils/foldedWord';
 import { normalizeWordLinks } from '../../utils/normalizeWordLinks';
 
 type PageT = { page: number; limit: number; after?: number | undefined };
@@ -130,7 +130,7 @@ export class EnAdminListsService {
   ): void {
     const search = query.search?.trim().toLowerCase();
     if (search) {
-      qb.andWhere(`${bytewise('entry.word')} LIKE :prefix ESCAPE '\\'`, { prefix: `${escapeLike(search)}%` });
+      qb.andWhere(`${foldedWord('entry.word')} LIKE :prefix ESCAPE '\\'`, { prefix: `${escapeLike(search)}%` });
     }
     if (query.part_of_speech?.length) {
       qb.andWhere('w.part_of_speech IN (:...partsOfSpeech)', { partsOfSpeech: query.part_of_speech });
@@ -229,7 +229,7 @@ export class EnAdminListsService {
       // avoids the distinct-subquery pagination TypeORM uses for skip/take
       qb.addSelect(meaningsCount, 'meanings_count')
         .addSelect(shortTranslationsCount, 'short_translations_count')
-        .orderBy('entry.word', 'ASC')
+        .orderBy(foldedWord('entry.word'), 'ASC')
         .addOrderBy('w.part_of_speech', 'ASC')
         .addOrderBy('w.id', 'ASC');
       this.applyPage(qb, page, 'w.id');
@@ -348,7 +348,7 @@ export class EnAdminListsService {
         .getQuery();
 
       qb.addSelect(translationsCount, 'translations_count')
-        .orderBy('entry.word', 'ASC')
+        .orderBy(foldedWord('entry.word'), 'ASC')
         .addOrderBy('w.part_of_speech', 'ASC')
         .addOrderBy('w.id', 'ASC')
         .addOrderBy('m.sort_order', 'ASC')
@@ -405,7 +405,7 @@ export class EnAdminListsService {
 
       const total = await qb.clone().getCount();
 
-      qb.orderBy('entry.word', 'ASC')
+      qb.orderBy(foldedWord('entry.word'), 'ASC')
         .addOrderBy('w.part_of_speech', 'ASC')
         .addOrderBy('w.id', 'ASC')
         .addOrderBy('m.sort_order', 'ASC')
@@ -453,7 +453,7 @@ export class EnAdminListsService {
 
       const total = await qb.clone().getCount();
 
-      qb.orderBy('entry.word', 'ASC')
+      qb.orderBy(foldedWord('entry.word'), 'ASC')
         .addOrderBy('w.part_of_speech', 'ASC')
         .addOrderBy('w.id', 'ASC')
         .addOrderBy('st.language', 'ASC')

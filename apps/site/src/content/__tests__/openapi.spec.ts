@@ -46,10 +46,27 @@ const spec: OpenApiSpecT = {
 };
 
 describe('the public OpenAPI document as the reference reads it', () => {
-  it('lists the operations in document order with an anchor per operation', () => {
+  it('lists the service endpoints first, then the reads, then the writes, with an anchor per operation', () => {
     expect(listEndpoints(spec).map((e) => [e.method, e.slug])).toEqual([
-      ['POST', 'post-search'],
       ['GET', 'get-words-word-meanings'],
+      ['POST', 'post-search'],
+    ]);
+    const ordered = listEndpoints({
+      ...spec,
+      paths: {
+        '/api/v1/suggestions': { post: spec.paths['/api/v1/search'].post },
+        '/api/v1/words': { get: spec.paths['/api/v1/words/{word}/meanings'].get },
+        '/api/v1/search': { get: spec.paths['/api/v1/words/{word}/meanings'].get },
+        '/api/v1/openapi.json': { get: spec.paths['/api/v1/words/{word}/meanings'].get },
+        '/api/v1/meta': { get: spec.paths['/api/v1/words/{word}/meanings'].get },
+      },
+    });
+    expect(ordered.map((e) => e.path)).toEqual([
+      '/api/v1/meta',
+      '/api/v1/openapi.json',
+      '/api/v1/search',
+      '/api/v1/words',
+      '/api/v1/suggestions',
     ]);
     expect(endpointSlug('get', '/api/v1/')).toBe('get-root');
   });
@@ -77,7 +94,7 @@ describe('the public OpenAPI document as the reference reads it', () => {
   });
 
   it('builds a runnable curl line: path params filled in, JSON body for a POST', () => {
-    const [search, meanings] = listEndpoints(spec);
+    const [meanings, search] = listEndpoints(spec);
     expect(buildCurlExample(meanings, 'https://x.example/api', spec)).toBe(
       "curl 'https://x.example/api/v1/words/run/meanings'",
     );

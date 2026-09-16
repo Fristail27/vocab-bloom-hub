@@ -6,12 +6,13 @@ import { SearchReqDTO } from '../../EnModule/modules/EnSearch/dto/SearchReq.dto'
 import { SearchDetailedReqDTO } from '../../EnModule/modules/EnSearch/dto/SearchDetailedReq.dto';
 import { toArray, toBoolean } from '../../EnModule/modules/EnAdminLists/dto/PaginationQuery.dto';
 
-// The GET form of the search (issue #396): the same fields as the POST bodies
+// The public search reads (issue #396): the fields of the admin search DTOs
 // (SearchReqDTO / SearchDetailedReqDTO), read from the query string. Only the
 // fields that arrive as text are re-declared, with the conversion in front of
-// the same validators and bounds; everything else is inherited, so the two
-// forms cannot drift. The transforms stay here: on the POST bodies they would
-// loosen the validation (a string where a number is required).
+// the same validators and bounds; everything else is inherited, so the public
+// and the admin search cannot drift. The transforms stay here: on the admin
+// JSON bodies they would loosen the validation (a string where a number is
+// required).
 
 export class SearchV1QueryDTO extends SearchReqDTO {
   @ApiPropertyOptional({ type: 'integer', minimum: 1, maximum: 100, default: 10 })
@@ -67,9 +68,10 @@ export class SearchDetailedV1QueryDTO extends SearchDetailedReqDTO {
     description: 'Keep only these translation languages (a repeated key); omit the key for all of them',
   })
   @IsOptional()
-  @Transform(toArray)
+  // `?translation_languages=` with nothing after it is an empty list, refused by name
+  @Transform(({ value }: { value: unknown }) => toArray({ value }).filter((v) => v !== ''))
   @IsArray()
-  @ArrayMinSize(1)
+  @ArrayMinSize(1, { message: 'translation_languages must not be empty; omit the key for every language' })
   @IsEnum(AvailableTranslationLanguagesE, { each: true })
   override translation_languages?: AvailableTranslationLanguagesE[] = undefined;
 }

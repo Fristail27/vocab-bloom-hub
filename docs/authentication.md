@@ -1,7 +1,5 @@
 # Authentication flow
 
-This document describes the full authentication flow of Vocab Bloom Hub as implemented today.
-
 ## Overview
 
 The platform has a **single admin user** and no user table. Credentials live in the environment
@@ -13,7 +11,7 @@ Key properties of the design:
 - The password (or any static equivalent of it) **never crosses the wire**. The client sends a
   one-time, time-bound proof instead.
 - Login proofs are **single-use** and expire with their time window, so captured requests cannot be
-  replayed (issue #184).
+  replayed.
 - All secret comparisons on the server are **constant-time** (`crypto.timingSafeEqual`).
 - The session is a **JWT in an httpOnly cookie**; the browser never exposes it to JS.
 
@@ -46,17 +44,18 @@ secretHash = PBKDF2-SHA256(password: loginHash, salt: "vocab-bloom-hub-login:" +
 signing secret. Both are derived on demand from the env credentials and are never stored or sent;
 the derivation is memoized, so the slow path runs once per process.
 
-The derivation is deliberately slow (issue #344): a leaked admin JWT lets its holder test password
+The derivation is deliberately slow: a leaked admin JWT lets its holder test password
 guesses offline against the signature, and PBKDF2 at 600k iterations prices one guess at a fraction
 of a second instead of the nanoseconds a raw hash would cost. The salt is deterministic on purpose —
 the browser and the server must derive the same value without exchanging anything. WebCrypto's
 PBKDF2 is the strongest KDF both runtimes share.
 
-There is deliberately no password-strength enforcement and no separate signing secret — one admin,
-one pair of env values. The flip side: **the derivation is only as strong as `ADMIN_PASSWORD`**, so
-use a long random secret (a password-manager string, not a word) on any instance reachable by
-others. Because the frontend computes the same derivation, upgrade the server and frontend
-builds together across a change of this scheme, and expect one re-login.
+> [!IMPORTANT]
+> There is deliberately no password-strength enforcement and no separate signing secret — one admin,
+> one pair of env values. The flip side: **the derivation is only as strong as `ADMIN_PASSWORD`**, so
+> use a long random secret (a password-manager string, not a word) on any instance reachable by
+> others. Because the frontend computes the same derivation, upgrade the server and frontend
+> builds together across a change of this scheme, and expect one re-login.
 
 ## Login: the proof exchange
 
@@ -105,10 +104,11 @@ The endpoint is rate-limited to **5 requests per minute** (`@nestjs/throttler`).
   fresh proof.
 - `timingSafeEqual` removes the timing side channel of a plain string comparison.
 
-Known limitation: if the client clock drifts by more than ~1 window (60 s) from the server clock,
-login fails with correct credentials. Widen `LOGIN_PROOF_SLOT_TOLERANCE` if that ever becomes a
-problem. The used-proof cache is in-memory and therefore per-instance; the app currently runs as a
-single instance.
+> [!NOTE]
+> If the client clock drifts by more than ~1 window (60 s) from the server clock, login fails with
+> correct credentials. Widen `LOGIN_PROOF_SLOT_TOLERANCE` if that ever becomes a problem. The
+> used-proof cache is in-memory and therefore per-instance; the app currently runs as a single
+> instance.
 
 ## The session: JWT in an httpOnly cookie
 
@@ -122,7 +122,7 @@ On successful login the server:
    [deployment/reverse-proxy.md](./deployment/reverse-proxy.md)). A login over plain http gets a
    cookie without the flag, so an instance reached over http (`docker compose` on a
    workstation, a LAN without certificates) can sign in; in production that case is logged as a
-   warning at every login, because the token travels unencrypted (issue #316).
+   warning at every login, because the token travels unencrypted.
 3. Also returns `{ token }` in the response body.
 
 ## Authenticated requests
@@ -183,7 +183,7 @@ sequenceDiagram
 
 ## Environment variables involved
 
-| Variable                           | Role                                                                                                                                               |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ADMIN_USERNAME`, `ADMIN_PASSWORD` | The only credentials; everything is derived from them                                                                                              |
-| `NODE_ENV`                         | `production` warns when the login is served over plain http; the `secure` cookie flag itself follows the request scheme (`req.secure`, issue #316) |
+| Variable                           | Role                                                                                                                                   |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `ADMIN_USERNAME`, `ADMIN_PASSWORD` | The only credentials; everything is derived from them                                                                                  |
+| `NODE_ENV`                         | `production` warns when the login is served over plain http; the `secure` cookie flag itself follows the request scheme (`req.secure`) |
