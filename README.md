@@ -113,7 +113,7 @@ curl -s localhost:3010/api/v1/words/run     # the dictionary answers
 ```
 
 > [!TIP]
-> To pin a release instead of the `main` development build, set `VBH_TAG=0.1.0-alpha.3` in `.env`.
+> To pin a release instead of the `main` development build, set `VBH_TAG=0.2.0-beta.1` in `.env`.
 > To add the website (docs, API reference, playground, word pages) on <http://localhost:3020>, set
 > `COMPOSE_PROFILES=db,site`.
 

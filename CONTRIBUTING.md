@@ -239,7 +239,10 @@ repeatable part of a release:
    curate the new `CHANGELOG.md` entry (the `release-changelog` agent skill in
    `.agents/skills/` — `/release-changelog <version>` in Codex, Cursor or Copilot, "run the
    release-changelog skill" in Claude Code — assembles the draft from everything merged since
-   the previous tag).
+   the previous tag); the section is dated with the day the tag will be pushed. The same PR
+   moves `VBH_TAG` to the new version in `.env.example`, `docs/deployment/docker.md` and the
+   install sections of the READMEs — the images exist minutes after the merge, once the tag
+   is pushed.
    Merge on green CI.
 2. **The tag — the whole release.** On the merged `main`:
    `git tag -a v<version> -m "..." && git push origin v<version>`.
@@ -259,9 +262,7 @@ repeatable part of a release:
    `release.yml`, environment `npm`, then re-run the failed npm job). PyPI's pending
    publisher covers the first publish.
 3. **After the tag**: export the dictionary (the manifest carries the next dataset version),
-   upload the revision to HuggingFace and git-tag it there with that version; update
-   `VBH_TAG` in `.env.example` / `docs/deployment/docker.md` and the install sections of the
-   READMEs.
+   upload the revision to HuggingFace and git-tag it there with that version.
 
 > [!NOTE]
 > PyPI normalizes pre-release suffixes per PEP 440 (`0.1.0-alpha.1` is served as `0.1.0a1`) —
