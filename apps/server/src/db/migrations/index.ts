@@ -11,6 +11,7 @@ import { AddSuggestionEditPayload1788800000000 } from './1788800000000-AddSugges
 import { AddSpanishTranslationLanguage1788900000000 } from './1788900000000-AddSpanishTranslationLanguage';
 import { AddFrenchTranslationLanguage1789000000000 } from './1789000000000-AddFrenchTranslationLanguage';
 import { AddGermanAndPortugueseTranslationLanguages1789100000000 } from './1789100000000-AddGermanAndPortugueseTranslationLanguages';
+import { AddCaseFoldedWordIndexes1789200000000 } from './1789200000000-AddCaseFoldedWordIndexes';
 
 // Every migration class must be listed here: both the CLI DataSource and the
 // runtime TypeORM options read this array. An explicit list (instead of a
@@ -29,4 +30,5 @@ export const migrations = [
   AddSpanishTranslationLanguage1788900000000,
   AddFrenchTranslationLanguage1789000000000,
   AddGermanAndPortugueseTranslationLanguages1789100000000,
+  AddCaseFoldedWordIndexes1789200000000,
 ];

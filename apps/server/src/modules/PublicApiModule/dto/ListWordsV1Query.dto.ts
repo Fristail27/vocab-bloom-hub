@@ -12,6 +12,8 @@ export const PUBLIC_CURSOR_MAX_LENGTH = 512;
 /** Query of GET /api/v1/words: the shared filters plus cursor paging and the optional joins */
 export class ListWordsV1QueryDTO extends WordFiltersV1QueryDTO {
   @ApiPropertyOptional({ description: 'The `meta.next_cursor` of the previous page; omit for the first page' })
+  // `?cursor=` with nothing after it is the first page, not an invalid token
+  @Transform(({ value }: { value: unknown }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsString()
   @MaxLength(PUBLIC_CURSOR_MAX_LENGTH)

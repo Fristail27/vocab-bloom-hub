@@ -1,6 +1,6 @@
 import { config } from 'dotenv';
 import path from 'path';
-import { resolveEnvFile } from '../configuration';
+import { parseDatabaseUrl, resolveEnvFile } from '../configuration';
 // The env must be loaded before any entity import: column types are resolved
 // inside entity decorators at import time (see checkIsPostgres). ENV_FILE
 // names the file explicitly (a build deployed outside the repository tree);
@@ -8,6 +8,15 @@ import { resolveEnvFile } from '../configuration';
 const envFile = resolveEnvFile(path.resolve(__dirname, '../../../../.env'));
 // quiet: dotenv 17 otherwise prints a tip of its own on stdout, between the JSON log lines
 const dotenvResult = config({ path: envFile.path, quiet: true });
+// The scheme of DATABASE_URL is read inside the entity decorators the imports
+// below run: an unsupported one would surface as an uncaught throw with a stack
+// trace instead of the one-line configuration error every other variable gets
+try {
+  parseDatabaseUrl(process.env.DATABASE_URL);
+} catch (error) {
+  console.error(`[Bootstrap] ${(error as Error).message}`);
+  process.exit(1);
+}
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { SwaggerModule } from '@nestjs/swagger';
@@ -38,7 +47,6 @@ import {
   assertRequiredConfig,
   checkIsPostgres,
   ConfigurationError,
-  parseDatabaseUrl,
 } from '../configuration';
 
 async function bootstrap() {

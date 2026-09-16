@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { DOC_PAGES, docFile, findDocBySlug, slugForFile } from '../registry';
+import { extractSection } from '../sections';
 import { InterfaceLanguageEnum } from '@/types/common';
 
 // The registry is the one list of documented files (issues #330, #404): a
@@ -11,23 +12,37 @@ import { InterfaceLanguageEnum } from '@/types/common';
 const root = path.resolve(__dirname, '../../../../..');
 
 describe('the docs registry', () => {
-  it('points every page and every Russian version at an existing file', () => {
+  it('points every page and every translated version at an existing file', () => {
     for (const page of DOC_PAGES) {
       expect({ slug: page.slug, exists: fs.existsSync(path.join(root, page.file)) }).toEqual({
         slug: page.slug,
         exists: true,
       });
-      if (page.ruFile) {
-        expect({ slug: page.slug, exists: fs.existsSync(path.join(root, page.ruFile)) }).toEqual({
+      for (const [locale, file] of Object.entries(page.translations ?? {})) {
+        expect({ slug: page.slug, locale, exists: fs.existsSync(path.join(root, file)) }).toEqual({
           slug: page.slug,
+          locale,
           exists: true,
         });
-        // the convention: <name>.ru.md next to the English file; the root
-        // README is the one exception, its Russian version lives under docs/
-        const expected = page.file === 'README.md' ? 'docs/README.ru.md' : page.file.replace(/\.md$/, '.ru.md');
-        expect(page.ruFile).toBe(expected);
+        // the convention: <name>.<lang>.md next to the English file; the root
+        // README is the one exception, its translations live under docs/
+        const expected =
+          page.file === 'README.md' ? `docs/README.${locale}.md` : page.file.replace(/\.md$/, `.${locale}.md`);
+        expect({ slug: page.slug, locale, file }).toEqual({ slug: page.slug, locale, file: expected });
       }
     }
+  });
+
+  it('renders the README in every interface language and the other pages in English elsewhere', () => {
+    const overview = findDocBySlug('getting-started')!;
+    for (const locale of Object.values(InterfaceLanguageEnum)) {
+      expect(docFile(overview, locale)).toBe(
+        locale === InterfaceLanguageEnum.en ? 'README.md' : `docs/README.${locale}.md`,
+      );
+    }
+    const operations = findDocBySlug('operations')!;
+    expect(docFile(operations, InterfaceLanguageEnum.de)).toBe('docs/operations.md');
+    expect(slugForFile('docs/README.de.md')).toBe('getting-started');
   });
 
   it('has unique slugs and resolves both files of a page to its slug', () => {
@@ -38,6 +53,18 @@ describe('the docs registry', () => {
     expect(slugForFile('docs/api.ru.md')).toBe('api');
     expect(docFile(api, InterfaceLanguageEnum.ru)).toBe('docs/api.ru.md');
     expect(docFile(api, InterfaceLanguageEnum.en)).toBe('docs/api.md');
+  });
+
+  it('finds the section a page renders in the English file and in every translation', () => {
+    for (const page of DOC_PAGES.filter((p) => p.extract)) {
+      for (const file of [page.file, ...Object.values(page.translations ?? {})]) {
+        const markdown = fs.readFileSync(path.join(root, file), 'utf8');
+        expect({ file, section: extractSection(markdown, page.extract!)?.split('\n')[0] ?? null }).toEqual({
+          file,
+          section: expect.stringMatching(/^# /),
+        });
+      }
+    }
   });
 
   it('lists the release notes so a link to CHANGELOG.md stays on the site', () => {

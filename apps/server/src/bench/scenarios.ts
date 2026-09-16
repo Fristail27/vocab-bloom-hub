@@ -1,4 +1,5 @@
-import { encodeWordCursor } from '../modules/PublicApiModule/utils/cursor';
+import { encodeWordCursor, wordListFingerprint } from '../modules/PublicApiModule/utils/cursor';
+import { WordLevelE } from '../../types';
 
 export type ScenarioT = {
   name: string;
@@ -76,71 +77,57 @@ const BATCH_50_WORDS = [
  * admin listings. Paths are relative to the server root.
  */
 export const buildScenarios = ({ runVerbId }: ScenarioContextT): ScenarioT[] => [
-  // ---- search (POST /api/v1/search): every tier runs on each call, the
+  // ---- search (GET /api/v1/search): every tier runs on each call, the
   // term decides how many rows each LIKE touches
   {
     name: 'search exact "run" (+ phrasal, prefix tiers)',
     group: 'search',
-    method: 'POST',
-    path: '/api/v1/search',
-    body: { search: 'run' },
+    method: 'GET',
+    path: '/api/v1/search?search=run',
   },
   {
     name: 'search one letter "a" (short-term flow)',
     group: 'search',
-    method: 'POST',
-    path: '/api/v1/search',
-    body: { search: 'a' },
+    method: 'GET',
+    path: '/api/v1/search?search=a',
   },
   {
     name: 'search broad prefix "ab" (short-term flow)',
     group: 'search',
-    method: 'POST',
-    path: '/api/v1/search',
-    body: { search: 'ab' },
+    method: 'GET',
+    path: '/api/v1/search?search=ab',
   },
   {
     name: 'search rare "xylo"',
     group: 'search',
-    method: 'POST',
-    path: '/api/v1/search',
-    body: { search: 'xylo' },
+    method: 'GET',
+    path: '/api/v1/search?search=xylo',
   },
   {
     name: 'search phrase "put up"',
     group: 'search',
-    method: 'POST',
-    path: '/api/v1/search',
-    body: { search: 'put up' },
+    method: 'GET',
+    path: '/api/v1/search?search=put%20up',
   },
   {
     name: 'search typo "recieve" (fuzzy tier)',
     group: 'search',
-    method: 'POST',
-    path: '/api/v1/search',
-    body: { search: 'recieve' },
+    method: 'GET',
+    path: '/api/v1/search?search=recieve',
   },
   {
     name: 'search no match "qzxvj" (fuzzy tier, empty)',
     group: 'search',
-    method: 'POST',
-    path: '/api/v1/search',
-    body: { search: 'qzxvj' },
+    method: 'GET',
+    path: '/api/v1/search?search=qzxvj',
   },
   {
     name: 'search detailed "run" + meanings + translations',
     group: 'search',
-    method: 'POST',
-    path: '/api/v1/search/detailed',
-    body: { search: 'run', with_meanings: true, with_translations: true },
+    method: 'GET',
+    path: '/api/v1/search/detailed?search=run&with_meanings=true&with_translations=true',
   },
   // ---- headword / id lookups
-  {
-    name: 'search exact "run" as GET (#396)',
-    group: 'search',
-    method: 'GET',
-    path: '/api/v1/search?search=run',
-  },
   { name: 'word "run" (noun + verb, full)', group: 'word', method: 'GET', path: '/api/v1/words/run' },
   { name: 'word "ran" (form → base entry)', group: 'word', method: 'GET', path: '/api/v1/words/ran' },
   { name: 'word by id (run, verb)', group: 'word', method: 'GET', path: `/api/v1/words/id/${runVerbId}` },
@@ -194,13 +181,15 @@ export const buildScenarios = ({ runVerbId }: ScenarioContextT): ScenarioT[] => 
     name: 'list cursor at "m" (deep page)',
     group: 'list',
     method: 'GET',
-    path: `/api/v1/words?cursor=${encodeURIComponent(encodeWordCursor({ word: 'm', id: 1 }))}`,
+    path: `/api/v1/words?cursor=${encodeURIComponent(encodeWordCursor({ word: 'm', id: 1, filters: wordListFingerprint({}) }))}`,
   },
   {
     name: 'list cursor at "m" + word_level=C1',
     group: 'list',
     method: 'GET',
-    path: `/api/v1/words?word_level=C1&cursor=${encodeURIComponent(encodeWordCursor({ word: 'm', id: 1 }))}`,
+    path: `/api/v1/words?word_level=C1&cursor=${encodeURIComponent(
+      encodeWordCursor({ word: 'm', id: 1, filters: wordListFingerprint({ word_level: [WordLevelE.C1] }) }),
+    )}`,
   },
   {
     name: 'list 50 + meanings + translations',

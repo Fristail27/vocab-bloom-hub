@@ -1,4 +1,12 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
 import { expect, test } from '@playwright/test';
+
+// the monorepo version the site was built with (scripts/bump-version.mjs keeps every package.json equal)
+const siteVersion = (
+  JSON.parse(readFileSync(path.resolve('../site/package.json'), 'utf8')) as { version: string }
+).version;
 
 // The landing in both locales and the language switch (issue #330)
 test.describe('landing', () => {
@@ -10,12 +18,19 @@ test.describe('landing', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
       'A dictionary you can run next to your app',
     );
+    const gettingStarted = page.getByRole('link', { name: 'Getting started' });
+    await expect(gettingStarted).toBeVisible();
+    await expect(gettingStarted).toHaveAttribute('href', '/en/docs/getting-started');
     await expect(page.getByRole('link', { name: 'Install with Docker' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Try the API' })).toBeVisible();
     // the header navigation
     for (const name of ['Docs', 'API', 'Playground', 'Words']) {
       await expect(page.getByRole('link', { name, exact: true }).first()).toBeVisible();
     }
+    // the footer names the build's version and links the release notes (issue #440)
+    const version = page.getByTestId('site-version');
+    await expect(version).toHaveText(`v${siteVersion}`);
+    await expect(version).toHaveAttribute('href', '/en/docs/changelog');
   });
 
   test('renders in Russian', async ({ page }) => {

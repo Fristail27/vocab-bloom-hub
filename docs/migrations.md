@@ -29,12 +29,14 @@ yarn workspace server migration:create src/db/migrations/MyDataFix              
 DATABASE_URL=... yarn workspace server db:reset                                          # DEV ONLY: wipe schema, re-run all migrations
 ```
 
-`db:reset` drops every table and type in the database and replays all migrations from
-scratch — a factory reset for a broken or half-migrated **development** database. Never point
-it at a database whose data you care about.
+> [!CAUTION]
+> `db:reset` drops every table and type in the database and replays all migrations from
+> scratch — a factory reset for a broken or half-migrated **development** database. Never point
+> it at a database whose data you care about.
 
-`DATABASE_URL` may also come from the root `.env` — the CLI DataSource loads it the same way
-the server does. A variable already set in the shell wins over the `.env` value.
+> [!TIP]
+> `DATABASE_URL` may also come from the root `.env` — the CLI DataSource loads it the same way
+> the server does. A variable already set in the shell wins over the `.env` value.
 
 ## Changing the schema: the workflow
 
@@ -70,11 +72,13 @@ docker stop vbh-pg
 
 ### Extensions
 
-`AddEntryWordTrigramIndex` runs `CREATE EXTENSION IF NOT EXISTS pg_trgm` (trigram search,
-issue #278). `pg_trgm` ships with every Postgres distribution and is a _trusted_ extension
-since Postgres 13, so the database owner can create it without superuser rights; managed
-services (RDS, Cloud SQL, Supabase, Neon, …) allow it too. If the migration fails with a
-permission error, create the extension once as a superuser and rerun `migration:run`.
+`AddEntryWordTrigramIndex` runs `CREATE EXTENSION IF NOT EXISTS pg_trgm` (trigram search).
+`pg_trgm` ships with every Postgres distribution and is a _trusted_ extension since Postgres 13, so the database owner can create it without superuser rights; managed
+services (RDS, Cloud SQL, Supabase, Neon, …) allow it too.
+
+> [!TIP]
+> If the migration fails with a permission error, create the extension once as a superuser and
+> rerun `migration:run`.
 
 ### Hand-written migrations
 
@@ -94,18 +98,17 @@ Keep `down()` a real inverse of `up()` — `migration:revert` executes it.
 The server config sets `migrationsRun: true` for Postgres, so on every start TypeORM:
 
 1. reads the `migrations` table to see what has already been applied;
-2. executes every pending migration in order, each inside a transaction, and records it;
+2. executes every pending migration in order inside **one transaction** (TypeORM's default
+   `migrationsTransactionMode: "all"`) and records each;
 3. only then lets Nest accept requests.
 
-A failed migration rolls back its transaction and **the server does not start** — deliberately
-fail-fast: better a service that is down than one running against a schema its code does not
-match. A start with no pending migrations is effectively instant.
-
-Deploying therefore is just: ship the new code (which includes the new migration files) and
-restart the service. The manual `migration:run` / `migration:revert` commands remain available
-for applying ahead of a restart or rolling back a migration you have just written. On a
-production instance the rollback path is a database backup taken before the upgrade, not
-`migration:revert` — see [`operations.md`](./operations.md#upgrading-the-code).
+A failed migration rolls that transaction back — every migration of that start with it, so the
+database stays where the previous version left it — and **the server does not start**: better a
+service that is down than one running against a schema its code does not match. A start with no
+pending migrations is effectively instant. The operator's side — what an upgrade does to the
+database, backups, and why the rollback is the pre-upgrade backup rather than `migration:revert`
+— is in [`database.md`](./database.md#the-schema-migrations) and
+[`operations.md`](./operations.md#upgrading-the-code).
 
 ## Adopting a pre-existing database
 
@@ -117,8 +120,11 @@ DATABASE_URL=... yarn workspace server migration:run --fake
 ```
 
 After that, `migration:show` reports the baseline as applied and only future migrations will
-actually execute. Skipping this step would make the first `migration:run` (or server start)
-fail on `CREATE TABLE` statements for tables that already exist.
+actually execute.
+
+> [!IMPORTANT]
+> Skipping this step would make the first `migration:run` (or server start) fail on
+> `CREATE TABLE` statements for tables that already exist.
 
 ## Troubleshooting
 

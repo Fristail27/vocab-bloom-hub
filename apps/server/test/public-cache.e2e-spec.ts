@@ -177,12 +177,6 @@ describe('public API caching headers (e2e, issue #274)', () => {
     expect(detailed.headers['cache-control']).toBe('public, max-age=3600');
   });
 
-  it('leaves the POST search reads without caching directives', async () => {
-    const res = await request(server()).post('/api/v1/search').send({ search: 'glim' }).expect(200);
-    expect(res.headers['cache-control']).toBeUndefined();
-    expect(res.headers['last-modified']).toBeUndefined();
-  });
-
   it('marks public errors no-store', async () => {
     const missing = await request(server()).get('/api/v1/words/nope').expect(404);
     expect(missing.headers['cache-control']).toBe('no-store');

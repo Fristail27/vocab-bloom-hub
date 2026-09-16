@@ -3,9 +3,8 @@ import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 import { Markdown } from '@/components/Markdown';
-import { INSTALL_SNIPPET, NODE_SNIPPET, PYTHON_SNIPPET, readRoadmap } from '@/content/home';
+import { INSTALL_SNIPPET, NODE_SNIPPET, PYTHON_SNIPPET } from '@/content/home';
 import { renderMarkdown } from '@/content/markdown';
-import { REPO_URL } from '@/content/repo';
 import { localeAlternates } from '@/core/site';
 import { Link } from '@/i18n/navigation';
 import { LocaleParamsP } from '@/types/common';
@@ -29,12 +28,10 @@ export default async function HomePage({ params }: LocaleParamsP) {
   setRequestLocale(locale);
   const t = await getTranslations('home');
 
-  const roadmap = readRoadmap(locale);
-  const [install, node, python, roadmapHtml] = await Promise.all([
+  const [install, node, python] = await Promise.all([
     renderMarkdown(fence('bash', INSTALL_SNIPPET), { fromFile: 'README.md', locale }),
     renderMarkdown(fence('ts', NODE_SNIPPET), { fromFile: 'README.md', locale }),
     renderMarkdown(fence('python', PYTHON_SNIPPET), { fromFile: 'README.md', locale }),
-    renderMarkdown(roadmap.markdown, { fromFile: roadmap.file, locale }),
   ]);
 
   return (
@@ -43,7 +40,10 @@ export default async function HomePage({ params }: LocaleParamsP) {
         <h1>{t('hero_title')}</h1>
         <p>{t('hero_text')}</p>
         <div className={styles.actions}>
-          <Link href="/docs/deployment/docker" className="button primary">
+          <Link href="/docs/getting-started" className="button primary">
+            {t('cta_getting_started')}
+          </Link>
+          <Link href="/docs/deployment/docker" className="button">
             {t('cta_start')}
           </Link>
           <Link href="/playground" className="button">
@@ -103,19 +103,6 @@ export default async function HomePage({ params }: LocaleParamsP) {
         <div className={styles.links}>
           <Link href="/docs/data">{t('data_link')} →</Link>
           <Link href="/docs/data-license">{t('license_link')} →</Link>
-        </div>
-      </section>
-
-      <section className={styles.section}>
-        <h2>{t('status_title')}</h2>
-        <p>{t('status_text')}</p>
-      </section>
-
-      <section className={styles.section}>
-        <h2>{t('roadmap_title')}</h2>
-        <Markdown html={roadmapHtml.html} />
-        <div className={styles.links}>
-          <a href={`${REPO_URL}/issues`}>{t('roadmap_link')} →</a>
         </div>
       </section>
     </div>

@@ -42,9 +42,10 @@ import { MANUALLY_MANAGED_INDEX } from './manually-managed-index';
 // GIN over the categories array (`&&`), created by the AddWordFilterIndexes
 // migration on Postgres; SQLite has no array index and needs nothing
 @Index('IDX_EN_CATEGORIES', ['categories'], MANUALLY_MANAGED_INDEX)
-// (word COLLATE "C", id): the byte order the public list pages in, walked
-// straight from en_words without joining en_entries; same migration
-@Index('IDX_EN_WORD_C', ['word'], MANUALLY_MANAGED_INDEX)
+// (LOWER(word) COLLATE "C", id): the case-folded byte order the public list
+// pages in, walked straight from en_words without joining en_entries;
+// AddCaseFoldedWordIndexes migration (issue #440)
+@Index('IDX_EN_WORD_LOWER_C', ['word'], MANUALLY_MANAGED_INDEX)
 export class EnWord {
   /** @asType integer */
   @PrimaryGeneratedColumn()

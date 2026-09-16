@@ -1,37 +1,55 @@
 import { extractSection } from '../sections';
 
-const README = `# Title
+const readme = [
+  '# Project',
+  '',
+  'Intro.',
+  '',
+  '## 📖 What it is',
+  '',
+  'Text.',
+  '',
+  '## ⚡ Getting started',
+  '',
+  '### Quick start with Docker',
+  '',
+  'Docker text.',
+  '',
+  '#### A sub-subsection',
+  '',
+  '### Native start',
+  '',
+  'Native text.',
+  '',
+  '## 🤝 Contributing',
+  '',
+  'Contributing text.',
+].join('\n');
 
-## 🚀 Overview
-
-Intro line.
-
----
-
-## 🗺️ Roadmap
-
-Planned directions:
-
-- Semantic search
-- More languages
-
----
-
-## 🤝 Contributing
-`;
-
-describe('extractSection (one ## section of a Markdown file)', () => {
-  it('returns the body between the heading and the next section or rule', () => {
-    expect(extractSection(README, /Roadmap/)).toBe(
-      'Planned directions:\n\n- Semantic search\n- More languages',
+describe('extractSection (a README section as a docs page, issue #440)', () => {
+  it('cuts the section out and promotes its headings one level', () => {
+    expect(extractSection(readme, /^## ⚡ /)).toBe(
+      [
+        '# ⚡ Getting started',
+        '',
+        '## Quick start with Docker',
+        '',
+        'Docker text.',
+        '',
+        '### A sub-subsection',
+        '',
+        '## Native start',
+        '',
+        'Native text.',
+      ].join('\n'),
     );
   });
 
-  it('matches the heading text regardless of the emoji in front', () => {
-    expect(extractSection(README, /^🚀 Overview$/)).toBe('Intro line.');
+  it('runs to the end of the file when the section is the last one', () => {
+    expect(extractSection(readme, /^## 🤝 /)).toBe('# 🤝 Contributing\n\nContributing text.');
   });
 
-  it('is null when there is no such heading', () => {
-    expect(extractSection(README, /Changelog/)).toBeNull();
+  it('answers null when no heading matches', () => {
+    expect(extractSection(readme, /^## Roadmap/)).toBeNull();
   });
 });

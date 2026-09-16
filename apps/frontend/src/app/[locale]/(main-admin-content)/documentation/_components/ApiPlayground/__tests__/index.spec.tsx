@@ -19,7 +19,7 @@ import { EnApi } from '@/core/api/EnApi';
 import { ApiEndpointKeyE, DOCUMENTED_ENDPOINTS } from '../../../constants';
 import { ApiPlayground } from '../index';
 
-const searchEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.search)!;
+const searchEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.search_get)!;
 const wordEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.word)!;
 const wordsEndpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.words)!;
 
@@ -56,19 +56,19 @@ describe('ApiPlayground (issue #245)', () => {
   });
 
   it('отправляет заполненные фильтры и показывает ответ в виде JSON', async () => {
-    (EnApi.publicPost as jest.Mock).mockResolvedValue({ data: [makeWord(1, 'run')], meta: { count: 1 } });
+    (EnApi.publicGet as jest.Mock).mockResolvedValue({ data: [makeWord(1, 'run')], meta: { count: 1 } });
 
     render(<ApiPlayground endpoint={searchEndpoint} />);
     typeSearch('run');
     await send();
 
-    expect(EnApi.publicPost).toHaveBeenCalledWith('/v1/search', { search: 'run', limit: 10 });
+    expect(EnApi.publicGet).toHaveBeenCalledWith('/v1/search', { search: 'run', limit: 10 });
     expect(screen.getByText(/"word": "run"/)).toBeInTheDocument();
     expect(screen.getByText(/"count": 1/)).toBeInTheDocument();
   });
 
   it('переключает ответ между JSON и таблицей', async () => {
-    (EnApi.publicPost as jest.Mock).mockResolvedValue({ data: [makeWord(1, 'run')], meta: { count: 1 } });
+    (EnApi.publicGet as jest.Mock).mockResolvedValue({ data: [makeWord(1, 'run')], meta: { count: 1 } });
 
     render(<ApiPlayground endpoint={searchEndpoint} />);
     typeSearch('run');
@@ -83,7 +83,7 @@ describe('ApiPlayground (issue #245)', () => {
   });
 
   it('показывает ошибку сервера вместо ответа', async () => {
-    (EnApi.publicPost as jest.Mock).mockResolvedValue({
+    (EnApi.publicGet as jest.Mock).mockResolvedValue({
       error: true,
       message: ['limit must not be greater than 100'],
     });
@@ -100,7 +100,7 @@ describe('ApiPlayground (issue #245)', () => {
     render(<ApiPlayground endpoint={searchEndpoint} />);
     typeSearch('run');
 
-    expect(screen.getByText(/-d '{"search":"run","limit":10}'/)).toBeInTheDocument();
+    expect(screen.getByText(/curl -X GET '.*\/v1\/search\?search=run&limit=10'/)).toBeInTheDocument();
   });
 
   it('выполняет GET-метод с path-параметром через публичный префикс (issue #272)', async () => {

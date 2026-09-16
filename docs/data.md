@@ -21,25 +21,27 @@ Two columns on every base-form word record the provenance:
 | `generated`          | `true` when the entry was produced by a model; `false` for entries authored by hand in the admin  |
 | `generated_by_model` | The model behind the entry, as an OpenRouter-style id (`deepseek/deepseek-v4-flash`); may be null |
 
-Meanings link to other headwords as **synonyms and antonyms** (~509k and ~183k links in the
-`v0.1.0` revision, counted in `manifest.json` as `synonym_links` / `antonym_links`); the API
-serves them under every entry and as `/words/{word}/synonyms` / `/antonyms`.
-
-Both are exported into the dataset with the meanings (the `meanings` file; before issue #442 the
-meanings were nested in the `words`, `phrases` and `grammar-patterns` lines). The published
-data is generated with DeepSeek models — the bulk with DeepSeek v4 Flash, smaller batches with
+The published data is generated with DeepSeek models — the bulk with DeepSeek v4 Flash, smaller batches with
 `deepseek/deepseek-v4-pro`; early batches were labelled by hand, so the same model can appear
 under several spellings. The exact numbers for a revision are on the dataset card. Only models
 whose terms are compatible with the data license are used — why that rules some providers out
 is recorded in [`DATA_LICENSE.md`](../DATA_LICENSE.md#provenance).
 
-**Tell your readers.** The terms of the generating models ask that end users know the text is
-AI-generated and may be wrong. `GET /api/v1/meta` carries the line to show as `notice`, the
-word pages of the website show it next to the license note, and so does the dataset card.
+Meanings link to other headwords as **synonyms and antonyms** (~509k and ~183k links in the
+`v0.1.0` revision, counted in `manifest.json` as `synonym_links` / `antonym_links`); the API
+serves them under every entry and as `/words/{word}/synonyms` / `/antonyms`, and the dataset
+carries them in the `meanings` file (earlier datasets nested the meanings in the `words`,
+`phrases` and `grammar-patterns` lines).
 
-**Human review** so far is spot-checking and targeted fixes through the admin UI; there is no
-systematic reviewed subset yet, so treat every entry as machine-generated. A review pass over
-the A1–B2 vocabulary is on the roadmap.
+> [!IMPORTANT]
+> **Tell your readers.** The terms of the generating models ask that end users know the text is
+> AI-generated and may be wrong. `GET /api/v1/meta` carries the line to show as `notice`, the
+> word pages of the website show it next to the license note, and so does the dataset card.
+
+> [!NOTE]
+> **Human review** so far is spot-checking and targeted fixes through the admin UI; there is no
+> systematic reviewed subset yet, so treat every entry as machine-generated. A review pass over
+> the A1–B2 vocabulary is on the roadmap.
 
 ## Known limitations
 
@@ -49,9 +51,10 @@ the A1–B2 vocabulary is on the roadmap.
   English usage.
 - **Translations are generated too** and have not been reviewed by a translator. The schema
   carries five translation languages, Russian, Spanish, French, German and Portuguese
-  (`GET /api/v1/meta` lists them under `available_languages`, issues #410, #445, #449); the
-  published `v0.1.0` revision holds Russian only — the others arrive with later revisions, and
-  `manifest.json` counts the rows per language (`translations`). Translations ship in files of their own, one per language
+  (`GET /api/v1/meta` lists them under `available_languages`). The
+  tagged `v0.1.0` revision holds Russian only; the current `main` revision ships all five, one
+  file per language, and `manifest.json` counts the rows per language (`translations`) — the
+  dataset card gives the coverage of each. Translations ship in files of their own, one per language
   (`meaning-translations.<lang>`, `short-translations.<lang>`, [offline-import.md](./offline-import.md#dataset-format)), so a language
   can be loaded on its own into an instance that already has the entries.
 - **Entry-level `language_register` is unreliable on words** — almost every word says `formal`
@@ -68,7 +71,8 @@ the A1–B2 vocabulary is on the roadmap.
   which senses are listed first and in the connotations attached to social, political and
   religious vocabulary.
 
-The data contains no personal information.
+> [!NOTE]
+> The data contains no personal information.
 
 ## Dataset versions
 
@@ -87,14 +91,14 @@ revision). The tags make revisions addressable:
   (`https://huggingface.co/api/datasets/Fristail27/vocab-bloom-hub-en/refs`).
 
 The dataset version is independent of the application version: it is bumped at the next
-export after a release ([the release plan](https://github.com/Fristail27/vocab-bloom-hub/issues/307)).
+export after a release.
 
 ## Reporting errors
 
 Fixes land in the Hub database, never in the published JSONL files (they are overwritten by the
 next export):
 
-- **A reader of a word page** has two flows right on the page (issue #327), both landing in
+- **A reader of a word page** has two flows right on the page, both landing in
   that instance's own moderation queue (`POST /api/v1/suggestions` — no account, strictly
   rate-limited): _Report a mistake_ opens one form with two modes — a free-text report, or
   the whole entry opened in editable fields to **suggest corrected values** — the admin sees the

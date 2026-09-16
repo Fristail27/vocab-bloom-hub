@@ -45,50 +45,6 @@ class CreateSuggestionV1ReqDTO(BaseModel):
     )
 
 
-class Type(Enum):
-    """
-    Restrict the answer to one entry type
-    """
-
-    word = "word"
-    grammar_pattern = "grammar_pattern"
-    phrase = "phrase"
-
-
-class SearchV1ReqDTO(BaseModel):
-    search: str = Field(
-        ..., description="The term to search for", examples=["run"], max_length=256, min_length=1
-    )
-    type: Type | None = Field(None, description="Restrict the answer to one entry type")
-    limit: int = Field(10, ge=1, le=100)
-
-
-class TranslationLanguage(Enum):
-    ru = "ru"
-    es = "es"
-    fr = "fr"
-    de = "de"
-    pt = "pt"
-
-
-class SearchDetailedV1ReqDTO(BaseModel):
-    search: str = Field(
-        ..., description="The term to search for", examples=["run"], max_length=256, min_length=1
-    )
-    type: Type | None = Field(None, description="Restrict the answer to one entry type")
-    limit: int = Field(10, ge=1, le=20)
-    page: int = Field(1, ge=1, le=20)
-    with_meanings: bool = Field(
-        False, description="Join the meanings (with translations, synonyms, antonyms) of every item"
-    )
-    with_translations: bool = Field(False, description="Join the short translations of every item")
-    translation_languages: list[TranslationLanguage] | None = Field(
-        None,
-        description="Keep only these translation languages; omit the field for all of them",
-        min_length=1,
-    )
-
-
 class WordsBatchV1ReqDTO(BaseModel):
     words: list[str] = Field(
         ...,

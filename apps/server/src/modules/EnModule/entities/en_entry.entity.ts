@@ -7,11 +7,12 @@ import { checkIsPostgres } from '../../../../configuration';
 
 @Entity('en_entries')
 @Index('IDX_EN_ENTRY_TYPE', ['type'])
-// Byte-order index behind the public list's (word, id) ordering and cursor
-// (issue #272): created by the AddEntryWordCollateCIndex migration with
-// COLLATE "C", which the decorator cannot express — hence synchronize: false.
-// SQLite orders text bytewise anyway and needs nothing extra
-@Index('IDX_EN_ENTRY_WORD_C', ['word'], MANUALLY_MANAGED_INDEX)
+// Case-folded byte-order index behind the search and admin prefix lookups
+// (issues #272, #440): LOWER(word) COLLATE "C", created by the
+// AddCaseFoldedWordIndexes migration, which the decorator cannot express —
+// hence synchronize: false. SQLite orders text bytewise anyway and needs
+// nothing extra
+@Index('IDX_EN_ENTRY_WORD_LOWER_C', ['word'], MANUALLY_MANAGED_INDEX)
 // GIN over the trigrams of the headword (issue #278): the substring search
 // tiers and the fuzzy tier; created by the AddEntryWordTrigramIndex
 // migration (needs pg_trgm), nothing on SQLite

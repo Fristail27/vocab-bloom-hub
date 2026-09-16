@@ -93,7 +93,7 @@ describe('public API /api/v1 (e2e, issue #271)', () => {
   });
 
   it('answers the search without auth, in the { data, meta } envelope, with the version header', async () => {
-    const res = await request(server()).post('/api/v1/search').send({ search: 'flick' }).expect(200);
+    const res = await request(server()).get('/api/v1/search?search=flick').expect(200);
     expect(res.headers['x-api-version']).toBe('1');
     expect(res.body.meta).toEqual({ count: 1, fuzzy: false, short_term: false });
     expect(res.body.data).toEqual([expect.objectContaining({ word: 'flicker' })]);
@@ -110,8 +110,7 @@ describe('public API /api/v1 (e2e, issue #271)', () => {
     }
 
     const detailed = await request(server())
-      .post('/api/v1/search/detailed')
-      .send({ search: 'flicker', with_meanings: true })
+      .get('/api/v1/search/detailed?search=flicker&with_meanings=true')
       .expect(200);
     expect(detailed.headers['x-api-version']).toBe('1');
     expect(detailed.body.meta).toEqual({
@@ -124,29 +123,23 @@ describe('public API /api/v1 (e2e, issue #271)', () => {
     expect(detailed.body.data[0].meanings).toEqual([expect.objectContaining({ title: 'to shine unsteadily' })]);
   });
 
-  it('serves the search as GET with the same fields in the query string (issue #396)', async () => {
-    const posted = await request(server())
-      .post('/api/v1/search')
-      .send({ search: 'flick', limit: 5 })
-      .expect(200);
+  it('serves the search as GET only: the fields in the query string, the POST forms gone (issues #396, #440)', async () => {
     const got = await request(server()).get('/api/v1/search?search=flick&limit=5').expect(200);
     expect(got.headers['x-api-version']).toBe('1');
-    expect(got.body).toEqual(posted.body);
+    expect(got.body.meta).toEqual({ count: 1, fuzzy: false, short_term: false });
 
     const detailed = await request(server())
       .get('/api/v1/search/detailed?search=flicker&with_meanings=true&translation_languages=ru&limit=5&page=1')
       .expect(200);
     expect(detailed.body.meta).toEqual({ page: 1, limit: 5, has_more: false, fuzzy: false, short_term: false });
     expect(detailed.body.data[0].meanings).toEqual([expect.objectContaining({ title: 'to shine unsteadily' })]);
-    // the numbers and booleans arrive as text and are converted, so the
-    // answer matches the POST form field for field
-    const postedDetailed = await request(server())
-      .post('/api/v1/search/detailed')
-      .send({ search: 'flicker', with_meanings: true, translation_languages: ['ru'], limit: 5, page: 1 })
-      .expect(200);
-    expect(detailed.body).toEqual(postedDetailed.body);
 
-    // the query is validated like the body
+    // the POST forms of the alpha answer 404 like any unknown route, in the public error shape
+    const posted = await request(server()).post('/api/v1/search').send({ search: 'flick' }).expect(404);
+    expect(posted.body).toEqual({ statusCode: 404, message: expect.any(String), error: true });
+    await request(server()).post('/api/v1/search/detailed').send({ search: 'flick' }).expect(404);
+
+    // the query is validated like a body would be: numbers and booleans arrive as text
     await request(server()).get('/api/v1/search').expect(400);
     await request(server()).get('/api/v1/search?search=').expect(400);
     await request(server()).get('/api/v1/search?search=x&limit=many').expect(400);
@@ -170,14 +163,10 @@ describe('public API /api/v1 (e2e, issue #271)', () => {
     expect(single.body.data[0].base_phrasal).toBe('glow');
   });
 
-  it('rejects an empty translation_languages list on both forms of the detailed search', async () => {
-    await request(server())
-      .post('/api/v1/search/detailed')
-      .send({ search: 'flick', translation_languages: [] })
-      .expect(400);
+  it('rejects an empty translation_languages list on the detailed search', async () => {
     await request(server()).get('/api/v1/search/detailed?search=flick&translation_languages=').expect(400);
-    // omitting the field means every language
-    await request(server()).post('/api/v1/search/detailed').send({ search: 'flick' }).expect(200);
+    // omitting the key means every language
+    await request(server()).get('/api/v1/search/detailed?search=flick').expect(200);
   });
 
   it('drops the session cookie on logout without a valid token (issue #398)', async () => {
@@ -187,24 +176,19 @@ describe('public API /api/v1 (e2e, issue #271)', () => {
   });
 
   it('rejects an empty and an oversized search term (issue #345)', async () => {
-    await request(server()).post('/api/v1/search').send({ search: '' }).expect(400);
+    await request(server()).get('/api/v1/search?search=').expect(400);
     const long = await request(server())
-      .post('/api/v1/search')
-      .send({ search: 'x'.repeat(257) })
+      .get(`/api/v1/search?search=${'x'.repeat(257)}`)
       .expect(400);
     expect(long.body).toEqual({ statusCode: 400, message: expect.stringContaining('256'), error: true });
     await request(server())
-      .post('/api/v1/search/detailed')
-      .send({ search: 'x'.repeat(257) })
-      .expect(400);
-    await request(server())
-      .get(`/api/v1/search?search=${'x'.repeat(257)}`)
+      .get(`/api/v1/search/detailed?search=${'x'.repeat(257)}`)
       .expect(400);
   });
 
   it('reports every error under the prefix in the ErrorResT shape', async () => {
     // validation
-    const bad = await request(server()).post('/api/v1/search').send({ search: 'x', limit: 'many' }).expect(400);
+    const bad = await request(server()).get('/api/v1/search?search=x&limit=many').expect(400);
     expect(bad.headers['x-api-version']).toBe('1');
     expect(bad.body).toEqual({ statusCode: 400, message: expect.stringContaining('limit'), error: true });
     // unknown route
@@ -221,9 +205,9 @@ describe('public API /api/v1 (e2e, issue #271)', () => {
     process.env.PUBLIC_API_RATE_LIMIT = '2/60';
     // a fresh ip: the budget counts every request under the prefix, whichever route
     const ip = { 'X-Forwarded-For': '203.0.113.7' };
-    await request(server()).post('/api/v1/search').set(ip).send({ search: 'a' }).expect(200);
-    await request(server()).post('/api/v1/search/detailed').set(ip).send({ search: 'a' }).expect(200);
-    const limited = await request(server()).post('/api/v1/search').set(ip).send({ search: 'a' }).expect(429);
+    await request(server()).get('/api/v1/search?search=a').set(ip).expect(200);
+    await request(server()).get('/api/v1/search/detailed?search=a').set(ip).expect(200);
+    const limited = await request(server()).get('/api/v1/search?search=a').set(ip).expect(429);
     expect(limited.body).toEqual({ statusCode: 429, message: 'too_many_requests', error: true });
     expect(limited.headers['x-api-version']).toBe('1');
   });
@@ -235,7 +219,7 @@ describe('public API /api/v1 (e2e, issue #271)', () => {
 
   it('hides the public prefix when PUBLIC_API_ENABLED=false', async () => {
     process.env.PUBLIC_API_ENABLED = 'false';
-    const res = await request(server()).post('/api/v1/search').send({ search: 'flick' }).expect(404);
+    const res = await request(server()).get('/api/v1/search?search=flick').expect(404);
     expect(res.body).toEqual({ statusCode: 404, message: expect.any(String), error: true });
     // the admin surface is untouched
     await request(server()).get('/api/auth/check-token').expect(200);
@@ -248,9 +232,8 @@ describe('public API /api/v1 (e2e, issue #271)', () => {
     await request(server()).get('/api/settings/all').set(auth).expect(404);
     // the public prefix keeps answering
     await request(server())
-      .post('/api/v1/search')
+      .get('/api/v1/search?search=flick')
       .set({ 'X-Forwarded-For': '203.0.113.8' })
-      .send({ search: 'flick' })
       .expect(200);
   });
 });

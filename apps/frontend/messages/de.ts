@@ -511,16 +511,10 @@ export default {
     public_endpoints: 'Öffentliche Endpunkte',
     endpoint_search_get: 'Einfache Suche',
     endpoint_search_detailed_get: 'Detaillierte Suche',
-    endpoint_search: 'Einfache Suche (POST-Form)',
-    endpoint_search_detailed: 'Detaillierte Suche (POST-Form)',
     desc_search_get:
       'Durchsucht die Wörterbucheinträge und antwortet mit einer flachen Liste von Wörtern ohne Bedeutungen und Übersetzungen, mit den Feldern im Query-String. Die Antwort trägt ETag, Last-Modified und Cache-Control wie jedes öffentliche GET, kann also hinter einem CDN liegen und als Link geteilt werden. Die Ergebnisse sind nach Trefferqualität geordnet: exakter Treffer zuerst, dann Phrasal Verbs, Einträge, die mit dem Suchbegriff beginnen, Phrasen, Einträge, die mit ihm enden, und alle weiteren Vorkommen. Passt nichts, beantwortet eine Trigramm-Ähnlichkeitsstufe Tippfehler: meta.fuzzy ist true und jedes Element trägt similarity (0–1) — nur Postgres-Instanzen. Ein Begriff aus ein oder zwei Zeichen durchsucht nur die exakte und die Präfixstufe (meta.short_term ist true).',
     desc_search_detailed_get:
       'Dieselbe Suche mit Paginierung, die zusätzlich Bedeutungen und ihre Übersetzungen einbinden kann; die Felder reisen im Query-String (translation_languages als wiederholter Schlüssel), und die Antwort ist cachebar. Da jedes Element eingebundene Daten tragen kann, sind Seitengröße und Paginierungstiefe enger begrenzt als bei der einfachen Suche.',
-    desc_search:
-      'Die POST-Form der einfachen Suche: dieselben Felder in einem JSON-Body, dieselbe Antwort, aber HTTP-Caches speichern sie nie. Bleibt während der Beta erhalten; neue Integrationen sollten die GET-Form verwenden. Die Ergebnisse sind nach Trefferqualität geordnet: exakter Treffer zuerst, dann Phrasal Verbs, Einträge, die mit dem Suchbegriff beginnen, Phrasen, Einträge, die mit ihm enden, und alle weiteren Vorkommen. Passt nichts, beantwortet eine Trigramm-Ähnlichkeitsstufe Tippfehler: meta.fuzzy ist true und jedes Element trägt similarity (0–1) — nur Postgres-Instanzen. Ein Begriff aus ein oder zwei Zeichen durchsucht nur die exakte und die Präfixstufe (meta.short_term ist true).',
-    desc_search_detailed:
-      'Die POST-Form der detaillierten Suche: dieselben Felder in einem JSON-Body, dieselbe Antwort, nicht cachebar; bleibt während der Beta erhalten. Sie kann zusätzlich Bedeutungen und ihre Übersetzungen einbinden. Da jedes Element eingebundene Daten tragen kann, sind Seitengröße und Paginierungstiefe enger begrenzt als bei der einfachen Suche.',
     endpoint_word: 'Stichwort nachschlagen',
     endpoint_words_batch: 'Stichwörter im Stapel nachschlagen',
     endpoint_word_meanings: 'Bedeutungen eines Stichworts',

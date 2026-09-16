@@ -37,11 +37,7 @@ export interface paths {
      */
     get: operations['PublicSearchController_searchGet'];
     put?: never;
-    /**
-     * Search dictionary entries (flat list, no meanings) — the POST form
-     * @description The same search as `GET /search` with the fields in a JSON body; not cacheable. Kept through the beta.
-     */
-    post: operations['PublicSearchController_search'];
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -57,15 +53,11 @@ export interface paths {
     };
     /**
      * Search dictionary entries with pagination, meanings and translations
-     * @description The GET form of the detailed search: the same fields as the POST body, in the query string; cacheable.
+     * @description The detailed search: the same term and tiers, paged, with meanings and translations joined on request; the fields travel in the query string (`translation_languages` as a repeated key). Cacheable like every public GET.
      */
     get: operations['PublicSearchController_searchDetailedGet'];
     put?: never;
-    /**
-     * Search dictionary entries with pagination, meanings and translations — the POST form
-     * @description The same search as `GET /search/detailed` with the fields in a JSON body; not cacheable. Kept through the beta.
-     */
-    post: operations['PublicSearchController_searchDetailed'];
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -314,48 +306,6 @@ export interface components {
       message?: Record<string, never>;
       /** @description Edit flow: every touched target of the word form with its proposed values */
       edits?: components['schemas']['SuggestionEditV1DTO'][];
-    };
-    SearchV1ReqDTO: {
-      /**
-       * @description The term to search for
-       * @example run
-       */
-      search: string;
-      /**
-       * @description Restrict the answer to one entry type
-       * @enum {string}
-       */
-      type?: 'word' | 'grammar_pattern' | 'phrase';
-      /** @default 10 */
-      limit: number;
-    };
-    SearchDetailedV1ReqDTO: {
-      /**
-       * @description The term to search for
-       * @example run
-       */
-      search: string;
-      /**
-       * @description Restrict the answer to one entry type
-       * @enum {string}
-       */
-      type?: 'word' | 'grammar_pattern' | 'phrase';
-      /** @default 10 */
-      limit: number;
-      /** @default 1 */
-      page: number;
-      /**
-       * @description Join the meanings (with translations, synonyms, antonyms) of every item
-       * @default false
-       */
-      with_meanings: boolean;
-      /**
-       * @description Join the short translations of every item
-       * @default false
-       */
-      with_translations: boolean;
-      /** @description Keep only these translation languages; omit the field for all of them */
-      translation_languages?: ('ru' | 'es' | 'fr' | 'de' | 'pt')[];
     };
     WordsBatchV1ReqDTO: {
       /**
@@ -794,48 +744,6 @@ export interface operations {
       };
     };
   };
-  PublicSearchController_search: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['SearchV1ReqDTO'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PublicSearchV1ResT'];
-        };
-      };
-      /** @description Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PublicApiErrorT'];
-        };
-      };
-      /** @description Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window */
-      429: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PublicApiErrorT'];
-        };
-      };
-    };
-  };
   PublicSearchController_searchDetailedGet: {
     parameters: {
       query: {
@@ -857,48 +765,6 @@ export interface operations {
       cookie?: never;
     };
     requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PublicSearchDetailedV1ResT'];
-        };
-      };
-      /** @description Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PublicApiErrorT'];
-        };
-      };
-      /** @description Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window */
-      429: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PublicApiErrorT'];
-        };
-      };
-    };
-  };
-  PublicSearchController_searchDetailed: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['SearchDetailedV1ReqDTO'];
-      };
-    };
     responses: {
       /** @description OK */
       200: {

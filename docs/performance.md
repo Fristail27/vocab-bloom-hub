@@ -1,33 +1,34 @@
 # Read performance on the full dictionary
 
-How the API behaves on the real data volume (issue #279) — ~298k `en_entries`, ~327k
-`en_words`, ~161k `en_meanings`, ~161k meaning translations, ~115k short translations, ~509k
-synonym and ~183k antonym links — what
-was done about it, and how to measure it again.
+How the API behaves on the real data volume — ~298k `en_entries`, ~327k
+`en_words`, ~161k `en_meanings`, ~807k meaning translations and ~576k short translations (five
+languages), ~509k synonym and ~183k antonym links — what was done about it, and how to measure
+it again.
 
 ## Targets and where things stand
 
-| Read (public API)                                  | Target (p95) | Postgres now | Note                                              |
-| -------------------------------------------------- | -----------: | -----------: | ------------------------------------------------- |
-| Headword / id lookup (`/words/{word}`, `/id/{id}`) |        20 ms |       ≤ 4 ms | one query per relation, rows assembled by hand    |
-| Filtered list page (`/words?…`)                    |        20 ms |       ≤ 5 ms | index walk in `(word, id)` order, keyset cursor   |
-| Random entry (`/random?…`)                         |        20 ms |       ≤ 7 ms | primary-key pivot, no `ORDER BY random()`         |
-| Search, exact / prefix tiers (`/search`)           |        20 ms |       ≤ 8 ms | byte-order index on the headword                  |
-| Search, substring / suffix tiers                   |        20 ms |       ≤ 8 ms | trigram GIN index (#278)                          |
-| Search, typo (fuzzy tier)                          |        20 ms |      ≤ 10 ms | `pg_trgm` similarity when nothing else matches    |
-| Search, 1–2 character term (short-term flow)       |        20 ms |       ≤ 6 ms | exact and prefix tiers only, index lookups (#292) |
-| List page with meanings joined (`with_meanings`)   |        50 ms |      ≤ 13 ms | 8 small queries instead of one exploding join     |
-| Batch lookup, 5 spellings (`/words/batch`, #397)   |        20 ms |       ≤ 5 ms | the same 9 statements as one headword             |
-| Batch lookup, 50 spellings (the cap)               |       100 ms |      ≤ 25 ms | 9 statements, ~80 entries, no entity hydration    |
+| Read (public API)                                  | Target (p95) | Postgres now | Note                                            |
+| -------------------------------------------------- | -----------: | -----------: | ----------------------------------------------- |
+| Headword / id lookup (`/words/{word}`, `/id/{id}`) |        20 ms |       ≤ 4 ms | one query per relation, rows assembled by hand  |
+| Filtered list page (`/words?…`)                    |        20 ms |       ≤ 5 ms | index walk in `(word, id)` order, keyset cursor |
+| Random entry (`/random?…`)                         |        20 ms |       ≤ 7 ms | primary-key pivot, no `ORDER BY random()`       |
+| Search, exact / prefix tiers (`/search`)           |        20 ms |       ≤ 8 ms | byte-order index on the headword                |
+| Search, substring / suffix tiers                   |        20 ms |       ≤ 8 ms | trigram GIN index                               |
+| Search, typo (fuzzy tier)                          |        20 ms |      ≤ 10 ms | `pg_trgm` similarity when nothing else matches  |
+| Search, 1–2 character term (short-term flow)       |        20 ms |       ≤ 6 ms | exact and prefix tiers only, index lookups      |
+| List page with meanings joined (`with_meanings`)   |        50 ms |      ≤ 13 ms | 8 small queries instead of one exploding join   |
+| Batch lookup, 5 spellings (`/words/batch`)         |        20 ms |       ≤ 5 ms | the same 9 statements as one headword           |
+| Batch lookup, 50 spellings (the cap)               |       100 ms |      ≤ 25 ms | 9 statements, ~80 entries, no entity hydration  |
 
-Numbers are p95 of the [benchmark](#the-benchmark) on a laptop against a local Postgres 18
-with the published dataset; treat them as an order of magnitude, not a promise.
+> [!NOTE]
+> Numbers are p95 of the [benchmark](#the-benchmark) on a laptop against a local Postgres 18
+> with the published dataset; treat them as an order of magnitude, not a promise.
 
 The full reads cost the same 9 statements whatever they return — the entries, then one
 `IN (...)` per relation for the whole set — so a batch's time grows with the entries it
 returns, not with the spellings: 50 everyday headwords are ~80 entries with ~240 meanings (a
 285 KB answer) in ~22 ms. They used to take ~275 ms: the same statements, but `find()` with
-relations then spent ~220 ms turning the rows into entity instances. Since issue #424
+relations then spent ~220 ms turning the rows into entity instances. Now
 `WordRowsService` (`src/modules/EnModule/word-rows.service.ts`) runs the statements itself —
 in two concurrent waves after the entries (the collections of the entries, then those of the
 meanings), so a read costs three round-trips whatever the distance to the database —
@@ -36,13 +37,14 @@ arrays, JSON, dates) and groups the collections by foreign key in one pass; a un
 its answer to `find()`'s field for field. The admin entry read, the detailed search and the
 list with joins go through it too.
 
-**SQLite is a development and test database only.** On the full dictionary its search tiers
-take 0.1 – 1 s per request and the admin statistics 0.25 s (tables below): `LIKE` cannot use
-its indexes, there is no `pg_trgm` (no fuzzy tier either) and the planner has no bitmap or parallel scans. The reads that became index
-lookups after this work (headword / id lookups ~1 ms, random ~8 ms, list pages 10 – 30 ms)
-are fine on SQLite too, so a full `dev.sqlite` stays usable for hacking on the API — but
-nothing else. `NODE_ENV=production`
-with a SQLite `DATABASE_URL` is a startup error, as before.
+> [!WARNING]
+> **SQLite is a development and test database only.** On the full dictionary its search tiers
+> take 0.1 – 1 s per request and the admin statistics 0.25 s (tables below): `LIKE` cannot use
+> its indexes, there is no `pg_trgm` (no fuzzy tier either) and the planner has no bitmap or
+> parallel scans. The reads that became index lookups after this work (headword / id lookups
+> ~1 ms, random ~8 ms, list pages 10 – 30 ms) are fine on SQLite too, so a full `dev.sqlite`
+> stays usable for hacking on the API — but nothing else. `NODE_ENV=production` with a SQLite
+> `DATABASE_URL` is a startup error, as before.
 
 ## What was slow and what changed
 
@@ -61,15 +63,17 @@ change that the [query-plan guard](#the-query-plan-guard) keeps in place.
 2. **Prefix search could not use an index.** `entry.word LIKE 'xylo%'` under the `en_US`
    collation is a sequential scan of `en_entries`; a rare term ran every tier at full cost —
    490 ms. The prefix tiers (starts-with, phrase start) and the admin prefix filter now
-   compare through `COLLATE "C"` (the `bytewise()` helper), served by `IDX_EN_ENTRY_WORD_C`:
-   35 ms, the rest being the substring tiers — which #278 then moved onto a trigram index (below): 7 ms.
+   compare through `LOWER(word) COLLATE "C"` (the `foldedWord()` helper; case-folded so
+   the capitalised grammar patterns stay findable), served by
+   `IDX_EN_ENTRY_WORD_LOWER_C`:
+   35 ms, the rest being the substring tiers, which the trigram index (below) brought to 7 ms.
 3. **The list had no index for its filters.** `?category=IT` scanned and sorted all of
    `en_words`: 244 ms. `AddWordFilterIndexes` adds a btree per filter column
    (`word_level`, `language_register`, `area_variant`, `form_of_word`), a GIN over the
    `categories` array (the filter uses the overlap operator `&&`, the only indexable form)
-   and `IDX_EN_WORD_C` on `(word COLLATE "C", id)`, the order the list pages in. The list no
-   longer joins `en_entries`: the same headword is on `en_words`, and the planner either
-   walks `IDX_EN_WORD_C` (unselective filters) or bitmap-ANDs the filter indexes and top-N
+   and `IDX_EN_WORD_LOWER_C` on `(LOWER(word) COLLATE "C", id)`, the order the list pages in.
+   The list no longer joins `en_entries`: the same headword is on `en_words`, and the planner
+   either walks `IDX_EN_WORD_LOWER_C` (unselective filters) or bitmap-ANDs the filter indexes and top-N
    sorts (selective ones). 2 – 4 ms either way.
 4. **The keyset cursor started the index walk from the beginning.** `word > :w OR (word = :w
 AND id > :id)` is a filter, not a range start: a page at "m" read half the index (23 ms).
@@ -79,13 +83,12 @@ AND id > :id)` is a filter, not a range start: a page at "m" read half the index
    sequential scan (38 ms). The pivot is now drawn in the id range of the whole table (two
    primary-key lookups) and the first matching row at or after it is taken, wrapping around
    to the last one before it: 4 – 7 ms whatever the filter.
-
-6. **Substring, suffix and word-boundary search tiers** (`%term`, `%term%`, `% term %`) were sequential scans of `en_entries` — a btree cannot serve them (issue #278). `AddEntryWordTrigramIndex` enables `pg_trgm` and adds `IDX_EN_ENTRY_WORD_TRGM`, a GIN over the trigrams of the headword: the same `LIKE`s now read the index (a rare term 35 → 7 ms, a phrase 38 → 5.5 ms), and a **fuzzy tier** answers typos through the similarity operator when no other tier matches (`recieve` → `relieve, retrieve, …` in 8 ms, `meta.fuzzy`, `similarity` per item — see `api.md`). Very short terms (`ab`) have no full trigram; #292 gives them their own flow (below).
+6. **Substring, suffix and word-boundary search tiers** (`%term`, `%term%`, `% term %`) were sequential scans of `en_entries` — a btree cannot serve them. `AddEntryWordTrigramIndex` enables `pg_trgm` and adds `IDX_EN_ENTRY_WORD_TRGM`, a GIN over the trigrams of the headword: the same `LIKE`s now read the index (a rare term 35 → 7 ms, a phrase 38 → 5.5 ms), and a **fuzzy tier** answers typos through the similarity operator when no other tier matches (`recieve` → `relieve, retrieve, …` in 8 ms, `meta.fuzzy`, `similarity` per item — see `api.md`). Very short terms (`ab`) have no full trigram and get their own flow (below).
 
 7. **One- and two-character terms ran every tier.** `%a%` matches ~175k of 298k headwords, so
    the suffix, substring and phrase tiers answered an arbitrary slice of half the dictionary
    (on Postgres a scan cut short by the `LIMIT`, on SQLite ~0.7 s), and a term with no full
-   trigram has nothing to look up in the GIN. Since #292 a term shorter than
+   trigram has nothing to look up in the GIN. A term shorter than
    `SEARCH_MIN_SUBSTRING_LENGTH` (3) stops after the exact and prefix tiers — both index
    lookups — and answers `meta.short_term: true`; a blank term answers nothing without a
    query. `a` and `ab`: 5 – 6 ms, every statement an index lookup (the guard covers them).
@@ -96,7 +99,7 @@ Not changed, by design:
   offset: 20 – 45 ms, admin-only, not part of the public contract.
 - **Statistics** are counts over whole tables by nature (50 ms, cached by the UI).
 - **`Last-Modified`** (`ORDER BY updateAt DESC LIMIT 1` on five tables) is a sort without an
-  index, run at most once a minute behind a cache (#274).
+  index, run at most once a minute behind a cache.
 
 ## The benchmark
 
@@ -116,8 +119,9 @@ to the data source (`QueryRecorder`), **how many statements one request costs** 
 audit in one column. `--explain` runs `EXPLAIN (FORMAT JSON)` on each recorded statement
 with its parameters bound and prints the sequential scans over the large tables.
 
-The scenarios need the loaded dictionary (they look up the verb _run_). Load it with the
-import page or `docs/offline-import.md`.
+> [!NOTE]
+> The scenarios need the loaded dictionary (they look up the verb _run_). Load it with the
+> import page or `docs/offline-import.md`.
 
 ## The query-plan guard
 
@@ -139,9 +143,9 @@ Beyond the primary keys and the foreign-key indexes TypeORM creates for relation
 
 | Table               | Index                                                                                                                            | Serves                                                                           |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `en_entries`        | `IDX_EN_ENTRY_WORD_C` on `(word COLLATE "C")`                                                                                    | prefix search tiers, admin prefix filter                                         |
+| `en_entries`        | `IDX_EN_ENTRY_WORD_LOWER_C` on `(LOWER(word) COLLATE "C")`                                                                       | prefix search tiers, admin prefix filter                                         |
 | `en_entries`        | `IDX_EN_ENTRY_WORD_TRGM` GIN on `(word gin_trgm_ops)`                                                                            | substring / suffix / phrase search tiers, the fuzzy tier (`%`) — needs `pg_trgm` |
-| `en_words`          | `IDX_EN_WORD_C` on `(word COLLATE "C", id)`                                                                                      | list order and cursor                                                            |
+| `en_words`          | `IDX_EN_WORD_LOWER_C` on `(LOWER(word) COLLATE "C", id)`                                                                         | list order and cursor                                                            |
 | `en_words`          | `IDX_EN_WORD_LEVEL`, `IDX_EN_LANGUAGE_REGISTER`, `IDX_EN_AREA_VARIANT`, `IDX_EN_FORM_OF_WORD`                                    | list and random filters (bitmap-ANDed)                                           |
 | `en_words`          | `IDX_EN_CATEGORIES` GIN on `(categories)`                                                                                        | `?category=` (`categories && ARRAY[…]`)                                          |
 | `en_words`          | `IDX_EN_WORD`, `IDX_EN_WORD_LOOKUP`, `IDX_EN_PART_OF_SPEECH`, `IDX_EN_BASE_FORM`, `IDX_EN_BASE_PHRASAL`, `IDX_EN_PHRASAL_SEARCH` | headword lookups, part of speech, forms and phrasal links                        |
@@ -150,12 +154,16 @@ Beyond the primary keys and the foreign-key indexes TypeORM creates for relation
 
 Indexes a decorator cannot express (`COLLATE "C"`, GIN) are declared on the entity with
 `MANUALLY_MANAGED_INDEX` (`synchronize: false`) and created by their migration
-(`AddEntryWordCollateCIndex`, `AddWordFilterIndexes`, `AddEntryWordTrigramIndex`); `migration:generate` leaves them alone.
+(`AddCaseFoldedWordIndexes`, `AddWordFilterIndexes`, `AddEntryWordTrigramIndex`); `migration:generate` leaves them alone.
+An expression index (`LOWER(word) COLLATE "C"`) gets planner statistics only from `ANALYZE`,
+which its migration runs right after creating it — without them a one-row lookup on the
+expression is estimated at 0.5 % of the table and planned with parallel workers, ~5 ms of
+start-up instead of 0.1 ms; autovacuum keeps the statistics fresh afterwards.
 SQLite gets the plain btrees through `synchronize` and needs nothing for the rest.
 
 ## Numbers
 
-p50 before → after the changes above (the Postgres "after" includes the trigram index of #278 and the short-term flow of #292; the fuzzy and one-letter scenarios did not exist before), then p95 and max after; "queries" is the number of SQL statements one request issues. Postgres 18, 30 iterations; SQLite (better-sqlite3 on the same `dev.sqlite`, no trigram index), 10 – 20 iterations. Same laptop, same dataset.
+p50 before → after the changes above (the Postgres "after" includes the trigram index and the short-term flow; the fuzzy and one-letter scenarios did not exist before), then p95 and max after; "queries" is the number of SQL statements one request issues. Postgres 18, 30 iterations; SQLite (better-sqlite3 on the same `dev.sqlite`, no trigram index), 10 – 20 iterations. Same laptop, same dataset.
 
 ### Postgres
 

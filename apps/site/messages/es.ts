@@ -17,6 +17,7 @@ export default {
     hero_title: 'Un diccionario que puedes ejecutar junto a tu aplicación',
     hero_text:
       'Vocab Bloom Hub es un diccionario de inglés autoalojado — 300 000 entradas con significados, ejemplos, formas flexionadas y traducciones al ruso, español, francés, alemán y portugués — detrás de una API pública de solo lectura, con SDK, una interfaz de administración y un dataset publicado. Un comando para instalar, MIT para el código, CC BY 4.0 para los datos.',
+    cta_getting_started: 'Primeros pasos',
     cta_start: 'Instalar con Docker',
     cta_api: 'Referencia de la API',
     cta_playground: 'Probar la API',
@@ -55,11 +56,6 @@ export default {
       'El código es MIT. Los datos del diccionario — servidos por la API, exportados como datasets, publicados en HuggingFace — son CC BY 4.0: libres para usar y adaptar, también comercialmente, con atribución. En gran parte están generados por LLM y no verificados por personas; lee qué significa eso antes de confiar en ellos.',
     data_link: 'Sobre los datos',
     license_link: 'Licencia de los datos',
-    status_title: 'Estado del proyecto',
-    status_text:
-      'Desarrollo temprano, 0.x: el diccionario, la interfaz de administración y la canalización de importación/exportación funcionan hoy; el contrato de la API aún puede cambiar entre versiones.',
-    roadmap_title: 'Hoja de ruta',
-    roadmap_link: 'Issues abiertos',
   },
   docs: {
     title: 'Documentación',
@@ -68,11 +64,20 @@ export default {
     on_this_page: 'En esta página',
     english_only: 'Esta página solo está disponible en inglés.',
     edit_on_github: 'Editar esta página en GitHub',
+    callouts: {
+      note: 'Nota',
+      tip: 'Consejo',
+      important: 'Importante',
+      warning: 'Advertencia',
+      caution: 'Precaución',
+    },
     sections: {
       start: 'Primeros pasos',
       deployment: 'Despliegue',
+      database: 'Base de datos',
       operations: 'Operación',
-      api: 'API y SDK',
+      api: 'API',
+      sdk: 'SDK',
       data: 'Datos',
       project: 'Proyecto',
     },
@@ -202,6 +207,7 @@ export default {
     data_license: 'Datos: CC BY 4.0',
     issues: 'Issues',
     discussions: 'Discusiones',
+    release_notes: 'Notas de la versión',
     made_by: 'Vocab Bloom Hub por Alexey Ryzhov',
   },
   error: {

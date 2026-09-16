@@ -1,16 +1,3 @@
-import { InterfaceLanguageEnum } from '@/types/common';
-
-import { readRepoFile } from './repo';
-import { extractSection } from './sections';
-
-/** The README's roadmap section, in the locale's README (single source, no copy on the site) */
-export const readRoadmap = (locale: InterfaceLanguageEnum): { markdown: string; file: string } => {
-  const file = locale === InterfaceLanguageEnum.ru ? 'docs/README.ru.md' : 'README.md';
-  const markdown = extractSection(readRepoFile(file), /Roadmap/i) ?? '';
-
-  return { markdown, file };
-};
-
 export const INSTALL_SNIPPET = `mkdir vocab-bloom-hub && cd vocab-bloom-hub
 curl -fsSLO https://raw.githubusercontent.com/Fristail27/vocab-bloom-hub/main/docker-compose.yml
 curl -fsSL  https://raw.githubusercontent.com/Fristail27/vocab-bloom-hub/main/.env.example -o .env

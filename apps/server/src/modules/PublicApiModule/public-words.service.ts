@@ -4,7 +4,7 @@ import { FindOptionsRelations, Repository, SelectQueryBuilder } from 'typeorm';
 import { EnWord } from '../EnModule/entities/en_word.entity';
 import { FULL_WORD_RELATIONS, SEARCH_ITEM_RELATIONS } from '../EnModule/utils/wordRelations';
 import { WordRowsService } from '../EnModule/word-rows.service';
-import { bytewise } from '../EnModule/utils/bytewise';
+import { foldedWord } from '../EnModule/utils/foldedWord';
 import { escapeLike } from '../EnModule/modules/EnSearch/utils/escapeLike';
 import { WordLinkKindT } from '../EnModule/utils/normalizeWordLinks';
 import { toPublicWord } from './utils/projection';
@@ -25,7 +25,7 @@ import {
 } from '../../../types';
 import { WordFiltersV1QueryDTO } from './dto/WordFiltersV1Query.dto';
 import { ListWordsV1QueryDTO, PUBLIC_LIST_DEFAULT_LIMIT } from './dto/ListWordsV1Query.dto';
-import { decodeWordCursor, encodeWordCursor } from './utils/cursor';
+import { decodeWordCursor, encodeWordCursor, wordListFingerprint } from './utils/cursor';
 
 /**
  * Read-only dictionary lookups of the public API (issue #272): a headword
@@ -60,14 +60,17 @@ export class PublicWordsService {
       .select(['w.id', 'w.part_of_speech'])
       .addSelect(['entry.word'])
       .addSelect(['baseForm.id', 'baseForm.part_of_speech'])
-      .where('entry.word IN (:...words)', { words })
+      // case-folded: a grammar pattern keeps its sentence capitals in the
+      // dictionary and is still found by its lower-case spelling (issue #440)
+      .where(`${foldedWord('entry.word')} IN (:...words)`, { words })
       .getMany();
     const byWord = new Map<string, Map<number, EnWord>>();
     for (const row of rows) {
       const target = row.base_form ?? row;
-      const targets = byWord.get(row.word.word) ?? new Map<number, EnWord>();
+      const key = row.word.word.toLowerCase();
+      const targets = byWord.get(key) ?? new Map<number, EnWord>();
       targets.set(target.id, target);
-      byWord.set(row.word.word, targets);
+      byWord.set(key, targets);
     }
     for (const [word, targets] of byWord) {
       found.set(
@@ -225,8 +228,9 @@ export class PublicWordsService {
   private applyFilters(qb: SelectQueryBuilder<EnWord>, filters: WordFiltersV1QueryDTO): void {
     const forms = filters.form_of_word?.length ? filters.form_of_word : [EnWordFormsE.base_form];
     qb.andWhere('w.form_of_word IN (:...forms)', { forms });
-    // a byte-order prefix on the headword: the same IDX_EN_WORD_C range the
-    // ordering walks, so an autocomplete page is one index scan (issue #403)
+    // a case-folded byte-order prefix on the headword: the same
+    // IDX_EN_WORD_LOWER_C range the ordering walks, so an autocomplete page
+    // is one index scan (issue #403)
     const prefix = filters.search?.trim().toLowerCase();
     if (prefix) {
       qb.andWhere(`${this.orderedWord} LIKE :prefix ESCAPE '\\'`, { prefix: `${escapeLike(prefix)}%` });
@@ -283,10 +287,11 @@ export class PublicWordsService {
     return rows.map((row) => toPublicWord(this.sortRelations(row), { with_meanings, with_translations }));
   }
 
-  // The headword column of en_words ordered by its bytes (backed by
-  // IDX_EN_WORD_C on Postgres); no join, en_entries.word holds the same value
+  // The headword column of en_words, case-folded and ordered by its bytes
+  // (backed by IDX_EN_WORD_LOWER_C on Postgres); no join, en_entries.word
+  // holds the same value
   private get orderedWord(): string {
-    return bytewise('w.word');
+    return foldedWord('w.word');
   }
 
   /**
@@ -300,14 +305,15 @@ export class PublicWordsService {
     const qb = this.filtered(query).select('w.id', 'id').addSelect('w.word', 'word');
     if (query.cursor !== undefined) {
       const cursor = decodeWordCursor(query.cursor);
-      if (!cursor) {
+      // a token of another filter set names a position in another listing
+      if (!cursor || cursor.filters !== wordListFingerprint(query)) {
         throw new BadRequestException(ErrorCodes.invalid_cursor);
       }
       // a row comparison, not `word > :w OR (word = :w AND id > :id)`: the
       // planner turns it into one index range start (0.1 ms instead of a
       // 30 ms walk of the index from its beginning on the full dictionary)
       qb.andWhere(`(${this.orderedWord}, w.id) > (:cursorWord, :cursorId)`, {
-        cursorWord: cursor.word,
+        cursorWord: cursor.word.toLowerCase(),
         cursorId: cursor.id,
       });
     }
@@ -328,7 +334,10 @@ export class PublicWordsService {
       meta: {
         limit,
         has_more,
-        next_cursor: has_more && last ? encodeWordCursor({ word: last.word, id: Number(last.id) }) : null,
+        next_cursor:
+          has_more && last
+            ? encodeWordCursor({ word: last.word, id: Number(last.id), filters: wordListFingerprint(query) })
+            : null,
       },
     };
   }

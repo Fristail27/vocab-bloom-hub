@@ -153,62 +153,11 @@
         "tags": [
           "Public API v1"
         ]
-      },
-      "post": {
-        "description": "The same search as `GET /search` with the fields in a JSON body; not cacheable. Kept through the beta.",
-        "operationId": "PublicSearchController_search",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SearchV1ReqDTO"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicSearchV1ResT"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicApiErrorT"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicApiErrorT"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Search dictionary entries (flat list, no meanings) — the POST form",
-        "tags": [
-          "Public API v1"
-        ]
       }
     },
     "/api/v1/search/detailed": {
       "get": {
-        "description": "The GET form of the detailed search: the same fields as the POST body, in the query string; cacheable.",
+        "description": "The detailed search: the same term and tiers, paged, with meanings and translations joined on request; the fields travel in the query string (`translation_languages` as a repeated key). Cacheable like every public GET.",
         "operationId": "PublicSearchController_searchDetailedGet",
         "parameters": [
           {
@@ -333,57 +282,6 @@
           }
         },
         "summary": "Search dictionary entries with pagination, meanings and translations",
-        "tags": [
-          "Public API v1"
-        ]
-      },
-      "post": {
-        "description": "The same search as `GET /search/detailed` with the fields in a JSON body; not cacheable. Kept through the beta.",
-        "operationId": "PublicSearchController_searchDetailed",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SearchDetailedV1ReqDTO"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicSearchDetailedV1ResT"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicApiErrorT"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicApiErrorT"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Search dictionary entries with pagination, meanings and translations — the POST form",
         "tags": [
           "Public API v1"
         ]
@@ -1437,7 +1335,7 @@
   "info": {
     "title": "VocabBloom Public API",
     "description": "Read-only dictionary API under /api/v1 (contract version 1): no authentication, every answer in a { data, meta } envelope, errors as { statusCode, message, error: true }, X-API-Version on every response. Successful GET answers carry ETag, Last-Modified and Cache-Control. See docs/api.md in the repository.",
-    "version": "0.1.0-alpha.3",
+    "version": "0.2.0-beta.1",
     "contact": {}
   },
   "tags": [
@@ -1509,97 +1407,6 @@
         },
         "required": [
           "headword"
-        ]
-      },
-      "SearchV1ReqDTO": {
-        "type": "object",
-        "properties": {
-          "search": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 256,
-            "description": "The term to search for",
-            "example": "run"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "word",
-              "grammar_pattern",
-              "phrase"
-            ],
-            "description": "Restrict the answer to one entry type"
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 100,
-            "default": 10
-          }
-        },
-        "required": [
-          "search"
-        ]
-      },
-      "SearchDetailedV1ReqDTO": {
-        "type": "object",
-        "properties": {
-          "search": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 256,
-            "description": "The term to search for",
-            "example": "run"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "word",
-              "grammar_pattern",
-              "phrase"
-            ],
-            "description": "Restrict the answer to one entry type"
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 20,
-            "default": 10
-          },
-          "page": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 20,
-            "default": 1
-          },
-          "with_meanings": {
-            "type": "boolean",
-            "default": false,
-            "description": "Join the meanings (with translations, synonyms, antonyms) of every item"
-          },
-          "with_translations": {
-            "type": "boolean",
-            "default": false,
-            "description": "Join the short translations of every item"
-          },
-          "translation_languages": {
-            "type": "array",
-            "minItems": 1,
-            "description": "Keep only these translation languages; omit the field for all of them",
-            "items": {
-              "type": "string",
-              "enum": [
-                "ru",
-                "es",
-                "fr",
-                "de",
-                "pt"
-              ]
-            }
-          }
-        },
-        "required": [
-          "search"
         ]
       },
       "WordsBatchV1ReqDTO": {

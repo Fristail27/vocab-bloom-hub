@@ -3,8 +3,10 @@ import { InterfaceLanguageEnum } from '@/types/common';
 export enum DocSectionE {
   start = 'start',
   deployment = 'deployment',
+  database = 'database',
   operations = 'operations',
   api = 'api',
+  sdk = 'sdk',
   data = 'data',
   project = 'project',
 }
@@ -14,8 +16,17 @@ export type DocPageT = {
   slug: string;
   /** The Markdown file, relative to the repository root */
   file: string;
-  /** A Russian version of the same page, when the repository has one (`<name>.ru.md` next to the English file) */
-  ruFile?: string;
+  /**
+   * The translated versions of the page the repository has, by locale
+   * (`<name>.<lang>.md` next to the English file; the README's live under docs/)
+   */
+  translations?: Partial<Record<Exclude<InterfaceLanguageEnum, InterfaceLanguageEnum.en>, string>>;
+  /**
+   * Render one level-2 section of the file instead of the whole file: the
+   * heading that starts it, matched against the raw Markdown line — the same
+   * pattern must hit in every translation (`content/sections.ts`)
+   */
+  extract?: RegExp;
   section: DocSectionE;
   title: string;
   titleRu: string;
@@ -24,18 +35,26 @@ export type DocPageT = {
 // The documentation of the repository, one page per Markdown file. Order is
 // the order in the sidebar
 export const DOC_PAGES: DocPageT[] = [
+  // the README's getting-started section (⚡ in every language), not the whole README
   {
-    slug: 'overview',
+    slug: 'getting-started',
     file: 'README.md',
-    ruFile: 'docs/README.ru.md',
+    extract: /^## ⚡ /,
+    translations: {
+      [InterfaceLanguageEnum.ru]: 'docs/README.ru.md',
+      [InterfaceLanguageEnum.es]: 'docs/README.es.md',
+      [InterfaceLanguageEnum.fr]: 'docs/README.fr.md',
+      [InterfaceLanguageEnum.pt]: 'docs/README.pt.md',
+      [InterfaceLanguageEnum.de]: 'docs/README.de.md',
+    },
     section: DocSectionE.start,
-    title: 'Overview',
-    titleRu: 'Обзор',
+    title: 'Getting started',
+    titleRu: 'Быстрый старт',
   },
   {
     slug: 'deployment',
     file: 'docs/deployment/README.md',
-    ruFile: 'docs/deployment/README.ru.md',
+    translations: { [InterfaceLanguageEnum.ru]: 'docs/deployment/README.ru.md' },
     section: DocSectionE.deployment,
     title: 'Deployment',
     titleRu: 'Развёртывание',
@@ -57,7 +76,7 @@ export const DOC_PAGES: DocPageT[] = [
   {
     slug: 'environment',
     file: 'docs/environment.md',
-    ruFile: 'docs/environment.ru.md',
+    translations: { [InterfaceLanguageEnum.ru]: 'docs/environment.ru.md' },
     section: DocSectionE.deployment,
     title: 'Environment variables',
     titleRu: 'Переменные окружения',
@@ -70,9 +89,16 @@ export const DOC_PAGES: DocPageT[] = [
     titleRu: 'Эксплуатация',
   },
   {
+    slug: 'database',
+    file: 'docs/database.md',
+    section: DocSectionE.database,
+    title: 'Database',
+    titleRu: 'База данных',
+  },
+  {
     slug: 'migrations',
     file: 'docs/migrations.md',
-    section: DocSectionE.operations,
+    section: DocSectionE.database,
     title: 'Migrations',
     titleRu: 'Миграции',
   },
@@ -100,10 +126,17 @@ export const DOC_PAGES: DocPageT[] = [
   {
     slug: 'api',
     file: 'docs/api.md',
-    ruFile: 'docs/api.ru.md',
+    translations: { [InterfaceLanguageEnum.ru]: 'docs/api.ru.md' },
     section: DocSectionE.api,
     title: 'API surfaces',
     titleRu: 'Устройство API',
+  },
+  {
+    slug: 'api-tools',
+    file: 'docs/api-tools.md',
+    section: DocSectionE.api,
+    title: 'Swagger and the API docs',
+    titleRu: 'Swagger и документация API',
   },
   {
     slug: 'authentication',
@@ -115,14 +148,14 @@ export const DOC_PAGES: DocPageT[] = [
   {
     slug: 'sdk/node',
     file: 'packages/npm-sdk/README.md',
-    section: DocSectionE.api,
+    section: DocSectionE.sdk,
     title: 'Node.js SDK',
     titleRu: 'Node.js SDK',
   },
   {
     slug: 'sdk/python',
     file: 'packages/python-sdk/README.md',
-    section: DocSectionE.api,
+    section: DocSectionE.sdk,
     title: 'Python SDK',
     titleRu: 'Python SDK',
   },
@@ -172,11 +205,15 @@ export const findDocBySlug = (slug: string): DocPageT | undefined =>
 
 /** The page rendered from a repository file, for rewriting the links between the Markdown files */
 export const slugForFile = (file: string): string | undefined =>
-  DOC_PAGES.find((page) => page.file === file || page.ruFile === file)?.slug;
+  DOC_PAGES.find((page) => page.file === file || Object.values(page.translations ?? {}).includes(file))?.slug;
 
 export const docTitle = (page: DocPageT, locale: InterfaceLanguageEnum): string =>
   locale === InterfaceLanguageEnum.ru ? page.titleRu : page.title;
 
-/** The file a page is rendered from in a locale: the Russian version when there is one */
+/** The translated file of a page in a locale, when the repository has one */
+export const translatedDocFile = (page: DocPageT, locale: InterfaceLanguageEnum): string | undefined =>
+  locale === InterfaceLanguageEnum.en ? undefined : page.translations?.[locale];
+
+/** The file a page is rendered from in a locale: its translation when there is one, else the English file */
 export const docFile = (page: DocPageT, locale: InterfaceLanguageEnum): string =>
-  locale === InterfaceLanguageEnum.ru && page.ruFile ? page.ruFile : page.file;
+  translatedDocFile(page, locale) ?? page.file;

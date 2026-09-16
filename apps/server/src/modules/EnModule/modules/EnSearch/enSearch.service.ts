@@ -9,7 +9,7 @@ import { EnEntryTypesE, SearchDetailedItemsT, SearchItemsT } from '../../../../.
 import { checkIsPostgres } from '../../../../../configuration';
 import { toPublicSearchWord, toPublicWord } from '../../../PublicApiModule/utils/projection';
 import { escapeLike } from './utils/escapeLike';
-import { bytewise } from '../../utils/bytewise';
+import { foldedWord, likeIgnoringCase } from '../../utils/foldedWord';
 import { WordRowsService } from '../../word-rows.service';
 import { SEARCH_ITEM_RELATIONS } from '../../utils/wordRelations';
 
@@ -40,10 +40,10 @@ export class EnSearchService {
     @Optional() private readonly metrics?: MetricsService,
   ) {}
 
-  private async getExactMatchesAndPhrasalVerbsIds(search: string) {
+  private async getExactMatchesAndPhrasalVerbsIds(search: string, type: EnEntryTypesE | undefined) {
     const exactSet = new Set<number>();
     const phrasalSet = new Set<number>();
-    const exactMatch = await this.enWordsRep
+    const qb = this.enWordsRep
       .createQueryBuilder('w')
       .innerJoin('w.word', 'entry')
       .leftJoinAndSelect('w.base_form', 'baseForm')
@@ -51,18 +51,22 @@ export class EnSearchService {
       .leftJoinAndSelect('baseForm.phrasal_variants', 'baseFormPhrasalVariants')
       .leftJoinAndSelect('w.base_phrasal', 'basePhrasal')
       .leftJoinAndSelect('w.phrasal_variants', 'phrasalVariants')
-      .where('entry.word = :word', { word: search })
-      .getMany();
+      .where(`${foldedWord('entry.word')} = :word`, { word: search });
+    // the type filter binds every tier, the exact one included (issue #440)
+    if (type) qb.andWhere('entry.type = :type', { type });
+    const exactMatch = await qb.getMany();
+    // phrasal variants are words: with another type asked for they stay out
+    const withPhrasal = !type || type === EnEntryTypesE.word;
 
     exactMatch?.forEach((w) => {
       if (w.base_form) {
         exactSet.add(w.base_form.id);
-        if (w.base_form.phrasal_variants) {
+        if (withPhrasal && w.base_form.phrasal_variants) {
           w.base_form.phrasal_variants.forEach((p) => phrasalSet.add(p.id));
         }
       } else {
         exactSet.add(w.id);
-        if (w.phrasal_variants) {
+        if (withPhrasal && w.phrasal_variants) {
           w.phrasal_variants.forEach((p) => phrasalSet.add(p.id));
         }
       }
@@ -71,20 +75,33 @@ export class EnSearchService {
     return { exactSet, phrasalSet };
   }
 
-  private async getWordsStartsFromSearch(search: string, excludedIds: number[], limit: number) {
-    const wordsStartFromSet = new Set<number>();
-    if (limit <= 0) {
-      return wordsStartFromSet;
-    }
+  /**
+   * One substring tier (phrase, suffix, contains) as a grouped query (issue
+   * #440): every matching row — a headword or one of its inflected forms —
+   * resolves to its base entry, one id per entry, and the LIMIT applies after
+   * the grouping, so a tier fills the limit it is given even when the forms
+   * outnumber the headwords, and a form never shows up next to its base. The
+   * shortest headword comes first — "language" before "body language" for
+   * "guag" — ties broken by the byte order of the first matching spelling.
+   * The prefix tier has its own reader below.
+   */
+  private async tierIds(
+    match: { where: string; params: Record<string, string> },
+    includedTypes: EnEntryTypesE[],
+    excludedIds: number[],
+    limit: number,
+  ): Promise<Set<number>> {
+    const ids = new Set<number>();
+    if (limit <= 0 || includedTypes.length === 0) return ids;
 
     const qb = this.enWordsRep
       .createQueryBuilder('w')
-      .innerJoinAndSelect('w.word', 'entry')
-      .leftJoinAndSelect('w.base_form', 'baseForm')
-      .where(`${bytewise('entry.word')} LIKE :word ESCAPE '\\'`, { word: `${escapeLike(search)}%` })
-      .andWhere('entry.type NOT IN (:...excludedTypes)', {
-        excludedTypes: [EnEntryTypesE.phrase, EnEntryTypesE.grammar_pattern],
-      });
+      .innerJoin('w.word', 'entry')
+      .leftJoin('w.base_form', 'baseForm')
+      .select('COALESCE(baseForm.id, w.id)', 'id')
+      .addSelect(`MIN(${foldedWord('entry.word')})`, 'first_word')
+      .where(match.where, match.params)
+      .andWhere('entry.type IN (:...includedTypes)', { includedTypes });
 
     if (excludedIds.length > 0) {
       qb.andWhere('w.id NOT IN (:...excludedIds)', { excludedIds }).andWhere(
@@ -93,123 +110,136 @@ export class EnSearchService {
       );
     }
 
-    const wordsStartFrom = await qb.limit(limit).getMany();
-
-    wordsStartFrom.forEach((w) => {
-      if (w.base_form) {
-        wordsStartFromSet.add(w.base_form.id);
-      } else {
-        wordsStartFromSet.add(w.id);
-      }
-    });
-
-    return wordsStartFromSet;
+    const rows = await qb
+      .addSelect('MIN(LENGTH(entry.word))', 'shortest')
+      .groupBy('COALESCE(baseForm.id, w.id)')
+      .orderBy('shortest', 'ASC')
+      .addOrderBy('first_word', 'ASC')
+      .limit(limit)
+      .getRawMany<{ id: unknown }>();
+    rows.forEach((row) => ids.add(Number(row.id)));
+    return ids;
   }
 
-  private async getWordsEndsFromSearch(
+  /**
+   * Headwords (and forms, resolved to their base) starting with the term, in
+   * byte order; words only. Unlike the other tiers this one is not grouped in
+   * SQL: a one-letter prefix matches ~18k rows and a GROUP BY would aggregate
+   * them all before the LIMIT (40 ms), while the folded index already yields
+   * the rows in the order wanted. So the rows are read in that order, LIMIT
+   * on rows, and collapsed to their base entry here; when the forms leave the
+   * chunk short of `limit` headwords, the next chunk starts after its last row
+   * (a keyset), so the cost stays a bounded index range whatever the prefix.
+   */
+  private async getWordsStartsFromSearch(
     search: string,
     type: EnEntryTypesE | undefined,
     excludedIds: number[],
     limit: number,
-  ) {
-    const wordsEndsFromSet = new Set<number>();
-
-    if ((!type || type === EnEntryTypesE.word) && limit > 0) {
+  ): Promise<Set<number>> {
+    const ids = new Set<number>();
+    if (limit <= 0 || (type && type !== EnEntryTypesE.word)) return ids;
+    const word = foldedWord('entry.word');
+    const chunk = Math.max(limit * 2, 20);
+    let after: { word: string; id: number } | undefined;
+    // each chunk yields at least one new headword or ends the matches, so the
+    // loop is bounded by the limit; the cap is a safety net against a pathology
+    for (let round = 0; round < 8 && ids.size < limit; round += 1) {
       const qb = this.enWordsRep
         .createQueryBuilder('w')
-        .innerJoinAndSelect('w.word', 'entry')
-        .leftJoinAndSelect('w.base_form', 'baseForm')
-        .where("entry.word LIKE :word ESCAPE '\\'", { word: `%${escapeLike(search)}` })
-        .andWhere('entry.type NOT IN (:...excludedTypes)', {
-          excludedTypes: [EnEntryTypesE.phrase, EnEntryTypesE.grammar_pattern],
-        });
-
+        .innerJoin('w.word', 'entry')
+        .leftJoin('w.base_form', 'baseForm')
+        .select('COALESCE(baseForm.id, w.id)', 'id')
+        .addSelect(word, 'first_word')
+        .addSelect('w.id', 'row_id')
+        .where(`${word} LIKE :word ESCAPE '\\'`, { word: `${escapeLike(search)}%` })
+        .andWhere('entry.type = :wordType', { wordType: EnEntryTypesE.word });
       if (excludedIds.length > 0) {
         qb.andWhere('w.id NOT IN (:...excludedIds)', { excludedIds }).andWhere(
           '(baseForm.id IS NULL OR baseForm.id NOT IN (:...excludedIds))',
           { excludedIds },
         );
       }
-      const wordsEndsFrom = await qb.limit(limit).getMany();
-
-      wordsEndsFrom.forEach((w) => wordsEndsFromSet.add(w.id));
+      if (after) {
+        qb.andWhere(`(${word}, w.id) > (:afterWord, :afterId)`, { afterWord: after.word, afterId: after.id });
+      }
+      const rows = await qb
+        .orderBy('first_word', 'ASC')
+        .addOrderBy('w.id', 'ASC')
+        .limit(chunk)
+        .getRawMany<{ id: unknown; first_word: string; row_id: unknown }>();
+      for (const row of rows) {
+        if (ids.size >= limit) break;
+        ids.add(Number(row.id));
+      }
+      if (rows.length < chunk) break;
+      const last = rows[rows.length - 1];
+      after = { word: last.first_word, id: Number(last.row_id) };
     }
-
-    return wordsEndsFromSet;
+    return ids;
   }
 
-  private async getAnyMatchesWords(
+  /** Headwords (and forms, resolved to their base) ending with the term; words only */
+  private getWordsEndsFromSearch(
     search: string,
     type: EnEntryTypesE | undefined,
     excludedIds: number[],
     limit: number,
   ) {
-    const anyMatchesWordsSet = new Set<number>();
-    if (limit > 0) {
-      const includedTypes = type
-        ? [type]
-        : [EnEntryTypesE.grammar_pattern, EnEntryTypesE.phrase, EnEntryTypesE.word];
-
-      const qb = this.enWordsRep
-        .createQueryBuilder('w')
-        .innerJoinAndSelect('w.word', 'entry')
-        .leftJoinAndSelect('w.base_form', 'baseForm')
-        .where("entry.word LIKE :word ESCAPE '\\'", { word: `%${escapeLike(search)}%` })
-        .andWhere('entry.type IN (:...includedTypes)', { includedTypes });
-
-      if (excludedIds.length > 0) {
-        qb.andWhere('w.id NOT IN (:...excludedIds)', { excludedIds }).andWhere(
-          '(baseForm.id IS NULL OR baseForm.id NOT IN (:...excludedIds))',
-          { excludedIds },
-        );
-      }
-
-      const anyMatchesWords = await qb.limit(limit).getMany();
-
-      anyMatchesWords.forEach((w) => anyMatchesWordsSet.add(w.id));
-    }
-
-    return anyMatchesWordsSet;
+    return this.tierIds(
+      {
+        where: `entry.word ${likeIgnoringCase()} :word ESCAPE '\\'`,
+        params: { word: `%${escapeLike(search)}` },
+      },
+      !type || type === EnEntryTypesE.word ? [EnEntryTypesE.word] : [],
+      excludedIds,
+      limit,
+    );
   }
 
-  private async getPhrases(
+  /** Anything containing the term, of the requested type or of every type */
+  private getAnyMatchesWords(
     search: string,
     type: EnEntryTypesE | undefined,
     excludedIds: number[],
     limit: number,
   ) {
-    const phrasesExactSet = new Set<number>();
+    return this.tierIds(
+      {
+        where: `entry.word ${likeIgnoringCase()} :word ESCAPE '\\'`,
+        params: { word: `%${escapeLike(search)}%` },
+      },
+      type ? [type] : [EnEntryTypesE.grammar_pattern, EnEntryTypesE.phrase, EnEntryTypesE.word],
+      excludedIds,
+      limit,
+    );
+  }
 
-    if ((!type || type === EnEntryTypesE.phrase || type === EnEntryTypesE.grammar_pattern) && limit > 0) {
-      const includedTypes = [];
-      if (type === EnEntryTypesE.phrase) includedTypes.push(EnEntryTypesE.phrase);
-      if (type === EnEntryTypesE.grammar_pattern) includedTypes.push(EnEntryTypesE.grammar_pattern);
-      if (!type) {
-        includedTypes.push(EnEntryTypesE.phrase);
-        includedTypes.push(EnEntryTypesE.grammar_pattern);
-      }
-
-      const qb = this.enWordsRep
-        .createQueryBuilder('w')
-        .innerJoinAndSelect('w.word', 'entry')
-        .where(
-          `(${bytewise('entry.word')} LIKE :start ESCAPE '\\' OR entry.word LIKE :middle ESCAPE '\\' OR entry.word LIKE :end ESCAPE '\\')`,
-          {
-            start: `${escapeLike(search)} %`,
-            middle: `% ${escapeLike(search)} %`,
-            end: `% ${escapeLike(search)}`,
-          },
-        )
-        .andWhere('entry.type NOT IN (:...excludedTypes)', { excludedTypes: [EnEntryTypesE.word] });
-
-      if (excludedIds.length > 0) {
-        qb.andWhere('w.id NOT IN (:...excludedIds)', { excludedIds });
-      }
-      const phrasesExact = await qb.limit(limit).getMany();
-
-      phrasesExact.forEach((w) => phrasesExactSet.add(w.id));
-    }
-    return phrasesExactSet;
+  /** Phrases and grammar patterns containing the term as a whole word */
+  private getPhrases(search: string, type: EnEntryTypesE | undefined, excludedIds: number[], limit: number) {
+    const includedTypes = type
+      ? [EnEntryTypesE.phrase, EnEntryTypesE.grammar_pattern].filter((t) => t === type)
+      : [EnEntryTypesE.phrase, EnEntryTypesE.grammar_pattern];
+    return this.tierIds(
+      {
+        // Three plain LIKEs: with the type predicate the planner walks the
+        // ~26k phrases through IDX_EN_ENTRY_TYPE and filters, whatever the
+        // operator — LIKE costs 5 ms over them, ILIKE 26 ms (docs/performance.md).
+        // The term is lower case and so are the phrases; a capital inside a
+        // grammar pattern is reached by the contains tier (ILIKE, trigram GIN).
+        where:
+          `(entry.word LIKE :start ESCAPE '\\' ` +
+          "OR entry.word LIKE :middle ESCAPE '\\' OR entry.word LIKE :end ESCAPE '\\')",
+        params: {
+          start: `${escapeLike(search)} %`,
+          middle: `% ${escapeLike(search)} %`,
+          end: `% ${escapeLike(search)}`,
+        },
+      },
+      includedTypes,
+      excludedIds,
+      limit,
+    );
   }
 
   /**
@@ -278,16 +308,18 @@ export class EnSearchService {
       }
     };
 
-    const { exactSet, phrasalSet } = await this.getExactMatchesAndPhrasalVerbsIds(search);
+    const { exactSet, phrasalSet } = await this.getExactMatchesAndPhrasalVerbsIds(search, type);
     pushUpToTarget(exactSet, 'exact');
     pushUpToTarget(phrasalSet, 'phrasal');
     // exact/phrasal ids beyond the target still must not resurface in lower tiers
     let excludedIds = [...exactSet, ...phrasalSet];
 
-    const wordsStartFromSet =
-      !type || type === EnEntryTypesE.word
-        ? await this.getWordsStartsFromSearch(search, excludedIds, target - ordered.length)
-        : new Set<number>();
+    const wordsStartFromSet = await this.getWordsStartsFromSearch(
+      search,
+      type,
+      excludedIds,
+      target - ordered.length,
+    );
     pushUpToTarget(wordsStartFromSet, 'prefix');
     excludedIds = [...excludedIds, ...wordsStartFromSet];
 

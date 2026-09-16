@@ -5,11 +5,11 @@
 <h1 align="center">Vocab Bloom Hub</h1>
 
 <p align="center">
-  A modular open-source platform for working with vocabulary data: dictionaries, linguistic datasets, and language processing tools.
+  A self-hosted English dictionary: 300 000 entries with meanings, examples, forms, translations and word links behind a public API, an admin UI, two SDKs, a website and an open dataset.
 </p>
 
 <p align="center">
-  <strong>English</strong> | <a href="docs/README.ru.md">Русский</a>
+  <strong>🇺🇸 EN</strong> | <a href="docs/README.ru.md">🇷🇺 RU</a> | <a href="docs/README.es.md">🇪🇸 ES</a> | <a href="docs/README.fr.md">🇫🇷 FR</a> | <a href="docs/README.pt.md">🇵🇹 PT</a> | <a href="docs/README.de.md">🇩🇪 DE</a>
 </p>
 
 <p align="center">
@@ -39,246 +39,156 @@
 
 ---
 
-## 📑 Table of contents
+## 📖 What it is
 
-- [Overview](#-overview)
-- [Project status](#-project-status)
-- [Features](#-features)
-- [Tech stack](#-tech-stack)
-- [Repository structure](#-repository-structure)
-- [Prerequisites](#-prerequisites)
-- [Getting started](#-getting-started)
-- [Scripts](#-scripts)
-- [Configuration](#️-configuration)
-- [Deployment](#-deployment)
-- [Documentation](#-documentation)
-- [Roadmap](#️-roadmap)
-- [Contributing](#-contributing)
-- [Community](#-community)
-- [License](#-license)
+A dictionary server you run yourself. It comes with the data, an API to read it, an admin
+panel to edit it, and SDKs to build on it.
 
----
+**The dictionary**
 
-## 🚀 Overview
+- 89 000 English words and 26 000 phrases, 161 000 senses with definitions and examples
+- IPA transcription, CEFR level, register and domain labels, inflected forms
+- synonym and antonym links between headwords, phrasal verbs linked to their base verb
+- translations into Russian, Spanish, French, German and Portuguese
+- open data: [CC BY 4.0](DATA_LICENSE.md), published on HuggingFace, loaded into an empty
+  instance on the first start; generated with language models, not human-verified
 
-**Vocab Bloom Hub** is a monorepo-based system for building a modern lexical and linguistic platform.
+**The API** — `/api/v1`, read-only, no keys
 
-It is inspired by WordNet-like structures and aims to provide:
+- search with relevance tiers and typo tolerance; a headword with everything attached
+- filtered lists with cursor paging, a random entry, a batch lookup of up to 50 words
+- rate-limited per client, every answer cached with an ETag, an OpenAPI document to generate from
 
-- 📖 Multilingual dictionary database
-- 🔎 Fast lexical search
-- 🔗 Word relations graph (synonyms, antonyms, hypernyms, etc.)
-- 📊 Linguistic datasets and tooling
-- 🧠 SDKs for Python and Node.js
+**The SDKs** — generated from that OpenAPI document
 
----
+- Node.js / TypeScript: `npm install @vocab-bloom-hub/client@alpha`
+- Python: `pip install --pre vocab-bloom-hub` (sync, async, a pandas helper)
 
-## 🚧 Project status
+**The admin panel** — six interface languages
 
-The project is in **early development** (`0.x`). The first alpha is [released](https://github.com/Fristail27/vocab-bloom-hub/releases): Docker images on GHCR, the SDKs on npm and PyPI, the dataset tagged on HuggingFace. The English dictionary, the admin UI and the import/export pipeline are usable today, but the API contract may still change between releases without a deprecation period. Follow the [issues](https://github.com/Fristail27/vocab-bloom-hub/issues) and [pull requests](https://github.com/Fristail27/vocab-bloom-hub/pulls) to see what is being worked on.
+- edit words, senses, translations and links; every change in an audit log
+- moderate the corrections readers send from the word pages
+- run bulk requests to a language model over a filtered slice of the dictionary
+- import and export the whole dictionary as a dataset, online or from a file
 
----
+**The website** — the docs, the API reference, a playground, public word pages
 
-## ✨ Features
+**Under the hood** — PostgreSQL (SQLite for development), Docker images, migrations on start,
+health probes, Prometheus metrics, JSON logs.
 
-- **Admin UI** (English, Russian, Spanish, French, Portuguese and German interface) with three areas:
-  - _Managing_ — create and edit English words, their meanings, translations, synonyms, antonyms and short translations;
-  - _Statistics_ — an overview of the dictionary contents;
-  - _Documentation_ — in-app reference for the data model.
-- **REST API** documented with Swagger/OpenAPI: a public read-only, versioned prefix `/api/v1` for consuming applications — search (a cacheable `GET`), headwords with meanings, forms, translations, synonyms and antonyms, a batch lookup, filtered cursor-paged lists, a random entry; no login, rate-limited, every `GET` cached with ETag — and an admin API protected by a single admin login (httpOnly JWT cookie or Bearer token) — see [`docs/api.md`](docs/api.md).
-- **Node.js / TypeScript SDK** for the public API — [`@vocab-bloom-hub/client`](packages/npm-sdk/README.md): typed methods per endpoint, cursor and page iteration, typed errors, ETag cache, opt-in retry, a versioned `User-Agent`; ESM and CommonJS, types generated from the committed OpenAPI document — `npm install @vocab-bloom-hub/client`.
-- **Python SDK** — [`vocab-bloom-hub`](packages/python-sdk/README.md): sync + async clients, pydantic models from the same spec, per-request options, opt-in retry, `words_dataframe()` for notebooks — `pip install --pre vocab-bloom-hub`.
-- **Dictionary import / export** as NDJSON datasets (`POST /api/en/dictionary/import`, `GET /api/en/dictionary/export`), so the whole dictionary can be versioned, shared or moved between environments — including offline, from an uploaded archive or a folder on the server (see [`docs/offline-import.md`](docs/offline-import.md)).
-- **Website** — [`apps/site`](apps/site): the documentation rendered from this repository, the public API reference from the OpenAPI document, a live playground and word pages over a running instance; the `site` profile of `docker-compose.yml`.
-- **Search** across words, meanings and translations.
-- **PostgreSQL** in production with TypeORM migrations applied on startup, and a zero-config **SQLite** fallback for local development and tests.
-- **Shared API types** — the frontend imports request/response types and error codes straight from the `server` workspace, so the two apps never drift apart.
-- **Quality gates** — ESLint, Prettier, type checks, unit, API (SQLite and Postgres) and browser e2e tests run in CI on every pull request, with a server coverage threshold and a dependency audit; CodeQL scans `main`.
-
----
-
-## 🧰 Tech stack
-
-| Layer    | Technology                                                                                 |
-| -------- | ------------------------------------------------------------------------------------------ |
-| Frontend | [Next.js 16](https://nextjs.org/) (App Router), React, Ant Design, Sass modules, next-intl |
-| Backend  | [NestJS 12](https://nestjs.com/), TypeORM, Swagger (OpenAPI)                               |
-| Database | PostgreSQL (production) / SQLite via better-sqlite3 (development)                          |
-| Testing  | Jest, Supertest, Playwright                                                                |
-| Tooling  | TypeScript, Yarn 4 workspaces, ESLint 10, Prettier, Husky + lint-staged, Dependabot        |
-
----
-
-## 🧱 Repository structure
-
-```txt
-.
-├── apps/
-│   ├── frontend/   → Next.js admin UI (en/ru locales)
-│   ├── site/       → Next.js project website: docs, API reference, playground, word pages (en/ru)
-│   ├── server/     → NestJS API; also exports shared types (types/) and constants (core/) used by the frontend
-│   └── e2e/        → Playwright browser tests that boot both apps against an isolated SQLite database
-├── packages/npm-sdk → @vocab-bloom-hub/client, the Node.js / TypeScript SDK of the public API
-├── packages/python-sdk → vocab-bloom-hub, the Python SDK of the public API (uv, httpx, pydantic)
-├── docs/           → In-depth documentation (deployment, operations, observability, performance, environment, API, authentication, migrations, offline import, data) and the Russian README
-├── eslint/         → Shared ESLint config pieces (base / next / nest)
-├── .github/        → CI workflows, issue/PR templates, Dependabot, CODEOWNERS
-├── .env            → Single environment file used by both apps (not committed)
-└── package.json    → Root workspace scripts
-```
-
----
-
-## ✅ Prerequisites
-
-- **Node.js >= 22.13** to run it; the Jest suites need 24.9+ (NestJS 12 is ESM-only and Jest's `require(ESM)` needs it)
-- **Yarn 4** (the repo pins the version via `packageManager`; enable it with `corepack enable`)
-- **PostgreSQL** — optional. Without `DATABASE_URL` the server falls back to a local `dev.sqlite` file.
+> [!NOTE]
+> Status: `0.x`, first alpha released; the API may change between releases.
 
 ---
 
 ## ⚡ Getting started
 
+Three ways in, from the quickest to the most flexible. All of them end with the admin panel on
+<http://localhost:3000>, the API on <http://localhost:3010> and the dictionary loaded.
+
+### 1. Run the published images
+
+No checkout needed — one folder, two files, Docker:
+
+```bash
+mkdir vocab-bloom-hub && cd vocab-bloom-hub
+curl -fsSLO https://raw.githubusercontent.com/Fristail27/vocab-bloom-hub/main/docker-compose.yml
+curl -fsSL  https://raw.githubusercontent.com/Fristail27/vocab-bloom-hub/main/.env.example -o .env
+```
+
+Open `.env` and set two passwords: `ADMIN_PASSWORD` (the admin login) and `POSTGRES_PASSWORD`
+(the bundled database). Then:
+
+```bash
+docker compose up -d
+```
+
+The first start downloads the dictionary and imports it — a few minutes. `GET /api/ready`
+answers `503` until it is in and `200` after; then sign in with `ADMIN_USERNAME` /
+`ADMIN_PASSWORD` from `.env`.
+
+```bash
+curl -s localhost:3010/api/ready            # {"status":"ok"}
+curl -s localhost:3010/api/v1/words/run     # the dictionary answers
+```
+
+> [!TIP]
+> To pin a release instead of the `main` development build, set `VBH_TAG=0.1.0-alpha.3` in `.env`.
+> To add the website (docs, API reference, playground, word pages) on <http://localhost:3020>, set
+> `COMPOSE_PROFILES=db,site`.
+
+### 2. Run from the repository
+
+The same compose file, built from the sources — for a fork or an unpublished change:
+
+```bash
+git clone https://github.com/Fristail27/vocab-bloom-hub.git
+cd vocab-bloom-hub
+cp .env.example .env                           # the same two passwords
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+```
+
+### 3. Run without Docker
+
+A production run on the machine itself: Node.js 22.13+, Yarn 4 (`corepack enable`) and a
+Postgres you can reach ([`docs/database.md`](docs/database.md)).
+
 ```bash
 git clone https://github.com/Fristail27/vocab-bloom-hub.git
 cd vocab-bloom-hub
 yarn install
+printf 'NODE_ENV=production\nDATABASE_URL=postgres://user:password@localhost:5432/vocab_bloom\nADMIN_USERNAME=admin\nADMIN_PASSWORD=change-me\nNEXT_PUBLIC_BASE_API_URL=http://localhost:3010/api\nDICTIONARY_AUTO_IMPORT=true\n' > .env
+yarn build && yarn start                       # API :3010, admin :3000; the dictionary loads itself on the first start
+yarn site:build && yarn start:site             # the website :3020, optional, in another terminal
 ```
 
-Create a `.env` file at the repository root. The minimal development setup is:
+Behind a domain and TLS, with systemd or PM2: [`docs/deployment/`](docs/deployment/README.md).
 
-```dotenv
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=change-me
-NODE_ENV=development
-NEXT_PUBLIC_BASE_API_URL=http://localhost:3010/api
-```
+### For development
 
-Then start both apps:
+No database needed: without `DATABASE_URL` the server uses a local SQLite file, and every app
+restarts on change.
 
 ```bash
-yarn dev
+printf 'NODE_ENV=development\nADMIN_USERNAME=admin\nADMIN_PASSWORD=change-me\nNEXT_PUBLIC_BASE_API_URL=http://localhost:3010/api\n' > .env
+yarn dev                                       # API :3010, admin :3000, website :3020
 ```
 
-- Admin UI: <http://localhost:3000> (the login page is at `/en/login` or `/ru/login`)
-- API: <http://localhost:3010>
-- Swagger UI: <http://localhost:3010/api> (disabled in production)
+> [!IMPORTANT]
+> Load the dictionary with _Import dictionary_ in the admin panel.
 
-Sign in with the `ADMIN_USERNAME` / `ADMIN_PASSWORD` values from your `.env`. See [`docs/environment.md`](docs/environment.md) for the full list of variables, including the Postgres setup.
+Everything else for contributors: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-> **Tip:** the SQLite fallback keeps its schema in sync with the entities automatically, so you can start hacking on the data model without writing migrations. Switch to Postgres (and migrations) once the change is ready — see [`docs/migrations.md`](docs/migrations.md).
+### Next
 
----
-
-## 📜 Scripts
-
-All commands run from the repository root.
-
-| Command                              | What it does                                                                                         |
-| ------------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| `yarn dev`                           | Run the API, the admin UI and the website together (with watch)                                      |
-| `yarn server:dev` / `yarn front:dev` | Run only the API (port `SERVER_PORT`, default 3010) or only the UI (port `FRONT_PORT`, default 3000) |
-| `yarn site:dev` / `yarn start:site`  | The website: dev server / production build start (port `SITE_PORT`, default 3020)                    |
-| `yarn test`                          | All unit tests (server, frontend, site, npm SDK)                                                     |
-| `yarn jest --selectProjects server`  | Only server tests (or `frontend`, `site`, `sdk`)                                                     |
-| `yarn workspace server test:cov`     | Server unit tests with coverage; CI fails below the thresholds in `apps/server/jest.config.ts`       |
-| `yarn workspace server test:e2e`     | Server e2e tests (Supertest against an in-memory SQLite)                                             |
-| `yarn e2e` / `yarn e2e:ui`           | Browser e2e: production frontend build + Playwright (API :3011, UI :3001)                            |
-| `yarn e2e:site`                      | Browser e2e of the website (API :3012, site :3021)                                                   |
-| `yarn lint` / `yarn lint:fix`        | ESLint                                                                                               |
-| `yarn format` / `yarn format:check`  | Prettier                                                                                             |
-| `yarn check`                         | `lint` + `format:check` + `peers:check` (unmet peer dependencies) — run before opening a PR          |
-
-Database migrations (Postgres only, need `DATABASE_URL`):
-
-```bash
-DATABASE_URL=postgres://... yarn workspace server migration:generate src/db/migrations/MyChange
-DATABASE_URL=postgres://... yarn workspace server migration:run      # also migration:revert / migration:show
-```
-
----
-
-## ⚙️ Configuration
-
-A single `.env` at the repository root is shared by both apps. The most important variables:
-
-| Variable                   | Required      | Description                                                                    |
-| -------------------------- | ------------- | ------------------------------------------------------------------------------ |
-| `ADMIN_USERNAME`           | yes           | Admin login                                                                    |
-| `ADMIN_PASSWORD`           | yes           | Admin password; the server refuses to start when it is missing                 |
-| `DATABASE_URL`             | in production | `postgres://user:pass@host:5432/db` or `sqlite:<path>`; SQLite fallback in dev |
-| `SERVER_PORT`              | no (3010)     | API port                                                                       |
-| `FRONT_PORT`               | no (3000)     | Admin UI port                                                                  |
-| `NEXT_PUBLIC_BASE_API_URL` | no (`/api`)   | API base URL used by the browser; inlined at build time                        |
-| `CORS_ORIGINS`             | no            | Comma-separated allowed origins                                                |
-| `LOG_LEVEL`                | no            | `verbose` / `debug` / `log` / `warn` / `error` / `fatal`                       |
-| `LOG_FORMAT`               | no            | `json` (one object per line; default in production) or `pretty` (terminal)     |
-| `NODE_ENV`                 | no            | `production` requires Postgres, secures the auth cookie and disables Swagger   |
-
-Full reference with defaults and startup validation rules: [`docs/environment.md`](docs/environment.md).
-
----
-
-## 🚢 Deployment
-
-Two supported shapes, both behind a reverse proxy that terminates TLS and routes `/api/*` to the server and everything else to the frontend (the admin cookie is `secure` whenever the login came over https).
-
-**Docker** — download `docker-compose.yml` and `.env.example` (as `.env`, set the passwords), `docker compose up -d`: Postgres, the API and the admin UI from the published images `ghcr.io/fristail27/vocab-bloom-hub-server` / `-frontend` (`main` = development builds, or pin a release: `VBH_TAG=0.1.0-alpha.3`), published on localhost; the dictionary loads itself on the first start (`DICTIONARY_AUTO_IMPORT`, `/api/ready` reports the progress). Guide: [`docs/deployment/docker.md`](docs/deployment/docker.md).
-
-**Native Node.js:**
-
-1. Provide the environment: `NODE_ENV=production`, a `postgres://` `DATABASE_URL`, strong `ADMIN_USERNAME` / `ADMIN_PASSWORD`, `NEXT_PUBLIC_BASE_API_URL` and `CORS_ORIGINS` set to the public origin, `TRUST_PROXY=1`.
-2. `yarn build`, then `yarn start` (or `yarn start:server` / `yarn start:front` under systemd or PM2 — example files in the guide); pending migrations run on server start. `ENV_FILE` points at an environment file outside the checkout; `GET /api/health` and `GET /api/ready` are the probes; SIGTERM stops the server gracefully.
-3. Put Caddy or nginx in front — copy-and-adapt configs, exposure profiles (public dictionary + private admin) and a security checklist are in the guide.
-
-Full guide: [`docs/deployment/`](docs/deployment/README.md) → [`reverse-proxy.md`](docs/deployment/reverse-proxy.md).
-
----
-
-## 📚 Documentation
-
-- [`docs/deployment/`](docs/deployment/README.md) — production build and start, probes, graceful stop, systemd / PM2; [`docker.md`](docs/deployment/docker.md): the three images and `docker compose` with Postgres; [`reverse-proxy.md`](docs/deployment/reverse-proxy.md): TLS, Caddy / nginx configs, exposure profiles, keeping the admin API private
-- [`docs/operations.md`](docs/operations.md) — operating an instance: what holds state and what to back up, database backup vs dictionary export, upgrading and rolling back, dataset updates vs code updates, sizing
-- [`docs/environment.md`](docs/environment.md) — every environment variable, driver selection, startup checks
-- [`docs/authentication.md`](docs/authentication.md) — how the single-admin login, login proof and JWT cookie work
-- [`docs/migrations.md`](docs/migrations.md) — TypeORM migrations workflow for Postgres, deployment and troubleshooting
-- [`docs/offline-import.md`](docs/offline-import.md) — moving a dictionary between instances without internet access (export → copy → import from file)
-- [`docs/observability.md`](docs/observability.md) — Prometheus metrics and structured JSON logs: enabling the endpoint, keeping it private, every metric, the log fields and the request id, shipping the logs to a collector
-- [`docs/performance.md`](docs/performance.md) — latency of the hot reads on the full dictionary (Postgres vs SQLite), the indexes behind them, the benchmark and the query-plan guard
-- [`docs/api.md`](docs/api.md) — the public `/api/v1` contract (envelope, errors, rate limit, caching, OpenAPI export) and the public-only / admin-only switches
-- [`docs/data.md`](docs/data.md) — where the dictionary data comes from (LLM-generated, `generated_by_model`), known limitations, how to report errors; the terms are in [`DATA_LICENSE.md`](DATA_LICENSE.md)
-- [`docs/README.ru.md`](docs/README.ru.md) — this README in Russian
-- Swagger UI at `/api` on a running server — the live API reference; the public contract as OpenAPI: [`apps/server/openapi/public-v1.json`](apps/server/openapi/public-v1.json) or `GET /api/v1/openapi.json`
-
----
-
-## 🗺️ Roadmap
-
-Planned directions, in no particular order (see the [issues](https://github.com/Fristail27/vocab-bloom-hub/issues) for the current state):
-
-- Semantic search and a semantic network on top of the dictionary (next major version)
-- Word relations graph beyond synonyms and antonyms: hypernyms/hyponyms, collocations
-- More source languages besides English, and more translation languages beyond Russian, Spanish, French, German and Portuguese
-- Published linguistic datasets built from the dictionary
+- Put it on a server: [`docs/deployment/`](docs/deployment/README.md) — TLS and a reverse
+  proxy, systemd / PM2, upgrades.
+- The database: [`docs/database.md`](docs/database.md) — Postgres requirements, migrations,
+  backups, sizing.
+- Every setting: [`docs/environment.md`](docs/environment.md).
+- Metrics and logs: [`docs/observability.md`](docs/observability.md) — Prometheus and Grafana in
+  one command, or your own.
+- Read the data: [`docs/api.md`](docs/api.md), the [Node.js](packages/npm-sdk/README.md) and
+  [Python](packages/python-sdk/README.md) SDKs.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workflow (branch naming, commit messages, PR checklist) and the [Code of Conduct](CODE_OF_CONDUCT.md).
-
-Found a bug or have an idea? Open an [issue](https://github.com/Fristail27/vocab-bloom-hub/issues/new/choose) — the templates will guide you. Every pull request is checked by CI (lint, format, type checks, tests), so run `yarn check && yarn test` locally first.
-
----
-
-## 💬 Community
-
-- [GitHub Discussions](https://github.com/Fristail27/vocab-bloom-hub/discussions) — questions, ideas, show & tell
-- [Issues](https://github.com/Fristail27/vocab-bloom-hub/issues) — bug reports and feature requests
+Contributions are welcome. [`CONTRIBUTING.md`](CONTRIBUTING.md) has the workflow (branch names,
+commit messages, the PR checklist), the tech stack and repository layout, every script, the
+index of the documentation and the roadmap; the [Code of Conduct](CODE_OF_CONDUCT.md) applies
+to every interaction. Found a bug or have an idea? Open an
+[issue](https://github.com/Fristail27/vocab-bloom-hub/issues/new/choose) — the templates guide
+you.
 
 ---
 
 ## 📄 License
 
 - **Code** — [MIT](LICENSE) © Alexey Ryzhov (Fristail27)
-- **Dictionary data** (exports, the public API, the HuggingFace dataset) — [CC BY 4.0](DATA_LICENSE.md): free to use and adapt, including commercially, with attribution. The data is largely LLM-generated and not human-verified — see [`docs/data.md`](docs/data.md) before relying on it.
+- **Dictionary data** (exports, the public API, the HuggingFace dataset) — [CC BY 4.0](DATA_LICENSE.md): free to use and adapt, including commercially, with attribution.
+
+> [!IMPORTANT]
+> The data is largely LLM-generated and not human-verified — see [`docs/data.md`](docs/data.md)
+> before relying on it.

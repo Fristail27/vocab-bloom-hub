@@ -1,34 +1,35 @@
 # Deployment
 
-How to run a Vocab Bloom Hub instance in production: as plain Node.js processes (this page) or
-in containers ([`docker.md`](./docker.md) — `docker compose up` with the published images and
-Postgres included). Either way a reverse proxy with TLS goes in front.
+Two ways to run an instance in production: in containers — `docker compose up` with the
+published images, the easiest ([`docker.md`](./docker.md)) — or as plain Node.js processes
+(this page). Either way a reverse proxy with TLS goes in front
+([`reverse-proxy.md`](./reverse-proxy.md)) and Postgres holds the data
+([`../database.md`](../database.md)).
 
-| Page                                           | What it covers                                                                                      |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| this page                                      | Building and starting the two processes, probes, graceful stop, process managers                    |
-| [`docker.md`](./docker.md)                     | The three images, `docker-compose.yml` with Postgres, build arguments, upgrading containers         |
-| [`examples/`](./examples/)                     | systemd units for both processes and a PM2 process file                                             |
-| [`reverse-proxy.md`](./reverse-proxy.md)       | TLS, routing both apps on one host, keeping the admin API private (Caddy / nginx), `TRUST_PROXY`    |
-| [`../operations.md`](../operations.md)         | Day two: what to back up, database backup vs dictionary export, upgrading and rolling back, sizing  |
-| [`../environment.md`](../environment.md)       | Every environment variable, startup validation                                                      |
-| [`../migrations.md`](../migrations.md)         | Postgres schema migrations: automatic run on start, adopting an old auto-synced database, rollbacks |
-| [`../offline-import.md`](../offline-import.md) | Loading the dictionary on an instance without internet access                                       |
+| Page                                           | What it covers                                                               |
+| ---------------------------------------------- | ---------------------------------------------------------------------------- |
+| this page                                      | Build and start the two processes, probes, graceful stop, systemd / PM2      |
+| [`docker.md`](./docker.md)                     | The three images, `docker-compose.yml`, the first start, building the images |
+| [`reverse-proxy.md`](./reverse-proxy.md)       | TLS, one origin for both apps, keeping the admin API private (Caddy / nginx) |
+| [`examples/`](./examples/)                     | systemd units for both processes and a PM2 process file                      |
+| [`../database.md`](../database.md)             | Postgres inside compose or separate, migrations, backups, size               |
+| [`../environment.md`](../environment.md)       | Every environment variable                                                   |
+| [`../operations.md`](../operations.md)         | Backups, upgrading, rolling back, dataset updates                            |
+| [`../observability.md`](../observability.md)   | Metrics (Prometheus + Grafana) and logs                                      |
+| [`../offline-import.md`](../offline-import.md) | Loading the dictionary without internet access                               |
 
 ## What production requires
 
-- **Node.js ≥ 22.13** and Yarn 4 (`corepack enable`) on the host (CI builds, starts and probes the production build on 22).
-- **Postgres** — the only supported production database; the server refuses to start with
-  `NODE_ENV=production` on SQLite. The full dictionary needs the indexes the migrations create
-  (see [`../performance.md`](../performance.md)).
-- **TLS in front of both apps** — the admin session cookie is `secure` in production and is not
-  sent over plain HTTP, so the admin UI only works on `https://`. The proxy also routes the two
-  processes under one origin; see [`reverse-proxy.md`](./reverse-proxy.md).
+- **Node.js ≥ 22.13** and Yarn 4 (`corepack enable`).
+- **Postgres** — the only production database; the server refuses `NODE_ENV=production` on
+  SQLite ([`../database.md`](../database.md)).
+- **HTTPS** for anything beyond this host — the admin cookie is `secure` only when the login
+  came over `https://`; over plain `http://` it travels unencrypted and the server logs a warning
+  at every login ([`reverse-proxy.md`](./reverse-proxy.md)).
 
 ## Environment
 
-Both apps read a single `.env` at the repository root (or the process environment). The values
-that matter in production:
+Both apps read one `.env` at the repository root. The values that matter in production:
 
 ```dotenv
 NODE_ENV=production
@@ -42,9 +43,11 @@ CORS_ORIGINS=https://dict.example.com
 TRUST_PROXY=1
 ```
 
-`NEXT_PUBLIC_*` values are inlined into the frontend bundle at build time — changing them means
-rebuilding the frontend. The full list, defaults and the checks the server runs at startup are in
-[`../environment.md`](../environment.md).
+> [!IMPORTANT]
+> `NEXT_PUBLIC_*` values are inlined into the frontend bundle at build time: change one, rebuild
+> the frontend.
+
+Every variable, its default and the startup checks: [`../environment.md`](../environment.md).
 
 ## Build and start
 
@@ -58,63 +61,59 @@ yarn start:front                  # next start — listens on PORT (3000)
 yarn site:build && yarn start:site # the project website, optional — listens on SITE_PORT (3020); docker.md#the-website
 ```
 
-The environment comes from the root `.env` or from the file named by **`ENV_FILE`** — an
-absolute path, for a checkout that keeps its secrets under `/etc` or a build that runs outside
-the repository tree ([`../environment.md`](../environment.md)). On start the server logs which
-file it loaded, validates the configuration (exits with code 1 and a message when something
-required is missing or `ENV_FILE` cannot be read), runs pending migrations, and logs the
-resolved database, CORS origins, trust-proxy setting, probe paths, log format and which API
-surfaces are enabled. The log goes to stdout — JSON lines with `NODE_ENV=production`
-([`../observability.md`](../observability.md#logs)) — and the process manager keeps it. Both processes are stateless apart from the database and, if used,
-`DICTIONARY_IMPORT_DIR`.
+**`ENV_FILE`** (an absolute path) loads another file than the root `.env` — for secrets kept
+under `/etc`, or a build started outside the checkout. On start the server logs the file it
+loaded, validates the configuration (exit code 1 with a message when something required is
+missing), runs pending migrations and logs the database, CORS origins, trust-proxy setting,
+probe paths, log format and enabled API surfaces. The log is stdout — JSON lines in production
+([`../observability.md`](../observability.md#logs)). Both processes are stateless apart from the
+database and, if used, `DICTIONARY_IMPORT_DIR`.
 
-CI starts the production build the same way on every pull request — `yarn build`, `yarn start`
-against Postgres, the probes and the login page, then a SIGTERM — so this path cannot rot
-(`.github/scripts/production-smoke.sh`).
+CI builds and starts the production build against Postgres on every pull request, probes it and
+stops it with SIGTERM (`.github/scripts/production-smoke.sh`).
 
 ## Probes
 
-The server answers two probes under `/api`, so the proxy configs route them like every other API
-path; they need no login, are not rate-limited, ignore the `PUBLIC_API_ENABLED` /
-`ADMIN_API_ENABLED` switches and are never cached:
+Two probes under `/api` — no login, no rate limit, never cached, on even when an API surface is
+switched off:
 
-| Probe             | Answers                                                                                                                                                                                                                      | Use it for                                                                               |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `GET /api/health` | `200 { "status": "ok", "version": "…" }` as long as the process serves HTTP                                                                                                                                                  | liveness: restart the process when it stops answering                                    |
-| `GET /api/ready`  | `200 { "status": "ok" }` once migrations ran and the database answers (`SELECT 1`, 2 s budget); otherwise `503 { "status": "error", "reason": "database_unreachable" \| "shutting_down" \| "importing" \| "import_failed" }` | readiness: route traffic only while it is `200`; it turns `503` the moment a stop begins |
+| Probe             | Answers                                                                                                                                                                                                                      | Use it for                                                                         |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `GET /api/health` | `200 { "status": "ok", "version": "…" }` as long as the process serves HTTP                                                                                                                                                  | liveness: restart the process when it stops answering                              |
+| `GET /api/ready`  | `200 { "status": "ok" }` once migrations ran and the database answers (`SELECT 1`, 2 s budget); otherwise `503 { "status": "error", "reason": "database_unreachable" \| "shutting_down" \| "importing" \| "import_failed" }` | readiness: route traffic only while it is `200`; it turns `503` when a stop begins |
 
-A `503` with `database_unreachable` means the process is up but Postgres is not: restarting the
-server does not help, the database does. The frontend has no probe of its own; `GET /en/login`
-answering `200` is the equivalent check.
+> [!NOTE]
+> `503 database_unreachable` means the process is fine and Postgres is not: fix the database, not
+> the server.
+
+The frontend has no probe; `GET /en/login` answering `200` is the equivalent.
 
 ## Stopping and restarting
 
-Stopping is the process manager's job; the server cooperates. On **SIGTERM** (or SIGINT) it:
+On **SIGTERM** (or SIGINT) the server:
 
-1. reports `503 shutting_down` on `/api/ready`, so a load balancer stops sending new requests;
-2. closes the listener — no new connections — and lets the requests in flight finish;
+1. answers `503 shutting_down` on `/api/ready`, so a load balancer stops sending requests;
+2. closes the listener and lets the requests in flight finish;
 3. closes the Postgres pool and exits with code 0.
 
-Everything must fit in **`SHUTDOWN_TIMEOUT`** seconds (30 by default). A stop that takes longer —
-a dictionary import in progress, a stuck connection — ends with `forcing exit` in the log and
-exit code 1 instead of hanging until the manager's SIGKILL. Give the manager a stop timeout
-_above_ this budget (`TimeoutStopSec` in systemd, `kill_timeout` in PM2) or it kills first.
+All of it within **`SHUTDOWN_TIMEOUT`** seconds (30 by default); past that the log says
+`forcing exit` and the exit code is 1.
 
-Restarting is the manager's job too: `Restart=always` (systemd), `autorestart` (PM2). The server
-exits with code 1 when it cannot start — missing configuration, a database it cannot reach (the
-migrations fail) — and the manager retries after its delay; `journalctl` shows why. A deploy is
-therefore: back up, ship the new build, restart both processes, watch `/api/ready` turn `200`
-([`../operations.md`](../operations.md#upgrading-the-code)). One process cannot be upgraded
-without a pause; zero-downtime needs two server instances behind the proxy, taken out of
-rotation by their readiness probe in turn — a topology this guide does not cover.
+> [!IMPORTANT]
+> Give the process manager a stop timeout _above_ this budget (`TimeoutStopSec` in systemd,
+> `kill_timeout` in PM2) or it kills first.
 
-More generally, the server is designed to run as **one instance per database**: the public
-rate-limit buckets, the login replay protection and the pending export downloads live in
-process memory, so replicas would each keep their own. Multiple replicas behind one
-load balancer will work but weaken the rate limits (each replica counts separately) and
-break export downloads that land on the wrong replica. Scale the database and the proxy
-first; a shared rate-limit store is a change worth an issue if a real multi-replica need
-appears.
+Restarting is the manager's job: `Restart=always` (systemd), `autorestart` (PM2). A server that
+cannot start — missing configuration, unreachable database — exits with code 1 and the manager
+retries; `journalctl` shows why. A deploy is: back up, ship the new build, restart both
+processes, watch `/api/ready` turn `200` ([`../operations.md`](../operations.md#upgrading-the-code)).
+There is a pause between the old and the new process; zero downtime needs two server instances
+behind the proxy, which this guide does not cover.
+
+> [!WARNING]
+> Run **one server instance per database**: the rate-limit buckets, the login replay protection
+> and the pending export downloads live in process memory. Replicas work but each counts the
+> limits on its own, and an export download that lands on another replica fails.
 
 ## Process managers
 
@@ -125,33 +124,30 @@ Ready-to-adapt files in [`examples/`](./examples/):
   `node` directly (no yarn in between, so the signal and the exit code are the process's own),
   `ENV_FILE` / `EnvironmentFile=` pointing at `/etc/vocab-bloom-hub/.env`, `TimeoutStopSec`
   above `SHUTDOWN_TIMEOUT`, `Restart=always`. Copy to `/etc/systemd/system/`, adjust paths and
-  user, `systemctl daemon-reload && systemctl enable --now vocab-bloom-hub-server
-vocab-bloom-hub-frontend`.
+  user, `systemctl daemon-reload && systemctl enable --now vocab-bloom-hub-server vocab-bloom-hub-frontend`.
 - **PM2** — [`ecosystem.config.cjs`](./examples/ecosystem.config.cjs): both apps from one file,
   `pm2 start docs/deployment/examples/ecosystem.config.cjs` after `yarn build`, then
   `pm2 save && pm2 startup` to come back after a reboot.
 
-Neither file is required: `yarn start` under any supervisor that forwards SIGTERM works the same.
+Any supervisor that forwards SIGTERM to `yarn start` works the same.
 
 ## First data
 
 A fresh instance has an empty dictionary. Two ways to fill it:
 
-- **By itself, on first start** — set `DICTIONARY_AUTO_IMPORT=true` in `.env` (the compose
-  file does; a native start leaves it off): with no dataset version recorded, the server loads
-  the published dataset from HuggingFace — or the newest dataset in `DICTIONARY_IMPORT_DIR` —
-  in the background, logs the progress and answers `503 importing` on `/api/ready` until it is
-  done; a failed load is retried on the next start
+- **By itself, on first start** — `DICTIONARY_AUTO_IMPORT=true` in `.env` (on in the compose
+  file, off by default for a native start): the server loads the published dataset from
+  HuggingFace — or the newest dataset in `DICTIONARY_IMPORT_DIR` — in the background, logs the
+  progress and answers `503 importing` on `/api/ready` until it is done
   ([`docker.md`](./docker.md#first-start-the-dictionary-loads-itself)).
-- **From the admin UI** — sign in and run _Import dictionary_: from HuggingFace, or from an
-  archive when the host has no internet access ([`../offline-import.md`](../offline-import.md)).
-  The import streams its progress for a few minutes; the proxy must not buffer that stream
-  (covered in the proxy guide). One import runs at a time; a second one is refused with `409`.
+- **From the admin UI** — _Import dictionary_: from HuggingFace, or from an archive when the
+  host has no internet access ([`../offline-import.md`](../offline-import.md)). The import
+  streams its progress for a few minutes; the proxy must not buffer that stream. One import at
+  a time; a second one is refused with `409`.
 
 ## Upgrading
 
-Back up the database first, then pull the new version, `yarn install --immutable`, rebuild both
-apps and restart the processes: pending migrations run on the server's start and bind the
-database to the new version. Rolling back means restoring that backup — the full procedure, what
-to back up and how dataset updates differ from code updates are in
-[`../operations.md`](../operations.md).
+Back up the database, pull the new version, `yarn install --immutable`, `yarn build`, restart both
+processes: pending migrations run on the server's start. Rolling back is restoring that backup —
+once the new server has run its migrations, the previous version no longer matches the schema.
+The full procedure: [`../operations.md`](../operations.md#upgrading-the-code).

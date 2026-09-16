@@ -216,16 +216,13 @@ describe('public API responses match their OpenAPI schemas (e2e, issue #305)', (
   });
 
   it('search and detailed search', async () => {
-    const flat = await request(server()).post('/api/v1/search').send({ search: 'run' }).expect(200);
-    validate('PublicSearchController_search', 200, flat.body);
+    const flat = await request(server()).get('/api/v1/search?search=run').expect(200);
+    validate('PublicSearchController_searchGet', 200, flat.body);
     expect((flat.body as { data: unknown[] }).data.length).toBeGreaterThan(0);
-    const detailed = await request(server())
-      .post('/api/v1/search/detailed')
-      .send({ search: 'run' })
-      .expect(200);
-    validate('PublicSearchController_searchDetailed', 200, detailed.body);
-    const bad = await request(server()).post('/api/v1/search').send({ nope: 1 }).expect(400);
-    validate('PublicSearchController_search', 400, bad.body);
+    const detailed = await request(server()).get('/api/v1/search/detailed?search=run').expect(200);
+    validate('PublicSearchController_searchDetailedGet', 200, detailed.body);
+    const bad = await request(server()).get('/api/v1/search?nope=1').expect(400);
+    validate('PublicSearchController_searchGet', 400, bad.body);
   });
 
   it('the list with and without the joins, and its 400 on a foreign cursor', async () => {

@@ -510,16 +510,10 @@ export default {
     public_endpoints: 'Endpoints públicos',
     endpoint_search_get: 'Búsqueda básica',
     endpoint_search_detailed_get: 'Búsqueda detallada',
-    endpoint_search: 'Búsqueda básica (forma POST)',
-    endpoint_search_detailed: 'Búsqueda detallada (forma POST)',
     desc_search_get:
       'Busca entradas del diccionario y responde con una lista plana de palabras sin significados ni traducciones, con los campos en la cadena de consulta. La respuesta lleva ETag, Last-Modified y Cache-Control como todo GET público, así que puede estar detrás de una CDN y compartirse como enlace. Los resultados se ordenan por calidad de la coincidencia: primero la exacta, luego los phrasal verbs, las entradas que empiezan por la consulta, las frases, las que terminan con ella y cualquier otra aparición. Cuando nada coincide, un nivel de similitud por trigramas responde a las erratas: meta.fuzzy es true y cada elemento lleva similarity (0–1) — solo en instancias con Postgres. Un término de uno o dos caracteres busca solo en los niveles exacto y de prefijo (meta.short_term es true).',
     desc_search_detailed_get:
       'La misma búsqueda con paginación, que además puede incorporar los significados y sus traducciones; los campos viajan en la cadena de consulta (translation_languages como clave repetida) y la respuesta es cacheable. Como cada elemento puede llevar datos incorporados, tanto el tamaño de página como la profundidad de paginación tienen límites más estrictos que en la búsqueda básica.',
-    desc_search:
-      'La forma POST de la búsqueda básica: los mismos campos en un cuerpo JSON, la misma respuesta, pero las cachés HTTP nunca la guardan. Se mantiene durante la beta; las integraciones nuevas deberían usar la forma GET. Los resultados se ordenan por calidad de la coincidencia: primero la exacta, luego los phrasal verbs, las entradas que empiezan por la consulta, las frases, las que terminan con ella y cualquier otra aparición. Cuando nada coincide, un nivel de similitud por trigramas responde a las erratas: meta.fuzzy es true y cada elemento lleva similarity (0–1) — solo en instancias con Postgres. Un término de uno o dos caracteres busca solo en los niveles exacto y de prefijo (meta.short_term es true).',
-    desc_search_detailed:
-      'La forma POST de la búsqueda detallada: los mismos campos en un cuerpo JSON, la misma respuesta, no cacheable; se mantiene durante la beta. Además puede incorporar los significados y sus traducciones. Como cada elemento puede llevar datos incorporados, tanto el tamaño de página como la profundidad de paginación tienen límites más estrictos que en la búsqueda básica.',
     endpoint_word: 'Consulta de un lema',
     endpoint_words_batch: 'Consulta de lemas por lotes',
     endpoint_word_meanings: 'Significados de un lema',

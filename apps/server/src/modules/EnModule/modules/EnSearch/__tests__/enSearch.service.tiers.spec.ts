@@ -165,6 +165,99 @@ describe('EnSearchService tier categorization (issue #187)', () => {
     expect(words(res)).toEqual(['let it run']);
   });
 
+  it('binds the type filter to the exact and phrasal tiers as well (issue #440)', async () => {
+    await seedRunDataset();
+    await addWord(await addEntry('let it run', EnEntryTypesE.grammar_pattern), EnPartOfSpeechE.grammar_pattern);
+
+    // "run" itself and its phrasal variants are words: with type=phrase they stay out
+    const phrases = await service.searchFlat({ search: 'run', type: EnEntryTypesE.phrase, limit: 20 });
+    expect(words(phrases.items).sort()).toEqual(['in the long run', 'run for it', 'runaway train']);
+    // and the phrases stay out of a grammar-pattern search
+    const patterns = await service.searchFlat({
+      search: 'run',
+      type: EnEntryTypesE.grammar_pattern,
+      limit: 20,
+    });
+    expect(words(patterns.items)).toEqual(['let it run']);
+  });
+
+  it('resolves inflected forms to their base entry in the suffix and substring tiers too (issue #440)', async () => {
+    await seedRunDataset();
+    const outrun = await addWord(await addEntry('outrun'), EnPartOfSpeechE.verb);
+    await addWord(await addEntry('outrunning'), EnPartOfSpeechE.verb, EnWordFormsE.present_participle, {
+      base_form: outrun,
+    });
+    const crunch = await addWord(await addEntry('crunch'), EnPartOfSpeechE.noun);
+    for (const spelling of ['crunches', "crunch's", "crunches'"]) {
+      await addWord(await addEntry(spelling), EnPartOfSpeechE.noun, EnWordFormsE.plural_form, {
+        base_form: crunch,
+      });
+    }
+
+    const names = words((await service.searchFlat({ search: 'run', type: undefined, limit: 30 })).items);
+    expect(names.filter((n) => n === 'outrun')).toHaveLength(1);
+    expect(names.filter((n) => n === 'crunch')).toHaveLength(1);
+    expect(names).not.toContain('outrunning');
+    expect(names).not.toContain('crunches');
+    expect(names).not.toContain("crunch's");
+  });
+
+  it('fills the limit of the prefix tier with distinct headwords in byte order, forms notwithstanding (issue #440)', async () => {
+    for (const spelling of ['abbey', 'abide', 'able', 'abode', 'about']) {
+      const base = await addWord(await addEntry(spelling), EnPartOfSpeechE.noun);
+      for (const suffix of ['s', "'s", "s'"]) {
+        await addWord(await addEntry(spelling + suffix), EnPartOfSpeechE.noun, EnWordFormsE.plural_form, {
+          base_form: base,
+        });
+      }
+    }
+
+    // 5 headwords behind 20 matching rows: the limit counts headwords
+    const res = await service.searchFlat({ search: 'ab', type: undefined, limit: 5 });
+    expect(res.short_term).toBe(true);
+    expect(words(res.items)).toEqual(['abbey', 'abide', 'able', 'abode', 'about']);
+    // a smaller limit keeps the alphabetical head, not an arbitrary subset
+    expect(words((await service.searchFlat({ search: 'ab', type: undefined, limit: 2 })).items)).toEqual([
+      'abbey',
+      'abide',
+    ]);
+  });
+
+  it('finds a headword that keeps its capitals — a grammar pattern — by its lower-case spelling (issue #440)', async () => {
+    await seedRunDataset();
+    await addWord(
+      await addEntry('It’s the first time ...', EnEntryTypesE.grammar_pattern),
+      EnPartOfSpeechE.grammar_pattern,
+    );
+
+    const exact = await service.searchFlat({ search: 'it’s the first time ...', type: undefined, limit: 5 });
+    expect(words(exact.items)).toEqual(['It’s the first time ...']);
+    const prefix = await service.searchFlat({ search: 'it’s', type: EnEntryTypesE.grammar_pattern, limit: 5 });
+    expect(words(prefix.items)).toEqual(['It’s the first time ...']);
+    const contains = await service.searchFlat({ search: 'first', type: undefined, limit: 5 });
+    expect(words(contains.items)).toEqual(['It’s the first time ...']);
+  });
+
+  it('keeps reading the prefix tier chunk after chunk until the limit is met (issue #440)', async () => {
+    // 30 headwords behind 120 rows: one chunk of rows collapses to far fewer
+    // headwords than asked, so the tier has to continue after its last row
+    const spellings = Array.from({ length: 30 }, (_, i) => `ab${String.fromCharCode(97 + i)}`);
+    for (const spelling of spellings) {
+      const base = await addWord(await addEntry(spelling), EnPartOfSpeechE.noun);
+      for (const suffix of ['s', "'s", "s'"]) {
+        await addWord(await addEntry(spelling + suffix), EnPartOfSpeechE.noun, EnWordFormsE.plural_form, {
+          base_form: base,
+        });
+      }
+    }
+
+    const res = await service.searchFlat({ search: 'ab', type: undefined, limit: 25 });
+    expect(words(res.items)).toEqual(spellings.slice(0, 25));
+    expect(words((await service.searchFlat({ search: 'ab', type: undefined, limit: 100 })).items)).toEqual(
+      spellings,
+    );
+  });
+
   it('normalizes the search term (trim + lowercase)', async () => {
     await seedRunDataset();
 
@@ -224,11 +317,14 @@ describe('EnSearchService tier categorization (issue #187)', () => {
       expect(words((await service.searchFlat({ search: 'its', type: undefined, limit: 10 })).items)[0]).toBe(
         'it',
       );
-      // the exact tier answers whatever the type (as in the full flow); the
-      // prefix tier only runs for words, so "abandon" stays out
+      // the type filter binds the exact tier too (issue #440): the word "a"
+      // stays out of a phrase search, and the prefix tier only runs for
+      // words, so "abandon" and "a cab ride" stay out as well
       const phrases = await service.searchFlat({ search: 'a', type: EnEntryTypesE.phrase, limit: 10 });
       expect(phrases.short_term).toBe(true);
-      expect(words(phrases.items)).toEqual(['a']);
+      expect(words(phrases.items)).toEqual([]);
+      const wordsOnly = await service.searchFlat({ search: 'a', type: EnEntryTypesE.word, limit: 10 });
+      expect(words(wordsOnly.items)[0]).toBe('a');
     });
 
     it('runs the full tiers from three characters on', async () => {

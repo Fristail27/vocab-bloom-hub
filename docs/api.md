@@ -1,6 +1,6 @@
 # API surfaces: public `/api/v1` and the admin API
 
-The server exposes two surfaces on one host (issue #271):
+The server exposes two surfaces on one host:
 
 | Surface    | Prefixes                                  | Auth                              | Purpose                                                                   |
 | ---------- | ----------------------------------------- | --------------------------------- | ------------------------------------------------------------------------- |
@@ -8,9 +8,9 @@ The server exposes two surfaces on one host (issue #271):
 | **Admin**  | `/api/en/*`, `/api/settings`, `/api/auth` | admin JWT (cookie / Bearer token) | Everything the admin UI does: editing, import / export, statistics, login |
 
 Nothing under `/api/v1` mutates data or requires a login; nothing outside it is part of the
-public contract. The Swagger UI at `/api` (development only) documents both, with the public
-endpoints under the _Public API v1_ tag; the public contract alone is exported as an
-[OpenAPI document](#openapi-document).
+public contract. The public contract is also served as an [OpenAPI document](#openapi-document);
+Swagger UI, the website's reference and the other ways to read the API are compared in
+[api-tools.md](./api-tools.md).
 
 ## The public contract
 
@@ -27,13 +27,12 @@ endpoints under the _Public API v1_ tag; the public contract alone is exported a
   { "statusCode": 429, "message": "too_many_requests", "error": true }
   ```
 
-- **Languages** (issue #394). The headwords are English and the prefix carries no language
+- **Languages**. The headwords are English and the prefix carries no language
   segment: a second source language is out of scope, so `/api/v1/words/run` will not become
   `/api/v1/en/words/run`. The translation language is a filter on the answer and travels as
   the multi-valued query parameter `language` (`/api/v1/words/run/translations?language=ru`);
-  a route that reads translations and gains a language filter uses that name; the detailed
-  search keeps its `translation_languages` body field as shipped. Without the parameter every
-  language is returned. `GET /api/v1/meta` lists the languages an instance
+  the detailed search's `translation_languages` (a repeated query key) does the same. Without
+  the parameter every language is returned. `GET /api/v1/meta` lists the languages an instance
   serves under `available_languages`; consumers should read it instead of assuming `ru`.
 - **Rate limit.** One budget per client IP for the whole prefix, `PUBLIC_API_RATE_LIMIT`
   (`<requests>/<seconds>`, default `100/60`); every request costs one unit, the batch lookup
@@ -42,7 +41,7 @@ endpoints under the _Public API v1_ tag; the public contract alone is exported a
   quotas.
 - **Cacheable.** Every successful `GET` carries `ETag`, `Last-Modified` and `Cache-Control:
 public, max-age=<PUBLIC_API_CACHE_MAX_AGE>`; conditional requests answer `304` — see
-  [Caching](#caching). The search has a `GET` form for that reason (issue #396).
+  [Caching](#caching). The search has a `GET` form for that reason.
 
 ### Endpoints
 
@@ -51,12 +50,11 @@ Every successful answer is an envelope: the payload under `data`, paging and cou
 
 | Method | Path                                | Query / body                                                                                           | Response                                                                                                |
 | ------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `GET`  | `/api/v1/meta`                      | —                                                                                                      | `{ data: { api_version, app_version, dataset_version, license, notice, counts, available_languages } }` |
+| `GET`  | `/api/v1/openapi.json`              | —                                                                                                      | the OpenAPI 3 document of this contract (no envelope; see [OpenAPI document](#openapi-document))        |
 | `GET`  | `/api/v1/search`                    | `search`, `type?`, `limit?`                                                                            | `{ data: PublicSearchWordV1T[], meta: { count, fuzzy, short_term } }`                                   |
 | `GET`  | `/api/v1/search/detailed`           | `search`, `type?`, `limit?`, `page?`, `with_meanings?`, `with_translations?`, `translation_languages?` | `{ data: PublicWordV1T[], meta: { page, limit, has_more, fuzzy, short_term } }`                         |
-| `POST` | `/api/v1/search`                    | `{ search, type?, limit? }` — the same search, not cacheable                                           | `{ data: PublicSearchWordV1T[], meta: { count, fuzzy, short_term } }`                                   |
-| `POST` | `/api/v1/search/detailed`           | `{ search, type?, limit?, page?, with_meanings?, with_translations?, translation_languages? }`         | `{ data: PublicWordV1T[], meta: { page, limit, has_more, fuzzy, short_term } }`                         |
 | `GET`  | `/api/v1/words/{word}`              | —                                                                                                      | `{ data: PublicWordV1T[], meta: { word, count } }`                                                      |
-| `POST` | `/api/v1/words/batch`               | `{ words: string[] }` (1–50)                                                                           | `{ data: { word, count, entries: PublicWordV1T[] }[], meta: { count, not_found } }`                     |
 | `GET`  | `/api/v1/words/{word}/meanings`     | —                                                                                                      | `{ data: PublicMeaningV1T[], meta: { word, count } }`                                                   |
 | `GET`  | `/api/v1/words/{word}/translations` | `language?`                                                                                            | `{ data: { short_translations, meaning_translations }, meta }`                                          |
 | `GET`  | `/api/v1/words/{word}/forms`        | —                                                                                                      | `{ data: PublicWordFormV1T[], meta: { word, count } }`                                                  |
@@ -65,14 +63,14 @@ Every successful answer is an envelope: the payload under `data`, paging and cou
 | `GET`  | `/api/v1/words/id/{id}`             | —                                                                                                      | `{ data: PublicWordV1T }`                                                                               |
 | `GET`  | `/api/v1/words`                     | filters, `cursor?`, `limit?`, `with_meanings?`, `with_translations?`                                   | `{ data: PublicWordV1T[], meta: { limit, has_more, next_cursor } }`                                     |
 | `GET`  | `/api/v1/random`                    | filters                                                                                                | `{ data: PublicWordV1T }`                                                                               |
-| `GET`  | `/api/v1/meta`                      | —                                                                                                      | `{ data: { api_version, app_version, dataset_version, license, notice, counts, available_languages } }` |
+| `POST` | `/api/v1/words/batch`               | `{ words: string[] }` (1–50)                                                                           | `{ data: { word, count, entries: PublicWordV1T[] }[], meta: { count, not_found } }`                     |
 | `POST` | `/api/v1/suggestions`               | `{ headword, word_id?, message?, kind?, edits? }`                                                      | `201 { data: { id, status } }`                                                                          |
 
-Every endpoint and its parameters are also described on the in-app _Documentation_ pages,
-which run live requests against the current database. The machine-readable contract is the
+The same endpoints can be tried on the website's playground and the admin's _Documentation_
+pages ([api-tools.md](./api-tools.md)); the machine-readable contract is the
 [OpenAPI document](#openapi-document).
 
-`POST /api/v1/suggestions` is the one write of the public surface (issue #327): a reader of the
+`POST /api/v1/suggestions` is the one write of the public surface: a reader of the
 website's word pages files feedback into the instance's moderation queue (the admin
 _Suggestions_ page). Two kinds share the endpoint:
 
@@ -87,7 +85,7 @@ _Suggestions_ page). Two kinds share the endpoint:
   current values into before/after diffs at file time; unknown fields, empty values, targets of
   another headword and a proposal that changes nothing are rejected. Applying walks every item
   through the same edit services the admin UI uses, so the changes are audited and flag the
-  entry `user_modified` (#328).
+  entry `user_modified`.
 
 The headword must exist in the dictionary. The endpoint has a rate limit of its own —
 `SUGGESTIONS_RATE_LIMIT`, default `5/3600` (five reports per hour per client), separate from
@@ -99,10 +97,6 @@ applies becomes part of the dictionary data and travels with it under the data l
 ```bash
 curl 'http://localhost:3010/api/v1/search?search=run&limit=5'
 curl 'http://localhost:3010/api/v1/search/detailed?search=run&with_meanings=true'
-# the same search as POST (not cacheable; kept through the beta)
-curl -X POST 'http://localhost:3010/api/v1/search/detailed' \
-  -H 'Content-Type: application/json' \
-  -d '{"search":"run","with_meanings":true}'
 
 curl 'http://localhost:3010/api/v1/words/run'
 curl 'http://localhost:3010/api/v1/words?part_of_speech=noun&word_level=B1&word_level=B2&limit=50'
@@ -111,18 +105,22 @@ curl 'http://localhost:3010/api/v1/random?part_of_speech=verb&word_level=A2'
 
 #### Search tiers and typo tolerance
 
-Each search comes in two forms with the same fields and the same answer (issue #396): `GET`
-with the fields in the query string (`translation_languages` as a repeated key, booleans as
-`true` / `false`), which carries the caching headers of the prefix and can be pasted into a
-browser or shared as a link, and `POST` with a JSON body, which HTTP caches never store. Use
-the `GET` form; the `POST` form stays through the beta for the consumers that already use
-it. `translation_languages` is either omitted (every language) or a non-empty list — an empty
-list answers `400`.
+Both searches are `GET` reads: the fields travel in the query string
+(`translation_languages` as a repeated key, booleans as `true` / `false`), the answer carries
+the caching headers of the prefix, and a search can be pasted into a browser or shared as a
+link. `limit` is 1–100 (default 10) for the search and 1–20 for the detailed one, whose `page`
+starts at 1. `translation_languages` is either omitted (every language) or a non-empty list —
+an empty list answers `400`. The `POST` forms of the alpha are gone
+([Removed aliases](#removed-aliases)).
 
 Both search endpoints rank their answer by tiers: exact headword, phrasal variants, starts
 with the term, phrases containing it as a word, ends with it, contains it anywhere. Every tier
 is served by an index on Postgres (a byte-order btree for the prefixes, a trigram GIN for the
-rest — issue #278).
+rest). Within a tier the starts-with entries come in byte order (an autocomplete
+reads them as typed) and the others shortest headword first — `language` before
+`body language` for `guag`. An inflected form resolves to its base entry in every tier, so a
+headword appears once however many of its forms match, each tier fills the part of `limit`
+left to it with distinct headwords, and `type` binds every tier, the exact one included.
 
 When no tier matches at all, a **fuzzy tier** answers instead: headwords whose trigrams are
 similar enough to the term (`pg_trgm`, similarity ≥ 0.3), best match first. Such an answer
@@ -133,9 +131,10 @@ signal for a UI or an SDK:
 { "data": [{ "word": "relieve", "similarity": 0.45, "…": "…" }], "meta": { "count": 8, "fuzzy": true } }
 ```
 
-`fuzzy` is `false` whenever the exact tiers found something, and also when nothing at all is
-similar (empty `data`). The fuzzy tier exists on Postgres instances only (`pg_trgm`); a
-SQLite instance answers an empty list for a typo, with `fuzzy: false`.
+> [!NOTE]
+> `fuzzy` is `false` whenever the exact tiers found something, and also when nothing at all is
+> similar (empty `data`). The fuzzy tier exists on Postgres instances only (`pg_trgm`); a
+> SQLite instance answers an empty list for a typo, with `fuzzy: false`.
 
 A term of **one or two characters** (after trimming) searches the exact and prefix tiers
 only — the headword itself, its phrasal variants, an inflected form's base entry and
@@ -158,13 +157,13 @@ The partial reads (`/meanings`, `/translations`, `/forms`) flatten the same entr
 list; every item carries `word_id` and `part_of_speech` so it can be tied back to its entry.
 `/translations` splits into `short_translations` (per entry) and `meaning_translations` (per
 meaning, with `meaning_id`); `?language=ru` keeps one language only. `/synonyms` and
-`/antonyms` (issue #403) list the linked headwords of every meaning — `{ word, meaning_id,
+`/antonyms` list the linked headwords of every meaning — `{ word, meaning_id,
 word_id, part_of_speech }`, each `word` readable through `/words/{word}` — so a thesaurus
 does not need the full entry; a headword without links answers an empty list.
 
 `GET /api/v1/words/id/{id}` is the same entry by its numeric id (the `id` of any item above).
 
-`POST /api/v1/words/batch` with `{ "words": ["run", "ran", "put up with"] }` (issue #397) looks
+`POST /api/v1/words/batch` with `{ "words": ["run", "ran", "put up with"] }` looks
 up to 50 spellings in one request — for a consumer enriching a word list, which would
 otherwise spend its whole rate-limit budget on per-word GETs. Each spelling is matched like
 the single read; the answer keeps the request order with one item per spelling — `word` (the
@@ -175,7 +174,7 @@ whatever its size; instances exposed to the open internet size `PUBLIC_API_RATE_
 that in mind. Being a `POST`, it carries no cache validators; a consumer that re-reads the same
 words benefits from the cached single reads instead.
 
-Word items are an explicit projection of the dictionary rows (issue #392): the fields of
+Word items are an explicit projection of the dictionary rows: the fields of
 `PublicWordV1T` and its parts in `apps/server/types/public/v1/index.ts` are the whole promise,
 each assigned by name from the row (`src/modules/PublicApiModule/utils/projection.ts`), so a
 column added to the database does not become public by accident. The instance's editorial
@@ -184,11 +183,13 @@ stays on the admin API (`GET /api/en/{id}`), where the admin UI reads it.
 
 #### Filtered list and cursor pagination
 
-`GET /api/v1/words` lists entries ordered by `(word, id)` — the headword by its bytes
-(`COLLATE "C"` on Postgres, the default on SQLite: `a bag of wind` before `aaron burr`,
-whatever the database locale), then the id. Filters: `part_of_speech`,
+`GET /api/v1/words` lists entries ordered by `(word, id)` — the headword by its bytes,
+case-folded (`LOWER(word) COLLATE "C"` on Postgres, `LOWER(word)` on SQLite: `a bag of wind`
+before `aaron burr`, whatever the database locale, and a grammar pattern that keeps its
+sentence capital — `It’s the first time …` — sorts among the `i`s, not before `a`), then the
+id. Filters: `part_of_speech`,
 `word_level`, `language_register`, `category`, `area_variant`, `form_of_word`, plus `search`
-and `is_obsolete` (issue #403). Every enum filter accepts one value or a repeated key; values
+and `is_obsolete`. Every enum filter accepts one value or a repeated key; values
 of one filter are OR-ed, different filters are AND-ed
 (`?word_level=B1&word_level=B2&part_of_speech=noun` — B1 or B2 nouns). `search` keeps the
 headwords starting with the prefix, case-insensitively (`?search=ru` — run, rung, runner, …;
@@ -201,10 +202,13 @@ short translations unless `with_meanings=true` / `with_translations=true` is pas
 
 Pages are read with a cursor: take `meta.next_cursor` of a page and pass it back as
 `?cursor=` (with the same filters) to get the next one; `next_cursor` is `null` on the last
-page and `has_more` says whether there is one. The cursor is opaque — do not build it by
-hand; an unrecognised value answers `400` with `invalid_cursor`. Unlike page numbers, a
-cursor never repeats or skips an item while the dictionary is being edited. `limit` is
-1–100, default 20.
+page and `has_more` says whether there is one. Unlike page numbers, a cursor never repeats or
+skips an item while the dictionary is being edited. `limit` is 1–100, default 20.
+
+> [!IMPORTANT]
+> The cursor is opaque — do not build it by hand; an unrecognised value answers `400` with
+> `invalid_cursor`, and so does a cursor taken from a page read with other filters (it carries
+> a fingerprint of them); `?cursor=` with nothing after it is the first page.
 
 #### Random entry
 
@@ -222,37 +226,24 @@ the terms of the data — `license` (the SPDX identifier, `"CC-BY-4.0"`), `licen
 `attribution` (the line a consumer has to show, see [`DATA_LICENSE.md`](../DATA_LICENSE.md)),
 `notice` (the provenance line to pass on to readers: the data is generated by language models
 and not human-verified, [`data.md`](./data.md)) — and `counts` (entries, words, phrases, grammar patterns, word forms, meanings, meaning and short
-translations; the counts are refreshed at most once a minute), and `available_languages`
-(issue #394): `source`, the language of the headwords (`["en"]`), and `translations`, the
-languages a translation may carry on this build (`["ru", "es", "fr", "de", "pt"]` — issues #410, #445, #449) — the values
+translations; the counts are refreshed at most once a minute), and `available_languages`: `source`, the language of the headwords (`["en"]`), and `translations`, the
+languages a translation may carry on this build (`["ru", "es", "fr", "de", "pt"]`) — the values
 `?language=` accepts. They describe the schema, not the data: a language is listed whether or not a
 translation in it has been imported yet.
 
 ### OpenAPI document
 
-The contract above is also an OpenAPI 3 document (issue #273), built from the controllers,
-DTOs and response types of the running code — nothing is hand-written, so it cannot drift:
+The contract above is also an OpenAPI 3 document, built from the controllers, DTOs and
+response types of the running code — nothing is hand-written, so it cannot drift.
+`GET /api/v1/openapi.json` serves it from any instance, with the caching headers of the prefix;
+`apps/server/openapi/public-v1.json` is the committed copy the SDKs and the website are
+generated from. Where each is used and the regeneration chain after a change:
+[api-tools.md](./api-tools.md#the-openapi-document-the-public-contract-as-a-file). The
+generator bootstraps the application without listening, on an in-memory SQLite database, so it
+needs no `.env` and its output depends on the source code only; `admin.json` — the whole API
+including the admin surface — is written next to it and ignored by git.
 
-- **`GET /api/v1/openapi.json`** serves it from any running instance, production included
-  (the Swagger UI at `/api` stays development-only). It carries the caching headers of the
-  prefix like every other public `GET`.
-- **`apps/server/openapi/public-v1.json`** is the same document committed to the repository:
-  the source for SDK generators (#275, #276) and the docs site (#277), and the place where a
-  contract change shows up in a pull request diff.
-
-```bash
-yarn workspace server openapi:generate   # rewrites openapi/public-v1.json + public-v1.schemas.json (+ admin.json, not committed)
-yarn workspace server openapi:check      # fails when a committed file is stale — CI runs this
-```
-
-The generator bootstraps the application without listening, on an in-memory SQLite database,
-so it needs no `.env` and its output depends on the source code only. After changing anything
-under `/api/v1` (a route, a DTO, a Swagger decorator, a type in `types/public/v1`) run
-`openapi:generate` and commit the result; the `check-pull-request` workflow rejects a stale
-spec. `admin.json` — the whole API including the admin surface — is written next to it for
-local use and ignored by git.
-
-**Response schemas** (issue #305). The controllers type their answers with the TypeScript
+**Response schemas**. The controllers type their answers with the TypeScript
 contract in `apps/server/types/public/v1`, which Swagger cannot see, so the generator reads
 those types with `ts-json-schema-generator`, converts the result to OpenAPI 3.0 component
 schemas (`nullable` for `| null`, enums, generics inlined; `src/openapi/json-schema-to-openapi.ts`)
@@ -261,24 +252,24 @@ every public operation to its response type and error statuses; the document bui
 route missing there, so an endpoint cannot ship untyped. The running server serves the committed
 schemas — no TypeScript at runtime. `test/public-schemas.e2e-spec.ts` calls every operation on a
 seeded dictionary and validates the real bodies against the served schemas (strictly, unknown
-fields fail), which is what makes the schemas trustworthy for SDK generators (#275, #276).
+fields fail), which is what makes the schemas trustworthy for SDK generators.
 
 ### SDKs
 
-- **Node.js / TypeScript** — [`@vocab-bloom-hub/client`](../packages/npm-sdk/README.md) (issue #275):
+- **Node.js / TypeScript** — [`@vocab-bloom-hub/client`](../packages/npm-sdk/README.md):
   one method per endpoint (the batch and thesaurus reads included), types generated from
   `openapi/public-v1.json`, typed errors, cursor and page iteration, optional ETag cache, opt-in
   retry on `429` / `5xx` honouring `Retry-After`, a versioned `User-Agent`. ESM and CommonJS with a
-  declaration file each. On npm since the first alpha (#308).
-- **Python** — [`vocab-bloom-hub`](../packages/python-sdk/README.md) (issue #276): sync and async
+  declaration file each. On npm since the first alpha.
+- **Python** — [`vocab-bloom-hub`](../packages/python-sdk/README.md): sync and async
   clients on httpx, pydantic models generated from the same spec, typed exceptions, per-request
   options, opt-in retry, cursor and page iteration, ETag cache, `words_dataframe()` for notebooks.
-  On PyPI since the first alpha (#310).
+  On PyPI since the first alpha.
 
 ### Caching
 
 Dictionary data changes rarely, so the public `GET` reads are built to be cached by browsers,
-CDNs and reverse proxies (issue #274). Every successful `GET` answer carries:
+CDNs and reverse proxies. Every successful `GET` answer carries:
 
 | Header          | Value                                                                                                          |
 | --------------- | -------------------------------------------------------------------------------------------------------------- |
@@ -300,19 +291,20 @@ informational (a minute behind at most) — when both validators are sent the `E
 CDN or proxy in front keeps an answer for `max-age` and then revalidates; lower
 `PUBLIC_API_CACHE_MAX_AGE` (or set it to `0`) on an instance whose dictionary is edited live.
 
-Not cached: the `POST` form of the search and the batch lookup (HTTP caches do not store
-`POST`; the `GET` search is cached like every other `GET`), every error under the
-prefix (`Cache-Control: no-store`, so a miss or a `429` is never served from a cache), and
-everything under the admin prefixes (`no-store` on every answer, including `401`s and the
-`404`s of a disabled surface).
+> [!NOTE]
+> Not cached: the two `POST` requests, the batch lookup and a suggestion (HTTP caches do not
+> store `POST`), every error under the prefix (`Cache-Control: no-store`, so a miss or a `429`
+> is never served from a cache), and everything under the admin prefixes (`no-store` on every
+> answer, including `401`s and the `404`s of a disabled surface).
 
 ### Removed aliases
 
-`POST /api/en/search` and `POST /api/en/search/detailed`, the pre-public-API search routes
-that answered with the bare bodies and a `Deprecation: true` header through the alpha, are
-gone since `v0.2.0-beta.1` (issue #395): they answer `404` like any unknown admin route.
-The successors are `GET /api/v1/search` and `GET /api/v1/search/detailed` (or their `POST`
-forms) with the `{ data, meta }` envelope.
+`POST /api/en/search` and `POST /api/en/search/detailed` — the pre-public-API search routes
+that answered with the bare bodies and a `Deprecation: true` header through the alpha — are
+gone since `v0.2.0-beta.1`, and so are the `POST /api/v1/search` and
+`POST /api/v1/search/detailed` forms that bridged the alpha (the same fields in a JSON body).
+All four answer `404` like any unknown route; the successors are `GET /api/v1/search` and
+`GET /api/v1/search/detailed` with the `{ data, meta }` envelope.
 
 ## Running a public-only or admin-only instance
 
@@ -323,10 +315,13 @@ Two switches decide which surfaces an instance serves; both default to on:
 | `PUBLIC_API_ENABLED` | `/api/v1/*` answers `404` as if the routes did not exist                            |
 | `ADMIN_API_ENABLED`  | `/api/en/*`, `/api/settings`, `/api/auth` answer `404`; the admin UI cannot sign in |
 
-Disabling both is a configuration error and the server refuses to start. A demo or embedded
-instance runs with `ADMIN_API_ENABLED=false` (edit the data elsewhere and move it over with the
-dataset export / import, see [offline-import.md](./offline-import.md)); an internal editing
-instance that must not be readable from outside runs with `PUBLIC_API_ENABLED=false`.
+> [!WARNING]
+> Disabling both is a configuration error and the server refuses to start.
+
+A demo or embedded instance runs with `ADMIN_API_ENABLED=false` (edit the data elsewhere and
+move it over with the dataset export / import, see [offline-import.md](./offline-import.md));
+an internal editing instance that must not be readable from outside runs with
+`PUBLIC_API_ENABLED=false`.
 
 ## Probes: `/api/health` and `/api/ready`
 

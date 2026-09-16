@@ -2,7 +2,7 @@
 
 The dictionary import normally downloads the published dataset from HuggingFace. Installations
 without internet access — corporate networks, air-gapped labs, CI — and admins who edited an
-exported dataset can load the same files from a local source instead (issue #269):
+exported dataset can load the same files from a local source instead:
 
 - **files uploaded through the admin UI** — the zip that _Export dictionary_ produces (the
   _Archive_ tab), or the dataset files in their own slots with the manifest either as a file or
@@ -30,7 +30,7 @@ vocab-bloom-hub-en-short-translations.<lang>.jsonl
 
 The entry files (`words`, `phrases`, `grammar-patterns`) carry the entries themselves and their
 forms; `phrasal-verbs` is the linking map of base verbs to their phrasal variants. The
-collections are files of their own (issue #442), one line per row next to the key of its parent:
+collections are files of their own, one line per row next to the key of its parent:
 
 | File                          | One line per                  | Key of the parent                                               |
 | ----------------------------- | ----------------------------- | --------------------------------------------------------------- |
@@ -62,9 +62,10 @@ fields an export writes into the manifest ([`DATA_LICENSE.md`](../DATA_LICENSE.m
 along and not checked. Line counts for the progress bar
 are always taken from the files themselves, so a hand-assembled dataset needs no bookkeeping.
 
-The dataset is validated **before** the import starts and is rejected (`dataset_invalid`) when
-there is no `.jsonl` file at all, when `manifest.json` is malformed, or when the folder / archive
-contains any file with an unknown name. OS artefacts (`.DS_Store`, `__MACOSX/`) are ignored.
+> [!NOTE]
+> The dataset is validated **before** the import starts and is rejected (`dataset_invalid`) when
+> there is no `.jsonl` file at all, when `manifest.json` is malformed, or when the folder / archive
+> contains any file with an unknown name. OS artefacts (`.DS_Store`, `__MACOSX/`) are ignored.
 
 ## Export on A → copy → import on B
 
@@ -102,8 +103,9 @@ curl -N -b cookies.txt -F short_translations_es=@es-short-translations.jsonl \
   http://localhost:3010/api/en/dictionary/import/upload
 ```
 
-Each upload is limited to 512 MiB; the uploaded files are deleted from the server once the
-import has finished, whether or not it succeeded.
+> [!NOTE]
+> Each upload is limited to 512 MiB; the uploaded files are deleted from the server once the
+> import has finished, whether or not it succeeded.
 
 ## Datasets on the server (`DICTIONARY_IMPORT_DIR`)
 
@@ -114,8 +116,9 @@ point `DICTIONARY_IMPORT_DIR` at the folder holding it:
 DICTIONARY_IMPORT_DIR=/data/dictionary-imports
 ```
 
-The _From file_ tab then lists what the folder offers (zip archives and sub-folders containing a
-`manifest.json`, one level deep), and the request names the pick relative to that folder:
+The _Archive_ tab then also lists what the folder offers (zip archives and sub-folders
+containing a `manifest.json`, one level deep) next to the upload area, and the request names
+the pick relative to that folder:
 
 ```bash
 curl -N -b cookies.txt -H 'Content-Type: application/json' \
@@ -123,29 +126,47 @@ curl -N -b cookies.txt -H 'Content-Type: application/json' \
   http://localhost:3010/api/en/dictionary/import
 ```
 
-Paths are resolved inside the import directory only: `..`, absolute paths and symlinks pointing
-elsewhere are rejected (`dataset_file_not_found`). Without the variable the request fails with
-`import_dir_not_configured` and the UI offers uploads only. The server never modifies or deletes
-the files in that folder.
+> [!NOTE]
+> Paths are resolved inside the import directory only: `..`, absolute paths and symlinks pointing
+> elsewhere are rejected (`dataset_file_not_found`). Without the variable the request fails with
+> `import_dir_not_configured` and the _Archive_ tab offers uploads only. The server never modifies
+> or deletes the files in that folder.
 
 `GET /api/en/dictionary/import/sources` returns the same listing the UI shows:
 
 ```json
 {
   "import_dir_configured": true,
-  "files": [{ "path": "vocab-bloom-hub-en-export.zip", "kind": "zip", "size": 12345678 }]
+  "files": [
+    {
+      "path": "vocab-bloom-hub-en-export.zip",
+      "kind": "zip",
+      "size": 12345678,
+      "modified_at": "2026-09-15T18:18:25.486Z"
+    },
+    { "path": "hand-assembled", "kind": "directory", "size": 0, "modified_at": "2026-09-15T18:18:25.486Z" }
+  ],
+  "revisions": ["v0.1.0"]
 }
 ```
 
+`revisions` are the version tags of the published dataset repository, newest first (the
+_Dataset version_ selector of the HuggingFace tab; `[]` when the HuggingFace refs API is
+unreachable).
+
 ## Notes
 
-- Importing does not wipe the database first: records that already exist (same word, part of
-  speech and form) are skipped, the same way the HuggingFace import behaves. To replace
-  existing entries with the dataset content (keeping the entries you edited), run the import in
-  update mode — see [operations.md](./operations.md#dataset-updates-vs-code-updates)
-  (issue #328).
-- With Docker Compose, mount the folder into the server container and set the variable to the
-  mount point, e.g. `- ./imports:/data/dictionary-imports` and
-  `DICTIONARY_IMPORT_DIR=/data/dictionary-imports`.
-- `pg_dump` / `pg_restore` remain the right tool for moving a **whole database** including ids;
-  the dataset route is for the dictionary content in its portable, diffable form.
+> [!IMPORTANT]
+> Importing does not wipe the database first: records that already exist (same word, part of
+> speech and form) are skipped, the same way the HuggingFace import behaves. To replace existing
+> entries with the dataset content (keeping the entries you edited), run the import in update
+> mode — see [operations.md](./operations.md#dataset-updates-vs-code-updates).
+
+> [!TIP]
+> With Docker Compose, mount the folder into the server container and set the variable to the
+> mount point, e.g. `- ./imports:/data/dictionary-imports` and
+> `DICTIONARY_IMPORT_DIR=/data/dictionary-imports`.
+
+> [!NOTE]
+> `pg_dump` / `pg_restore` remain the right tool for moving a **whole database** including ids;
+> the dataset route is for the dictionary content in its portable, diffable form.

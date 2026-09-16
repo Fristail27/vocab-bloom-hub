@@ -69,7 +69,14 @@ const spec: OpenApiSpecT = {
   },
 };
 
-const [search, translations, batch] = listEndpoints(spec).map((endpoint) => playgroundEndpoint(endpoint, spec));
+const byPath = (method: string, path: string) =>
+  playgroundEndpoint(
+    listEndpoints(spec).find((e) => e.method === method && e.path === path)!,
+    spec,
+  );
+const search = byPath('POST', '/api/v1/search');
+const translations = byPath('GET', '/api/v1/words/{word}/translations');
+const batch = byPath('POST', '/api/v1/words/batch');
 
 describe('the playground form, derived from the OpenAPI document', () => {
   it('turns parameters and body fields into controls', () => {

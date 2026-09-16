@@ -12,8 +12,10 @@ import remarkRehype from 'remark-rehype';
 import { unified } from 'unified';
 import { visit } from 'unist-util-visit';
 
+import { type CalloutTitlesT, rehypeCallouts } from './callouts';
 import { rewriteRepoUrl } from './links';
-import { slugForFile } from './registry';
+import { docFile, findDocBySlug, slugForFile } from './registry';
+import { InterfaceLanguageEnum } from '@/types/common';
 
 export type HeadingT = { id: string; text: string; depth: 2 | 3 };
 
@@ -29,6 +31,14 @@ type RenderOptions = {
   /** The Markdown file, relative to the repository root — the base of its relative links */
   fromFile: string;
   locale: string;
+  /** The title line of the `> [!NOTE]`-style callouts, in the page's language */
+  callouts?: CalloutTitlesT;
+};
+
+// the file a docs page renders in a locale, for the anchored links (links.ts)
+const renderedFile = (slug: string, locale: string): string => {
+  const page = findDocBySlug(slug);
+  return page ? docFile(page, locale as InterfaceLanguageEnum) : '';
 };
 
 // links and images between the repository files become site routes / GitHub URLs
@@ -37,10 +47,16 @@ const rehypeRepoUrls =
   (tree: Root) => {
     visit(tree, 'element', (node: Element) => {
       if (node.tagName === 'a' && typeof node.properties.href === 'string') {
-        node.properties.href = rewriteRepoUrl(node.properties.href, fromFile, locale, slugForFile);
+        node.properties.href = rewriteRepoUrl(
+          node.properties.href,
+          fromFile,
+          locale,
+          slugForFile,
+          renderedFile,
+        );
       }
       if (node.tagName === 'img' && typeof node.properties.src === 'string') {
-        node.properties.src = rewriteRepoUrl(node.properties.src, fromFile, locale, slugForFile);
+        node.properties.src = rewriteRepoUrl(node.properties.src, fromFile, locale, slugForFile, renderedFile);
       }
     });
   };
@@ -85,6 +101,7 @@ export const renderMarkdown = async (markdown: string, options: RenderOptions): 
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
     .use(rehypeSlug)
+    .use(rehypeCallouts, options.callouts)
     .use(rehypeHighlight, { plainText: PLAIN_TEXT_LANGUAGES })
     .use(rehypeRepoUrls, options)
     .use(rehypeOutline, outline)

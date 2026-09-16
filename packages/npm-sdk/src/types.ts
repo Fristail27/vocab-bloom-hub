@@ -35,8 +35,11 @@ export type PhrasalObjectPattern = Schemas['EnPhrasalObjectPatternE'];
 export type TranslationLanguage = Schemas['AvailableTranslationLanguagesE'];
 
 // -------------------------------------------------------------- requests
-export type SearchRequest = Schemas['SearchV1ReqDTO'];
-export type DetailedSearchRequest = Schemas['SearchDetailedV1ReqDTO'];
+// the searches are GET reads (issue #396): their request types are the query strings
+export type SearchRequest = NonNullable<operations['PublicSearchController_searchGet']['parameters']['query']>;
+export type DetailedSearchRequest = NonNullable<
+  operations['PublicSearchController_searchDetailedGet']['parameters']['query']
+>;
 export type WordFilters = NonNullable<operations['PublicDictionaryController_random']['parameters']['query']>;
 export type ListWordsQuery = NonNullable<operations['PublicWordsController_list']['parameters']['query']>;
 export type TranslationsQuery = NonNullable<

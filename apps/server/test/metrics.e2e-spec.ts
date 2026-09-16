@@ -86,8 +86,8 @@ describe('Prometheus metrics (e2e, issue #281)', () => {
     await request(server()).get('/api/v1/words/run').expect(200);
     await request(server()).get('/api/v1/words/nonexistent').expect(404);
     await request(server()).get('/no/such/route').expect(404);
-    await request(server()).post('/api/v1/search').send({ search: 'run' }).expect(200);
-    await request(server()).post('/api/v1/search').send({ search: 'qzxvjwq' }).expect(200);
+    await request(server()).get('/api/v1/search?search=run').expect(200);
+    await request(server()).get('/api/v1/search?search=qzxvjwq').expect(200);
 
     const res = await request(server()).get('/internal/metrics').expect(200);
     expect(res.headers['content-type']).toMatch(/^text\/plain/);

@@ -24,7 +24,7 @@ test.describe('documentation', () => {
   test('the docs index lists the sections', async ({ page }) => {
     await page.goto('/en/docs');
 
-    for (const section of ['Getting started', 'Deployment', 'API and SDKs']) {
+    for (const section of ['Getting started', 'Deployment', 'Database', 'API', 'SDKs']) {
       await expect(page.locator('aside').getByRole('heading', { name: section, exact: true })).toBeVisible();
     }
   });

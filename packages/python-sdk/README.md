@@ -27,8 +27,8 @@ from vocab_bloom_hub import NotFoundError, VocabBloomClient
 client = VocabBloomClient("https://dict.example.com")
 
 # search: relevance tiers, typo tolerance
-result = client.search("recieve")
-print(result.meta.fuzzy, result.data[0].word)  # True receive
+result = client.search("definately")
+print(result.meta.fuzzy, result.data[0].word)  # True definitely
 
 # a headword with every part of speech, forms, meanings and translations
 try:

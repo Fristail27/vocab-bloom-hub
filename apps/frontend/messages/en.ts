@@ -504,16 +504,10 @@ export default {
     public_endpoints: 'Public endpoints',
     endpoint_search_get: 'Basic search',
     endpoint_search_detailed_get: 'Detailed search',
-    endpoint_search: 'Basic search (POST form)',
-    endpoint_search_detailed: 'Detailed search (POST form)',
     desc_search_get:
       'Searches dictionary entries and answers with a flat list of words without meanings and translations, with the fields in the query string. The answer carries ETag, Last-Modified and Cache-Control like every public GET, so it can sit behind a CDN and be shared as a link. Results are ordered by match quality: exact match first, then phrasal verbs, entries starting with the query, phrases, entries ending with it and any other occurrence. When nothing matches, a trigram similarity tier answers typos: meta.fuzzy is true and every item carries similarity (0–1) — Postgres instances only. A term of one or two characters searches the exact and prefix tiers only (meta.short_term is true).',
     desc_search_detailed_get:
       'The same search with pagination, which can additionally join meanings and their translations; the fields travel in the query string (translation_languages as a repeated key) and the answer is cacheable. Because every item may carry joined data, both the page size and the pagination depth are capped tighter than in the basic search.',
-    desc_search:
-      'The POST form of the basic search: the same fields in a JSON body, the same answer, but HTTP caches never store it. Kept through the beta; new integrations should use the GET form. Results are ordered by match quality: exact match first, then phrasal verbs, entries starting with the query, phrases, entries ending with it and any other occurrence. When nothing matches, a trigram similarity tier answers typos: meta.fuzzy is true and every item carries similarity (0–1) — Postgres instances only. A term of one or two characters searches the exact and prefix tiers only (meta.short_term is true).',
-    desc_search_detailed:
-      'The POST form of the detailed search: the same fields in a JSON body, the same answer, not cacheable; kept through the beta. It can additionally join meanings and their translations. Because every item may carry joined data, both the page size and the pagination depth are capped tighter than in the basic search.',
     endpoint_word: 'Headword lookup',
     endpoint_words_batch: 'Batch headword lookup',
     endpoint_word_meanings: 'Meanings of a headword',
