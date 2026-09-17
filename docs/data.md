@@ -50,11 +50,11 @@ carries them in the `meanings` file (earlier datasets nested the meanings in the
   use the data as ground truth for evaluating other dictionaries or as a citable source of
   English usage.
 - **Translations are generated too** and have not been reviewed by a translator. The schema
-  carries five translation languages, Russian, Spanish, French, German and Portuguese
-  (`GET /api/v1/meta` lists them under `available_languages`). The
-  tagged `v0.1.0` revision holds Russian only; the current `main` revision ships all five, one
-  file per language, and `manifest.json` counts the rows per language (`translations`) — the
-  dataset card gives the coverage of each. Translations ship in files of their own, one per language
+  carries six translation languages, Russian, Spanish, French, German, Portuguese and Chinese
+  (`GET /api/v1/meta` lists them under `available_languages`). The published dataset (the
+  tagged `v0.1.0` revision and `main`) ships the first five, one file per language, and
+  `manifest.json` counts the rows per language (`translations`) — the dataset card gives the
+  coverage of each; the Chinese rows arrive with a later revision. Translations ship in files of their own, one per language
   (`meaning-translations.<lang>`, `short-translations.<lang>`, [offline-import.md](./offline-import.md#dataset-format)), so a language
   can be loaded on its own into an instance that already has the entries.
 - **Entry-level `language_register` is unreliable on words** — almost every word says `formal`

@@ -43,7 +43,7 @@ test.describe('landing', () => {
   });
 
   // the locales of issue #450: the hero in Spanish and German, the html lang attribute
-  test('renders in Spanish and German', async ({ page }) => {
+  test('renders in Spanish, German and Chinese', async ({ page }) => {
     await page.goto('/es');
     await expect(page.locator('html')).toHaveAttribute('lang', 'es');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
@@ -55,6 +55,11 @@ test.describe('landing', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
       'Ein Wörterbuch, das neben deiner App läuft',
     );
+
+    // issue #463: the first non-Latin interface language
+    await page.goto('/zh');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('一部可以与你的应用并肩运行的词典');
   });
 
   test('the language switch keeps the page', async ({ page }) => {

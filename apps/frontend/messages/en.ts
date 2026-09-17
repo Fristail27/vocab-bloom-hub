@@ -407,6 +407,7 @@ export default {
     translation_fr: 'French',
     translation_de: 'German',
     translation_pt: 'Portuguese',
+    translation_zh: 'Chinese',
     translation_desc: 'Word Description Translation',
     translation_variants: 'Possible Direct Translations',
     translation_short_meaning: 'Short translation of meaning',

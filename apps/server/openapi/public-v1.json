@@ -243,7 +243,8 @@
                   "es",
                   "fr",
                   "de",
-                  "pt"
+                  "pt",
+                  "zh"
                 ]
               }
             }
@@ -928,7 +929,8 @@
                   "es",
                   "fr",
                   "de",
-                  "pt"
+                  "pt",
+                  "zh"
                 ]
               }
             }
@@ -2076,7 +2078,8 @@
           "es",
           "fr",
           "de",
-          "pt"
+          "pt",
+          "zh"
         ]
       },
       "PublicWordV1ShortTranslationT": {

@@ -105,6 +105,7 @@ def test_random_meta_openapi(client: VocabBloomClient) -> None:
         TranslationLanguage.fr,
         TranslationLanguage.de,
         TranslationLanguage.pt,
+        TranslationLanguage.zh,
     ]
     document = client.openapi()
     assert str(document["openapi"]).startswith("3.")

@@ -30,8 +30,8 @@ export enum CategoryE {
 }
 
 // The languages a translation may carry (issue #410 added Spanish, #445
-// French, #449 German and Portuguese; #394 made every consumer treat the
-// value as data). Adding one: a
+// French, #449 German and Portuguese, #463 Chinese; #394 made every consumer
+// treat the value as data). Adding one: a
 // Postgres migration widening both `..._language_enum` types, a flag + label
 // in the admin (TranslationLanguageSelect, FlagByAreaEnum), its English name
 // in the bulk-request PROMPT_LANGUAGE_NAMES, the spec and both SDKs regenerated
@@ -41,4 +41,6 @@ export enum AvailableTranslationLanguagesE {
   fr = 'fr',
   de = 'de',
   pt = 'pt',
+  // one code for Chinese: Simplified characters, Mandarin (issue #463)
+  zh = 'zh',
 }

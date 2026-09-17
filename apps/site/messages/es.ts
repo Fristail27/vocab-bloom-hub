@@ -16,7 +16,7 @@ export default {
   home: {
     hero_title: 'Un diccionario que puedes ejecutar junto a tu aplicación',
     hero_text:
-      'Vocab Bloom Hub es un diccionario de inglés autoalojado — 300 000 entradas con significados, ejemplos, formas flexionadas y traducciones al ruso, español, francés, alemán y portugués — detrás de una API pública de solo lectura, con SDK, una interfaz de administración y un dataset publicado. Un comando para instalar, MIT para el código, CC BY 4.0 para los datos.',
+      'Vocab Bloom Hub es un diccionario de inglés autoalojado — 300 000 entradas con significados, ejemplos, formas flexionadas y traducciones al ruso, español, francés, alemán, portugués y chino — detrás de una API pública de solo lectura, con SDK, una interfaz de administración y un dataset publicado. Un comando para instalar, MIT para el código, CC BY 4.0 para los datos.',
     cta_getting_started: 'Primeros pasos',
     cta_start: 'Instalar con Docker',
     cta_api: 'Referencia de la API',

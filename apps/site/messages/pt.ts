@@ -16,7 +16,7 @@ export default {
   home: {
     hero_title: 'Um dicionário para rodar ao lado do seu aplicativo',
     hero_text:
-      'O Vocab Bloom Hub é um dicionário de inglês auto-hospedado — 300 000 verbetes com significados, exemplos, formas flexionadas e traduções para russo, espanhol, francês, alemão e português — atrás de uma API pública somente leitura, com SDKs, uma interface de administração e um dataset publicado. Um comando para instalar, MIT para o código, CC BY 4.0 para os dados.',
+      'O Vocab Bloom Hub é um dicionário de inglês auto-hospedado — 300 000 verbetes com significados, exemplos, formas flexionadas e traduções para russo, espanhol, francês, alemão, português e chinês — atrás de uma API pública somente leitura, com SDKs, uma interface de administração e um dataset publicado. Um comando para instalar, MIT para o código, CC BY 4.0 para os dados.',
     cta_getting_started: 'Primeiros passos',
     cta_start: 'Instalar com Docker',
     cta_api: 'Referência da API',

@@ -169,6 +169,7 @@ class AvailableTranslationLanguagesE(Enum):
     fr = "fr"
     de = "de"
     pt = "pt"
+    zh = "zh"
 
 
 class PublicWordV1ShortTranslationT(BaseModel):

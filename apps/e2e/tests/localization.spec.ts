@@ -13,6 +13,10 @@ test.describe('localization', () => {
     await expect(page.getByText('Búsqueda en el diccionario')).toBeVisible();
     await page.goto('/de/managing');
     await expect(page.getByText('Wörterbuchsuche')).toBeVisible();
+
+    // issue #463: the first non-Latin interface language
+    await page.goto('/zh/managing');
+    await expect(page.getByText('词典搜索')).toBeVisible();
   });
 
   test('the root path redirects to the default locale', async ({ page }) => {
