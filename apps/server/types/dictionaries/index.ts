@@ -30,7 +30,7 @@ export enum CategoryE {
 }
 
 // The languages a translation may carry (issue #410 added Spanish, #445
-// French, #449 German and Portuguese, #463 Chinese; #394 made every consumer
+// French, #449 German and Portuguese, #463 Chinese, #464 Arabic; #394 made every consumer
 // treat the value as data). Adding one: a
 // Postgres migration widening both `..._language_enum` types, a flag + label
 // in the admin (TranslationLanguageSelect, FlagByAreaEnum), its English name
@@ -43,4 +43,6 @@ export enum AvailableTranslationLanguagesE {
   pt = 'pt',
   // one code for Chinese: Simplified characters, Mandarin (issue #463)
   zh = 'zh',
+  // one code for Arabic: Modern Standard Arabic, the first right-to-left language (issue #464)
+  ar = 'ar',
 }

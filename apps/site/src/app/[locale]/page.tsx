@@ -2,6 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 
+import { Arrow } from '@/components/Arrow';
 import { Markdown } from '@/components/Markdown';
 import { INSTALL_SNIPPET, NODE_SNIPPET, PYTHON_SNIPPET } from '@/content/home';
 import { renderMarkdown } from '@/content/markdown';
@@ -62,7 +63,9 @@ export default async function HomePage({ params }: LocaleParamsP) {
           <Markdown html={install.html} />
         </div>
         <div className={styles.links}>
-          <Link href="/docs/deployment">{t('install_more')} →</Link>
+          <Link href="/docs/deployment">
+            {t('install_more')} <Arrow />
+          </Link>
         </div>
       </section>
 
@@ -101,8 +104,12 @@ export default async function HomePage({ params }: LocaleParamsP) {
         <h2>{t('data_title')}</h2>
         <p>{t('data_text')}</p>
         <div className={styles.links}>
-          <Link href="/docs/data">{t('data_link')} →</Link>
-          <Link href="/docs/data-license">{t('license_link')} →</Link>
+          <Link href="/docs/data">
+            {t('data_link')} <Arrow />
+          </Link>
+          <Link href="/docs/data-license">
+            {t('license_link')} <Arrow />
+          </Link>
         </div>
       </section>
     </div>

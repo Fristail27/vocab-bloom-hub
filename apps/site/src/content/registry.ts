@@ -47,6 +47,7 @@ export const DOC_PAGES: DocPageT[] = [
       [InterfaceLanguageEnum.pt]: 'docs/README.pt.md',
       [InterfaceLanguageEnum.de]: 'docs/README.de.md',
       [InterfaceLanguageEnum.zh]: 'docs/README.zh.md',
+      [InterfaceLanguageEnum.ar]: 'docs/README.ar.md',
     },
     section: DocSectionE.start,
     title: 'Getting started',

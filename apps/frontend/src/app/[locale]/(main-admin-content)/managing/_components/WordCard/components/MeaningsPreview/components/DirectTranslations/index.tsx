@@ -30,7 +30,7 @@ export const DirectTranslations: React.FC<DirectTranslationsP> = ({ translation,
       )}
       <Icon name={FlagByAreaEnum[translation.language] as IconNamesT} size="medium" />
       {translation.variants_of_words.map((v, i) => (
-        <Tag key={i} variant="outlined" color="orange">
+        <Tag key={i} variant="outlined" color="orange" dir="auto">
           {v}
         </Tag>
       ))}

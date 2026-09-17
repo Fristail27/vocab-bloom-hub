@@ -403,6 +403,7 @@ export default {
     translation_de: '德语',
     translation_pt: '葡萄牙语',
     translation_zh: '中文',
+    translation_ar: '阿拉伯语',
     translation_desc: '单词描述的翻译',
     translation_variants: '可能的直接翻译',
     translation_short_meaning: '释义的简短翻译',

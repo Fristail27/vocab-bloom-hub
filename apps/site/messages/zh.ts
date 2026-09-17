@@ -16,7 +16,7 @@ export default {
   home: {
     hero_title: '一部可以与你的应用并肩运行的词典',
     hero_text:
-      'Vocab Bloom Hub 是一部自托管的英语词典——30 万个条目，包含释义、例句、词形变化，以及俄语、西班牙语、法语、德语、葡萄牙语和中文的翻译——通过公共只读 API 提供，并配有 SDK、管理界面和已发布的数据集。一条命令即可安装，代码采用 MIT 许可证，数据采用 CC BY 4.0 许可证。',
+      'Vocab Bloom Hub 是一部自托管的英语词典——30 万个条目，包含释义、例句、词形变化，以及俄语、西班牙语、法语、德语、葡萄牙语、中文和阿拉伯语的翻译——通过公共只读 API 提供，并配有 SDK、管理界面和已发布的数据集。一条命令即可安装，代码采用 MIT 许可证，数据采用 CC BY 4.0 许可证。',
     cta_getting_started: '快速开始',
     cta_start: '使用 Docker 安装',
     cta_api: 'API 参考',
@@ -140,7 +140,7 @@ export default {
     random: '随机一个词',
     page_title: '{word}——释义、词形变化、翻译',
     page_description: '“{word}”的词典条目。',
-    entries: '{count, plural, one {# 个条目} other {# 个条目}}',
+    entries: '{count, plural, other {# 个条目}}',
     pronounce: '朗读 {word}',
     obsolete: '已废弃',
     abbreviation: '缩写',

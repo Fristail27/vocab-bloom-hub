@@ -1,0 +1,7 @@
+.arrow::before {
+  content: '→';
+}
+
+:global([dir='rtl']) .arrow::before {
+  content: '←';
+}

@@ -414,6 +414,7 @@ export default {
     translation_de: 'Deutsch',
     translation_pt: 'Portugiesisch',
     translation_zh: 'Chinesisch',
+    translation_ar: 'Arabisch',
     translation_desc: 'Übersetzung der Wortbeschreibung',
     translation_variants: 'Mögliche direkte Übersetzungen',
     translation_short_meaning: 'Kurzübersetzung der Bedeutung',

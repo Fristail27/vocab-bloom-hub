@@ -184,6 +184,7 @@ export const Playground = ({ endpoints }: PlaygroundP) => {
             <input
               id={`field-${field.name}`}
               type="text"
+              dir="ltr"
               value={String(value ?? '')}
               onChange={(e) => setValue(field.name, e.target.value)}
             />

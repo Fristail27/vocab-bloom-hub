@@ -11,6 +11,7 @@ import { DOC_PAGES, docFile, docTitle, findDocBySlug, translatedDocFile } from '
 import { readRepoFile, REPO_BLOB_URL } from '@/content/repo';
 import { localeAlternates, pageMeta } from '@/core/site';
 import { routing } from '@/i18n/routing';
+import { localeDirection } from '@/i18n/direction';
 import { InterfaceLanguageEnum, LocaleParamsP } from '@/types/common';
 
 import styles from '../docs.module.scss';
@@ -60,7 +61,12 @@ export default async function DocPage({ params }: DocPageP) {
 
   return (
     <div className={styles.content}>
-      <article className={styles.article}>
+      {/* the Markdown keeps the direction of its own language: English pages stay left-to-right under /ar */}
+      <article
+        className={styles.article}
+        lang={englishOnly ? 'en' : locale}
+        dir={englishOnly ? 'ltr' : localeDirection(locale)}
+      >
         {englishOnly && <div className={styles.note}>{t('english_only')}</div>}
         <Markdown html={rendered.html} />
         <div className={styles.edit}>

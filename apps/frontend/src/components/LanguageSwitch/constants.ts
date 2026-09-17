@@ -8,4 +8,5 @@ export const InterfaceLanguageOptions = [
   { value: InterfaceLanguageEnum.pt, label: 'Português', icons: ['ptFlag' as const] },
   { value: InterfaceLanguageEnum.de, label: 'Deutsch', icons: ['deFlag' as const] },
   { value: InterfaceLanguageEnum.zh, label: '中文', icons: ['zhFlag' as const] },
+  { value: InterfaceLanguageEnum.ar, label: 'العربية', icons: ['arFlag' as const] },
 ];

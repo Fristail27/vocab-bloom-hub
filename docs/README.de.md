@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="../README.md">🇺🇸 EN</a> | <a href="README.ru.md">🇷🇺 RU</a> | <a href="README.es.md">🇪🇸 ES</a> | <a href="README.fr.md">🇫🇷 FR</a> | <a href="README.pt.md">🇵🇹 PT</a> | <strong>🇩🇪 DE</strong> | <a href="README.zh.md">🇨🇳 ZH</a>
+  <a href="../README.md">🇺🇸 EN</a> | <a href="README.ru.md">🇷🇺 RU</a> | <a href="README.es.md">🇪🇸 ES</a> | <a href="README.fr.md">🇫🇷 FR</a> | <a href="README.pt.md">🇵🇹 PT</a> | <strong>🇩🇪 DE</strong> | <a href="README.zh.md">🇨🇳 ZH</a> | <a href="README.ar.md">🌐 AR</a>
 </p>
 
 <p align="center">
@@ -49,7 +49,7 @@ ein Admin-Panel zum Bearbeiten und SDKs, um darauf aufzubauen.
 - 89 000 englische Wörter und 26 000 Wendungen, 161 000 Bedeutungen mit Definitionen und Beispielen
 - IPA-Transkription, GER-Niveau, Register- und Fachgebietsangaben, flektierte Formen
 - Synonym- und Antonymlinks zwischen Stichwörtern, Partikelverben mit ihrem Grundverb verknüpft
-- Übersetzungen ins Russische, Spanische, Französische, Deutsche, Portugiesische und Chinesische
+- Übersetzungen ins Russische, Spanische, Französische, Deutsche, Portugiesische, Chinesische und Arabische
 - offene Daten: [CC BY 4.0](../DATA_LICENSE.md), auf HuggingFace veröffentlicht, beim ersten
   Start in eine leere Instanz geladen; mit Sprachmodellen erzeugt, nicht von Menschen geprüft
 
@@ -64,7 +64,7 @@ ein Admin-Panel zum Bearbeiten und SDKs, um darauf aufzubauen.
 - Node.js / TypeScript: `npm install @vocab-bloom-hub/client@alpha`
 - Python: `pip install --pre vocab-bloom-hub` (synchron, asynchron, ein pandas-Helfer)
 
-**Das Admin-Panel** — sieben Oberflächensprachen
+**Das Admin-Panel** — acht Oberflächensprachen
 
 - Wörter, Bedeutungen, Übersetzungen und Links bearbeiten; jede Änderung im Audit-Protokoll
 - die Korrekturen moderieren, die Leser von den Wortseiten schicken

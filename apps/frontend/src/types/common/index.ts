@@ -15,6 +15,7 @@ export enum InterfaceLanguageEnum {
   pt = 'pt',
   de = 'de',
   zh = 'zh',
+  ar = 'ar',
 }
 
 export type CommonPageP<T extends object = object> = {
