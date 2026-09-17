@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="../README.md">🇺🇸 EN</a> | <a href="README.ru.md">🇷🇺 RU</a> | <strong>🇪🇸 ES</strong> | <a href="README.fr.md">🇫🇷 FR</a> | <a href="README.pt.md">🇵🇹 PT</a> | <a href="README.de.md">🇩🇪 DE</a>
+  <a href="../README.md">🇺🇸 EN</a> | <a href="README.ru.md">🇷🇺 RU</a> | <strong>🇪🇸 ES</strong> | <a href="README.fr.md">🇫🇷 FR</a> | <a href="README.pt.md">🇵🇹 PT</a> | <a href="README.de.md">🇩🇪 DE</a> | <a href="README.zh.md">🇨🇳 ZH</a>
 </p>
 
 <p align="center">
@@ -49,7 +49,7 @@ panel de administración para editarlos y SDK para construir encima.
 - 89 000 palabras y 26 000 frases en inglés, 161 000 acepciones con definiciones y ejemplos
 - transcripción IPA, nivel CEFR, marcas de registro y de ámbito, formas flexionadas
 - enlaces de sinónimos y antónimos entre lemas, verbos frasales enlazados a su verbo base
-- traducciones al ruso, español, francés, alemán y portugués
+- traducciones al ruso, español, francés, alemán, portugués y chino
 - datos abiertos: [CC BY 4.0](../DATA_LICENSE.md), publicados en HuggingFace, cargados en una
   instancia vacía en el primer arranque; generados con modelos de lenguaje, sin verificación humana
 
@@ -64,7 +64,7 @@ panel de administración para editarlos y SDK para construir encima.
 - Node.js / TypeScript: `npm install @vocab-bloom-hub/client@alpha`
 - Python: `pip install --pre vocab-bloom-hub` (síncrono, asíncrono, un ayudante para pandas)
 
-**El panel de administración** — seis idiomas de interfaz
+**El panel de administración** — siete idiomas de interfaz
 
 - editar palabras, acepciones, traducciones y enlaces; cada cambio en un registro de auditoría
 - moderar las correcciones que los lectores envían desde las páginas de palabras

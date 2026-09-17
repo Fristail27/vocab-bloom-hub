@@ -6,12 +6,13 @@ import es from '../es';
 import fr from '../fr';
 import pt from '../pt';
 import ru from '../ru';
+import zh from '../zh';
 
 // The trees are edited by hand and nothing else enforces their parity
 // (issue #353): a key present in one locale and missing in another only
 // surfaces as a MISSING_MESSAGE error at runtime. One catalog per member of
-// InterfaceLanguageEnum (issue #450)
-const CATALOGS = { en, ru, es, fr, pt, de } as const;
+// InterfaceLanguageEnum (issues #450, #463)
+const CATALOGS = { en, ru, es, fr, pt, de, zh } as const;
 
 const flatten = (node: unknown, prefix = ''): Array<[string, string]> =>
   typeof node === 'object' && node !== null

@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="../README.md">🇺🇸 EN</a> | <a href="README.ru.md">🇷🇺 RU</a> | <a href="README.es.md">🇪🇸 ES</a> | <a href="README.fr.md">🇫🇷 FR</a> | <strong>🇵🇹 PT</strong> | <a href="README.de.md">🇩🇪 DE</a>
+  <a href="../README.md">🇺🇸 EN</a> | <a href="README.ru.md">🇷🇺 RU</a> | <a href="README.es.md">🇪🇸 ES</a> | <a href="README.fr.md">🇫🇷 FR</a> | <strong>🇵🇹 PT</strong> | <a href="README.de.md">🇩🇪 DE</a> | <a href="README.zh.md">🇨🇳 ZH</a>
 </p>
 
 <p align="center">
@@ -49,7 +49,7 @@ lê-los, um painel de administração para editá-los e SDKs para construir em c
 - 89 000 palavras e 26 000 expressões em inglês, 161 000 sentidos com definições e exemplos
 - transcrição IPA, nível CEFR, marcas de registro e de domínio, formas flexionadas
 - ligações de sinônimos e antônimos entre verbetes, verbos frasais ligados ao seu verbo base
-- traduções para russo, espanhol, francês, alemão e português
+- traduções para russo, espanhol, francês, alemão, português e chinês
 - dados abertos: [CC BY 4.0](../DATA_LICENSE.md), publicados no HuggingFace, carregados em uma
   instância vazia na primeira inicialização; gerados por modelos de linguagem, sem verificação humana
 
@@ -64,7 +64,7 @@ lê-los, um painel de administração para editá-los e SDKs para construir em c
 - Node.js / TypeScript: `npm install @vocab-bloom-hub/client@alpha`
 - Python: `pip install --pre vocab-bloom-hub` (síncrono, assíncrono, um auxiliar para pandas)
 
-**O painel de administração** — seis idiomas de interface
+**O painel de administração** — sete idiomas de interface
 
 - editar palavras, sentidos, traduções e ligações; cada alteração em um registro de auditoria
 - moderar as correções que os leitores enviam das páginas de palavras

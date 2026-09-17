@@ -7,6 +7,7 @@ import { SpanishFlag } from '@/core/ui/icons/colorful/SpanishFlag';
 import { FrenchFlag } from '@/core/ui/icons/colorful/FrenchFlag';
 import { GermanFlag } from '@/core/ui/icons/colorful/GermanFlag';
 import { PortugueseFlag } from '@/core/ui/icons/colorful/PortugueseFlag';
+import { ChineseFlag } from '@/core/ui/icons/colorful/ChineseFlag';
 import { Home } from '@/core/ui/icons/mono/Home';
 import { Managing } from '@/core/ui/icons/mono/Managing';
 
@@ -20,6 +21,7 @@ export default {
   frFlag: FrenchFlag,
   deFlag: GermanFlag,
   ptFlag: PortugueseFlag,
+  zhFlag: ChineseFlag,
   home: Home,
   managing: Managing,
 };

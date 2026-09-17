@@ -24,6 +24,8 @@ export const PROMPT_LANGUAGE_NAMES: Record<AvailableTranslationLanguagesE, strin
   [AvailableTranslationLanguagesE.de]: 'German',
   // one code for Portuguese; the prompts ask for the Brazilian usage (issue #449)
   [AvailableTranslationLanguagesE.pt]: 'Brazilian Portuguese',
+  // one code for Chinese; the prompts ask for Simplified characters (issue #463)
+  [AvailableTranslationLanguagesE.zh]: 'Simplified Chinese (Mandarin)',
 };
 
 const TRANSLATION_LANGUAGES = Object.values(AvailableTranslationLanguagesE);

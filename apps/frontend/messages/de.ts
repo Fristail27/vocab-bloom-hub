@@ -413,6 +413,7 @@ export default {
     translation_fr: 'Französisch',
     translation_de: 'Deutsch',
     translation_pt: 'Portugiesisch',
+    translation_zh: 'Chinesisch',
     translation_desc: 'Übersetzung der Wortbeschreibung',
     translation_variants: 'Mögliche direkte Übersetzungen',
     translation_short_meaning: 'Kurzübersetzung der Bedeutung',

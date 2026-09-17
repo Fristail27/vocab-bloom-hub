@@ -274,24 +274,29 @@ def test_memory_cache_evicts_least_recently_used() -> None:
 
 def test_version_is_the_installed_distribution_version() -> None:
     """``__version__`` comes from the package metadata (issue #401): the version of
-    pyproject.toml in PyPI's normalized form, so it cannot drift from a release."""
+    pyproject.toml in PyPI's normalized form, so it cannot drift from a release.
+    The metadata may carry either spelling (hatchling normalized it up to 1.32.1 and
+    keeps the pyproject spelling since 1.32.3); ``__version__`` is always normalized."""
     import importlib.metadata
     import re
     from pathlib import Path
 
     import vocab_bloom_hub
 
-    assert vocab_bloom_hub.__version__ == importlib.metadata.version("vocab-bloom-hub")
+    # 1.2.3-alpha.4 → 1.2.3a4, -beta.4 → b4, -rc.4 → rc4 (PEP 440)
+    def normalize(version: str) -> str:
+        return re.sub(
+            r"-(alpha|beta|rc)\.(\d+)$",
+            lambda m: {"alpha": "a", "beta": "b", "rc": "rc"}[m[1]] + m[2],
+            version,
+        )
+
+    assert vocab_bloom_hub.__version__ == normalize(importlib.metadata.version("vocab-bloom-hub"))
     pyproject = (Path(__file__).parents[1] / "pyproject.toml").read_text()
     match = re.search(r'^version = "([^"]+)"$', pyproject, re.M)
     assert match is not None
-    # 1.2.3-alpha.4 → 1.2.3a4, -beta.4 → b4, -rc.4 → rc4 (PEP 440)
-    normalized = re.sub(
-        r"-(alpha|beta|rc)\.(\d+)$",
-        lambda m: {"alpha": "a", "beta": "b", "rc": "rc"}[m[1]] + m[2],
-        match[1],
-    )
-    assert vocab_bloom_hub.__version__ == normalized
+    assert vocab_bloom_hub.__version__ == normalize(match[1])
+    assert f"vocab-bloom-hub-python/{vocab_bloom_hub.__version__}" == vocab_bloom_hub.USER_AGENT
 
 
 def test_user_agent_is_versioned_and_overridable() -> None:
