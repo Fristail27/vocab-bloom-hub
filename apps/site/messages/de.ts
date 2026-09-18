@@ -210,7 +210,7 @@ export default {
     issues: 'Issues',
     discussions: 'Diskussionen',
     release_notes: 'Versionshinweise',
-    made_by: 'Vocab Bloom Hub von Alexey Ryzhov',
+    made_by: 'Vocab Bloom Hub von Aleksei Ryzhov',
   },
   error: {
     title: 'Etwas ist schiefgelaufen',

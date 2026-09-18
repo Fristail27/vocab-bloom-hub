@@ -3,7 +3,8 @@
 # Prometheus scrapes the server's /metrics over the compose network (the
 # overlay turns METRICS_ENABLED on for the server); Grafana comes with the
 # datasource and the dashboard in observability/ already provisioned —
-# open http://localhost:3001 (GRAFANA_PORT), log in with
+# open http://localhost:3244 (GRAFANA_PORT; Prometheus is on 3243,
+# PROMETHEUS_PORT), log in with
 # GRAFANA_ADMIN_USER / GRAFANA_ADMIN_PASSWORD (admin / admin by default).
 # Both UIs are published on localhost only and are never part of the
 # default stack. See docs/observability.md#prometheus--grafana-in-docker.
@@ -25,7 +26,7 @@ services:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
     ports:
-      - '127.0.0.1:${PROMETHEUS_PORT:-9090}:9090'
+      - '127.0.0.1:${PROMETHEUS_PORT:-3243}:9090'
     restart: unless-stopped
 
   grafana:
@@ -42,8 +43,8 @@ services:
       - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
     ports:
-      # 3001 by default: 3000 is the admin UI (FRONT_PORT)
-      - '127.0.0.1:${GRAFANA_PORT:-3001}:3000'
+      # 3244 by default, right after the apps (3240–3242) and Prometheus (3243)
+      - '127.0.0.1:${GRAFANA_PORT:-3244}:3000'
     depends_on:
       prometheus:
         condition: service_started

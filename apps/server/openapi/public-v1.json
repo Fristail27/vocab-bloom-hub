@@ -1338,8 +1338,8 @@
   },
   "info": {
     "title": "VocabBloom Public API",
-    "description": "Read-only dictionary API under /api/v1 (contract version 1): no authentication, every answer in a { data, meta } envelope, errors as { statusCode, message, error: true }, X-API-Version on every response. Successful GET answers carry ETag, Last-Modified and Cache-Control. See docs/api.md in the repository.",
-    "version": "0.2.0-beta.1",
+    "description": "Read-only dictionary API under /api/v1 (contract version 1): no authentication, every answer in a { data, meta } envelope, errors as { statusCode, message, error: true }, X-API-Version on every response. Successful GET answers carry ETag, Last-Modified and Cache-Control. Documentation: https://vocab-bloom-hub.com/en/docs/api.",
+    "version": "1.0.0",
     "contact": {}
   },
   "tags": [
@@ -2729,5 +2729,9 @@
         ]
       }
     }
+  },
+  "externalDocs": {
+    "description": "Documentation",
+    "url": "https://vocab-bloom-hub.com/en/docs/api"
   }
 }

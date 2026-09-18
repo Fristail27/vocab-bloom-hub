@@ -33,6 +33,15 @@ export default {
     [ErrorCodes.suggestion_not_applicable]:
       'Nichts anzuwenden: eine Textmeldung oder eine Meldung, die bereits ein Urteil erhalten hat',
   },
+  header: {
+    home: 'Startseite',
+    theme: 'Dunkles Design',
+    language: 'Sprache der Oberfläche',
+  },
+  footer: {
+    docs: 'Dokumentation',
+    version: 'Version: {version}',
+  },
   common: {
     theme: {
       light: 'hell',

@@ -10,7 +10,12 @@ import { InterfaceLanguageEnum } from '@/types/common';
 import { labelRender, optionRender } from '@/core/ui/Select/utils';
 import icons from '@/core/ui/icons';
 
-export const LanguageSwitch: React.FC = () => {
+type LanguageSwitchP = {
+  /** Accessible name of the select */
+  label?: string;
+};
+
+export const LanguageSwitch: React.FC<LanguageSwitchP> = ({ label }) => {
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
@@ -31,7 +36,7 @@ export const LanguageSwitch: React.FC = () => {
       value={locale as InterfaceLanguageEnum}
       style={{ width: 140 }}
       onChange={onChange}
-      placeholder="Select a language"
+      aria-label={label}
       options={InterfaceLanguageOptions}
       optionRender={optionRender}
       labelRender={renderLabel}

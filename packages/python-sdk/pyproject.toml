@@ -1,11 +1,11 @@
 [project]
 name = "vocab-bloom-hub"
-version = "0.2.0-beta.1"
+version = "1.0.0"
 description = "Typed Python client for the Vocab Bloom Hub public dictionary API (/api/v1): sync and async, pydantic models, cursor iteration, ETag cache."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
-authors = [{ name = "Alexey Ryzhov (Fristail27)" }]
+authors = [{ name = "Aleksei Ryzhov (Fristail27)" }]
 keywords = ["dictionary", "vocabulary", "english", "api-client", "sdk", "vocab-bloom-hub"]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -29,10 +29,10 @@ dependencies = [
 pandas = ["pandas>=2.0"]
 
 [project.urls]
-Homepage = "https://github.com/Fristail27/vocab-bloom-hub/tree/main/packages/python-sdk#readme"
+Homepage = "https://vocab-bloom-hub.com/en/docs/sdk/python"
 Repository = "https://github.com/Fristail27/vocab-bloom-hub"
 Issues = "https://github.com/Fristail27/vocab-bloom-hub/issues"
-Documentation = "https://github.com/Fristail27/vocab-bloom-hub/blob/main/docs/api.md"
+Documentation = "https://vocab-bloom-hub.com/en/docs/api"
 
 [build-system]
 requires = ["hatchling"]

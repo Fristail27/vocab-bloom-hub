@@ -5,6 +5,85 @@ the admin UI, the website and both SDKs; the published dataset keeps its own ver
 (`manifest.version`), bumped at the next export after a release. Entries are curated from the
 generated release notes; the full commit history lives in git.
 
+## v1.0.0 — 2026-09-18
+
+The first stable release: the public API under `/api/v1` is covered by semantic versioning from
+here on, the packages install without a prerelease channel, the dictionary speaks seven
+translation languages and the interfaces eight — Arabic as the first right-to-left one.
+
+- **Stable channels**: `npm install @vocab-bloom-hub/client` and `pip install vocab-bloom-hub`
+  resolve this release (npm `latest`; no `@alpha`, no `--pre`), and the Docker images get the
+  floating tags `1.0`, `1` and `latest` next to `1.0.0`. The READMEs, the SDK READMEs and
+  `SECURITY.md` say so; a breaking change to `/api/v1` means a new major version.
+
+- **Chinese (`zh`) as a translation language and an interface language** (issue #463):
+  `AvailableTranslationLanguagesE` gains `zh` (Simplified characters, Mandarin), one migration
+  widens both Postgres enum types, the admin offers it (flag, labels, the bulk-request preset
+  "Simplified Chinese (Mandarin)"), the public filters and `available_languages` carry it, the
+  spec and both SDKs are regenerated. The admin UI and the website speak Chinese: a message
+  catalog per app and `docs/README.zh.md` for the getting-started page.
+
+- **Arabic (`ar`) as a translation language and the first right-to-left interface** (issue
+  #464): the same recipe for the language (Modern Standard Arabic; a neutral icon instead of one
+  state's flag), plus the layout work — `dir` on `<html>` per locale and Ant Design's
+  `direction`, every physical CSS property of both apps replaced by its logical counterpart,
+  translation texts isolated with `dir="auto"` in the admin previews and on the word pages,
+  documentation pages keeping the direction of their own language (English pages stay
+  left-to-right under `/ar`), code blocks and the playground's text inputs always left-to-right,
+  and the "more" arrows after link labels pointing forward in the writing direction.
+
+- **Plural forms checked per locale**: the message parity specs of both apps assert that every
+  plural message carries exactly the categories `Intl.PluralRules` reports for its locale —
+  Arabic needs six. The check completed the Russian, Spanish, French and Portuguese plurals
+  (`many`) and reduced the Chinese one to `other`.
+
+- **Dataset `v0.2.0`**: the published dataset ships all seven translation languages, each
+  covering every sense and every entry, and its English side was cleaned on the way — 26 entries
+  (mostly prepositions) whose titles, definitions or examples carried Russian text, and a handful
+  of wrong descriptions (`fingerroot`, `copesettic`, `linelike`, `myg`, the Yeniseian languages
+  called Uralic). `docs/data.md` and the `.env.example` revision example follow.
+
+- **`HEAD` carries the caching headers of its `GET`**: a `HEAD` on a public read used to bypass
+  the cache interceptor — no `Cache-Control`, no `Last-Modified`, and Express's own `ETag`
+  instead of the content hash — so a proxy checking freshness with `HEAD` saw a validator that
+  never matched the stored `GET`. Both methods now answer with the same three headers.
+
+- **Getting started shows the search**: the install section of every README ends with the two
+  basic requests, `GET /api/v1/search` and `GET /api/v1/search/detailed`, next to the readiness
+  probe; the admin UI serves the project icon instead of the framework's default favicon.
+
+- **New default ports under docker compose**: the stack is published on `3240` (API), `3241`
+  (admin UI) and `3242` (website), and the observability overlay on `3243` (Prometheus) and
+  `3244` (Grafana) — away from the `3000` and `9090` so many other tools take. Inside the
+  containers, and for a start without Docker, the ports stay `3010` / `3000` / `3020`.
+  **Upgrading**: an `.env` made from the earlier template names `SERVER_PORT=3010` and
+  `FRONT_PORT=3000` and keeps them; the website, Prometheus and Grafana move unless
+  `SITE_PORT`, `PROMETHEUS_PORT` and `GRAFANA_PORT` are set (`3020`, `9090`, `3001` before) — a
+  reverse proxy pointing at them needs the new upstreams or those three lines.
+  `docs/deployment/docker.md` gains an _Everything together_ section: the database, the website
+  and the metrics stack on one host, from downloaded files, with the ports and the volumes.
+
+- **The project website, vocab-bloom-hub.com**: the documentation, the API reference and the
+  playground have a public address. The READMEs link it under the title and in the "Next" list
+  (each in its own locale), the SDK READMEs and the package manifests (`homepage`, the PyPI
+  project URLs) point at their pages, both OpenAPI documents carry it as `externalDocs`, the
+  admin footer's "Docs" opens it in the interface language, and the issue chooser offers it.
+
+- **Admin header and footer**: the footer's "Docs" was a dead label, its GitHub link had neither
+  icon nor link colour (both came from a library the app does not ship), and the login page
+  showed an empty version — the settings endpoint is admin-only. The footer now links the
+  documentation and the repository, shows the build's own version when the server's is out of
+  reach, and is translated like the rest of the interface; the header logo leads home and the
+  theme and language switches have accessible names.
+
+- **Python SDK**: `__version__` normalizes the metadata version itself (`1.1.0-beta.1` →
+  `1.1.0b1`); hatchling 1.32.3 stopped writing the PEP 440 spelling, which made the value and the
+  `User-Agent` depend on the build backend.
+
+- **Maintenance**: the weekly dependency group (NestJS 12.0.x, Next.js 16.3.x, React 19.2.x and
+  the rest) is in; TypeScript stays on 6.x — version 7 breaks the builds — and Dependabot now
+  ignores its major updates until the move is made on purpose.
+
 ## v0.2.0-beta.1 — 2026-09-17
 
 The first beta: the public search settles on `GET` and a stable ordering, the dictionary speaks

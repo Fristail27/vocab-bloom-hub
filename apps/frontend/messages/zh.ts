@@ -29,6 +29,15 @@ export default {
     [ErrorCodes.suggestion_invalid]: '提议的修改格式有误',
     [ErrorCodes.suggestion_not_applicable]: '没有可应用的内容：这是一条文字报告，或该报告已经处理过',
   },
+  header: {
+    home: '首页',
+    theme: '深色主题',
+    language: '界面语言',
+  },
+  footer: {
+    docs: '文档',
+    version: '版本：{version}',
+  },
   common: {
     theme: {
       light: '浅色',

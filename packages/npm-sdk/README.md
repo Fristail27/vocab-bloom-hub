@@ -2,6 +2,8 @@
 
 Typed client for the public read-only API of a [Vocab Bloom Hub](https://github.com/Fristail27/vocab-bloom-hub) instance — an English dictionary with IPA, CEFR levels, sense-level definitions, examples, translations (Russian, Spanish, French, German, Portuguese, Chinese, Arabic) and inflected forms, served under `/api/v1`.
 
+Documentation, the API reference and a playground: [vocab-bloom-hub.com](https://vocab-bloom-hub.com/en/docs/sdk/node).
+
 - One method per endpoint, typed from the server's OpenAPI document — the types cannot drift from the API.
 - Node.js ≥ 20 and browsers; `fetch` only, no dependencies; ESM and CommonJS.
 - Errors are thrown as typed exceptions; `AbortSignal` on every call; optional ETag cache for repeated reads; opt-in retry on `429` / `5xx` honouring `Retry-After`; a versioned `User-Agent`.
@@ -9,12 +11,12 @@ Typed client for the public read-only API of a [Vocab Bloom Hub](https://github.
 ## Install
 
 ```bash
-npm install @vocab-bloom-hub/client@alpha
+npm install @vocab-bloom-hub/client
 ```
 
-Prereleases publish under the `alpha` dist-tag, so the channel has to be named while no
-stable release exists — a bare `npm install @vocab-bloom-hub/client` resolves `latest`, which
-does not follow the alphas. From the first stable release `latest` is the one to install.
+Stable releases publish under `latest`. A prerelease publishes under its channel dist-tag
+(`alpha`, `beta`) and never takes `latest`, so it has to be named:
+`npm install @vocab-bloom-hub/client@beta`.
 
 ## Quick start
 

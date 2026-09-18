@@ -31,6 +31,15 @@ export default {
     [ErrorCodes.suggestion_not_applicable]:
       'Nothing to apply: a text report, or a report that already took a verdict',
   },
+  header: {
+    home: 'Home',
+    theme: 'Dark theme',
+    language: 'Interface language',
+  },
+  footer: {
+    docs: 'Docs',
+    version: 'Version: {version}',
+  },
   common: {
     theme: {
       light: 'light',

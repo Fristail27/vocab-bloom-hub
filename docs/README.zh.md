@@ -9,6 +9,13 @@
 </p>
 
 <p align="center">
+  <a href="https://vocab-bloom-hub.com/zh"><strong>vocab-bloom-hub.com</strong></a> ·
+  <a href="https://vocab-bloom-hub.com/zh/docs">文档</a> ·
+  <a href="https://vocab-bloom-hub.com/zh/api">API 参考</a> ·
+  <a href="https://vocab-bloom-hub.com/zh/playground">演练场</a>
+</p>
+
+<p align="center">
   <a href="../README.md">🇺🇸 EN</a> | <a href="README.ru.md">🇷🇺 RU</a> | <a href="README.es.md">🇪🇸 ES</a> | <a href="README.fr.md">🇫🇷 FR</a> | <a href="README.pt.md">🇵🇹 PT</a> | <a href="README.de.md">🇩🇪 DE</a> | <strong>🇨🇳 ZH</strong> | <a href="README.ar.md">🌐 AR</a>
 </p>
 
@@ -17,7 +24,7 @@
   <a href="https://github.com/Fristail27/vocab-bloom-hub/actions/workflows/codeql.yml"><img src="https://github.com/Fristail27/vocab-bloom-hub/actions/workflows/codeql.yml/badge.svg?branch=main" alt="CodeQL" /></a>
   <a href="../LICENSE"><img src="https://img.shields.io/github/license/Fristail27/vocab-bloom-hub" alt="许可证：MIT" /></a>
   <a href="../DATA_LICENSE.md"><img src="https://img.shields.io/badge/data-CC%20BY%204.0-lightgrey" alt="数据：CC BY 4.0" /></a>
-  <a href="https://www.npmjs.com/package/@vocab-bloom-hub/client"><img src="https://img.shields.io/npm/v/%40vocab-bloom-hub%2Fclient/alpha?logo=npm&label=npm" alt="npm: @vocab-bloom-hub/client" /></a>
+  <a href="https://www.npmjs.com/package/@vocab-bloom-hub/client"><img src="https://img.shields.io/npm/v/%40vocab-bloom-hub%2Fclient?logo=npm&label=npm" alt="npm: @vocab-bloom-hub/client" /></a>
   <a href="https://pypi.org/project/vocab-bloom-hub/"><img src="https://img.shields.io/pypi/v/vocab-bloom-hub?logo=pypi&logoColor=white" alt="PyPI: vocab-bloom-hub" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/commits/main"><img src="https://img.shields.io/github/last-commit/Fristail27/vocab-bloom-hub" alt="最近提交" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/issues"><img src="https://img.shields.io/github/issues/Fristail27/vocab-bloom-hub" alt="未关闭的 issue" /></a>
@@ -61,8 +68,8 @@
 
 **SDK** — 由该 OpenAPI 文档生成
 
-- Node.js / TypeScript：`npm install @vocab-bloom-hub/client@alpha`
-- Python：`pip install --pre vocab-bloom-hub`（同步、异步、一个 pandas 辅助函数）
+- Node.js / TypeScript：`npm install @vocab-bloom-hub/client`
+- Python：`pip install vocab-bloom-hub`（同步、异步、一个 pandas 辅助函数）
 
 **管理面板** — 八种界面语言
 
@@ -77,14 +84,15 @@
 健康探针、Prometheus 指标、JSON 日志。
 
 > [!NOTE]
-> 状态：`0.x`，首个 alpha 版本已发布；API 可能在版本之间发生变化。
+> 状态：`1.0`，稳定版：`/api/v1` 下的公共 API 遵循语义化版本；不兼容的变更意味着新的主版本。
 
 ---
 
 ## ⚡ 快速开始
 
-三种方式，从最快捷到最灵活。它们最终都会得到运行在 <http://localhost:3000> 的管理面板、
-运行在 <http://localhost:3010> 的 API 和已加载的词典。
+三种方式，从最快捷到最灵活。它们最终都会得到管理面板、API 和已加载的词典：
+使用 Docker 时位于 <http://localhost:3241> 和 <http://localhost:3240>，
+不使用 Docker 时位于 <http://localhost:3000> 和 <http://localhost:3010>。
 
 ### 1. 运行已发布的镜像
 
@@ -107,13 +115,18 @@ docker compose up -d
 完成后返回 `200`；然后使用 `.env` 中的 `ADMIN_USERNAME` / `ADMIN_PASSWORD` 登录。
 
 ```bash
-curl -s localhost:3010/api/ready            # {"status":"ok"}
-curl -s localhost:3010/api/v1/words/run     # 词典给出响应
+curl -s localhost:3240/api/ready            # {"status":"ok"}
+curl -s localhost:3240/api/v1/words/run     # 词典给出响应
+
+# 搜索：匹配的词条，最佳匹配在前
+curl -s 'localhost:3240/api/v1/search?search=run&limit=5'
+# 同上，并带释义、例句和翻译
+curl -s 'localhost:3240/api/v1/search/detailed?search=run&with_meanings=true'
 ```
 
 > [!TIP]
-> 要固定使用某个发布版本而不是 `main` 开发构建，请在 `.env` 中设置 `VBH_TAG=0.2.0-beta.1`。
-> 要在 <http://localhost:3020> 上添加网站（文档、API 参考、演练场、单词页面），请设置
+> 要固定使用某个发布版本而不是 `main` 开发构建，请在 `.env` 中设置 `VBH_TAG=1.0.0`。
+> 要在 <http://localhost:3242> 上添加网站（文档、API 参考、演练场、单词页面），请设置
 > `COMPOSE_PROFILES=db,site`。
 
 ### 2. 从仓库运行
@@ -160,6 +173,8 @@ yarn dev                                       # API :3010，管理面板 :3000�
 
 ### 下一步
 
+- 文档网站，含 API 参考和演练场：
+  [vocab-bloom-hub.com](https://vocab-bloom-hub.com/zh/docs)。
 - 部署到服务器：[`docs/deployment/`](deployment/README.md) — TLS 和反向代理、
   systemd / PM2、升级。
 - 数据库：[`docs/database.md`](database.md) — Postgres 要求、迁移、备份、容量规划。
@@ -182,7 +197,7 @@ PR 检查清单）、技术栈和仓库结构、每个脚本、文档索引和�
 
 ## 📄 许可证
 
-- **代码** — [MIT](../LICENSE) © Alexey Ryzhov (Fristail27)
+- **代码** — [MIT](../LICENSE) © Aleksei Ryzhov (Fristail27)
 - **词典数据**（导出文件、公共 API、HuggingFace 数据集）— [CC BY 4.0](../DATA_LICENSE.md)：可自由使用和改编，包括商业用途，需注明出处。
 
 > [!IMPORTANT]

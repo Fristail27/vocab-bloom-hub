@@ -208,7 +208,7 @@ export default {
     issues: 'المشكلات',
     discussions: 'المناقشات',
     release_notes: 'ملاحظات الإصدار',
-    made_by: 'Vocab Bloom Hub من Alexey Ryzhov',
+    made_by: 'Vocab Bloom Hub من Aleksei Ryzhov',
   },
   error: {
     title: 'حدث خطأ ما',
