@@ -16,6 +16,12 @@ updates:
     schedule:
       interval: 'weekly'
 
+    # TypeScript 7 breaks the builds: stay on the 6.x line until the move is
+    # made on purpose, in its own PR (minor and patch updates still arrive)
+    ignore:
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
+
     groups:
       npm-all:
         patterns:
