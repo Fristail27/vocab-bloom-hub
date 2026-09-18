@@ -208,7 +208,7 @@ export default {
     issues: 'Issues',
     discussions: 'Discusiones',
     release_notes: 'Notas de la versión',
-    made_by: 'Vocab Bloom Hub por Alexey Ryzhov',
+    made_by: 'Vocab Bloom Hub por Aleksei Ryzhov',
   },
   error: {
     title: 'Algo ha salido mal',

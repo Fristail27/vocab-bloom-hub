@@ -100,6 +100,22 @@ describe('public API caching headers (e2e, issue #274)', () => {
     expect(meta.headers.etag).not.toBe(res.headers.etag);
   });
 
+  // a cache may check freshness with HEAD: the validators must be the ones of the GET it stored
+  it('answers HEAD with the caching headers of the GET and no body', async () => {
+    const get = await request(server()).get(`/api/v1/words/id/${wordId}`).expect(200);
+    const head = await request(server()).head(`/api/v1/words/id/${wordId}`).expect(200);
+
+    expect(head.text ?? '').toBe('');
+    expect(head.headers.etag).toBe(get.headers.etag);
+    expect(head.headers['last-modified']).toBe(get.headers['last-modified']);
+    expect(head.headers['cache-control']).toBe('public, max-age=3600');
+
+    await request(server())
+      .head(`/api/v1/words/id/${wordId}`)
+      .set('If-None-Match', get.headers.etag)
+      .expect(304);
+  });
+
   it('answers 304 without a body to a matching If-None-Match or If-Modified-Since', async () => {
     const first = await request(server()).get(`/api/v1/words/id/${wordId}`).expect(200);
 

@@ -94,6 +94,9 @@ public, max-age=<PUBLIC_API_CACHE_MAX_AGE>`; условные запросы о�
 становится частью данных словаря и распространяется вместе с ними под лицензией данных, CC BY
 4.0 ([`DATA_LICENSE.md`](../DATA_LICENSE.md)); страницы слов говорят об этом рядом с формой.
 
+В примерах `localhost:3010` — порт запуска без Docker; установка через docker compose по
+умолчанию публикует API на `localhost:3240` (`SERVER_PORT`).
+
 ```bash
 curl 'http://localhost:3010/api/v1/search?search=run&limit=5'
 curl 'http://localhost:3010/api/v1/search/detailed?search=run&with_meanings=true'
@@ -276,7 +279,9 @@ rung, runner, …; префикс фразы сохраняет пробелы);
 | `Last-Modified` | самое свежее изменение где угодно в словаре (записи, слова, значения, переводы), обновляется раз в минуту          |
 | `Cache-Control` | `public, max-age=<PUBLIC_API_CACHE_MAX_AGE>` (по умолчанию `3600`); `public, no-cache`, когда переменная равна `0` |
 
-Клиент, отправляющий тег обратно, перепроверяет ответ одним обменом без тела:
+`HEAD` отвечает теми же тремя заголовками, что и `GET` этого адреса, поэтому кэш, проверяющий
+свежесть через `HEAD`, видит те валидаторы, которые сохранил. Клиент, отправляющий тег обратно,
+перепроверяет ответ одним обменом без тела:
 
 ```bash
 curl -i 'http://localhost:3010/api/v1/words/run'                                   # 200, ETag: W/"…"

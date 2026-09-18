@@ -29,6 +29,15 @@ export default {
     [ErrorCodes.suggestion_invalid]: 'التغييرات المقترحة غير سليمة البنية',
     [ErrorCodes.suggestion_not_applicable]: 'لا شيء لتطبيقه: بلاغ نصي، أو بلاغ صدر فيه قرار بالفعل',
   },
+  header: {
+    home: 'الصفحة الرئيسية',
+    theme: 'الوضع الداكن',
+    language: 'لغة الواجهة',
+  },
+  footer: {
+    docs: 'التوثيق',
+    version: 'الإصدار: {version}',
+  },
   common: {
     theme: {
       light: 'فاتح',

@@ -32,6 +32,15 @@ export default {
     [ErrorCodes.suggestion_not_applicable]:
       'Rien à appliquer : un signalement textuel, ou un signalement qui a déjà reçu un verdict',
   },
+  header: {
+    home: 'Accueil',
+    theme: 'Thème sombre',
+    language: 'Langue de l’interface',
+  },
+  footer: {
+    docs: 'Documentation',
+    version: 'Version : {version}',
+  },
   common: {
     theme: {
       light: 'clair',

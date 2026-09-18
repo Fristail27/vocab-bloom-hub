@@ -65,7 +65,8 @@ in [api.md](./api.md#openapi-document).
 
 ## The website: reference and playground
 
-The [website](./deployment/docker.md) (`apps/site`, the `site` compose profile) renders the
+The [website](./deployment/docker.md) (`apps/site`, the `site` compose profile; the project's own
+copy runs at [vocab-bloom-hub.com](https://vocab-bloom-hub.com)) renders the
 committed document as two pages:
 
 - **API reference** at `/api` of the site — one section per endpoint, with the parameters,

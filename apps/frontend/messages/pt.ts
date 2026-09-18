@@ -32,6 +32,15 @@ export default {
     [ErrorCodes.suggestion_not_applicable]:
       'Nada a aplicar: um relato em texto, ou um relato que já recebeu um veredito',
   },
+  header: {
+    home: 'Início',
+    theme: 'Tema escuro',
+    language: 'Idioma da interface',
+  },
+  footer: {
+    docs: 'Documentação',
+    version: 'Versão: {version}',
+  },
   common: {
     theme: {
       light: 'claro',

@@ -32,6 +32,15 @@ export default {
     [ErrorCodes.suggestion_not_applicable]:
       'Nada que aplicar: un reporte de texto o un reporte que ya recibió un veredicto',
   },
+  header: {
+    home: 'Inicio',
+    theme: 'Tema oscuro',
+    language: 'Idioma de la interfaz',
+  },
+  footer: {
+    docs: 'Documentación',
+    version: 'Versión: {version}',
+  },
   common: {
     theme: {
       light: 'claro',

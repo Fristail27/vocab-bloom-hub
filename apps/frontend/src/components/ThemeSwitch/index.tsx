@@ -7,7 +7,12 @@ import { ThemeE } from '@/types/common';
 import { StateContext } from '@/components/StateContext';
 import { getThemeVariablesLink } from '@/helpers/getThemeLink';
 
-export const ThemeSwitch: React.FC = () => {
+type ThemeSwitchP = {
+  /** Accessible name: the switch shows only an emoji */
+  label?: string;
+};
+
+export const ThemeSwitch: React.FC<ThemeSwitchP> = ({ label }) => {
   const { theme, setTheme } = useContext(StateContext);
 
   const changeTheme = useCallback((checked: boolean) => {
@@ -20,6 +25,7 @@ export const ThemeSwitch: React.FC = () => {
 
   return (
     <Switch
+      aria-label={label}
       checked={theme === ThemeE.dark}
       onChange={changeTheme}
       checkedChildren="🌙"

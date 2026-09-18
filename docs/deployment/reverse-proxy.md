@@ -1,7 +1,8 @@
 # Reverse proxy, TLS and keeping the admin API private
 
 The server (`SERVER_PORT`, 3010) and the frontend (`FRONT_PORT`, 3000) speak plain HTTP on
-their own ports. In production a reverse proxy in front of them does three things:
+their own ports. Under docker compose the host ports default to `3240` (API), `3241` (admin UI)
+and `3242` (website): use those in the upstreams below instead of `3010` / `3000` / `3020`. In production a reverse proxy in front of them does three things:
 
 1. **Terminates TLS.** The admin cookie is `secure` only over HTTPS; on plain `http://` the login
    works but the token travels unencrypted, and the server logs a warning at every such login.

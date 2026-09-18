@@ -9,6 +9,13 @@
 </p>
 
 <p align="center">
+  <a href="https://vocab-bloom-hub.com/ar"><strong>vocab-bloom-hub.com</strong></a> ·
+  <a href="https://vocab-bloom-hub.com/ar/docs">التوثيق</a> ·
+  <a href="https://vocab-bloom-hub.com/ar/api">مرجع API</a> ·
+  <a href="https://vocab-bloom-hub.com/ar/playground">ساحة التجربة</a>
+</p>
+
+<p align="center">
   <a href="../README.md">🇺🇸 EN</a> | <a href="README.ru.md">🇷🇺 RU</a> | <a href="README.es.md">🇪🇸 ES</a> | <a href="README.fr.md">🇫🇷 FR</a> | <a href="README.pt.md">🇵🇹 PT</a> | <a href="README.de.md">🇩🇪 DE</a> | <a href="README.zh.md">🇨🇳 ZH</a> | <strong>🌐 AR</strong>
 </p>
 
@@ -17,7 +24,7 @@
   <a href="https://github.com/Fristail27/vocab-bloom-hub/actions/workflows/codeql.yml"><img src="https://github.com/Fristail27/vocab-bloom-hub/actions/workflows/codeql.yml/badge.svg?branch=main" alt="CodeQL" /></a>
   <a href="../LICENSE"><img src="https://img.shields.io/github/license/Fristail27/vocab-bloom-hub" alt="الترخيص: MIT" /></a>
   <a href="../DATA_LICENSE.md"><img src="https://img.shields.io/badge/data-CC%20BY%204.0-lightgrey" alt="البيانات: CC BY 4.0" /></a>
-  <a href="https://www.npmjs.com/package/@vocab-bloom-hub/client"><img src="https://img.shields.io/npm/v/%40vocab-bloom-hub%2Fclient/alpha?logo=npm&label=npm" alt="npm: @vocab-bloom-hub/client" /></a>
+  <a href="https://www.npmjs.com/package/@vocab-bloom-hub/client"><img src="https://img.shields.io/npm/v/%40vocab-bloom-hub%2Fclient?logo=npm&label=npm" alt="npm: @vocab-bloom-hub/client" /></a>
   <a href="https://pypi.org/project/vocab-bloom-hub/"><img src="https://img.shields.io/pypi/v/vocab-bloom-hub?logo=pypi&logoColor=white" alt="PyPI: vocab-bloom-hub" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/commits/main"><img src="https://img.shields.io/github/last-commit/Fristail27/vocab-bloom-hub" alt="آخر إيداع" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/issues"><img src="https://img.shields.io/github/issues/Fristail27/vocab-bloom-hub" alt="المشكلات المفتوحة" /></a>
@@ -61,8 +68,8 @@
 
 **حزم SDK** — مولَّدة من وثيقة OpenAPI تلك
 
-- Node.js / TypeScript: `npm install @vocab-bloom-hub/client@alpha`
-- Python: `pip install --pre vocab-bloom-hub` (متزامن، وغير متزامن، ومساعد لـ pandas)
+- Node.js / TypeScript: `npm install @vocab-bloom-hub/client`
+- Python: `pip install vocab-bloom-hub` (متزامن، وغير متزامن، ومساعد لـ pandas)
 
 **لوحة الإدارة** — ثماني لغات للواجهة
 
@@ -77,14 +84,15 @@
 ومسابر صحة، ومقاييس Prometheus، وسجلات JSON.
 
 > [!NOTE]
-> الحالة: `0.x`، صدرت أول نسخة alpha؛ قد تتغير الواجهة البرمجية بين الإصدارات.
+> الحالة: `1.0`، إصدار مستقر: تتبع الواجهة البرمجية العامة تحت `/api/v1` نظام الإصدارات الدلالي؛ وأي تغيير غير متوافق يعني إصدارًا رئيسيًا جديدًا.
 
 ---
 
 ## ⚡ البدء
 
-ثلاث طرق للبدء، من الأسرع إلى الأكثر مرونة. تنتهي جميعها بلوحة الإدارة على
-<http://localhost:3000>، والواجهة البرمجية على <http://localhost:3010>، والقاموس محمَّلًا.
+ثلاث طرق للبدء، من الأسرع إلى الأكثر مرونة. تنتهي جميعها بلوحة الإدارة والواجهة
+البرمجية والقاموس محمَّلًا: مع Docker على <http://localhost:3241> و<http://localhost:3240>،
+وبدونه على <http://localhost:3000> و<http://localhost:3010>.
 
 ### 1. تشغيل الصور المنشورة
 
@@ -108,14 +116,19 @@ docker compose up -d
 من `.env`.
 
 ```bash
-curl -s localhost:3010/api/ready            # {"status":"ok"}
-curl -s localhost:3010/api/v1/words/run     # القاموس يجيب
+curl -s localhost:3240/api/ready            # {"status":"ok"}
+curl -s localhost:3240/api/v1/words/run     # القاموس يجيب
+
+# البحث: المداخل المطابقة، وأفضلها أولًا
+curl -s 'localhost:3240/api/v1/search?search=run&limit=5'
+# الشيء نفسه مع المعاني والأمثلة والترجمات
+curl -s 'localhost:3240/api/v1/search/detailed?search=run&with_meanings=true'
 ```
 
 > [!TIP]
-> لتثبيت إصدار محدد بدلًا من بناء التطوير `main`، عيّن `VBH_TAG=0.2.0-beta.1` في `.env`.
+> لتثبيت إصدار محدد بدلًا من بناء التطوير `main`، عيّن `VBH_TAG=1.0.0` في `.env`.
 > لإضافة الموقع الإلكتروني (الوثائق، ومرجع الواجهة البرمجية، وساحة التجربة، وصفحات الكلمات) على
-> <http://localhost:3020>، عيّن `COMPOSE_PROFILES=db,site`.
+> <http://localhost:3242>، عيّن `COMPOSE_PROFILES=db,site`.
 
 ### 2. التشغيل من المستودع
 
@@ -161,6 +174,8 @@ yarn dev                                       # الواجهة البرمجية
 
 ### الخطوات التالية
 
+- التوثيق في صورة موقع، مع مرجع API وساحة للتجربة:
+  [vocab-bloom-hub.com](https://vocab-bloom-hub.com/ar/docs).
 - نشره على خادم: [`docs/deployment/`](deployment/README.md) — TLS ووكيل عكسي،
   وsystemd / PM2، والترقيات.
 - قاعدة البيانات: [`docs/database.md`](database.md) — متطلبات Postgres، والترحيلات،
@@ -186,7 +201,7 @@ yarn dev                                       # الواجهة البرمجية
 
 ## 📄 الترخيص
 
-- **الكود** — [MIT](../LICENSE) © Alexey Ryzhov (Fristail27)
+- **الكود** — [MIT](../LICENSE) © Aleksei Ryzhov (Fristail27)
 - **بيانات القاموس** (ملفات التصدير، والواجهة البرمجية العامة، ومجموعة بيانات HuggingFace) — [CC BY 4.0](../DATA_LICENSE.md): حرة الاستخدام والتعديل، بما في ذلك تجاريًا، مع نسب العمل إلى مصدره.
 
 > [!IMPORTANT]

@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "0.2.0-beta.1",
+  "version": "1.0.0",
   "private": true,
   "license": "MIT",
   "description": "Web interface for Vocab Bloom Hub — a modern vocabulary and linguistics platform built with Next.js. Provides dictionary search, word exploration, semantic relations, and language learning tools.",
@@ -22,7 +22,7 @@
     "vocab-bloom-hub"
   ],
   "author": {
-    "name": "Alexey Ryzhov (Fristail27)",
+    "name": "Aleksei Ryzhov (Fristail27)",
     "url": "https://github.com/Fristail27"
   },
   "bugs": {
