@@ -43,7 +43,7 @@ test.describe('landing', () => {
   });
 
   // the locales of issue #450: the hero in Spanish and German, the html lang attribute
-  test('renders in Spanish, German and Chinese', async ({ page }) => {
+  test('renders in Spanish, German, Chinese and Arabic', async ({ page }) => {
     await page.goto('/es');
     await expect(page.locator('html')).toHaveAttribute('lang', 'es');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
@@ -60,6 +60,12 @@ test.describe('landing', () => {
     await page.goto('/zh');
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('一部可以与你的应用并肩运行的词典');
+
+    // issue #464: the first right-to-left interface language
+    await page.goto('/ar');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ar');
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('قاموس يمكنك تشغيله إلى جانب تطبيقك');
   });
 
   test('the language switch keeps the page', async ({ page }) => {

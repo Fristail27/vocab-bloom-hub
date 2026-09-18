@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="../README.md">🇺🇸 EN</a> | <a href="README.ru.md">🇷🇺 RU</a> | <a href="README.es.md">🇪🇸 ES</a> | <a href="README.fr.md">🇫🇷 FR</a> | <a href="README.pt.md">🇵🇹 PT</a> | <a href="README.de.md">🇩🇪 DE</a> | <strong>🇨🇳 ZH</strong>
+  <a href="../README.md">🇺🇸 EN</a> | <a href="README.ru.md">🇷🇺 RU</a> | <a href="README.es.md">🇪🇸 ES</a> | <a href="README.fr.md">🇫🇷 FR</a> | <a href="README.pt.md">🇵🇹 PT</a> | <a href="README.de.md">🇩🇪 DE</a> | <strong>🇨🇳 ZH</strong> | <a href="README.ar.md">🌐 AR</a>
 </p>
 
 <p align="center">
@@ -49,7 +49,7 @@
 - 89 000 个英语单词和 26 000 个短语，161 000 个义项，配有定义和例句
 - IPA 音标、CEFR 等级、语域和领域标签、屈折形式
 - 词条之间的同义词和反义词关联，短语动词与其基础动词相关联
-- 翻译成俄语、西班牙语、法语、德语、葡萄牙语和中文
+- 翻译成俄语、西班牙语、法语、德语、葡萄牙语、中文和阿拉伯语
 - 开放数据：[CC BY 4.0](../DATA_LICENSE.md)，发布在 HuggingFace 上，首次启动时加载到空实例中；
   由语言模型生成，未经人工校验
 
@@ -64,7 +64,7 @@
 - Node.js / TypeScript：`npm install @vocab-bloom-hub/client@alpha`
 - Python：`pip install --pre vocab-bloom-hub`（同步、异步、一个 pandas 辅助函数）
 
-**管理面板** — 七种界面语言
+**管理面板** — 八种界面语言
 
 - 编辑单词、义项、翻译和关联；每次更改都记录在审计日志中
 - 审核读者从单词页面提交的更正

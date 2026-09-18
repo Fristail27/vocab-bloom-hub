@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { Arrow } from '@/components/Arrow';
 import { Link } from '@/i18n/navigation';
 
 import {
@@ -132,7 +133,9 @@ export const Operation = ({ endpoint, spec, baseUrl, labels }: OperationP) => {
       <pre className={styles.pre}>{buildCurlExample(endpoint, baseUrl, spec)}</pre>
       {tryable && (
         <p className={styles.tryIt}>
-          <Link href={`/playground?endpoint=${slug}`}>{labels.try_it} →</Link>
+          <Link href={`/playground?endpoint=${slug}`}>
+            {labels.try_it} <Arrow />
+          </Link>
         </p>
       )}
     </section>

@@ -38,7 +38,7 @@ export const MeaningTranslation: React.FC<MeaningTranslationP> = ({
         </>
       )}
       <Icon name={FlagByAreaEnum[language] as IconNamesT} size="medium" />
-      <Text>{text}</Text>
+      <Text dir="auto">{text}</Text>
     </div>
   );
 };

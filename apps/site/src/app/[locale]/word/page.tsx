@@ -2,6 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 
+import { Arrow } from '@/components/Arrow';
 import { WordSearch } from '@/components/WordSearch';
 import { EXAMPLE_WORDS } from '@/content/words';
 import { localeAlternates, pageMeta } from '@/core/site';
@@ -36,7 +37,9 @@ export default async function WordIndexPage({ params }: LocaleParamsP) {
             </li>
           ))}
           <li>
-            <a href={`/${locale}/word/random`}>{t('random')} →</a>
+            <a href={`/${locale}/word/random`}>
+              {t('random')} <Arrow />
+            </a>
           </li>
         </ul>
       </div>

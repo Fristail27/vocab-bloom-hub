@@ -24,7 +24,7 @@ vocab-bloom-hub-en-phrasal-verbs.jsonl
 vocab-bloom-hub-en-grammar-patterns.jsonl
 vocab-bloom-hub-en-phrases.jsonl
 vocab-bloom-hub-en-meanings.jsonl
-vocab-bloom-hub-en-meaning-translations.<lang>.jsonl   # one per language: .ru, .es, .fr, .de, .pt, .zh
+vocab-bloom-hub-en-meaning-translations.<lang>.jsonl   # one per language: .ru, .es, .fr, .de, .pt, .zh, .ar
 vocab-bloom-hub-en-short-translations.<lang>.jsonl
 ```
 

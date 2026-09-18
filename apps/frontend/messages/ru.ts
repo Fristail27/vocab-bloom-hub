@@ -411,6 +411,7 @@ export default {
     translation_de: 'Немецкий',
     translation_pt: 'Португальский',
     translation_zh: 'Китайский',
+    translation_ar: 'Арабский',
     translation_desc: 'Перевод описания слова',
     translation_variants: 'Варианты прямого перевода',
     translation_short_meaning: 'Короткий перевод значения',

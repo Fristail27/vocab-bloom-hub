@@ -13,6 +13,7 @@ import { Provider } from '@/components/Provider';
 import { ServerAuthApi } from '@/core/api/AuthApi/ServerAuthApi';
 import { ServerSettingsApi } from '@/core/api/SettingsApi/ServerSettingsApi';
 import { getThemeVariablesLink } from '@/helpers/getThemeLink';
+import { localeDirection } from '@/i18n/direction';
 import { routing } from '@/i18n/routing';
 import { InterfaceLanguageEnum, ThemeE } from '@/types/common';
 import styles from './styles.module.scss';
@@ -53,7 +54,7 @@ export default async function RootLayout({ children, params }: RootLayoutP) {
   const themeLink = getThemeVariablesLink(theme);
   const settings = await ServerSettingsApi.getSettings();
   return (
-    <html lang={locale} className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang={locale} dir={localeDirection(locale)} className={`${geistSans.variable} ${geistMono.variable}`}>
       <head>
         <link id="variables-link" rel="stylesheet" href={themeLink} />
         <link rel="stylesheet" href="/styles/variables.css" />

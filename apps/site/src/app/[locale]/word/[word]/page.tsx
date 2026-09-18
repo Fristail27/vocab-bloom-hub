@@ -101,7 +101,7 @@ const Meaning = ({ meaning, t }: { meaning: PublicWordV1MeaningT; t: TranslateT 
     {meaning.translations.length > 0 && (
       <p className={styles.translations}>
         {meaning.translations.map((translation) => (
-          <span key={translation.id} lang={translation.language} title={translation.definition}>
+          <span key={translation.id} lang={translation.language} dir="auto" title={translation.definition}>
             {mixesLanguages(meaning.translations) && <LanguageTag language={translation.language} />}
             {translation.title}
           </span>
@@ -159,7 +159,7 @@ const Entry = ({ entry, t }: { entry: PublicWordV1T; t: TranslateT }) => {
       {entry.short_translations.length > 0 && (
         <p className={styles.short}>
           {entry.short_translations.map((item) => (
-            <span key={item.id} lang={item.language}>
+            <span key={item.id} lang={item.language} dir="auto">
               {mixesLanguages(entry.short_translations) && <LanguageTag language={item.language} />}
               {item.description}
             </span>

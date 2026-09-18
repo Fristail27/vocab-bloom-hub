@@ -7,6 +7,7 @@ import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { siteUrl } from '@/core/site';
+import { localeDirection } from '@/i18n/direction';
 import { isLocale, routing } from '@/i18n/routing';
 import { LocaleParamsP } from '@/types/common';
 
@@ -45,7 +46,7 @@ export default async function RootLayout({ children, params }: RootLayoutP) {
   const messages = await getMessages();
 
   return (
-    <html lang={locale}>
+    <html lang={locale} dir={localeDirection(locale)}>
       <body>
         <NextIntlClientProvider messages={messages}>
           <Header />

@@ -13,6 +13,7 @@ import { AddFrenchTranslationLanguage1789000000000 } from './1789000000000-AddFr
 import { AddGermanAndPortugueseTranslationLanguages1789100000000 } from './1789100000000-AddGermanAndPortugueseTranslationLanguages';
 import { AddCaseFoldedWordIndexes1789200000000 } from './1789200000000-AddCaseFoldedWordIndexes';
 import { AddChineseTranslationLanguage1789300000000 } from './1789300000000-AddChineseTranslationLanguage';
+import { AddArabicTranslationLanguage1789400000000 } from './1789400000000-AddArabicTranslationLanguage';
 
 // Every migration class must be listed here: both the CLI DataSource and the
 // runtime TypeORM options read this array. An explicit list (instead of a
@@ -33,4 +34,5 @@ export const migrations = [
   AddGermanAndPortugueseTranslationLanguages1789100000000,
   AddCaseFoldedWordIndexes1789200000000,
   AddChineseTranslationLanguage1789300000000,
+  AddArabicTranslationLanguage1789400000000,
 ];

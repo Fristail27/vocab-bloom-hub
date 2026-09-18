@@ -153,9 +153,9 @@ you generate: every record names the model behind it, see [`docs/data.md`](./doc
 English is the source language of the documentation. A page may have translated versions next
 to it, named `<name>.<lang>.md` (`docs/api.md` ↔ `docs/api.ru.md`; the README's live under
 `docs/`: `README.md` ↔ `docs/README.ru.md`, `README.es.md`, `README.fr.md`, `README.pt.md`,
-`README.de.md`, `README.zh.md`) and registered under `translations` in
+`README.de.md`, `README.zh.md`, `README.ar.md`) and registered under `translations` in
 `apps/site/src/content/registry.ts`, where the website renders them under `/ru`, `/es`, `/fr`,
-`/pt`, `/de`, `/zh`. The README exists in
+`/pt`, `/de`, `/zh`, `/ar`. The README exists in
 every interface language of the apps; the other pages have a Russian version at most. A page
 without a translation shows the English text on the site with a notice. Code comments, issue
 and PR templates and the pages without a translation are English only.
@@ -291,7 +291,7 @@ Everything the repository documents, also rendered on the website:
 - [`docs/api-tools.md`](./docs/api-tools.md) — Swagger UI, the OpenAPI document, the website's reference and playground, the admin Documentation pages: which to open when
 - [`docs/data.md`](./docs/data.md) — where the dictionary data comes from (LLM-generated, `generated_by_model`), known limitations, how to report errors; the terms are in [`DATA_LICENSE.md`](./DATA_LICENSE.md)
 - [`packages/npm-sdk/README.md`](./packages/npm-sdk/README.md) and [`packages/python-sdk/README.md`](./packages/python-sdk/README.md) — the SDKs
-- [`docs/README.ru.md`](./docs/README.ru.md), [`README.es.md`](./docs/README.es.md), [`README.fr.md`](./docs/README.fr.md), [`README.pt.md`](./docs/README.pt.md), [`README.de.md`](./docs/README.de.md), [`README.zh.md`](./docs/README.zh.md) — the README in the other interface languages; `docs/api.ru.md`, `docs/environment.ru.md` and `docs/deployment/README.ru.md` are the other translated pages
+- [`docs/README.ru.md`](./docs/README.ru.md), [`README.es.md`](./docs/README.es.md), [`README.fr.md`](./docs/README.fr.md), [`README.pt.md`](./docs/README.pt.md), [`README.de.md`](./docs/README.de.md), [`README.zh.md`](./docs/README.zh.md), [`README.ar.md`](./docs/README.ar.md) — the README in the other interface languages; `docs/api.ru.md`, `docs/environment.ru.md` and `docs/deployment/README.ru.md` are the other translated pages
 - [`AGENTS.md`](./AGENTS.md) — the map of the codebase for coding agents (commands, architecture, conventions), kept in sync with the tree
 
 ## Roadmap
@@ -300,7 +300,7 @@ Planned directions, in no particular order (the [issues](https://github.com/Fris
 
 - Semantic search and a semantic network on top of the dictionary (next major version)
 - Word relations graph beyond synonyms and antonyms: hypernyms / hyponyms, collocations
-- More source languages besides English, and more translation languages beyond Russian, Spanish, French, German, Portuguese and Chinese
+- More source languages besides English, and more translation languages beyond Russian, Spanish, French, German, Portuguese, Chinese and Arabic
 - Published linguistic datasets built from the dictionary
 
 ## Questions
@@ -313,14 +313,14 @@ Planned directions, in no particular order (the [issues](https://github.com/Fris
 ```text
 .
 ├── apps/
-│   ├── frontend/   → Next.js admin UI (seven interface languages)
+│   ├── frontend/   → Next.js admin UI (eight interface languages)
 │   ├── site/       → Next.js project website: docs, API reference, playground, word pages
 │   ├── server/     → NestJS API; also exports the shared types (types/) and constants (core/) the frontend and the site import
 │   └── e2e/        → Playwright browser tests that boot the apps against an isolated SQLite database
 ├── packages/
 │   ├── npm-sdk/    → @vocab-bloom-hub/client, the Node.js / TypeScript SDK of the public API
 │   └── python-sdk/ → vocab-bloom-hub, the Python SDK (uv, httpx, pydantic)
-├── docs/           → the documentation (deployment, database, operations, observability, performance, environment, API, authentication, migrations, offline import, data) and the README in the other six languages
+├── docs/           → the documentation (deployment, database, operations, observability, performance, environment, API, authentication, migrations, offline import, data) and the README in the other seven languages
 ├── eslint/         → shared ESLint config pieces (base / next / nest)
 ├── .agents/        → skills for coding agents; the per-agent MCP configs sit next to them (AGENTS.md)
 ├── .github/        → CI workflows, issue / PR templates, Dependabot, CODEOWNERS

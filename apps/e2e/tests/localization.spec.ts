@@ -17,6 +17,11 @@ test.describe('localization', () => {
     // issue #463: the first non-Latin interface language
     await page.goto('/zh/managing');
     await expect(page.getByText('词典搜索')).toBeVisible();
+
+    // issue #464: the first right-to-left interface language
+    await page.goto('/ar/managing');
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await expect(page.getByText('البحث في القاموس')).toBeVisible();
   });
 
   test('the root path redirects to the default locale', async ({ page }) => {

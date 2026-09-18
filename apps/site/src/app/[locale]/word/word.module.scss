@@ -134,7 +134,8 @@
 
 .meanings {
   margin: 0;
-  padding: 0 0 0 22px;
+  padding: 0;
+  padding-inline-start: 22px;
 
   > li {
     margin: 0 0 16px;

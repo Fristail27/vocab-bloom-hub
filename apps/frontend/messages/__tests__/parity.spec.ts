@@ -1,5 +1,6 @@
-import { parse } from '@formatjs/icu-messageformat-parser';
+import { parse, TYPE, type MessageFormatElement } from '@formatjs/icu-messageformat-parser';
 
+import ar from '../ar';
 import de from '../de';
 import en from '../en';
 import es from '../es';
@@ -11,8 +12,8 @@ import zh from '../zh';
 // The trees are edited by hand and nothing else enforces their parity
 // (issue #353): a key present in one locale and missing in another only
 // surfaces as a MISSING_MESSAGE error at runtime. One catalog per member of
-// InterfaceLanguageEnum (issues #450, #463)
-const CATALOGS = { en, ru, es, fr, pt, de, zh } as const;
+// InterfaceLanguageEnum (issues #450, #463, #464)
+const CATALOGS = { en, ru, es, fr, pt, de, zh, ar } as const;
 
 const flatten = (node: unknown, prefix = ''): Array<[string, string]> =>
   typeof node === 'object' && node !== null
@@ -60,4 +61,22 @@ describe('message trees (issue #353)', () => {
       }
     },
   );
+
+  // A plural message must carry the categories of its locale (issue #464):
+  // English gets by with `one` / `other`, Arabic needs all six, and a missing
+  // category falls back to `other` silently at runtime
+  it.each(Object.entries(CATALOGS))('every %s plural carries the categories of its locale', (locale, tree) => {
+    const required = new Intl.PluralRules(locale).resolvedOptions().pluralCategories;
+    const pluralCategories = (elements: MessageFormatElement[]): string[][] =>
+      elements.flatMap((element) => {
+        if (element.type !== TYPE.plural) return [];
+        const own = Object.keys(element.options).filter((key) => !key.startsWith('='));
+        return [own, ...Object.values(element.options).flatMap((option) => pluralCategories(option.value))];
+      });
+    for (const [key, message] of flatten(tree)) {
+      for (const categories of pluralCategories(parse(message))) {
+        expect({ key, categories: categories.sort() }).toEqual({ key, categories: [...required].sort() });
+      }
+    }
+  });
 });

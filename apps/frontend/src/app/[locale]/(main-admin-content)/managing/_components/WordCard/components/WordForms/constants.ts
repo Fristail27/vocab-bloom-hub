@@ -12,4 +12,5 @@ export const FlagByAreaEnum = {
   de: 'deFlag',
   pt: 'ptFlag',
   zh: 'zhFlag',
+  ar: 'arFlag',
 };

@@ -98,11 +98,11 @@ export const ShortTranslationsPreview: React.FC<ShortTranslationsPreviewP> = ({
               <Text className={styles.title}>{t('translation_desc')}:</Text>
               <div className={styles.desc}>
                 <Icon size="medium" name={FlagByAreaEnum[translation.language] as IconNamesT} />
-                <Text>{translation.description}</Text>
+                <Text dir="auto">{translation.description}</Text>
               </div>
               <div className={styles.variantsOfWord}>
                 {translation.variants_of_words.map((v) => (
-                  <Tag key={v} color="orange" variant="outlined">
+                  <Tag key={v} color="orange" variant="outlined" dir="auto">
                     {v}
                   </Tag>
                 ))}

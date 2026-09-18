@@ -16,7 +16,7 @@ export default {
   home: {
     hero_title: 'Ein Wörterbuch, das neben deiner App läuft',
     hero_text:
-      'Vocab Bloom Hub ist ein selbst gehostetes Englisch-Wörterbuch — 300 000 Einträge mit Bedeutungen, Beispielen, flektierten Formen und Übersetzungen ins Russische, Spanische, Französische, Deutsche, Portugiesische und Chinesische — hinter einer öffentlichen, nur lesenden API, mit SDKs, einer Admin-Oberfläche und einem veröffentlichten Datensatz. Ein Befehl zur Installation, MIT für den Code, CC BY 4.0 für die Daten.',
+      'Vocab Bloom Hub ist ein selbst gehostetes Englisch-Wörterbuch — 300 000 Einträge mit Bedeutungen, Beispielen, flektierten Formen und Übersetzungen ins Russische, Spanische, Französische, Deutsche, Portugiesische, Chinesische und Arabische — hinter einer öffentlichen, nur lesenden API, mit SDKs, einer Admin-Oberfläche und einem veröffentlichten Datensatz. Ein Befehl zur Installation, MIT für den Code, CC BY 4.0 für die Daten.',
     cta_getting_started: 'Erste Schritte',
     cta_start: 'Mit Docker installieren',
     cta_api: 'API-Referenz',

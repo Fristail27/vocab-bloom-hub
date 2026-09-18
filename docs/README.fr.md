@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="../README.md">🇺🇸 EN</a> | <a href="README.ru.md">🇷🇺 RU</a> | <a href="README.es.md">🇪🇸 ES</a> | <strong>🇫🇷 FR</strong> | <a href="README.pt.md">🇵🇹 PT</a> | <a href="README.de.md">🇩🇪 DE</a> | <a href="README.zh.md">🇨🇳 ZH</a>
+  <a href="../README.md">🇺🇸 EN</a> | <a href="README.ru.md">🇷🇺 RU</a> | <a href="README.es.md">🇪🇸 ES</a> | <strong>🇫🇷 FR</strong> | <a href="README.pt.md">🇵🇹 PT</a> | <a href="README.de.md">🇩🇪 DE</a> | <a href="README.zh.md">🇨🇳 ZH</a> | <a href="README.ar.md">🌐 AR</a>
 </p>
 
 <p align="center">
@@ -49,7 +49,7 @@ pour les lire, un panneau d’administration pour les modifier et des SDK pour c
 - 89 000 mots et 26 000 expressions en anglais, 161 000 sens avec définitions et exemples
 - transcription API, niveau CECRL, marques de registre et de domaine, formes fléchies
 - liens de synonymes et d’antonymes entre les vedettes, verbes à particule reliés à leur verbe de base
-- traductions vers le russe, l’espagnol, le français, l’allemand, le portugais et le chinois
+- traductions vers le russe, l’espagnol, le français, l’allemand, le portugais, le chinois et l’arabe
 - données ouvertes : [CC BY 4.0](../DATA_LICENSE.md), publiées sur HuggingFace, chargées dans
   une instance vide au premier démarrage ; générées par des modèles de langage, non vérifiées par des humains
 
@@ -64,7 +64,7 @@ pour les lire, un panneau d’administration pour les modifier et des SDK pour c
 - Node.js / TypeScript : `npm install @vocab-bloom-hub/client@alpha`
 - Python : `pip install --pre vocab-bloom-hub` (synchrone, asynchrone, un utilitaire pandas)
 
-**Le panneau d’administration** — sept langues d’interface
+**Le panneau d’administration** — huit langues d’interface
 
 - modifier les mots, les sens, les traductions et les liens ; chaque changement dans un journal d’audit
 - modérer les corrections que les lecteurs envoient depuis les pages de mots

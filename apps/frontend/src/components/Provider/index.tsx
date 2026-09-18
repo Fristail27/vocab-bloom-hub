@@ -4,6 +4,7 @@ import React, { ReactNode, useEffect, useState, useMemo } from 'react';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import { ConfigProvider, theme as antdTheme } from 'antd';
 import { StateContext } from '@/components/StateContext';
+import { localeDirection } from '@/i18n/direction';
 import { ThemeE } from '@/types/common';
 
 type ProviderP = {
@@ -29,6 +30,7 @@ export const Provider: React.FC<ProviderP> = ({ children, isAuth: defaultIsAuth,
   return (
     <StateContext value={state}>
       <ConfigProvider
+        direction={localeDirection(String(locale))}
         theme={{
           algorithm: theme === ThemeE.dark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
         }}
