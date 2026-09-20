@@ -1,16 +1,29 @@
 .footer {
   display: flex;
   justify-content: space-between;
-  gap: 48px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 48px;
   width: 100%;
   padding: 16px;
   background-color: var(--color-bg-container);
+  color: var(--color-text-secondary);
 
   .link {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     text-decoration: none;
-    color: var(--blue-500);
+    color: var(--color-primary);
+
+    &:hover {
+      color: var(--color-primary-hover);
+      text-decoration: underline;
+    }
+  }
+
+  .version {
+    // a version reads left to right in every locale
+    unicode-bidi: plaintext;
   }
 }

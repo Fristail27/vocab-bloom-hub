@@ -9,6 +9,13 @@
 </p>
 
 <p align="center">
+  <a href="https://vocab-bloom-hub.com/en"><strong>vocab-bloom-hub.com</strong></a> ·
+  <a href="https://vocab-bloom-hub.com/en/docs">Documentation</a> ·
+  <a href="https://vocab-bloom-hub.com/en/api">API reference</a> ·
+  <a href="https://vocab-bloom-hub.com/en/playground">Playground</a>
+</p>
+
+<p align="center">
   <strong>🇺🇸 EN</strong> | <a href="docs/README.ru.md">🇷🇺 RU</a> | <a href="docs/README.es.md">🇪🇸 ES</a> | <a href="docs/README.fr.md">🇫🇷 FR</a> | <a href="docs/README.pt.md">🇵🇹 PT</a> | <a href="docs/README.de.md">🇩🇪 DE</a> | <a href="docs/README.zh.md">🇨🇳 ZH</a> | <a href="docs/README.ar.md">🌐 AR</a>
 </p>
 
@@ -17,7 +24,7 @@
   <a href="https://github.com/Fristail27/vocab-bloom-hub/actions/workflows/codeql.yml"><img src="https://github.com/Fristail27/vocab-bloom-hub/actions/workflows/codeql.yml/badge.svg?branch=main" alt="CodeQL" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/Fristail27/vocab-bloom-hub" alt="License: MIT" /></a>
   <a href="DATA_LICENSE.md"><img src="https://img.shields.io/badge/data-CC%20BY%204.0-lightgrey" alt="Data: CC BY 4.0" /></a>
-  <a href="https://www.npmjs.com/package/@vocab-bloom-hub/client"><img src="https://img.shields.io/npm/v/%40vocab-bloom-hub%2Fclient/alpha?logo=npm&label=npm" alt="npm: @vocab-bloom-hub/client" /></a>
+  <a href="https://www.npmjs.com/package/@vocab-bloom-hub/client"><img src="https://img.shields.io/npm/v/%40vocab-bloom-hub%2Fclient?logo=npm&label=npm" alt="npm: @vocab-bloom-hub/client" /></a>
   <a href="https://pypi.org/project/vocab-bloom-hub/"><img src="https://img.shields.io/pypi/v/vocab-bloom-hub?logo=pypi&logoColor=white" alt="PyPI: vocab-bloom-hub" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/commits/main"><img src="https://img.shields.io/github/last-commit/Fristail27/vocab-bloom-hub" alt="Last commit" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/issues"><img src="https://img.shields.io/github/issues/Fristail27/vocab-bloom-hub" alt="Open issues" /></a>
@@ -61,8 +68,8 @@ panel to edit it, and SDKs to build on it.
 
 **The SDKs** — generated from that OpenAPI document
 
-- Node.js / TypeScript: `npm install @vocab-bloom-hub/client@alpha`
-- Python: `pip install --pre vocab-bloom-hub` (sync, async, a pandas helper)
+- Node.js / TypeScript: `npm install @vocab-bloom-hub/client`
+- Python: `pip install vocab-bloom-hub` (sync, async, a pandas helper)
 
 **The admin panel** — eight interface languages
 
@@ -77,14 +84,15 @@ panel to edit it, and SDKs to build on it.
 health probes, Prometheus metrics, JSON logs.
 
 > [!NOTE]
-> Status: `0.x`, first alpha released; the API may change between releases.
+> Status: `1.0`, stable: the public API under `/api/v1` follows semantic versioning — a breaking change means a new major version.
 
 ---
 
 ## ⚡ Getting started
 
-Three ways in, from the quickest to the most flexible. All of them end with the admin panel on
-<http://localhost:3000>, the API on <http://localhost:3010> and the dictionary loaded.
+Three ways in, from the quickest to the most flexible. All of them end with the admin panel,
+the API and the dictionary loaded: under Docker on <http://localhost:3241> and
+<http://localhost:3240>, without it on <http://localhost:3000> and <http://localhost:3010>.
 
 ### 1. Run the published images
 
@@ -108,13 +116,18 @@ answers `503` until it is in and `200` after; then sign in with `ADMIN_USERNAME`
 `ADMIN_PASSWORD` from `.env`.
 
 ```bash
-curl -s localhost:3010/api/ready            # {"status":"ok"}
-curl -s localhost:3010/api/v1/words/run     # the dictionary answers
+curl -s localhost:3240/api/ready            # {"status":"ok"}
+curl -s localhost:3240/api/v1/words/run     # the dictionary answers
+
+# search: the entries matching a term, best match first
+curl -s 'localhost:3240/api/v1/search?search=run&limit=5'
+# the same with meanings, examples and translations
+curl -s 'localhost:3240/api/v1/search/detailed?search=run&with_meanings=true'
 ```
 
 > [!TIP]
-> To pin a release instead of the `main` development build, set `VBH_TAG=0.2.0-beta.1` in `.env`.
-> To add the website (docs, API reference, playground, word pages) on <http://localhost:3020>, set
+> To pin a release instead of the `main` development build, set `VBH_TAG=1.0.0` in `.env`.
+> To add the website (docs, API reference, playground, word pages) on <http://localhost:3242>, set
 > `COMPOSE_PROFILES=db,site`.
 
 ### 2. Run from the repository
@@ -161,6 +174,8 @@ Everything else for contributors: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ### Next
 
+- The documentation as a website, with the API reference and a playground:
+  [vocab-bloom-hub.com](https://vocab-bloom-hub.com/en/docs).
 - Put it on a server: [`docs/deployment/`](docs/deployment/README.md) — TLS and a reverse
   proxy, systemd / PM2, upgrades.
 - The database: [`docs/database.md`](docs/database.md) — Postgres requirements, migrations,
@@ -186,7 +201,7 @@ you.
 
 ## 📄 License
 
-- **Code** — [MIT](LICENSE) © Alexey Ryzhov (Fristail27)
+- **Code** — [MIT](LICENSE) © Aleksei Ryzhov (Fristail27)
 - **Dictionary data** (exports, the public API, the HuggingFace dataset) — [CC BY 4.0](DATA_LICENSE.md): free to use and adapt, including commercially, with attribution.
 
 > [!IMPORTANT]

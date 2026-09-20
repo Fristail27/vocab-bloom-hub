@@ -9,7 +9,10 @@
 # the `site` profile: COMPOSE_PROFILES=db,site starts it too — off by
 # default, an installation does not need it. Nothing in this file needs
 # editing either way.
-# The apps are published on localhost only; put a reverse proxy with TLS in
+# The apps are published on localhost only, on ports away from the usual
+# 3000 / 9090 of other tools: the API on 3240, the admin UI on 3241, the
+# website on 3242 (SERVER_PORT / FRONT_PORT / SITE_PORT in .env; the
+# observability overlay continues with 3243 and 3244). Put a reverse proxy with TLS in
 # front for anything beyond this host (docs/deployment/reverse-proxy.md) —
 # the admin login cookie is `secure` on https.
 
@@ -45,7 +48,7 @@ services:
     environment:
       NODE_ENV: production
       # inside the container the server always listens on 3010; SERVER_PORT in
-      # .env is the host port it is published on
+      # .env is the host port it is published on (3240 by default)
       SERVER_PORT: 3010
       # the bundled database (profile `db`) unless .env names another one;
       # a database on the Docker host is host.docker.internal, not localhost
@@ -59,7 +62,7 @@ services:
     volumes:
       - ./imports:/data/dictionary-imports:ro
     ports:
-      - '127.0.0.1:${SERVER_PORT:-3010}:3010'
+      - '127.0.0.1:${SERVER_PORT:-3240}:3010'
     # no depends_on: the database may live outside this file. The server
     # retries the connection for a minute at start and, past that, exits and
     # is restarted here — a bundled Postgres is ready long before.
@@ -77,7 +80,7 @@ services:
       # directly, inside the compose network
       API_INTERNAL_URL: http://server:3010/api
     ports:
-      - '127.0.0.1:${FRONT_PORT:-3000}:3000'
+      - '127.0.0.1:${FRONT_PORT:-3241}:3000'
     depends_on:
       server:
         condition: service_started
@@ -95,7 +98,7 @@ services:
       PORT: 3020
       API_INTERNAL_URL: http://server:3010/api
     ports:
-      - '127.0.0.1:${SITE_PORT:-3020}:3020'
+      - '127.0.0.1:${SITE_PORT:-3242}:3020'
     depends_on:
       server:
         condition: service_started

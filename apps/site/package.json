@@ -1,11 +1,11 @@
 {
   "name": "site",
-  "version": "0.2.0-beta.1",
+  "version": "1.0.0",
   "private": true,
   "license": "MIT",
   "description": "Public website of Vocab Bloom Hub — documentation, the public API reference, SDK guides, a live playground and word pages, served next to a running instance (Next.js).",
   "author": {
-    "name": "Alexey Ryzhov (Fristail27)",
+    "name": "Aleksei Ryzhov (Fristail27)",
     "url": "https://github.com/Fristail27"
   },
   "repository": {

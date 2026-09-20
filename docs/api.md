@@ -94,6 +94,9 @@ waiting for the admin. See [`data.md`](./data.md#reporting-errors). A suggestion
 applies becomes part of the dictionary data and travels with it under the data license, CC BY
 4.0 ([`DATA_LICENSE.md`](../DATA_LICENSE.md)); the word pages say so next to the form.
 
+The examples use `localhost:3010`, the port of a start without Docker; a docker compose
+installation publishes the API on `localhost:3240` by default (`SERVER_PORT`).
+
 ```bash
 curl 'http://localhost:3010/api/v1/search?search=run&limit=5'
 curl 'http://localhost:3010/api/v1/search/detailed?search=run&with_meanings=true'
@@ -277,7 +280,9 @@ CDNs and reverse proxies. Every successful `GET` answer carries:
 | `Last-Modified` | the newest change anywhere in the dictionary (entries, words, meanings, translations), refreshed once a minute |
 | `Cache-Control` | `public, max-age=<PUBLIC_API_CACHE_MAX_AGE>` (default `3600`); `public, no-cache` when the variable is `0`     |
 
-A client that sends the tag back revalidates in one bodiless round trip:
+`HEAD` answers with the same three headers as the `GET` of that URL, so a cache that checks
+freshness with `HEAD` sees the validators it stored. A client that sends the tag back
+revalidates in one bodiless round trip:
 
 ```bash
 curl -i 'http://localhost:3010/api/v1/words/run'                                   # 200, ETag: W/"…"

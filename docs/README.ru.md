@@ -9,6 +9,13 @@
 </p>
 
 <p align="center">
+  <a href="https://vocab-bloom-hub.com/ru"><strong>vocab-bloom-hub.com</strong></a> ·
+  <a href="https://vocab-bloom-hub.com/ru/docs">Документация</a> ·
+  <a href="https://vocab-bloom-hub.com/ru/api">Справочник API</a> ·
+  <a href="https://vocab-bloom-hub.com/ru/playground">Песочница</a>
+</p>
+
+<p align="center">
   <a href="../README.md">🇺🇸 EN</a> | <strong>🇷🇺 RU</strong> | <a href="README.es.md">🇪🇸 ES</a> | <a href="README.fr.md">🇫🇷 FR</a> | <a href="README.pt.md">🇵🇹 PT</a> | <a href="README.de.md">🇩🇪 DE</a> | <a href="README.zh.md">🇨🇳 ZH</a> | <a href="README.ar.md">🌐 AR</a>
 </p>
 
@@ -17,7 +24,7 @@
   <a href="https://github.com/Fristail27/vocab-bloom-hub/actions/workflows/codeql.yml"><img src="https://github.com/Fristail27/vocab-bloom-hub/actions/workflows/codeql.yml/badge.svg?branch=main" alt="CodeQL" /></a>
   <a href="../LICENSE"><img src="https://img.shields.io/github/license/Fristail27/vocab-bloom-hub" alt="Лицензия: MIT" /></a>
   <a href="../DATA_LICENSE.md"><img src="https://img.shields.io/badge/data-CC%20BY%204.0-lightgrey" alt="Данные: CC BY 4.0" /></a>
-  <a href="https://www.npmjs.com/package/@vocab-bloom-hub/client"><img src="https://img.shields.io/npm/v/%40vocab-bloom-hub%2Fclient/alpha?logo=npm&label=npm" alt="npm: @vocab-bloom-hub/client" /></a>
+  <a href="https://www.npmjs.com/package/@vocab-bloom-hub/client"><img src="https://img.shields.io/npm/v/%40vocab-bloom-hub%2Fclient?logo=npm&label=npm" alt="npm: @vocab-bloom-hub/client" /></a>
   <a href="https://pypi.org/project/vocab-bloom-hub/"><img src="https://img.shields.io/pypi/v/vocab-bloom-hub?logo=pypi&logoColor=white" alt="PyPI: vocab-bloom-hub" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/commits/main"><img src="https://img.shields.io/github/last-commit/Fristail27/vocab-bloom-hub" alt="Последний коммит" /></a>
   <a href="https://github.com/Fristail27/vocab-bloom-hub/issues"><img src="https://img.shields.io/github/issues/Fristail27/vocab-bloom-hub" alt="Открытые issues" /></a>
@@ -61,8 +68,8 @@
 
 **SDK** — сгенерированы из этого OpenAPI-документа
 
-- Node.js / TypeScript: `npm install @vocab-bloom-hub/client@alpha`
-- Python: `pip install --pre vocab-bloom-hub` (синхронный, асинхронный, помощник для pandas)
+- Node.js / TypeScript: `npm install @vocab-bloom-hub/client`
+- Python: `pip install vocab-bloom-hub` (синхронный, асинхронный, помощник для pandas)
 
 **Админка** — восемь языков интерфейса
 
@@ -77,14 +84,15 @@
 готовности, метрики Prometheus, JSON-логи.
 
 > [!NOTE]
-> Статус: `0.x`, первая альфа выпущена; API может меняться между релизами.
+> Статус: `1.0`, стабильный релиз: публичный API под `/api/v1` следует семантическому версионированию — несовместимое изменение означает новую мажорную версию.
 
 ---
 
 ## ⚡ Быстрый старт
 
-Три пути, от самого быстрого к самому гибкому. Все заканчиваются админкой на
-<http://localhost:3000>, API на <http://localhost:3010> и загруженным словарём.
+Три пути, от самого быстрого к самому гибкому. Все заканчиваются админкой, API
+и загруженным словарём: в Docker на <http://localhost:3241> и <http://localhost:3240>, без него
+на <http://localhost:3000> и <http://localhost:3010>.
 
 ### 1. Запуск готовых образов
 
@@ -108,14 +116,19 @@ docker compose up -d
 `ADMIN_PASSWORD` из `.env`.
 
 ```bash
-curl -s localhost:3010/api/ready            # {"status":"ok"}
-curl -s localhost:3010/api/v1/words/run     # словарь отвечает
+curl -s localhost:3240/api/ready            # {"status":"ok"}
+curl -s localhost:3240/api/v1/words/run     # словарь отвечает
+
+# поиск: статьи по запросу, лучшее совпадение первым
+curl -s 'localhost:3240/api/v1/search?search=run&limit=5'
+# то же со значениями, примерами и переводами
+curl -s 'localhost:3240/api/v1/search/detailed?search=run&with_meanings=true'
 ```
 
 > [!TIP]
-> Чтобы закрепить релиз вместо сборки `main`, задайте `VBH_TAG=0.2.0-beta.1` в `.env`. Чтобы
+> Чтобы закрепить релиз вместо сборки `main`, задайте `VBH_TAG=1.0.0` в `.env`. Чтобы
 > добавить сайт (документация, справочник API, площадка, страницы слов) на
-> <http://localhost:3020>, задайте `COMPOSE_PROFILES=db,site`.
+> <http://localhost:3242>, задайте `COMPOSE_PROFILES=db,site`.
 
 ### 2. Запуск из репозитория
 
@@ -161,6 +174,8 @@ yarn dev                                       # API :3010, админка :3000
 
 ### Дальше
 
+- Документация в виде сайта, со справочником API и песочницей:
+  [vocab-bloom-hub.com](https://vocab-bloom-hub.com/ru/docs).
 - На сервер: [`docs/deployment/`](deployment/README.ru.md) — TLS и обратный прокси, systemd /
   PM2, обновления.
 - База данных: [`docs/database.md`](database.md) — требования к Postgres, миграции, бэкапы,
@@ -185,7 +200,7 @@ yarn dev                                       # API :3010, админка :3000
 
 ## 📄 Лицензия
 
-- **Код** — [MIT](../LICENSE) © Alexey Ryzhov (Fristail27)
+- **Код** — [MIT](../LICENSE) © Aleksei Ryzhov (Fristail27)
 - **Данные словаря** (выгрузки, публичный API, датасет на HuggingFace) — [CC BY 4.0](../DATA_LICENSE.md): свободное использование и переработка, в том числе коммерческие, с указанием источника.
 
 > [!IMPORTANT]

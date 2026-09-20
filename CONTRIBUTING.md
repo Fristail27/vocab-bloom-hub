@@ -276,7 +276,8 @@ repeatable part of a release:
 
 ## Documentation
 
-Everything the repository documents, also rendered on the website:
+Everything the repository documents, also rendered on the website,
+[vocab-bloom-hub.com](https://vocab-bloom-hub.com/en/docs):
 
 - [`docs/deployment/`](./docs/deployment/README.md) — production build and start, probes, graceful stop, systemd / PM2; [`docker.md`](./docs/deployment/docker.md): the three images and `docker compose` with Postgres; [`reverse-proxy.md`](./docs/deployment/reverse-proxy.md): TLS, Caddy / nginx configs, exposure profiles, keeping the admin API private
 - [`docs/operations.md`](./docs/operations.md) — operating an instance: what holds state and what to back up, database backup vs dictionary export, upgrading and rolling back, dataset updates vs code updates, sizing

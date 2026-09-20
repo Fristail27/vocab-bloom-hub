@@ -5,8 +5,8 @@
 # follows the request scheme, so a proxy with TLS gets a secure one).
 #
 # Needs ADMIN_USERNAME / ADMIN_PASSWORD (read from .env when not exported)
-# and curl + openssl + python3 (the PBKDF2 of the login hash). Ports: SERVER_PORT / FRONT_PORT / SITE_PORT (defaults
-# 3010 / 3000 / 3020); the website checks run when the `site` profile is on.
+# and curl + openssl + python3 (the PBKDF2 of the login hash). Ports: SERVER_PORT / FRONT_PORT / SITE_PORT (the compose
+# defaults 3240 / 3241 / 3242); the website checks run when the `site` profile is on.
 set -euo pipefail
 
 ENV_FILE="${ENV_FILE:-.env}"
@@ -18,9 +18,9 @@ SERVER_URL="http://localhost:${SERVER_PORT:-$(env_value SERVER_PORT)}"
 FRONT_URL="http://localhost:${FRONT_PORT:-$(env_value FRONT_PORT)}"
 SITE_URL="http://localhost:${SITE_PORT:-$(env_value SITE_PORT)}"
 SERVER_URL="${SERVER_URL%:}"; FRONT_URL="${FRONT_URL%:}"; SITE_URL="${SITE_URL%:}"
-[ "$SERVER_URL" = "http://localhost" ] && SERVER_URL="http://localhost:3010"
-[ "$FRONT_URL" = "http://localhost" ] && FRONT_URL="http://localhost:3000"
-[ "$SITE_URL" = "http://localhost" ] && SITE_URL="http://localhost:3020"
+[ "$SERVER_URL" = "http://localhost" ] && SERVER_URL="http://localhost:3240"
+[ "$FRONT_URL" = "http://localhost" ] && FRONT_URL="http://localhost:3241"
+[ "$SITE_URL" = "http://localhost" ] && SITE_URL="http://localhost:3242"
 
 fail() { echo "::error::$1"; exit 1; }
 http_status() { curl -s -o /dev/null -w '%{http_code}' "$@"; }

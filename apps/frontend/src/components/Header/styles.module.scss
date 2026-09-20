@@ -1,4 +1,4 @@
-.loginHeader {
+.header {
   display: flex;
   justify-content: space-between;
   gap: 48px;
@@ -6,6 +6,12 @@
   padding: 0 16px;
   align-items: center;
   background-color: var(--color-bg-container);
+
+  .home {
+    display: flex;
+    // the logo shrinks on a narrow screen instead of pushing the switches out
+    min-width: 0;
+  }
 
   .rightPart {
     display: flex;

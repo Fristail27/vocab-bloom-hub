@@ -88,6 +88,9 @@ Equivalent API calls (the admin cookie or a Bearer token is required). The multi
 the text fields `version`, `synonym_links` and `antonym_links` stand in for (and override) a
 manifest file:
 
+The examples use `localhost:3010`, the port of a start without Docker; under docker compose the
+API is on `localhost:3240` by default.
+
 ```bash
 # the whole archive
 curl -N -b cookies.txt -F archive=@vocab-bloom-hub-en-export.zip \

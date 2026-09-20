@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "0.2.0-beta.1",
+  "version": "1.0.0",
   "description": "Backend API for Vocab Bloom Hub — a modular NestJS server providing dictionary APIs, lexical search, semantic graph data, and language processing services for multilingual vocabulary datasets.",
   "keywords": [
     "backend",
@@ -21,7 +21,7 @@
     "vocab-bloom-hub"
   ],
   "author": {
-    "name": "Alexey Ryzhov (Fristail27)",
+    "name": "Aleksei Ryzhov (Fristail27)",
     "url": "https://github.com/Fristail27"
   },
   "bugs": {

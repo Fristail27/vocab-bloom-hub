@@ -203,7 +203,7 @@ export default {
     issues: 'Issues',
     discussions: 'Discussions',
     release_notes: '版本说明',
-    made_by: 'Vocab Bloom Hub，由 Alexey Ryzhov 制作',
+    made_by: 'Vocab Bloom Hub，由 Aleksei Ryzhov 制作',
   },
   error: {
     title: '出了点问题',

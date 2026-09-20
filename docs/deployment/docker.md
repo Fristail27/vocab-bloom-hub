@@ -15,7 +15,7 @@ All three are built for `linux/amd64` and `linux/arm64`. The tags:
 | ------------------- | ------------------------- | --------------------------------------------------------------- |
 | `1.2.3`, `1.2`, `1` | the release tag `v1.2.3`  | production — pin `1.2` to get patch releases, `1.2.3` to freeze |
 | `latest`            | the newest stable release | trying it out                                                   |
-| `0.1.0-alpha.1`     | a prerelease tag          | exactly that prerelease; no `latest`, no floating tag           |
+| `1.1.0-beta.1`      | a prerelease tag          | exactly that prerelease; no `latest`, no floating tag           |
 | `main`, `sha-…`     | every push to `main`      | following development; may break between pushes                 |
 
 `docker-compose.yml` defaults to `main`; production pins a release with `VBH_TAG` in `.env`.
@@ -28,12 +28,12 @@ No checkout needed — the compose file and the environment template are enough:
 mkdir vocab-bloom-hub && cd vocab-bloom-hub
 curl -fsSLO https://raw.githubusercontent.com/Fristail27/vocab-bloom-hub/main/docker-compose.yml
 curl -fsSL  https://raw.githubusercontent.com/Fristail27/vocab-bloom-hub/main/.env.example -o .env
-# edit .env: ADMIN_PASSWORD, POSTGRES_PASSWORD (and VBH_TAG to pin a release, e.g. 0.2.0-beta.1)
+# edit .env: ADMIN_PASSWORD, POSTGRES_PASSWORD (and VBH_TAG to pin a release, e.g. 1.0.0)
 docker compose up -d               # pulls the images, starts Postgres, the API, the UI
-curl -s localhost:3010/api/ready   # {"status":"ok"} once migrations ran and the dictionary is in
+curl -s localhost:3240/api/ready   # {"status":"ok"} once migrations ran and the dictionary is in
 ```
 
-The admin UI is at `http://localhost:3000`, the API at `http://localhost:3010`, both published
+The admin UI is at `http://localhost:3241`, the API at `http://localhost:3240`, both published
 on **localhost only**. The dictionary loads itself on the first start (next section).
 
 ## First start: the dictionary loads itself
@@ -72,18 +72,20 @@ Everything the containers need comes from `.env` ([`../environment.md`](../envir
 | `frontend` | `ghcr.io/…/vocab-bloom-hub-frontend:${VBH_TAG}`              | The standalone Next.js build on `3000`; server-side rendering reaches the API at `http://server:3010/api` (`API_INTERNAL_URL`)                                      |
 | `site`     | `ghcr.io/…/vocab-bloom-hub-site:${VBH_TAG}` (profile `site`) | The project website on `3020` ([below](#the-website)); the word pages reach the API at `http://server:3010/api` (`API_INTERNAL_URL`)                                |
 
-Host ports come from `SERVER_PORT` / `FRONT_PORT` / `SITE_PORT` in `.env` (defaults `3010` /
-`3000` / `3020`); inside the containers the apps always listen on `3010` / `3000` / `3020`.
+Host ports come from `SERVER_PORT` / `FRONT_PORT` / `SITE_PORT` in `.env` (defaults `3240` /
+`3241` / `3242`, chosen away from the `3000` and `9090` other tools take; the observability
+overlay continues with `3243` and `3244`); inside the containers the apps always listen on
+`3010` / `3000` / `3020`, which are also the ports of a start without Docker.
 
 **Without a reverse proxy** (a workstation, a LAN) the browser calls the API under the page origin
-— `http://localhost:3000/api/…` — and the frontend forwards `/api/*` to the server
+— `http://localhost:3241/api/…` — and the frontend forwards `/api/*` to the server
 (`API_INTERNAL_URL`), cookies and progress streams included.
 
 > [!WARNING]
 > The admin cookie is plain on `http://`; the server logs a warning at every such login.
 
 **With a reverse proxy** — production — Caddy or nginx on the host terminates TLS, forwards
-`/api/*` to `127.0.0.1:3010` and everything else to `127.0.0.1:3000`
+`/api/*` to `127.0.0.1:3240` and everything else to `127.0.0.1:3241`
 ([`reverse-proxy.md`](./reverse-proxy.md)); the frontend's forwarding is then never used.
 
 ### Bundled or external Postgres
@@ -106,17 +108,84 @@ dictionary. Off by default; to have it:
 
 ```dotenv
 COMPOSE_PROFILES=db,site
-# SITE_PORT=3020                                   # the host port
+# SITE_PORT=3242                                   # the host port
 # NEXT_PUBLIC_SITE_URL=https://vocabbloom.example  # its public origin, for sitemap.xml and the social cards
 ```
 
 `docker compose up -d` then pulls the third image and the site answers on
-`http://localhost:3020`. Behind the reverse proxy a public instance routes `/` to the site and
+`http://localhost:3242`. Behind the reverse proxy a public instance routes `/` to the site and
 `/api/*` to the server ([`reverse-proxy.md`](./reverse-proxy.md#c-public-only-instance)); the
 admin UI stays on another hostname or off (`ADMIN_API_ENABLED=false`). Like the admin UI, the
 site calls the API under its own origin (`NEXT_PUBLIC_BASE_API_URL=/api`) and forwards `/api/*`
 to `API_INTERNAL_URL` itself when no proxy does. The site of a given tag documents that tag;
 the word pages are rendered on request and cached for an hour.
+
+## Everything together
+
+The instance with its bundled database, the website and the metrics stack, on one host — what a
+full installation looks like. No checkout is needed, but the observability overlay mounts its
+configuration from an `observability/` folder next to the compose files, so those four small
+files come along:
+
+```bash
+mkdir vocab-bloom-hub && cd vocab-bloom-hub
+BASE=https://raw.githubusercontent.com/Fristail27/vocab-bloom-hub/main
+
+curl -fsSLO $BASE/docker-compose.yml
+curl -fsSLO $BASE/docker-compose.observability.yml
+curl -fsSL  $BASE/.env.example -o .env
+for f in prometheus.yml \
+         grafana/dashboards/vocab-bloom-hub.json \
+         grafana/provisioning/dashboards/provider.yml \
+         grafana/provisioning/datasources/prometheus.yml; do
+  curl -fsSL --create-dirs $BASE/observability/$f -o observability/$f
+done
+```
+
+(`git clone` gives the same files. To pin a release, replace `main` in `BASE` with its tag,
+`v1.0.0`, and set `VBH_TAG=1.0.0`: the dashboard and the configuration then match the images.)
+
+In `.env`:
+
+```dotenv
+ADMIN_PASSWORD=…                 # the admin login
+POSTGRES_PASSWORD=…              # the bundled database
+COMPOSE_PROFILES=db,site         # the database and the website next to the two apps
+# GRAFANA_ADMIN_PASSWORD=…       # admin / admin otherwise
+```
+
+Start it with both compose files:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+curl -s localhost:3240/api/ready   # 503 while the dictionary loads, then {"status":"ok"}
+```
+
+| Service    | Address                 | Port variable     |
+| ---------- | ----------------------- | ----------------- |
+| API        | `http://localhost:3240` | `SERVER_PORT`     |
+| Admin UI   | `http://localhost:3241` | `FRONT_PORT`      |
+| Website    | `http://localhost:3242` | `SITE_PORT`       |
+| Prometheus | `http://localhost:3243` | `PROMETHEUS_PORT` |
+| Grafana    | `http://localhost:3244` | `GRAFANA_PORT`    |
+
+Everything is published on **localhost only**; Postgres is not published at all. To move a
+service, set its variable in `.env` — nothing inside the compose network changes, the apps keep
+talking to each other on their container ports. Only `CORS_ORIGINS` follows the admin UI and the
+website, and only for browsers that call the API directly.
+
+The state lives in three named volumes that survive `docker compose down`: `postgres-data` (the
+dictionary), `prometheus-data` (the metrics, `PROMETHEUS_RETENTION`, 15 days) and `grafana-data`
+(Grafana's own settings). `./imports` is a read-only bind mount for datasets loaded from a file.
+
+> [!IMPORTANT]
+> Pass both `-f` files to every later command — `pull`, `up -d`, `logs`, `down`. With the first
+> file alone compose treats Prometheus and Grafana as orphans (`down` leaves them running) and
+> `up -d` recreates the server without its metrics endpoint.
+
+What the dashboard shows and how to scrape an instance with a Prometheus of your own:
+[`../observability.md`](../observability.md#prometheus--grafana-in-docker). Putting it on a
+domain: [`reverse-proxy.md`](./reverse-proxy.md).
 
 ## Building the images yourself
 
@@ -172,8 +241,9 @@ The packages live at <https://github.com/Fristail27?tab=packages>.
   compose healthchecks use the liveness one, so a container with an unreachable database stays
   up (restarting it would not help) and reports `503` on `/api/ready`.
 - **Metrics with dashboards**: `docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d`
-  adds a local Prometheus + Grafana with a provisioned dashboard
-  ([`../observability.md`](../observability.md#prometheus--grafana-in-docker)).
+  adds a local Prometheus + Grafana with a provisioned dashboard — the files it needs and the
+  whole stack in one place: [Everything together](#everything-together);
+  the metrics themselves: [`../observability.md`](../observability.md#prometheus--grafana-in-docker).
 - **Upgrade**: back up the database, bump `VBH_TAG`, `docker compose pull && docker compose up -d`;
   migrations run when the new server starts, rollback is the backup
   ([`../operations.md`](../operations.md#upgrading-the-code)).

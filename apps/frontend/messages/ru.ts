@@ -31,6 +31,15 @@ export default {
     [ErrorCodes.suggestion_not_applicable]:
       'Нечего применять: текстовая жалоба или жалоба, по которой уже есть вердикт',
   },
+  header: {
+    home: 'На главную',
+    theme: 'Тёмная тема',
+    language: 'Язык интерфейса',
+  },
+  footer: {
+    docs: 'Документация',
+    version: 'Версия: {version}',
+  },
   common: {
     theme: {
       light: 'Светлая',

@@ -2,9 +2,8 @@
 
 ## Supported versions
 
-The project is on its `0.x` prereleases (the `0.1.0` alphas, next the `0.2.0` betas). Security
-fixes land on `main` and ship in the next release — there are no backports: the supported
-release is the **latest one** (Docker images on GHCR, `@vocab-bloom-hub/client` on npm,
+The project is stable since `1.0.0`. Security fixes land on `main` and ship in the next release —
+there are no backports: the supported release is the **latest one** (Docker images on GHCR, `@vocab-bloom-hub/client` on npm,
 `vocab-bloom-hub` on PyPI).
 
 | Version                                                                                         | Supported |

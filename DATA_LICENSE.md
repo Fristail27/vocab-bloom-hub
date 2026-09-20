@@ -9,7 +9,7 @@ HuggingFace dataset [`Fristail27/vocab-bloom-hub-en`](https://huggingface.co/dat
 **[Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/)
 (CC BY 4.0)**, SPDX identifier `CC-BY-4.0`.
 
-Copyright (c) 2026 Alexey Ryzhov.
+Copyright (c) 2026 Aleksei Ryzhov.
 
 You are free to copy, redistribute and adapt the data for any purpose, including commercially,
 as long as you credit the source, link to the license and indicate whether you changed anything.

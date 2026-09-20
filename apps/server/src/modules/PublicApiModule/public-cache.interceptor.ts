@@ -12,7 +12,10 @@ import { publicCacheControl, weakEtagOf } from '../../core/utils/http-cache';
  * the JSON body and `Last-Modified` from the dictionary's newest change.
  * Express compares them with `If-None-Match` / `If-Modified-Since` while
  * sending and answers `304 Not Modified` without a body when they match.
- * POST requests (the batch lookup, a suggestion) are left alone: HTTP caches do not store them.
+ * `HEAD` gets the same headers: Express answers it with the `GET` handler,
+ * and a cache that checks freshness with `HEAD` must see the validators of
+ * the `GET` it stored. POST requests (the batch lookup, a suggestion) are
+ * left alone: HTTP caches do not store them.
  */
 @Injectable()
 export class PublicCacheInterceptor implements NestInterceptor {
@@ -22,7 +25,7 @@ export class PublicCacheInterceptor implements NestInterceptor {
     const http = context.switchToHttp();
     const req = http.getRequest<Request>();
     const res = http.getResponse<Response>();
-    if (req.method !== 'GET') {
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
       return next.handle();
     }
     return next.handle().pipe(

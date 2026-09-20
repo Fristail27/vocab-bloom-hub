@@ -2,6 +2,8 @@
 
 Typed Python client for the public read-only API of a [Vocab Bloom Hub](https://github.com/Fristail27/vocab-bloom-hub) instance — an English dictionary with IPA, CEFR levels, sense-level definitions, examples, translations (Russian, Spanish, French, German, Portuguese, Chinese, Arabic) and inflected forms, served under `/api/v1`.
 
+Documentation, the API reference and a playground: [vocab-bloom-hub.com](https://vocab-bloom-hub.com/en/docs/sdk/python).
+
 - Sync (`VocabBloomClient`) and async (`AsyncVocabBloomClient`) on `httpx`; one method per endpoint.
 - pydantic models generated from the server's OpenAPI document — the types cannot drift from the API.
 - Typed exceptions, cursor iteration, optional ETag cache, `words_dataframe()` for notebooks.
@@ -10,14 +12,13 @@ Typed Python client for the public read-only API of a [Vocab Bloom Hub](https://
 ## Install
 
 ```bash
-pip install --pre vocab-bloom-hub
+pip install vocab-bloom-hub
 # with pandas support
-pip install --pre "vocab-bloom-hub[pandas]"
+pip install "vocab-bloom-hub[pandas]"
 ```
 
-`--pre` is needed while only prereleases exist (`0.1.0a1`, PEP 440 for
-`0.1.0-alpha.1`) — pip skips them by default; from the first stable release a
-plain `pip install vocab-bloom-hub` works.
+pip skips prereleases by default (`1.1.0b1`, PEP 440 for `1.1.0-beta.1`); add `--pre` to
+try one.
 
 ## Quick start
 

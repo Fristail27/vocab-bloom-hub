@@ -10,6 +10,7 @@ import {
   PublicResponseSpecT,
 } from './public-responses';
 import committedSchemas from '../../openapi/public-v1.schemas.json';
+import { projectWebsitePage } from '../../core/constants/project_links';
 
 export const PUBLIC_OPENAPI_TAG = 'Public API v1';
 
@@ -18,6 +19,7 @@ export const buildAdminDocument = (app: INestApplication): OpenAPIObject => {
   const config = new DocumentBuilder()
     .setTitle('VocabBloom API')
     .setDescription('API documentation for VocabBloom backend')
+    .setExternalDoc('Documentation', projectWebsitePage('en', '/docs'))
     .setVersion(getVersion())
     .addBearerAuth()
     .build();
@@ -172,8 +174,9 @@ export const buildPublicDocument = (
         'no authentication, every answer in a { data, meta } envelope, errors as ' +
         '{ statusCode, message, error: true }, X-API-Version on every response. ' +
         'Successful GET answers carry ETag, Last-Modified and Cache-Control. ' +
-        'See docs/api.md in the repository.',
+        `Documentation: ${projectWebsitePage('en', '/docs/api')}.`,
     )
+    .setExternalDoc('Documentation', projectWebsitePage('en', '/docs/api'))
     .setVersion(getVersion())
     .addTag(PUBLIC_OPENAPI_TAG, 'Read-only dictionary endpoints for consuming applications')
     .build();

@@ -209,7 +209,7 @@ export default {
     issues: 'Issues',
     discussions: 'Discussions',
     release_notes: 'Notes de version',
-    made_by: 'Vocab Bloom Hub par Alexey Ryzhov',
+    made_by: 'Vocab Bloom Hub par Aleksei Ryzhov',
   },
   error: {
     title: "Quelque chose s'est mal passé",

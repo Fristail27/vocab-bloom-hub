@@ -20,8 +20,8 @@ Three parts, each doing one job:
    `METRICS_ENABLED=true`.
 2. **Prometheus** is a database for those numbers. Every 15 s it fetches (_scrapes_) that
    page, stamps the values with the time and keeps them, so "requests per second over the
-   last hour" becomes a question it can answer. It has a small UI of its own (port 9090) for
-   ad-hoc queries in its query language, PromQL.
+   last hour" becomes a question it can answer. It has a small UI of its own (port 9090; the bundled stack
+   publishes it on 3243) for ad-hoc queries in its query language, PromQL.
 3. **Grafana** draws the graphs. It asks Prometheus for the numbers and shows them on
    dashboards; this repository ships one dashboard with the panels an operator needs, and
    Grafana loads it at start.
@@ -89,13 +89,19 @@ server. Start the instance with both files instead of one:
 docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
 ```
 
+> [!NOTE]
+> The overlay mounts its configuration from the `observability/` folder next to the compose
+> files. An installation made from the two downloaded files of the quick start does not have
+> it: [Everything together](./deployment/docker.md#everything-together) lists the four files to
+> fetch.
+
 That starts, on localhost only:
 
-- **Prometheus** at `http://localhost:9090` (`PROMETHEUS_PORT`), scraping the server's
+- **Prometheus** at `http://localhost:3243` (`PROMETHEUS_PORT`), scraping the server's
   `/metrics` over the compose network every 15 s (`observability/prometheus.yml`; edit it if
   you change `METRICS_PATH`), keeping `PROMETHEUS_RETENTION` (15 days) of data in a named
   volume;
-- **Grafana** at `http://localhost:3001` (`GRAFANA_PORT`; 3000 is the admin UI), log in with
+- **Grafana** at `http://localhost:3244` (`GRAFANA_PORT`), log in with
   `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` (`admin` / `admin` unless set in `.env`).
   The Prometheus datasource and the **Vocab Bloom Hub** dashboard are provisioned from
   `observability/grafana/` at start — request rate, error rate and p95 latency by route,

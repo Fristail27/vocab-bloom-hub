@@ -1,15 +1,15 @@
 {
   "name": "vocab-bloom-hub",
-  "version": "0.2.0-beta.1",
+  "version": "1.0.0",
   "private": true,
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "description": "A modular open-source platform for working with vocabulary data: APIs, datasets, and tooling.",
-  "homepage": "https://github.com/Fristail27/vocab-bloom-hub",
+  "homepage": "https://vocab-bloom-hub.com",
   "author": {
-    "name": "Alexey Ryzhov (Fristail27)",
+    "name": "Aleksei Ryzhov (Fristail27)",
     "url": "https://github.com/Fristail27"
   },
   "bugs": {
