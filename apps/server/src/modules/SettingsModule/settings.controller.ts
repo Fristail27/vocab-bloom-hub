@@ -1,12 +1,16 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import { AdminGuard } from '../AuthModule/guards/admin.guard';
-import type { AddSettingResT } from '../../../types/settings/SettingsApiTypes';
+import type { AddSettingResT, UpdateCheckResT } from '../../../types/settings/SettingsApiTypes';
 import { AddSettingReqDTO } from './dto/AddSettingReq.dto';
+import { UpdateCheckService } from './update-check.service';
 
 @Controller('/api/settings')
 export class SettingsController {
-  constructor(private readonly settingsService: SettingsService) {}
+  constructor(
+    private readonly settingsService: SettingsService,
+    private readonly updateCheckService: UpdateCheckService,
+  ) {}
 
   @UseGuards(AdminGuard)
   @Post('add')
@@ -21,6 +25,14 @@ export class SettingsController {
   @Get('all')
   async getAllSettings(): Promise<Record<string, string>> {
     return this.settingsService.findAll();
+  }
+
+  // whether a newer stable release exists (issue #477): admin-only — a visitor
+  // has no use for it, and an outdated instance is nothing to advertise
+  @UseGuards(AdminGuard)
+  @Get('update-check')
+  async getUpdateCheck(): Promise<UpdateCheckResT> {
+    return this.updateCheckService.check();
   }
 
   @UseGuards(AdminGuard)

@@ -1,6 +1,11 @@
 import React from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { PROJECT_REPOSITORY_URL, projectWebsitePage } from 'server/core/constants/project_links';
+import {
+  PROJECT_REPOSITORY_URL,
+  projectWebsitePage,
+  UPDATE_NOTICE_DOCS_PATH,
+} from 'server/core/constants/project_links';
+import type { UpdateCheckT } from 'server/types/settings/SettingsApiTypes';
 import { version as packageVersion } from '../../../package.json';
 import styles from './styles.module.scss';
 
@@ -14,6 +19,8 @@ const GithubMark: React.FC = () => (
 
 type FooterP = {
   settings: Record<string, string>;
+  /** The update check of a signed-in admin (issue #477); absent on the login page */
+  update?: UpdateCheckT | null;
 };
 
 /**
@@ -21,7 +28,7 @@ type FooterP = {
  * that endpoint is admin-only, so the login page falls back to the version
  * this build was made from — one version covers the whole monorepo.
  */
-export const Footer: React.FC<FooterP> = ({ settings }) => {
+export const Footer: React.FC<FooterP> = ({ settings, update }) => {
   const t = useTranslations('footer');
   const locale = useLocale();
   const version = settings.version || packageVersion;
@@ -40,7 +47,22 @@ export const Footer: React.FC<FooterP> = ({ settings }) => {
         <GithubMark />
         GitHub
       </a>
-      <span className={styles.version}>{t('version', { version })}</span>
+      <span className={styles.version}>
+        {t('version', { version })}
+        {update?.update_available && update.latest && (
+          <>
+            {' · '}
+            <a
+              className={styles.link}
+              href={projectWebsitePage(locale, UPDATE_NOTICE_DOCS_PATH)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {t('update_available', { latest: update.latest })}
+            </a>
+          </>
+        )}
+      </span>
     </footer>
   );
 };

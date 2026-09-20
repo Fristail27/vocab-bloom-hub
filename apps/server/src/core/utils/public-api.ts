@@ -80,7 +80,8 @@ export const getPublicApiCacheMaxAge = (env: NodeJS.ProcessEnv = process.env): n
   }
 };
 
-const parseFlag = (name: string, raw: string | undefined): boolean => {
+/** A boolean variable: unset or empty is `true`; anything but true/false words throws ConfigurationError */
+export const parseFlag = (name: string, raw: string | undefined): boolean => {
   const value = raw?.trim().toLowerCase();
   if (value === undefined || value === '') return true;
   if (['true', '1', 'yes', 'on'].includes(value)) return true;

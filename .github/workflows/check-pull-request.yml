@@ -311,6 +311,8 @@ jobs:
           # the full dictionary from HuggingFace takes minutes and a network;
           # the automatic import is covered by the server e2e suite instead
           echo 'DICTIONARY_AUTO_IMPORT=false' >> .env
+          # and no request to api.github.com for the update notice of the admin UI
+          echo 'UPDATE_CHECK=false' >> .env
           # the website too (profile `site`), so its image and its wiring are checked
           sed -i 's/^COMPOSE_PROFILES=.*/COMPOSE_PROFILES=db,site/' .env
           # its public origin is a build argument: the smoke test looks for it in

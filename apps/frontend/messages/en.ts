@@ -39,6 +39,13 @@ export default {
   footer: {
     docs: 'Docs',
     version: 'Version: {version}',
+    update_available: '{latest} available',
+  },
+  update_notice: {
+    available: 'Version {latest} is available; this instance runs {current}.',
+    release_notes: 'Release notes',
+    how_to_update: 'How to update',
+    dismiss: 'Hide until the next release',
   },
   common: {
     theme: {

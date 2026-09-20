@@ -41,6 +41,13 @@ export default {
   footer: {
     docs: 'Dokumentation',
     version: 'Version: {version}',
+    update_available: '{latest} verfügbar',
+  },
+  update_notice: {
+    available: 'Version {latest} ist verfügbar; diese Instanz läuft mit {current}.',
+    release_notes: 'Versionshinweise',
+    how_to_update: 'So wird aktualisiert',
+    dismiss: 'Bis zur nächsten Version ausblenden',
   },
   common: {
     theme: {

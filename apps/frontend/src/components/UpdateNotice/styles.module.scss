@@ -1,0 +1,11 @@
+.message {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+
+  a {
+    color: var(--color-primary);
+    text-decoration: underline;
+  }
+}

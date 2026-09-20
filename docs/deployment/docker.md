@@ -256,8 +256,9 @@ The packages live at <https://github.com/Fristail27?tab=packages>.
   whole stack in one place: [Everything together](#everything-together);
   the metrics themselves: [`../observability.md`](../observability.md#prometheus--grafana-in-docker).
 - **Upgrade**: back up the database, bump `VBH_TAG`, `docker compose pull && docker compose up -d`;
-  migrations run when the new server starts, rollback is the backup
-  ([`../operations.md`](../operations.md#upgrading-the-code)).
+  migrations run when the new server starts, rollback is the backup — step by step, for a build
+  from a checkout too: [`../upgrading.md`](../upgrading.md); what it does to the database:
+  [`../operations.md`](../operations.md#upgrading-the-code).
 - **Migrations as an explicit step**:
   `docker compose run --rm server node ../../node_modules/typeorm/cli.js migration:run -d dist/src/db/data-source.js`
   ([`../migrations.md`](../migrations.md)).

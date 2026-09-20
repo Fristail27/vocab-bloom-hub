@@ -37,6 +37,13 @@ export default {
   footer: {
     docs: 'التوثيق',
     version: 'الإصدار: {version}',
+    update_available: '{latest} متاح',
+  },
+  update_notice: {
+    available: 'الإصدار {latest} متاح؛ يعمل هذا المثيل بالإصدار {current}.',
+    release_notes: 'ملاحظات الإصدار',
+    how_to_update: 'كيفية التحديث',
+    dismiss: 'إخفاء حتى الإصدار التالي',
   },
   common: {
     theme: {

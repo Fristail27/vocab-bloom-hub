@@ -1,11 +1,16 @@
 import { AbstractBaseApi } from '../AbstractBaseApi';
-import { AddSettingResT, GetAllSettingResT } from 'server/types/settings/SettingsApiTypes';
+import { AddSettingResT, GetAllSettingResT, GetUpdateCheckResT } from 'server/types/settings/SettingsApiTypes';
 
 export class SettingsApi extends AbstractBaseApi {
   static async getSettings(): Promise<Record<string, string>> {
     const res = await this.get<GetAllSettingResT>(`${this.baseURL}/settings/all`);
     if (res.error) return {};
     return res as Record<string, string>;
+  }
+
+  /** Whether a newer stable release exists (issue #477); admin-only, cached on the server */
+  static async getUpdateCheck(): Promise<GetUpdateCheckResT> {
+    return this.get<GetUpdateCheckResT>(`${this.baseURL}/settings/update-check`);
   }
 
   static async getField(field: string): Promise<AddSettingResT> {

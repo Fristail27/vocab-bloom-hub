@@ -56,6 +56,8 @@ export default defineConfig({
         // a developer's .env may turn the first-start import on; the browser
         // tests seed their own data and must never reach for HuggingFace
         DICTIONARY_AUTO_IMPORT: 'false',
+        // the suite is hermetic: no request to api.github.com for the update notice (issue #477)
+        UPDATE_CHECK: 'false',
       },
     },
     {

@@ -37,6 +37,13 @@ export default {
   footer: {
     docs: '文档',
     version: '版本：{version}',
+    update_available: '{latest} 可用',
+  },
+  update_notice: {
+    available: '版本 {latest} 已发布；此实例运行的是 {current}。',
+    release_notes: '发布说明',
+    how_to_update: '如何更新',
+    dismiss: '隐藏，直到下一个版本',
   },
   common: {
     theme: {

@@ -30,6 +30,31 @@ describe('Footer', () => {
     expect(screen.getByText('version {"version":"9.9.9"}')).toBeInTheDocument();
   });
 
+  it('marks an outdated version with a link to the documentation of the upgrade', () => {
+    render(
+      <Footer
+        settings={{ version: '1.0.0' }}
+        update={{
+          enabled: true,
+          current: '1.0.0',
+          latest: '1.1.0',
+          update_available: true,
+          release_url: null,
+          checked_at: null,
+        }}
+      />,
+    );
+    expect(screen.getByRole('link', { name: 'update_available {"latest":"1.1.0"}' })).toHaveAttribute(
+      'href',
+      'https://vocab-bloom-hub.com/de/docs/upgrading#update-notice',
+    );
+  });
+
+  it('shows no update mark without one', () => {
+    render(<Footer settings={{ version: '1.0.0' }} update={null} />);
+    expect(screen.queryByRole('link', { name: /update_available/ })).not.toBeInTheDocument();
+  });
+
   // the settings endpoint is admin-only: the login page gets an empty object
   it('falls back to the version of the build when the settings carry none', () => {
     render(<Footer settings={{}} />);
