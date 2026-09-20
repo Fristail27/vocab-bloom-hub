@@ -44,7 +44,8 @@ test.describe('word pages', () => {
     const response = await request.get('/en/word/random', { maxRedirects: 0 });
 
     expect(response.status()).toBe(307);
-    expect(response.headers()['location']).toMatch(/\/en\/word\/.+$/);
+    // relative: behind a reverse proxy the server does not know its public origin
+    expect(response.headers()['location']).toMatch(/^\/en\/word\/.+$/);
   });
 
   test('the edit mode of the report form files a form proposal (issue #327)', async ({ page }) => {
