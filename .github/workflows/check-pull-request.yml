@@ -313,6 +313,9 @@ jobs:
           echo 'DICTIONARY_AUTO_IMPORT=false' >> .env
           # the website too (profile `site`), so its image and its wiring are checked
           sed -i 's/^COMPOSE_PROFILES=.*/COMPOSE_PROFILES=db,site/' .env
+          # its public origin is a build argument: the smoke test looks for it in
+          # the prerendered robots.txt, sitemap.xml and canonical links
+          echo 'NEXT_PUBLIC_SITE_URL=https://site.ci.example' >> .env
 
       # the build override: the images of this checkout, not the published ones
       - name: Build images and start

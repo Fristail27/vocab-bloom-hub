@@ -92,6 +92,17 @@ if echo ",$(env_value COMPOSE_PROFILES)," | grep -q ',site,'; then
   # an empty dictionary: the word index renders, a headword is a clean 404
   [ "$(http_status "$SITE_URL/en/word")" = 200 ] || fail "the word index is not 200"
   [ "$(http_status "$SITE_URL/en/word/run")" = 404 ] || fail "a missing headword is not a 404"
+  # the public origin is baked in at build time (NEXT_PUBLIC_SITE_URL → the build
+  # argument of apps/site/Dockerfile): when .env names one, the prerendered
+  # files must carry it instead of the development default
+  PUBLIC_ORIGIN="$(env_value NEXT_PUBLIC_SITE_URL)"
+  if [ -n "$PUBLIC_ORIGIN" ]; then
+    curl -sf "$SITE_URL/robots.txt" | grep -q "$PUBLIC_ORIGIN/sitemap.xml" || fail "robots.txt does not name $PUBLIC_ORIGIN"
+    curl -sf "$SITE_URL/sitemap.xml" | grep -q "<loc>$PUBLIC_ORIGIN/" || fail "sitemap.xml does not list $PUBLIC_ORIGIN"
+    curl -sf "$SITE_URL/en" | grep -q "rel=\"canonical\" href=\"$PUBLIC_ORIGIN/en\"" || fail "the canonical link of /en is not under $PUBLIC_ORIGIN"
+    curl -sf "$SITE_URL/robots.txt" "$SITE_URL/sitemap.xml" | grep -q 'localhost:3020' && fail "the development origin leaked into robots.txt / sitemap.xml"
+    echo "ok: the website is built for $PUBLIC_ORIGIN"
+  fi
   echo "ok: the website renders and reaches the API"
 fi
 

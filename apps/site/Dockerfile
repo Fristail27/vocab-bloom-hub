@@ -7,6 +7,11 @@
 # the default (/api, relative to the page origin) works behind the documented
 # reverse proxy and through the site's own /api forwarding. Server-side
 # rendering (the word pages) reaches the API through API_INTERNAL_URL at runtime.
+# NEXT_PUBLIC_SITE_URL, the public origin of the site, is inlined at build time
+# as well — the canonical and hreflang links, the social cards, sitemap.xml and
+# robots.txt are prerendered with it — so it is a build argument, not a runtime
+# variable: without it they say http://localhost:3020. The published image is
+# built with the project's own origin (.github/workflows/docker.yml).
 
 # --- deps: the whole workspace install
 FROM node:22-alpine AS deps
@@ -25,6 +30,9 @@ RUN yarn install --immutable
 FROM deps AS build
 ARG NEXT_PUBLIC_BASE_API_URL=/api
 ENV NEXT_PUBLIC_BASE_API_URL=$NEXT_PUBLIC_BASE_API_URL
+# empty = the development default of core/site.ts, http://localhost:3020
+ARG NEXT_PUBLIC_SITE_URL=
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 ENV NODE_ENV=production
 COPY tsconfig.base.json ./
 # the content the pages are rendered from: the READMEs, docs/, the licences,

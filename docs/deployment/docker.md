@@ -109,7 +109,6 @@ dictionary. Off by default; to have it:
 ```dotenv
 COMPOSE_PROFILES=db,site
 # SITE_PORT=3242                                   # the host port
-# NEXT_PUBLIC_SITE_URL=https://vocabbloom.example  # its public origin, for sitemap.xml and the social cards
 ```
 
 `docker compose up -d` then pulls the third image and the site answers on
@@ -119,6 +118,18 @@ admin UI stays on another hostname or off (`ADMIN_API_ENABLED=false`). Like the 
 site calls the API under its own origin (`NEXT_PUBLIC_BASE_API_URL=/api`) and forwards `/api/*`
 to `API_INTERNAL_URL` itself when no proxy does. The site of a given tag documents that tag;
 the word pages are rendered on request and cached for an hour.
+
+> [!IMPORTANT]
+> The public origin of the site — the canonical and hreflang links, the social cards,
+> `sitemap.xml`, `robots.txt` — is baked in when the image is **built**: `NEXT_PUBLIC_SITE_URL`
+> has no effect on a pulled image. The published image is the project's own website and says
+> `https://vocab-bloom-hub.com`. For a website under your own hostname build it from a checkout,
+> with the variable in `.env`:
+>
+> ```bash
+> echo 'NEXT_PUBLIC_SITE_URL=https://dict.example.com' >> .env
+> docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build site
+> ```
 
 ## Everything together
 

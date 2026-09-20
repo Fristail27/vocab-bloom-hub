@@ -22,5 +22,9 @@ services:
     build:
       context: .
       dockerfile: apps/site/Dockerfile
+      # the public origin is baked in too (canonical links, sitemap.xml, the
+      # social cards): a website under your own hostname is built here with
+      # NEXT_PUBLIC_SITE_URL from .env — it has no effect on a pulled image
       args:
         NEXT_PUBLIC_BASE_API_URL: ${NEXT_PUBLIC_BASE_API_URL:-/api}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}

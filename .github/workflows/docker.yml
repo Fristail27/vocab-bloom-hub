@@ -97,9 +97,14 @@ jobs:
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           # the frontend and the site bake the browser-side API base in; the
-          # relative default works behind the documented reverse proxy
+          # relative default works behind the documented reverse proxy. The site
+          # also bakes its public origin in (canonical links, sitemap.xml, the
+          # social cards): the published image is the project's own website
+          # (PROJECT_WEBSITE_URL), an installation under another hostname builds
+          # its own with docker-compose.build.yml
           build-args: |
             NEXT_PUBLIC_BASE_API_URL=/api
+            ${{ matrix.image == 'site' && 'NEXT_PUBLIC_SITE_URL=https://vocab-bloom-hub.com' || '' }}
           cache-from: type=gha,scope=${{ matrix.image }}-${{ steps.image.outputs.arch }}
           cache-to: type=gha,scope=${{ matrix.image }}-${{ steps.image.outputs.arch }},mode=max
           # pushed without a tag; the merge job names the multi-platform manifest
