@@ -5,7 +5,7 @@ the admin UI, the website and both SDKs; the published dataset keeps its own ver
 (`manifest.version`), bumped at the next export after a release. Entries are curated from the
 generated release notes; the full commit history lives in git.
 
-## v1.0.0 — 2026-09-18
+## v1.0.0 — 2026-09-20
 
 The first stable release: the public API under `/api/v1` is covered by semantic versioning from
 here on, the packages install without a prerelease channel, the dictionary speaks seven
