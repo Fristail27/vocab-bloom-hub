@@ -13,6 +13,7 @@ import { Provider } from '@/components/Provider';
 import { ServerAuthApi } from '@/core/api/AuthApi/ServerAuthApi';
 import { ServerSettingsApi } from '@/core/api/SettingsApi/ServerSettingsApi';
 import { getThemeVariablesLink } from '@/helpers/getThemeLink';
+import { getUpdateCheck } from '@/helpers/getUpdateCheck';
 import { localeDirection } from '@/i18n/direction';
 import { routing } from '@/i18n/routing';
 import { InterfaceLanguageEnum, ThemeE } from '@/types/common';
@@ -53,6 +54,8 @@ export default async function RootLayout({ children, params }: RootLayoutP) {
   const theme = (cookieStore.get('theme')?.value || ThemeE.light) as ThemeE;
   const themeLink = getThemeVariablesLink(theme);
   const settings = await ServerSettingsApi.getSettings();
+  // admin-only on the server: asked only with a session, so the login page stays quiet
+  const update = isAuth ? await getUpdateCheck() : null;
   return (
     <html lang={locale} dir={localeDirection(locale)} className={`${geistSans.variable} ${geistMono.variable}`}>
       <head>
@@ -66,7 +69,7 @@ export default async function RootLayout({ children, params }: RootLayoutP) {
               <NextIntlClientProvider messages={messages}>
                 <Header />
                 <main className={styles.mainContainer}>{children}</main>
-                <Footer settings={settings} />
+                <Footer settings={settings} update={update} />
               </NextIntlClientProvider>
             </Provider>
           </App>

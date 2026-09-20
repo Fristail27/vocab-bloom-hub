@@ -23,6 +23,9 @@
   }
 
   .version {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
     // a version reads left to right in every locale
     unicode-bidi: plaintext;
   }

@@ -40,6 +40,13 @@ export default {
   footer: {
     docs: 'Documentation',
     version: 'Version : {version}',
+    update_available: '{latest} disponible',
+  },
+  update_notice: {
+    available: 'La version {latest} est disponible ; cette instance exécute la {current}.',
+    release_notes: 'Notes de version',
+    how_to_update: 'Comment mettre à jour',
+    dismiss: 'Masquer jusqu’à la prochaine version',
   },
   common: {
     theme: {

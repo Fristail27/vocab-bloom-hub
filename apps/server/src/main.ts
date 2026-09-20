@@ -42,6 +42,7 @@ import {
   getPublicApiRateLimit,
   PUBLIC_API_PREFIX,
 } from './core/utils/public-api';
+import { assertUpdateCheckConfig, isUpdateCheckEnabled } from './core/utils/update-check';
 import {
   assertDatabaseDriverConsistent,
   assertRequiredConfig,
@@ -78,6 +79,7 @@ async function bootstrap() {
   try {
     assertRequiredConfig();
     assertPublicApiConfig();
+    assertUpdateCheckConfig();
     assertDatabaseDriverConsistent();
     getShutdownTimeout();
     // Fails here, before Nest is created, instead of inside buildTypeOrmOptions
@@ -187,6 +189,11 @@ async function bootstrap() {
   );
   logger.log(
     `Swagger UI: ${isSwaggerEnabled() ? 'enabled at /api' : 'disabled (production)'}; public OpenAPI document at ${PUBLIC_API_PREFIX}/openapi.json`,
+  );
+  logger.log(
+    isUpdateCheckEnabled()
+      ? 'Update check: on — the admin UI is told about a newer release (asks api.github.com; UPDATE_CHECK=false turns it off)'
+      : 'Update check: off (UPDATE_CHECK=false) — no outgoing request',
   );
   logger.log(
     isMetricsEnabled()

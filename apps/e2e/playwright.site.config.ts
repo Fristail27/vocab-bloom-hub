@@ -54,6 +54,8 @@ export default defineConfig({
         ADMIN_PASSWORD: E2E_PASSWORD,
         LOG_LEVEL: 'warn',
         DICTIONARY_AUTO_IMPORT: 'false',
+        // the suite is hermetic: no request to api.github.com for the update notice (issue #477)
+        UPDATE_CHECK: 'false',
         PUBLIC_API_RATE_LIMIT: '10000/60',
       },
     },

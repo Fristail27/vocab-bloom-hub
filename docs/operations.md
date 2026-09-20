@@ -2,7 +2,8 @@
 
 What an operator needs to know on day two: what holds the state of an instance, what to back
 up and when, what a code upgrade does to the database and how to roll it back, and how a
-dictionary update differs from a code update.
+dictionary update differs from a code update. The upgrade itself, step by step:
+[`upgrading.md`](./upgrading.md).
 
 > [!NOTE]
 > This page says _what_ to back up and _when_; the `pg_dump` / `pg_restore` commands, for the
@@ -50,6 +51,12 @@ database backup when you want to be able to _go back_. The data terms of an expo
 [`DATA_LICENSE.md`](../DATA_LICENSE.md).
 
 ## Upgrading the code
+
+> [!TIP]
+> The step-by-step upgrade for each way of installing — the published images, a build from a
+> checkout, a start without Docker — and the update notice of the admin UI are on their own
+> page: [`upgrading.md`](./upgrading.md). This section is about what an upgrade does to the
+> database and how to get back.
 
 On start the server applies every pending migration shipped with its version, then serves
 requests ([`database.md`](./database.md#the-schema-migrations)). Deploying is

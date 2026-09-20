@@ -91,6 +91,13 @@ export const DOC_PAGES: DocPageT[] = [
     titleRu: 'Эксплуатация',
   },
   {
+    slug: 'upgrading',
+    file: 'docs/upgrading.md',
+    section: DocSectionE.operations,
+    title: 'Upgrading',
+    titleRu: 'Обновление',
+  },
+  {
     slug: 'database',
     file: 'docs/database.md',
     section: DocSectionE.database,

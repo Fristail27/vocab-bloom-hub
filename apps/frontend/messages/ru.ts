@@ -39,6 +39,13 @@ export default {
   footer: {
     docs: 'Документация',
     version: 'Версия: {version}',
+    update_available: 'доступна {latest}',
+  },
+  update_notice: {
+    available: 'Доступна версия {latest}; на этом инстансе работает {current}.',
+    release_notes: 'Заметки к релизу',
+    how_to_update: 'Как обновиться',
+    dismiss: 'Скрыть до следующего релиза',
   },
   common: {
     theme: {

@@ -281,6 +281,7 @@ Everything the repository documents, also rendered on the website,
 
 - [`docs/deployment/`](./docs/deployment/README.md) — production build and start, probes, graceful stop, systemd / PM2; [`docker.md`](./docs/deployment/docker.md): the three images and `docker compose` with Postgres; [`reverse-proxy.md`](./docs/deployment/reverse-proxy.md): TLS, Caddy / nginx configs, exposure profiles, keeping the admin API private
 - [`docs/operations.md`](./docs/operations.md) — operating an instance: what holds state and what to back up, database backup vs dictionary export, upgrading and rolling back, dataset updates vs code updates, sizing
+- [`docs/upgrading.md`](./docs/upgrading.md) — upgrading an instance step by step: the update notice of the admin UI, the published images, a build from a checkout, a start without Docker, the checks after, rolling back
 - [`docs/database.md`](./docs/database.md) — Postgres inside compose or separate, connecting, the migrations, backups and restore, size
 - [`docs/environment.md`](./docs/environment.md) — every environment variable, driver selection, startup checks
 - [`docs/authentication.md`](./docs/authentication.md) — how the single-admin login, login proof and JWT cookie work
