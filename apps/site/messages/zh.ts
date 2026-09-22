@@ -1,6 +1,8 @@
 export default {
   meta: {
     title: 'Vocab Bloom Hub',
+    // the start page's own title: the words a person searches for, not the bare brand (issue #480)
+    home_title: 'Vocab Bloom Hub — 英汉词典，公共 API，可自行部署',
     description:
       '一个开源词典平台：自托管的英语词典，提供公共只读 API、Node.js 和 Python 的 SDK、管理界面和已发布的数据集。',
   },
@@ -138,8 +140,23 @@ export default {
     search_error: '词典没有响应。',
     examples_title: '不妨从这些词开始',
     random: '随机一个词',
+    // the browse index over the headword list (issue #480): a paged, crawlable
+    // way to every word page, not only the examples and the sitemap
+    browse_title: '全部词条',
+    browse_intro: '词典的全部词条，按首字母排列——共 {count} 个。',
+    browse_letter_title: '以 {letter} 开头的词',
+    browse_other: '其他字符',
+    browse_page: '第 {page} 页，共 {pages} 页',
+    browse_prev: '上一页',
+    browse_next: '下一页',
+    browse_link: '浏览全部词条',
     page_title: '{word}——释义、词形变化、翻译',
     page_description: '“{word}”的词典条目。',
+    // the page in a locale the dictionary translates into (issue #480): the
+    // title and description carry that locale's own translations
+    page_title_translated: '{word}——翻译：{translations}',
+    translations_of: '{word} 的中文翻译：{translations}。',
+    translation_label: '翻译',
     entries: '{count, plural, other {# 个条目}}',
     pronounce: '朗读 {word}',
     obsolete: '已废弃',
@@ -161,7 +178,6 @@ export default {
     synonyms: '同义词',
     antonyms: '反义词',
     phrasal_variants: '短语动词变体',
-    unavailable: '词典目前无法访问——请稍后再试。',
     from_api: '此页面来自',
     try_in_playground: '在演练场中试用',
     license_note: '数据采用 CC BY 4.0 许可证',
@@ -200,6 +216,7 @@ export default {
   footer: {
     code_license: '代码：MIT',
     data_license: '数据：CC BY 4.0',
+    words: '全部词条',
     issues: 'Issues',
     discussions: 'Discussions',
     release_notes: '版本说明',

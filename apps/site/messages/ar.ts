@@ -1,6 +1,8 @@
 export default {
   meta: {
     title: 'Vocab Bloom Hub',
+    // the start page's own title: the words a person searches for, not the bare brand (issue #480)
+    home_title: 'Vocab Bloom Hub — قاموس إنجليزي-عربي مع واجهة API عامة، مستضاف ذاتيًا',
     description:
       'منصة قاموس مفتوحة المصدر: قاموس إنجليزي مستضاف ذاتيًا مع واجهة API عامة للقراءة فقط، وحزم SDK لـ Node.js وPython، وواجهة إدارة، ومجموعة بيانات منشورة.',
   },
@@ -141,8 +143,23 @@ export default {
     search_error: 'لم يُجب القاموس.',
     examples_title: 'بعض الكلمات للبدء بها',
     random: 'كلمة عشوائية',
+    // the browse index over the headword list (issue #480): a paged, crawlable
+    // way to every word page, not only the examples and the sitemap
+    browse_title: 'كل الكلمات',
+    browse_intro: 'كل مداخل القاموس حسب الحرف الأول — {count} إجمالًا.',
+    browse_letter_title: 'كلمات تبدأ بـ {letter}',
+    browse_other: 'رموز أخرى',
+    browse_page: 'صفحة {page} من {pages}',
+    browse_prev: 'الصفحة السابقة',
+    browse_next: 'الصفحة التالية',
+    browse_link: 'تصفح كل الكلمات',
     page_title: '{word} — المعاني والصيغ والترجمات',
     page_description: 'مدخل القاموس للكلمة "{word}".',
+    // the page in a locale the dictionary translates into (issue #480): the
+    // title and description carry that locale's own translations
+    page_title_translated: '{word} — الترجمة: {translations}',
+    translations_of: 'ترجمة {word} إلى العربية: {translations}.',
+    translation_label: 'الترجمة',
     entries:
       '{count, plural, zero {لا مداخل} one {مدخل واحد} two {مدخلان} few {# مداخل} many {# مدخلًا} other {# مدخل}}',
     pronounce: 'انطق {word}',
@@ -165,7 +182,6 @@ export default {
     synonyms: 'المرادفات',
     antonyms: 'الأضداد',
     phrasal_variants: 'الصيغ المركّبة',
-    unavailable: 'القاموس غير متاح حاليًا — حاول مرة أخرى بعد دقيقة.',
     from_api: 'هذه الصفحة هي',
     try_in_playground: 'جرّبها في ساحة التجربة',
     license_note: 'البيانات برخصة CC BY 4.0',
@@ -205,6 +221,7 @@ export default {
   footer: {
     code_license: 'الشيفرة: MIT',
     data_license: 'البيانات: CC BY 4.0',
+    words: 'كل الكلمات',
     issues: 'المشكلات',
     discussions: 'المناقشات',
     release_notes: 'ملاحظات الإصدار',

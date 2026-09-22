@@ -5,7 +5,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Arrow } from '@/components/Arrow';
 import { WordSearch } from '@/components/WordSearch';
 import { EXAMPLE_WORDS } from '@/content/words';
-import { localeAlternates, pageMeta } from '@/core/site';
+import { pageMeta } from '@/core/site';
 import { Link } from '@/i18n/navigation';
 import { LocaleParamsP } from '@/types/common';
 
@@ -15,7 +15,7 @@ export const generateMetadata = async ({ params }: LocaleParamsP): Promise<Metad
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'word' });
 
-  return { ...pageMeta(t('index_title'), t('index_intro')), alternates: localeAlternates(locale, '/word') };
+  return pageMeta({ locale, path: '/word', title: t('index_title'), description: t('index_intro') });
 };
 
 export default async function WordIndexPage({ params }: LocaleParamsP) {
@@ -40,6 +40,11 @@ export default async function WordIndexPage({ params }: LocaleParamsP) {
             <a href={`/${locale}/word/random`}>
               {t('random')} <Arrow />
             </a>
+          </li>
+          <li>
+            <Link href="/word/browse">
+              {t('browse_link')} <Arrow />
+            </Link>
           </li>
         </ul>
       </div>

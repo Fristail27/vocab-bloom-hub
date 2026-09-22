@@ -1,6 +1,8 @@
 export default {
   meta: {
     title: 'Vocab Bloom Hub',
+    // the start page's own title: the words a person searches for, not the bare brand (issue #480)
+    home_title: 'Vocab Bloom Hub — dictionnaire anglais-français avec API publique, auto-hébergé',
     description:
       "Une plateforme de dictionnaire open source : un dictionnaire d'anglais auto-hébergé avec une API publique en lecture seule, des SDK pour Node.js et Python, une interface d'administration et un jeu de données publié.",
   },
@@ -142,8 +144,23 @@ export default {
     search_error: "Le dictionnaire n'a pas répondu.",
     examples_title: 'Quelques mots pour commencer',
     random: 'Un mot au hasard',
+    // the browse index over the headword list (issue #480): a paged, crawlable
+    // way to every word page, not only the examples and the sitemap
+    browse_title: 'Tous les mots',
+    browse_intro: 'Toutes les entrées du dictionnaire par première lettre — {count} au total.',
+    browse_letter_title: 'Mots commençant par {letter}',
+    browse_other: 'Autres caractères',
+    browse_page: 'page {page} sur {pages}',
+    browse_prev: 'Page précédente',
+    browse_next: 'Page suivante',
+    browse_link: 'Parcourir tous les mots',
     page_title: '{word} — sens, formes, traductions',
     page_description: "L'entrée du dictionnaire pour « {word} ».",
+    // the page in a locale the dictionary translates into (issue #480): the
+    // title and description carry that locale's own translations
+    page_title_translated: '{word} — traduction : {translations}',
+    translations_of: 'Traduction de {word} en français : {translations}.',
+    translation_label: 'Traduction',
     entries: '{count, plural, one {# entrée} many {# entrées} other {# entrées}}',
     pronounce: 'Prononcer {word}',
     obsolete: 'obsolète',
@@ -165,7 +182,6 @@ export default {
     synonyms: 'Synonymes',
     antonyms: 'Antonymes',
     phrasal_variants: 'Variantes phrasal',
-    unavailable: "Le dictionnaire n'est pas joignable pour le moment — réessayez dans une minute.",
     from_api: 'Cette page est',
     try_in_playground: 'essayez-la dans le playground',
     license_note: 'données sous CC BY 4.0',
@@ -206,6 +222,7 @@ export default {
   footer: {
     code_license: 'Code : MIT',
     data_license: 'Données : CC BY 4.0',
+    words: 'Tous les mots',
     issues: 'Issues',
     discussions: 'Discussions',
     release_notes: 'Notes de version',

@@ -131,6 +131,27 @@ the word pages are rendered on request and cached for an hour.
 > docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build site
 > ```
 
+#### Search engines
+
+The site is built for them: one canonical URL per page (`/en/word/Bloom` redirects to
+`/en/word/bloom`, an untranslated documentation page points at its English original), hreflang
+links for the languages a page exists in, a description and a social card on every page,
+structured data (`WebSite`, `BreadcrumbList`, `TechArticle`, `DefinedTerm`), and two sitemaps
+named in `robots.txt`: `sitemap.xml` for the static pages and `sitemap-words.xml`, a sitemap
+index over the dictionary's headwords — one file of 2 500 headwords in every interface language,
+built from a walk of `GET /api/v1/words` that the site does once a day in the background (it
+honours the public rate limit, waits for the instance to be ready, and answers `503` with
+`Retry-After` until the first walk is through). `/word/browse` is the crawlable A–Z index of the
+same list. The word and browse pages are regenerated on demand and kept for an hour, and say so
+to a cache in front of the site (`Cache-Control: s-maxage=3600, stale-while-revalidate=86400`).
+
+To watch the site in the webmaster tools, verify the origin — by DNS, which needs nothing here,
+or by the meta tag, whose token is a **build** variable next to `NEXT_PUBLIC_SITE_URL`
+(`SITE_VERIFICATION_GOOGLE`, `SITE_VERIFICATION_BING`, `SITE_VERIFICATION_YANDEX`,
+[`../environment.md`](../environment.md)) — then submit both sitemaps in Google Search Console,
+Bing Webmaster Tools and Yandex Webmaster. That registration is a manual step; nothing in the
+compose stack does it.
+
 ## Everything together
 
 The instance with its bundled database, the website and the metrics stack, on one host — what a

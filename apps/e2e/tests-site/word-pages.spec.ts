@@ -15,6 +15,23 @@ test.describe('word pages', () => {
     await expect(page.getByText('GET /api/v1/words/run')).toBeVisible();
   });
 
+  // issue #480: the Russian copy leads with the Russian translation — in the
+  // title, the description and on the first screen
+  test("a word page in a translated locale leads with that locale's translations", async ({ page }) => {
+    await page.goto('/ru/word/run');
+
+    await expect(page).toHaveTitle('run — перевод: бежать · Vocab Bloom Hub');
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+      'content',
+      'Перевод слова run на русский: бежать. definition of to move fast',
+    );
+    await expect(page.getByText('Перевод: бежать')).toBeVisible();
+    // the English copy has no such lead
+    await page.goto('/en/word/run');
+    await expect(page).toHaveTitle('run — meanings, forms, translations · Vocab Bloom Hub');
+    await expect(page.getByText('Translation:')).toHaveCount(0);
+  });
+
   test('the word index offers the search and the examples', async ({ page }) => {
     await page.goto('/en/word');
 

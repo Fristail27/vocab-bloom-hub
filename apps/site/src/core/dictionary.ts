@@ -9,6 +9,18 @@ import { serverApiBase } from './apiBase';
 // for often once it is indexed
 const REVALIDATE_SECONDS = 3600;
 
+/**
+ * Thrown by a page that cannot be rendered without the API (issue #480): the
+ * route-level error boundary shows it and Next answers 500 with no-store, so
+ * neither a crawler nor a cache keeps a placeholder for a page that exists
+ */
+export class DictionaryUnavailableError extends Error {
+  constructor() {
+    super('the dictionary API is unavailable');
+    this.name = 'DictionaryUnavailableError';
+  }
+}
+
 export type HeadwordResultT =
   { kind: 'found'; result: PublicHeadwordV1ResT } | { kind: 'not_found' } | { kind: 'unavailable' };
 

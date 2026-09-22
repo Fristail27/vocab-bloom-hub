@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { DOC_PAGES, docFile, findDocBySlug, slugForFile } from '../registry';
+import { DOC_PAGES, docFile, docLocales, findDocBySlug, slugForFile } from '../registry';
 import { extractSection } from '../sections';
 import { InterfaceLanguageEnum } from '@/types/common';
 
@@ -69,5 +69,15 @@ describe('the docs registry', () => {
 
   it('lists the release notes so a link to CHANGELOG.md stays on the site', () => {
     expect(slugForFile('CHANGELOG.md')).toBe('changelog');
+  });
+});
+
+describe('docLocales (issue #480)', () => {
+  it('is English plus the translations the repository has, nothing else', () => {
+    expect(docLocales(findDocBySlug('operations')!)).toEqual([InterfaceLanguageEnum.en]);
+    expect(docLocales(findDocBySlug('api')!)).toEqual([InterfaceLanguageEnum.en, InterfaceLanguageEnum.ru]);
+    expect(docLocales(findDocBySlug('getting-started')!)).toHaveLength(
+      Object.values(InterfaceLanguageEnum).length,
+    );
   });
 });

@@ -219,6 +219,16 @@ export const slugForFile = (file: string): string | undefined =>
 export const docTitle = (page: DocPageT, locale: InterfaceLanguageEnum): string =>
   locale === InterfaceLanguageEnum.ru ? page.titleRu : page.title;
 
+/**
+ * The locales a page really exists in: English and the translations the
+ * repository has. The other locales render the English file — canonicalized
+ * to the English URL and left out of the sitemap (issue #480)
+ */
+export const docLocales = (page: DocPageT): InterfaceLanguageEnum[] => [
+  InterfaceLanguageEnum.en,
+  ...(Object.keys(page.translations ?? {}) as InterfaceLanguageEnum[]),
+];
+
 /** The translated file of a page in a locale, when the repository has one */
 export const translatedDocFile = (page: DocPageT, locale: InterfaceLanguageEnum): string | undefined =>
   locale === InterfaceLanguageEnum.en ? undefined : page.translations?.[locale];

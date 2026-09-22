@@ -1,14 +1,17 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import type { PublicWordV1MeaningT, PublicWordV1T } from 'server/types';
 
+import { JsonLd } from '@/components/JsonLd';
 import { Pronounce } from '@/components/Pronounce';
 import { ReportMistake } from '@/components/ReportMistake';
 import { WordSearch } from '@/components/WordSearch';
-import { fetchHeadword } from '@/core/dictionary';
-import { localeAlternates, pageMeta, siteUrl } from '@/core/site';
+import { DictionaryUnavailableError, fetchHeadword } from '@/core/dictionary';
+import { pageMeta, trimDescription } from '@/core/site';
+import { breadcrumbJsonLd, definedTermJsonLd } from '@/core/structuredData';
+import { leadDefinition, localeFirst, localeTranslations } from '@/core/wordPage';
 import { Link } from '@/i18n/navigation';
 import { LocaleParamsP } from '@/types/common';
 
@@ -16,13 +19,26 @@ import styles from '../word.module.scss';
 
 type WordPageP = LocaleParamsP<{ word: string }>;
 
-// rendered on request from the instance's API, cached (core/dictionary.ts)
-export const dynamic = 'force-dynamic';
+// Rendered on the first request from the instance's API and regenerated
+// after an hour (ISR, next.config.ts): no headword is known at build time,
+// so nothing is prerendered. The API being down throws — a render that
+// failed is not kept, the stale copy is served when there is one
+export const revalidate = 3600;
+export const generateStaticParams = () => [];
 
 const headwordOf = async (params: WordPageP['params']) => {
   const { locale, word } = await params;
 
   return { locale, word: decodeURIComponent(word) };
+};
+
+const wordPath = (word: string): string => `/word/${encodeURIComponent(word)}`;
+
+// The one URL of a headword is its normalized spelling, `meta.word` of the
+// API answer (issue #480): /en/word/Bloom answered 200 with a canonical of
+// its own, one indexable page per spelling variant. A 308 folds them
+const canonicalOrRedirect = (locale: string, word: string, canonical: string): void => {
+  if (word !== canonical) permanentRedirect(`/${locale}${wordPath(canonical)}`);
 };
 
 export const generateMetadata = async ({ params }: WordPageP): Promise<Metadata> => {
@@ -33,23 +49,41 @@ export const generateMetadata = async ({ params }: WordPageP): Promise<Metadata>
   if (headword.kind === 'unavailable') return { title: word, robots: { index: false } };
   if (headword.kind !== 'found') return { title: word };
 
-  const first = headword.result.data[0];
-  const definition = first?.meanings[0]?.definition;
-  const translations = first?.short_translations.map((item) => item.description).join(', ');
+  const { data, meta } = headword.result;
+  canonicalOrRedirect(locale, word, meta.word);
+  const definition = leadDefinition(data);
+  // the locale's own translations lead the title and the description (issue
+  // #480): "bloom — перевод: цветок, цветение"; the English pattern otherwise
+  const translations = localeTranslations(data, locale);
+  const title = translations.length
+    ? t('page_title_translated', {
+        word: meta.word,
+        translations: translations.slice(0, TITLE_TRANSLATIONS).join(', '),
+      })
+    : t('page_title', { word: meta.word });
+  const description = translations.length
+    ? [t('translations_of', { word: meta.word, translations: translations.join(', ') }), definition]
+        .filter(Boolean)
+        .join(' ')
+    : definition || t('page_description', { word: meta.word });
 
-  return {
-    ...pageMeta(
-      t('page_title', { word: headword.result.meta.word }),
-      [definition, translations].filter(Boolean).join(' — ') || t('page_description', { word }),
-    ),
-    alternates: localeAlternates(locale, `/word/${encodeURIComponent(word)}`),
-  };
+  return pageMeta({
+    locale,
+    path: wordPath(meta.word),
+    title,
+    // a snippet's length: search engines cut a description at about 160 characters
+    description: trimDescription(description),
+    type: 'article',
+  });
 };
+
+// how many of the locale's translations fit a title
+const TITLE_TRANSLATIONS = 4;
 
 // the data writes transcriptions as `/rʌn/` or bare; shown once between slashes
 const ipa = (value: string): string => `/${value.replace(/^[/[]|[/\]]$/g, '')}/`;
 
-const WordLink = ({ word }: { word: string }) => <Link href={`/word/${encodeURIComponent(word)}`}>{word}</Link>;
+const WordLink = ({ word }: { word: string }) => <Link href={wordPath(word)}>{word}</Link>;
 
 type TranslateT = Awaited<ReturnType<typeof getTranslations>>;
 
@@ -75,7 +109,7 @@ const mixesLanguages = (items: ReadonlyArray<{ language: string }>): boolean =>
 
 const LanguageTag = ({ language }: { language: string }) => <small className={styles.tag}>{language}</small>;
 
-const Meaning = ({ meaning, t }: { meaning: PublicWordV1MeaningT; t: TranslateT }) => (
+const Meaning = ({ meaning, locale, t }: { meaning: PublicWordV1MeaningT; locale: string; t: TranslateT }) => (
   <li>
     {meaning.title && <span className={styles.meaningTitle}>{meaning.title}</span>}
     {meaning.meaning_level && <span className={styles.tag}> {meaning.meaning_level}</span>}
@@ -100,7 +134,7 @@ const Meaning = ({ meaning, t }: { meaning: PublicWordV1MeaningT; t: TranslateT 
     )}
     {meaning.translations.length > 0 && (
       <p className={styles.translations}>
-        {meaning.translations.map((translation) => (
+        {localeFirst(meaning.translations, locale).map((translation) => (
           <span key={translation.id} lang={translation.language} dir="auto" title={translation.definition}>
             {mixesLanguages(meaning.translations) && <LanguageTag language={translation.language} />}
             {translation.title}
@@ -127,7 +161,7 @@ const Meaning = ({ meaning, t }: { meaning: PublicWordV1MeaningT; t: TranslateT 
   </li>
 );
 
-const Entry = ({ entry, t }: { entry: PublicWordV1T; t: TranslateT }) => {
+const Entry = ({ entry, locale, t }: { entry: PublicWordV1T; locale: string; t: TranslateT }) => {
   const grammar = grammarOf(entry, t);
 
   return (
@@ -158,7 +192,7 @@ const Entry = ({ entry, t }: { entry: PublicWordV1T; t: TranslateT }) => {
       {entry.description && <p className={styles.description}>{entry.description}</p>}
       {entry.short_translations.length > 0 && (
         <p className={styles.short}>
-          {entry.short_translations.map((item) => (
+          {localeFirst(entry.short_translations, locale).map((item) => (
             <span key={item.id} lang={item.language} dir="auto">
               {mixesLanguages(entry.short_translations) && <LanguageTag language={item.language} />}
               {item.description}
@@ -169,7 +203,7 @@ const Entry = ({ entry, t }: { entry: PublicWordV1T; t: TranslateT }) => {
       {entry.meanings.length > 0 && (
         <ol className={styles.meanings}>
           {entry.meanings.map((meaning) => (
-            <Meaning key={meaning.id} meaning={meaning} t={t} />
+            <Meaning key={meaning.id} meaning={meaning} locale={locale} t={t} />
           ))}
         </ol>
       )}
@@ -207,35 +241,40 @@ export default async function WordPage({ params }: WordPageP) {
   const headword = await fetchHeadword(word);
 
   if (headword.kind === 'not_found') notFound();
-  if (headword.kind === 'unavailable') {
-    return (
-      <div className={`container ${styles.page}`}>
-        <h1>{word}</h1>
-        <p className={styles.intro}>{t('unavailable')}</p>
-      </div>
-    );
-  }
+  // the page is cacheable (next.config.ts); one the API failed to render must not be
+  if (headword.kind === 'unavailable') throw new DictionaryUnavailableError();
 
   const { data, meta } = headword.result;
+  canonicalOrRedirect(locale, word, meta.word);
   const transcription = data.find((entry) => entry.transcription)?.transcription;
-
-  // structured data for search engines (issue #350): one DefinedTerm per page
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'DefinedTerm',
-    name: meta.word,
-    description: data[0]?.meanings[0]?.definition || data[0]?.description || undefined,
-    url: `${siteUrl()}/${locale}/word/${encodeURIComponent(meta.word)}`,
-  };
+  // the locale's translations on the first screen, before the entries
+  const translations = localeTranslations(data, locale);
 
   return (
     <div className={`container ${styles.page}`}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      {/* structured data for search engines (issues #350, #480): the trail and the term in its dictionary */}
+      <JsonLd
+        data={[
+          breadcrumbJsonLd(locale, [
+            { name: t('index_title'), path: '/word' },
+            { name: meta.word, path: wordPath(meta.word) },
+          ]),
+          definedTermJsonLd({ locale, word: meta.word, description: leadDefinition(data) }),
+        ]}
+      />
       <div className={styles.headword}>
         <h1>{meta.word}</h1>
         <Pronounce word={meta.word} />
         {transcription && <span className={styles.transcription}>{ipa(transcription)}</span>}
       </div>
+      {translations.length > 0 && (
+        <p className={styles.lead}>
+          <span className={styles.leadLabel}>{t('translation_label')}:</span>{' '}
+          <span lang={locale} dir="auto">
+            {translations.join(', ')}
+          </span>
+        </p>
+      )}
       <div className={styles.metaRow}>
         <p className={styles.meta}>{t('entries', { count: meta.count })}</p>
         <ReportMistake
@@ -263,7 +302,7 @@ export default async function WordPage({ params }: WordPageP) {
         />
       </div>
       {data.map((entry) => (
-        <Entry key={entry.id} entry={entry} t={t} />
+        <Entry key={entry.id} entry={entry} locale={locale} t={t} />
       ))}
       <div className={styles.footer}>
         <p>

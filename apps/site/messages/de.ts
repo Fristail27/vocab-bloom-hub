@@ -1,6 +1,8 @@
 export default {
   meta: {
     title: 'Vocab Bloom Hub',
+    // the start page's own title: the words a person searches for, not the bare brand (issue #480)
+    home_title: 'Vocab Bloom Hub — Englisch-Deutsch-Wörterbuch mit öffentlicher API, selbst gehostet',
     description:
       'Eine Open-Source-Wörterbuchplattform: ein selbst gehostetes Englisch-Wörterbuch mit einer öffentlichen, nur lesenden API, SDKs für Node.js und Python, einer Admin-Oberfläche und einem veröffentlichten Datensatz.',
   },
@@ -142,8 +144,23 @@ export default {
     search_error: 'Das Wörterbuch hat nicht geantwortet.',
     examples_title: 'Ein paar Wörter zum Einstieg',
     random: 'Ein zufälliges Wort',
+    // the browse index over the headword list (issue #480): a paged, crawlable
+    // way to every word page, not only the examples and the sitemap
+    browse_title: 'Alle Wörter',
+    browse_intro: 'Alle Stichwörter des Wörterbuchs nach Anfangsbuchstaben — {count} insgesamt.',
+    browse_letter_title: 'Wörter mit {letter}',
+    browse_other: 'Andere Zeichen',
+    browse_page: 'Seite {page} von {pages}',
+    browse_prev: 'Vorherige Seite',
+    browse_next: 'Nächste Seite',
+    browse_link: 'Alle Wörter durchsuchen',
     page_title: '{word} — Bedeutungen, Formen, Übersetzungen',
     page_description: 'Der Wörterbucheintrag zu „{word}“.',
+    // the page in a locale the dictionary translates into (issue #480): the
+    // title and description carry that locale's own translations
+    page_title_translated: '{word} — Übersetzung: {translations}',
+    translations_of: 'Übersetzung von {word} ins Deutsche: {translations}.',
+    translation_label: 'Übersetzung',
     entries: '{count, plural, one {# Eintrag} other {# Einträge}}',
     pronounce: '{word} aussprechen',
     obsolete: 'veraltet',
@@ -165,7 +182,6 @@ export default {
     synonyms: 'Synonyme',
     antonyms: 'Antonyme',
     phrasal_variants: 'Phrasal-Varianten',
-    unavailable: 'Das Wörterbuch ist gerade nicht erreichbar — versuch es in einer Minute noch einmal.',
     from_api: 'Diese Seite ist',
     try_in_playground: 'probier es im Playground',
     license_note: 'Daten unter CC BY 4.0',
@@ -207,6 +223,7 @@ export default {
   footer: {
     code_license: 'Code: MIT',
     data_license: 'Daten: CC BY 4.0',
+    words: 'Alle Wörter',
     issues: 'Issues',
     discussions: 'Diskussionen',
     release_notes: 'Versionshinweise',

@@ -19,6 +19,7 @@ export const Footer = async () => {
         </Link>
         <a href={`${REPO_BLOB_URL}/LICENSE`}>{t('code_license')}</a>
         <Link href="/docs/data-license">{t('data_license')}</Link>
+        <Link href="/word/browse">{t('words')}</Link>
         <span className={styles.spacer} />
         <a href={`${REPO_URL}/issues`}>{t('issues')}</a>
         <a href={`${REPO_URL}/discussions`}>{t('discussions')}</a>

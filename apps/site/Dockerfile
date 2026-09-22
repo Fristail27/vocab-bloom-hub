@@ -11,7 +11,9 @@
 # as well — the canonical and hreflang links, the social cards, sitemap.xml and
 # robots.txt are prerendered with it — so it is a build argument, not a runtime
 # variable: without it they say http://localhost:3020. The published image is
-# built with the project's own origin (.github/workflows/docker.yml).
+# built with the project's own origin (.github/workflows/docker.yml). The
+# webmaster-tools tokens (SITE_VERIFICATION_*) are build arguments for the
+# same reason: the start page that carries their meta tags is prerendered.
 
 # --- deps: the whole workspace install
 FROM node:22-alpine AS deps
@@ -33,6 +35,12 @@ ENV NEXT_PUBLIC_BASE_API_URL=$NEXT_PUBLIC_BASE_API_URL
 # empty = the development default of core/site.ts, http://localhost:3020
 ARG NEXT_PUBLIC_SITE_URL=
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ARG SITE_VERIFICATION_GOOGLE=
+ARG SITE_VERIFICATION_BING=
+ARG SITE_VERIFICATION_YANDEX=
+ENV SITE_VERIFICATION_GOOGLE=$SITE_VERIFICATION_GOOGLE \
+    SITE_VERIFICATION_BING=$SITE_VERIFICATION_BING \
+    SITE_VERIFICATION_YANDEX=$SITE_VERIFICATION_YANDEX
 ENV NODE_ENV=production
 COPY tsconfig.base.json ./
 # the content the pages are rendered from: the READMEs, docs/, the licences,
@@ -54,6 +62,7 @@ ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3020
 WORKDIR /app
+# (the standalone output traces cache-handler.js, the in-memory page cache next.config.ts loads by path)
 COPY --from=build /app/apps/site/.next/standalone ./
 COPY --from=build /app/apps/site/.next/static ./apps/site/.next/static
 COPY --from=build /app/apps/site/public ./apps/site/public
