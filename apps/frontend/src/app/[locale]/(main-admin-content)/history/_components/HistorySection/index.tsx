@@ -3,7 +3,7 @@
 import React from 'react';
 import { App, Input, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { AuditActionE, AuditEntityTypeE, AuditEntryT } from 'server/types';
 import { EnApi } from '@/core/api/EnApi';
 import { Select } from '@/core/ui/Select';
@@ -25,6 +25,8 @@ const short = (value: unknown): string => {
 
 /** The journal of admin changes (issue #334): filters + a server-paged table */
 export const HistorySection: React.FC = () => {
+  // dates in the interface language, not the browser's (issue #479)
+  const locale = useLocale();
   const t = useTranslations('history');
   const tErr = useTranslations('errors');
   const { message } = App.useApp();
@@ -68,7 +70,7 @@ export const HistorySection: React.FC = () => {
       title: t('col_time'),
       dataIndex: 'created_at',
       width: 170,
-      render: (value: string) => new Date(value).toLocaleString(),
+      render: (value: string) => new Date(value).toLocaleString(locale),
     },
     {
       title: t('col_action'),

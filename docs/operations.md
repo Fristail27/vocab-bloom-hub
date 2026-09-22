@@ -30,8 +30,26 @@ needed to bring an instance back:
   re-created from the dataset.
 
 Back it up on whatever schedule matches how often the dictionary is edited — a dictionary
-imported once and never edited needs one backup, after the import
-([`database.md`](./database.md#backups)).
+imported once and never edited needs one backup, after the import; an edited one on a
+schedule, with a cron recipe in [`database.md`](./database.md#scheduled-backups).
+
+## External uptime check
+
+The instance's own monitoring ([`observability.md`](./observability.md)) runs next to it and
+goes down with the host. Something outside — an uptime service, a cron job on another machine,
+the load balancer's health check — should poll the readiness probe and alert when it is not
+`200`:
+
+```
+GET https://dict.example.com/api/ready       every 1–5 minutes, alert after 2 failures
+```
+
+`/api/ready` is the right probe for this: it turns `503` when the database is unreachable, an
+import runs or fails, or a stop begins, and its body names the reason
+([`deployment/README.md`](./deployment/README.md#probes)). `/api/health` only says the process
+answers HTTP. Polling readiness also feeds the `VbhNotReady` alert rule of the overlay, which
+watches the probe's own answers ([`observability.md`](./observability.md#alerts)). An
+installation with the website adds its start page (`GET /en`, `200`) to the same check.
 
 ## Database backup vs dictionary export
 

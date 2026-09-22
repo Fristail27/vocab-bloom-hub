@@ -15,8 +15,12 @@ export const weakEtagOf = (body: string): string =>
 
 /**
  * The Cache-Control of a successful public GET: shared caches may keep it
- * for `maxAgeSeconds`; zero asks every cache to revalidate on each use,
- * which the ETag makes cheap (304, no body).
+ * for `maxAgeSeconds` and, for as long again, serve the stale copy while
+ * they revalidate it in the background (issue #479) — the ETag makes that
+ * revalidation a bodiless 304. Zero asks every cache to revalidate on each
+ * use instead.
  */
 export const publicCacheControl = (maxAgeSeconds: number): string =>
-  maxAgeSeconds > 0 ? `public, max-age=${maxAgeSeconds}` : 'public, no-cache';
+  maxAgeSeconds > 0
+    ? `public, max-age=${maxAgeSeconds}, stale-while-revalidate=${maxAgeSeconds}`
+    : 'public, no-cache';

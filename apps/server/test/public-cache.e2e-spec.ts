@@ -83,7 +83,7 @@ describe('public API caching headers (e2e, issue #274)', () => {
   it('stamps every public GET with ETag, Cache-Control and Last-Modified', async () => {
     const res = await request(server()).get('/api/v1/words/glimmer').expect(200);
     expect(res.headers.etag).toMatch(WEAK_ETAG);
-    expect(res.headers['cache-control']).toBe('public, max-age=3600');
+    expect(res.headers['cache-control']).toBe('public, max-age=3600, stale-while-revalidate=3600');
     expect(res.headers['x-api-version']).toBe('1');
 
     const lastModified = Date.parse(res.headers['last-modified']);
@@ -108,7 +108,7 @@ describe('public API caching headers (e2e, issue #274)', () => {
     expect(head.text ?? '').toBe('');
     expect(head.headers.etag).toBe(get.headers.etag);
     expect(head.headers['last-modified']).toBe(get.headers['last-modified']);
-    expect(head.headers['cache-control']).toBe('public, max-age=3600');
+    expect(head.headers['cache-control']).toBe('public, max-age=3600, stale-while-revalidate=3600');
 
     await request(server())
       .head(`/api/v1/words/id/${wordId}`)
@@ -125,7 +125,7 @@ describe('public API caching headers (e2e, issue #274)', () => {
       .expect(304);
     expect(notModified.text).toBe('');
     expect(notModified.headers.etag).toBe(first.headers.etag);
-    expect(notModified.headers['cache-control']).toBe('public, max-age=3600');
+    expect(notModified.headers['cache-control']).toBe('public, max-age=3600, stale-while-revalidate=3600');
     expect(notModified.headers['x-api-version']).toBe('1');
 
     await request(server())
@@ -169,7 +169,7 @@ describe('public API caching headers (e2e, issue #274)', () => {
   it('sizes Cache-Control by PUBLIC_API_CACHE_MAX_AGE, read per request', async () => {
     process.env.PUBLIC_API_CACHE_MAX_AGE = '120';
     const custom = await request(server()).get('/api/v1/random').expect(200);
-    expect(custom.headers['cache-control']).toBe('public, max-age=120');
+    expect(custom.headers['cache-control']).toBe('public, max-age=120, stale-while-revalidate=120');
 
     process.env.PUBLIC_API_CACHE_MAX_AGE = '0';
     const revalidate = await request(server()).get('/api/v1/random').expect(200);
@@ -180,7 +180,7 @@ describe('public API caching headers (e2e, issue #274)', () => {
   it('caches the GET search like every other public GET (issue #396)', async () => {
     const res = await request(server()).get('/api/v1/search?search=glim').expect(200);
     expect(res.headers.etag).toMatch(WEAK_ETAG);
-    expect(res.headers['cache-control']).toBe('public, max-age=3600');
+    expect(res.headers['cache-control']).toBe('public, max-age=3600, stale-while-revalidate=3600');
     expect(Number.isNaN(Date.parse(res.headers['last-modified']))).toBe(false);
     await request(server())
       .get('/api/v1/search?search=glim')
@@ -190,7 +190,7 @@ describe('public API caching headers (e2e, issue #274)', () => {
       .get('/api/v1/search/detailed?search=glim&with_meanings=true')
       .expect(200);
     expect(detailed.headers.etag).toMatch(WEAK_ETAG);
-    expect(detailed.headers['cache-control']).toBe('public, max-age=3600');
+    expect(detailed.headers['cache-control']).toBe('public, max-age=3600, stale-while-revalidate=3600');
   });
 
   it('marks public errors no-store', async () => {

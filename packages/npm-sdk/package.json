@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "Typed Node.js / browser client for the Vocab Bloom Hub public dictionary API (/api/v1).",
   "license": "MIT",
+  "author": {
+    "name": "Aleksei Ryzhov (Fristail27)",
+    "url": "https://github.com/Fristail27"
+  },
   "homepage": "https://vocab-bloom-hub.com/en/docs/sdk/node",
   "repository": {
     "type": "git",

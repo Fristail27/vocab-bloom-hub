@@ -1,4 +1,5 @@
 import { Progress } from 'antd';
+import { useLocale } from 'next-intl';
 import styles from './styles.module.scss';
 
 export const percentOf = (count: number, total: number) => (total > 0 ? (count / total) * 100 : 0);
@@ -12,15 +13,20 @@ type DistributionRowP = {
   showPercent?: boolean;
 };
 
-export const DistributionRow = ({ label, count, total, showPercent }: DistributionRowP) => (
-  <div className={styles.distributionRow}>
-    <span className={styles.distributionLabel}>{label}</span>
-    <Progress percent={percentOf(count, total)} showInfo={false} size="small" />
-    <span className={styles.distributionCount}>
-      {count.toLocaleString()}
-      {showPercent && (
-        <span className={styles.distributionPercent}> ({formatPercent(percentOf(count, total))}%)</span>
-      )}
-    </span>
-  </div>
-);
+export const DistributionRow = ({ label, count, total, showPercent }: DistributionRowP) => {
+  // the number in the interface language, not the browser's (issue #479)
+  const locale = useLocale();
+
+  return (
+    <div className={styles.distributionRow}>
+      <span className={styles.distributionLabel}>{label}</span>
+      <Progress percent={percentOf(count, total)} showInfo={false} size="small" />
+      <span className={styles.distributionCount}>
+        {count.toLocaleString(locale)}
+        {showPercent && (
+          <span className={styles.distributionPercent}> ({formatPercent(percentOf(count, total))}%)</span>
+        )}
+      </span>
+    </div>
+  );
+};

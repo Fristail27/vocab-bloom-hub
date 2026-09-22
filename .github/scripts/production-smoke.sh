@@ -77,6 +77,15 @@ wait_for "$START_TIMEOUT" "frontend ($FRONT_URL/ = 200 after redirects)" front_i
 login_is_up() { [ "$(http_status "$FRONT_URL/en/login")" = "200" ]; }
 wait_for 30 "login page ($FRONT_URL/en/login = 200)" login_is_up
 
+# the security headers every installation must send (issue #479): the admin
+# UI refuses framing, the server answers through helmet
+has_header() { curl -s -D - -o /dev/null "$1" | grep -qi "^$2"; }
+has_header "$FRONT_URL/en/login" 'x-frame-options: DENY' || fail "the admin UI does not send X-Frame-Options: DENY"
+has_header "$FRONT_URL/en/login" 'x-content-type-options: nosniff' || fail "the admin UI does not send X-Content-Type-Options"
+has_header "$FRONT_URL/en/login" 'referrer-policy:' || fail "the admin UI does not send Referrer-Policy"
+has_header "$SERVER_URL/api/v1/meta" 'x-content-type-options: nosniff' || fail "the server does not send X-Content-Type-Options"
+echo "ok: security headers"
+
 # graceful stop: SIGTERM to the server process itself, the way a process
 # manager stops it; readiness must drop and the process must exit on its own
 SERVER_PID="$(pgrep -f 'dist/src/main' | head -1)"

@@ -11,8 +11,8 @@ describe('public API caching helpers (issue #274)', () => {
   });
 
   it('builds the Cache-Control of public reads from the max-age', () => {
-    expect(publicCacheControl(3600)).toBe('public, max-age=3600');
-    expect(publicCacheControl(1)).toBe('public, max-age=1');
+    expect(publicCacheControl(3600)).toBe('public, max-age=3600, stale-while-revalidate=3600');
+    expect(publicCacheControl(1)).toBe('public, max-age=1, stale-while-revalidate=1');
     expect(publicCacheControl(0)).toBe('public, no-cache');
     expect(CACHE_CONTROL_NO_STORE).toBe('no-store');
   });

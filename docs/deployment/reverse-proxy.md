@@ -48,6 +48,13 @@ list, or `true` for every hop. Leave it unset without a proxy — the server the
 - **Allow long requests on `/api/*`**: an import runs for minutes (`proxy_read_timeout 600s`).
 - **Allow large request bodies on `/api/*`**: an uploaded archive is up to 512 MB (nginx:
   `client_max_body_size 512m`; Caddy has no limit by default).
+- **Add `Strict-Transport-Security`.** The other security headers come from the apps
+  themselves — the server through helmet, the admin UI and the website from their Next.js
+  configs (`X-Content-Type-Options: nosniff`, `X-Frame-Options` / `frame-ancestors`,
+  `Referrer-Policy`, `Permissions-Policy`) — so every installation has them. HSTS is the one
+  that only makes sense where TLS ends, which is here; the templates below add it. Leave it
+  out while a hostname is still served over plain `http://`: browsers remember it for the
+  whole `max-age`.
 
 ## Caddy
 
@@ -57,6 +64,8 @@ themselves. `/etc/caddy/Caddyfile`:
 ```caddyfile
 dict.example.com {
 	encode gzip
+	# TLS ends here: tell browsers to come back over https only
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
 
 	# API: streamed progress must reach the browser as it is produced
 	handle /api/* {
@@ -97,6 +106,9 @@ server {
 
     ssl_certificate     /etc/letsencrypt/live/dict.example.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/dict.example.com/privkey.pem;
+
+    # TLS ends here: tell browsers to come back over https only
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
     # dataset upload (import from an archive)
     client_max_body_size 512m;
@@ -219,6 +231,13 @@ This is where the project website belongs (the `site` profile,
 else to the site (`127.0.0.1:3020`) instead of the admin UI — the documentation, the API
 reference, the playground and the word pages then run over this dictionary.
 
+A public website that is still edited in place combines (b) and (c) on two hostnames: the
+website with `/api/v1` on the public one, where the admin prefixes answer `404` at the proxy,
+and the admin UI with the admin API on `admin.…`, behind an address list and a certificate of
+its own, plus a `www` redirect. That layout — the one the project website runs on — is a
+complete nginx file: [`examples/nginx-two-hosts.conf`](./examples/nginx-two-hosts.conf); the
+whole installation around it: [`vps.md`](./vps.md).
+
 The opposite switch, `PUBLIC_API_ENABLED=false`, makes an editing-only instance
 ([`../api.md`](../api.md#running-a-public-only-or-admin-only-instance)).
 
@@ -226,6 +245,9 @@ The opposite switch, `PUBLIC_API_ENABLED=false`, makes an editing-only instance
 
 - [ ] `https://` end to end — the admin cookie is `secure` only then; over plain HTTP the token
       travels in the clear.
+- [ ] `Strict-Transport-Security` is added by the proxy (the templates do); the other security
+      headers are already in every answer of the apps — `curl -I https://dict.example.com/en/login`
+      shows `X-Frame-Options: DENY` from the admin UI.
 - [ ] `TRUST_PROXY` set to the number of proxy hops; the startup log confirms it.
 - [ ] `NEXT_PUBLIC_BASE_API_URL` and `CORS_ORIGINS` are the public origin; the frontend was
       rebuilt after setting them.

@@ -46,6 +46,13 @@ echo "ok: probes and /api/v1/meta"
 wait_for 60 "login page ($FRONT_URL/en/login = 200)" test "$(http_status "$FRONT_URL/en/login")" = 200
 [ "$(http_status -L "$FRONT_URL/")" = 200 ] || fail "/ does not reach the login page"
 
+# the security headers every installation must send (issue #479)
+has_header() { curl -s -D - -o /dev/null "$1" | grep -qi "^$2"; }
+has_header "$FRONT_URL/en/login" 'x-frame-options: DENY' || fail "the admin UI does not send X-Frame-Options: DENY"
+has_header "$FRONT_URL/en/login" 'x-content-type-options: nosniff' || fail "the admin UI does not send X-Content-Type-Options"
+has_header "$SERVER_URL/api/v1/meta" 'x-content-type-options: nosniff' || fail "the server does not send X-Content-Type-Options"
+echo "ok: security headers"
+
 # --- admin login over plain http: a one-time HMAC proof (docs/authentication.md)
 # mirrors hashLoginString (apps/server/core/utils/crypto): PBKDF2-SHA256,
 # 600k iterations, deterministic per-user salt (issue #344)
@@ -88,6 +95,8 @@ if echo ",$(env_value COMPOSE_PROFILES)," | grep -q ',site,'; then
   [ "$(http_status "$SITE_URL/en/docs/deployment/docker")" = 200 ] || fail "a documentation page is not 200"
   [ "$(http_status "$SITE_URL/en/api")" = 200 ] || fail "the API reference is not 200"
   [ "$(http_status "$SITE_URL/en/playground")" = 200 ] || fail "the playground is not 200"
+  has_header "$SITE_URL/en" 'x-content-type-options: nosniff' || fail "the website does not send X-Content-Type-Options"
+  has_header "$SITE_URL/en" 'x-frame-options: SAMEORIGIN' || fail "the website does not send X-Frame-Options"
   [ "$(http_status "$SITE_URL/api/v1/meta")" = 200 ] || fail "/api/v1/meta through the site origin is not 200"
   # an empty dictionary: the word index renders, a headword is a clean 404
   [ "$(http_status "$SITE_URL/en/word")" = 200 ] || fail "the word index is not 200"

@@ -12,6 +12,16 @@ test.describe('authentication', () => {
     await expect(page.getByRole('heading', { name: 'Admin Panel Sign In' })).toBeVisible();
   });
 
+  test('sends the security headers on every page (issue #479)', async ({ request }) => {
+    const res = await request.get('/en/login');
+    const headers = res.headers();
+    expect(headers['x-frame-options']).toBe('DENY');
+    expect(headers['content-security-policy']).toBe("frame-ancestors 'none'");
+    expect(headers['x-content-type-options']).toBe('nosniff');
+    expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
+    expect(headers['permissions-policy']).toContain('camera=()');
+  });
+
   test('rejects API requests without a token', async ({ request }) => {
     const res = await request.get(`${API_URL}/en/check-word/run?partOfSpeech=verb`);
     expect(res.status()).toBe(401);

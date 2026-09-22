@@ -97,7 +97,8 @@ export const SuggestionsSection: React.FC = () => {
       title: t('col_time'),
       dataIndex: 'created_at',
       width: 170,
-      render: (value: string) => new Date(value).toLocaleString(),
+      // in the interface language, not the browser's (issue #479)
+      render: (value: string) => new Date(value).toLocaleString(locale),
     },
     {
       title: t('col_status'),

@@ -11,7 +11,7 @@ import { AuditActionE, AuditEntityTypeE } from '../../../types';
 import { AuditService } from '../AuditModule/audit.service';
 import { diffSnapshots, snapshotScalars } from '../AuditModule/audit-diff';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository, FindOptionsRelations } from 'typeorm';
 import { EnEntry } from './entities/en_entry.entity';
 import { EnWord } from './entities/en_word.entity';
 import {
@@ -262,12 +262,17 @@ export class EnService {
     return { success: true };
   }
 
-  async editWord(id: number, body: EditCommonInfoOfWordReqDTO): Promise<EditCommonInfoOfWordResT> {
-    const word = await this.enWordsRep.findOne({ where: { id }, relations: { word: true } });
-
+  /** The row of a word id, or the not-found error every edit answers with */
+  private async requireWord(id: number, relations?: FindOptionsRelations<EnWord>): Promise<EnWord> {
+    const word = await this.enWordsRep.findOne({ where: { id }, relations });
     if (!word) {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);
     }
+    return word;
+  }
+
+  async editWord(id: number, body: EditCommonInfoOfWordReqDTO): Promise<EditCommonInfoOfWordResT> {
+    const word = await this.requireWord(id, { word: true });
 
     const before = snapshotScalars(word);
     const {
@@ -344,17 +349,8 @@ export class EnService {
   }
 
   async editPhrasalBase(body: EditPhrasalBaseReqDTO): Promise<EditPhrasalBaseResT> {
-    const word = await this.enWordsRep.findOne({ where: { id: body.id } });
-
-    if (!word) {
-      throw new NotFoundException(ErrorCodes.word_doesnt_found);
-    }
-
-    const phrasalBase = await this.enWordsRep.findOne({ where: { id: body.phrasal_base_id } });
-
-    if (!phrasalBase) {
-      throw new NotFoundException(ErrorCodes.word_doesnt_found);
-    }
+    const word = await this.requireWord(body.id);
+    const phrasalBase = await this.requireWord(body.phrasal_base_id);
     word.base_phrasal = phrasalBase;
     await this.enWordsRep.save(word);
     await markEntryUserModifiedByRow(this.enWordsRep.manager, body.id);
@@ -415,11 +411,7 @@ export class EnService {
       throw new ConflictException(ErrorCodes.word_already_exists);
     }
 
-    // TODO объединить с getById
-    const baseWord = await this.enWordsRep.findOne({ where: { id: body.base_word_id } });
-    if (!baseWord) {
-      throw new NotFoundException(ErrorCodes.word_doesnt_found);
-    }
+    const baseWord = await this.requireWord(body.base_word_id);
     const res = await this.dataSource.transaction(async (em) => {
       const entry = await this.getOrAddEntry(em, body.word, EnEntryTypesE.word);
       const saved = await em.getRepository(EnWord).save({
@@ -447,13 +439,7 @@ export class EnService {
   }
 
   async editWordForm(body: EditWordFormReqDTO): Promise<EditWordFormResT> {
-    const word = await this.enWordsRep.findOne({
-      where: { id: body.id },
-      relations: { word: true },
-    });
-    if (!word) {
-      throw new NotFoundException(ErrorCodes.word_doesnt_found);
-    }
+    const word = await this.requireWord(body.id, { word: true });
 
     const before = snapshotScalars(word);
     await this.dataSource.transaction(async (em) => {

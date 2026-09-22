@@ -92,7 +92,7 @@ docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
 > [!NOTE]
 > The overlay mounts its configuration from the `observability/` folder next to the compose
 > files. An installation made from the two downloaded files of the quick start does not have
-> it: [Everything together](./deployment/docker.md#everything-together) lists the four files to
+> it: [Everything together](./deployment/docker.md#everything-together) lists the five files to
 > fetch.
 
 That starts, on localhost only:
@@ -127,8 +127,9 @@ PM2) or a server on another machine — takes two steps instead of one:
    docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d prometheus grafana
    ```
 
-Already running a Prometheus? Skip the compose file: add the instance to its scrape config
-and import `observability/grafana/dashboards/vocab-bloom-hub.json` into your Grafana.
+Already running a Prometheus? Skip the compose file: add the instance to its scrape config,
+load `observability/alerts.yml` as a rule file and import
+`observability/grafana/dashboards/vocab-bloom-hub.json` into your Grafana.
 
 > [!TIP]
 > **Target DOWN with `connection refused`?** The scrape fails while the server is not listening
@@ -147,6 +148,42 @@ and import `observability/grafana/dashboards/vocab-bloom-hub.json` into your Gra
 > `DATABASE_URL=postgres://…@host.docker.internal:5432/… docker compose …`. A target that is
 > `down` only briefly right after `up -d` is normal: the server answers `/metrics` once its
 > migrations and startup are done.
+
+## Alerts
+
+The overlay's Prometheus loads `observability/alerts.yml` (`rule_files` in `prometheus.yml`):
+seven rules over the metrics below, visible at `http://localhost:3243/alerts` and validated in
+CI with `promtool`. What they watch, and what to do:
+
+| Alert                | Fires when                                                                   | Look at                                                                                                |
+| -------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `VbhInstanceDown`    | `/metrics` could not be scraped for 2 min                                    | `docker compose logs server`; the target address in `prometheus.yml`                                   |
+| `VbhNotReady`        | `GET /api/ready` answered `503` only for 5 min                               | the reason in the probe's body: `database_unreachable`, `shutting_down`, `importing`, `import_failed`  |
+| `VbhHighErrorRate`   | more than 5 % of the answers are `5xx` over 5 min, on real traffic           | the request ids of the errors in the log ([Logs](#logs))                                               |
+| `VbhSlowRequests`    | the p95 latency of `/api/v1` is above 1 s for 10 min                         | the indexes and the query plans ([`performance.md`](./performance.md)), the pool                       |
+| `VbhDbPoolExhausted` | clients wait for a Postgres connection for 5 min                             | `DB_POOL_SIZE`, slow queries ([`environment.md`](./environment.md))                                    |
+| `VbhTransferStuck`   | an import or export is in progress with no change of its progress for 30 min | the server log; a stuck import holds readiness at `503 importing` ([`operations.md`](./operations.md)) |
+| `VbhEventLoopLag`    | the p99 event-loop lag is above 0.5 s for 10 min                             | CPU and memory on the dashboard                                                                        |
+
+`VbhNotReady` needs something that polls the readiness probe — an external uptime check
+([`operations.md`](./operations.md#external-uptime-check)) or a load balancer; the probe is
+counted like any other request, and without a poller the rule has nothing to see. The
+thresholds suit one instance on the full dictionary: tune `for` and the ratios to your traffic
+in the file, `docker compose … restart prometheus` reloads it.
+
+Prometheus only shows a firing alert. To be notified — mail, a chat, a pager — run an
+[Alertmanager](https://prometheus.io/docs/alerting/latest/alertmanager/) and name it in
+`prometheus.yml`:
+
+```yaml
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+```
+
+The overlay does not ship one: where the notifications go is a decision of the installation,
+not of the project.
 
 ## Metrics
 
@@ -318,4 +355,5 @@ start under systemd goes through journald, which every collector reads as well.
 ## Not here yet
 
 Traces (OpenTelemetry) are out of scope; the metrics can be re-exported through an OTel
-collector's Prometheus receiver.
+collector's Prometheus receiver. An Alertmanager and its notification channels are not part
+of the overlay either ([Alerts](#alerts)).

@@ -255,6 +255,9 @@ repeatable part of a release:
    (categories in `.github/release.yml`; a hyphen in the tag marks it a prerelease).
    A prerelease publishes to npm under its channel dist-tag (`alpha`, `beta`, …), never
    `latest` — npm refuses a bare `npm publish` of a prerelease version.
+   An SDK is published only when its package or the public OpenAPI spec changed since the
+   previous tag (the version bump alone does not count): a release that touched neither
+   leaves the registries at the version they have, so the SDK versions may lag the app's.
    A publish job that failed on the tag push is repeated from the Actions tab: _release_ →
    _Run workflow_ with the tag (the npm and PyPI checkboxes pick the jobs); a plain re-run
    would use the workflow file as it was at that tag.
