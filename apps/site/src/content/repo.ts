@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -17,3 +18,25 @@ export const repoRoot = (): string => process.env.CONTENT_ROOT ?? path.resolve(p
 // time only, so the tracer must not pull the whole checkout into the output
 export const readRepoFile = (file: string): string =>
   fs.readFileSync(/* turbopackIgnore: true */ path.join(/* turbopackIgnore: true */ repoRoot(), file), 'utf8');
+
+/**
+ * When a repository file last changed, for the `lastmod` of its page
+ * (issue #480): the date of its last commit when the build runs in a
+ * checkout, the file's modification time otherwise (the Docker build copies
+ * the files without their history)
+ */
+export const repoFileDate = (file: string): Date => {
+  try {
+    const committed = execFileSync('git', ['log', '-1', '--format=%cI', '--', file], {
+      cwd: repoRoot(),
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+      .toString()
+      .trim();
+    if (committed) return new Date(committed);
+  } catch {
+    // no git, or not a checkout: the file's own time below
+  }
+  // marked like readRepoFile: a traced `statSync(<repo root>/…)` pulls the checkout into the output
+  return fs.statSync(/* turbopackIgnore: true */ path.join(/* turbopackIgnore: true */ repoRoot(), file)).mtime;
+};

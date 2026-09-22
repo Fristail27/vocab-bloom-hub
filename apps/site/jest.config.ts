@@ -15,6 +15,8 @@ export default {
     ],
   },
   testEnvironment: 'node',
+  // the standalone build output copies the traced files under .next
+  testPathIgnorePatterns: ['/node_modules/', '/\\.next/'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '\\.(css|scss|module\\.css|module\\.scss)$': 'identity-obj-proxy',

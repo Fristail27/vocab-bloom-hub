@@ -1,6 +1,8 @@
 export default {
   meta: {
     title: 'Vocab Bloom Hub',
+    // the start page's own title: the words a person searches for, not the bare brand (issue #480)
+    home_title: 'Vocab Bloom Hub — a self-hosted English dictionary with a public API',
     description:
       'An open-source dictionary platform: a self-hosted English dictionary with a public read-only API, SDKs for Node.js and Python, an admin UI and a published dataset.',
   },
@@ -141,8 +143,23 @@ export default {
     search_error: 'The dictionary did not answer.',
     examples_title: 'Some words to start with',
     random: 'A random word',
+    // the browse index over the headword list (issue #480): a paged, crawlable
+    // way to every word page, not only the examples and the sitemap
+    browse_title: 'All words',
+    browse_intro: 'Every headword of this dictionary by its first letter — {count} in total.',
+    browse_letter_title: 'Words starting with {letter}',
+    browse_other: 'Other characters',
+    browse_page: 'page {page} of {pages}',
+    browse_prev: 'Previous page',
+    browse_next: 'Next page',
+    browse_link: 'Browse all words',
     page_title: '{word} — meanings, forms, translations',
     page_description: 'The dictionary entry for "{word}".',
+    // the page in a locale the dictionary translates into (issue #480): the
+    // title and description carry that locale's own translations
+    page_title_translated: '{word} — translation: {translations}',
+    translations_of: 'Translation of {word}: {translations}.',
+    translation_label: 'Translation',
     entries: '{count, plural, one {# entry} other {# entries}}',
     pronounce: 'Pronounce {word}',
     obsolete: 'obsolete',
@@ -164,7 +181,6 @@ export default {
     synonyms: 'Synonyms',
     antonyms: 'Antonyms',
     phrasal_variants: 'Phrasal variants',
-    unavailable: 'The dictionary is not reachable right now — try again in a minute.',
     from_api: 'This page is',
     try_in_playground: 'try it in the playground',
     license_note: 'data under CC BY 4.0',
@@ -205,6 +221,7 @@ export default {
   footer: {
     code_license: 'Code: MIT',
     data_license: 'Data: CC BY 4.0',
+    words: 'All words',
     issues: 'Issues',
     discussions: 'Discussions',
     release_notes: 'Release notes',

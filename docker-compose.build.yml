@@ -28,3 +28,7 @@ services:
       args:
         NEXT_PUBLIC_BASE_API_URL: ${NEXT_PUBLIC_BASE_API_URL:-/api}
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
+        # the webmaster-tools meta tags of the start page, baked in the same way
+        SITE_VERIFICATION_GOOGLE: ${SITE_VERIFICATION_GOOGLE:-}
+        SITE_VERIFICATION_BING: ${SITE_VERIFICATION_BING:-}
+        SITE_VERIFICATION_YANDEX: ${SITE_VERIFICATION_YANDEX:-}

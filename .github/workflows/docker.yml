@@ -102,9 +102,14 @@ jobs:
           # social cards): the published image is the project's own website
           # (PROJECT_WEBSITE_URL), an installation under another hostname builds
           # its own with docker-compose.build.yml
+          # The site also bakes the webmaster-tools tokens of its start page in
+          # (issue #480): repository variables, empty until the maintainer sets them
           build-args: |
             NEXT_PUBLIC_BASE_API_URL=/api
             ${{ matrix.image == 'site' && 'NEXT_PUBLIC_SITE_URL=https://vocab-bloom-hub.com' || '' }}
+            ${{ matrix.image == 'site' && format('SITE_VERIFICATION_GOOGLE={0}', vars.SITE_VERIFICATION_GOOGLE) || '' }}
+            ${{ matrix.image == 'site' && format('SITE_VERIFICATION_BING={0}', vars.SITE_VERIFICATION_BING) || '' }}
+            ${{ matrix.image == 'site' && format('SITE_VERIFICATION_YANDEX={0}', vars.SITE_VERIFICATION_YANDEX) || '' }}
           cache-from: type=gha,scope=${{ matrix.image }}-${{ steps.image.outputs.arch }}
           cache-to: type=gha,scope=${{ matrix.image }}-${{ steps.image.outputs.arch }},mode=max
           # pushed without a tag; the merge job names the multi-platform manifest

@@ -6,7 +6,7 @@ import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server
 
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
-import { siteUrl } from '@/core/site';
+import { siteUrl, siteVerification } from '@/core/site';
 import { localeDirection } from '@/i18n/direction';
 import { isLocale, routing } from '@/i18n/routing';
 import { LocaleParamsP } from '@/types/common';
@@ -34,6 +34,8 @@ export const generateMetadata = async ({ params }: LocaleParamsP): Promise<Metad
       locale,
     },
     twitter: { card: 'summary_large_image' },
+    // the webmaster-tools meta tags, when their tokens were given at build time (issue #480)
+    verification: siteVerification(),
   };
 };
 

@@ -1,6 +1,8 @@
 export default {
   meta: {
     title: 'Vocab Bloom Hub',
+    // the start page's own title: the words a person searches for, not the bare brand (issue #480)
+    home_title: 'Vocab Bloom Hub — англо-русский словарь с открытым API, self-hosted',
     description:
       'Open-source словарная платформа: self-hosted английский словарь с публичным read-only API, SDK для Node.js и Python, админкой и опубликованным датасетом.',
   },
@@ -141,8 +143,23 @@ export default {
     search_error: 'Словарь не ответил.',
     examples_title: 'С чего начать',
     random: 'Случайное слово',
+    // the browse index over the headword list (issue #480): a paged, crawlable
+    // way to every word page, not only the examples and the sitemap
+    browse_title: 'Все слова',
+    browse_intro: 'Все заголовочные слова словаря по первой букве — всего {count}.',
+    browse_letter_title: 'Слова на букву {letter}',
+    browse_other: 'Другие символы',
+    browse_page: 'страница {page} из {pages}',
+    browse_prev: 'Предыдущая страница',
+    browse_next: 'Следующая страница',
+    browse_link: 'Все слова по алфавиту',
     page_title: '{word} — значения, формы, переводы',
     page_description: 'Словарная статья «{word}».',
+    // the page in a locale the dictionary translates into (issue #480): the
+    // title and description carry that locale's own translations
+    page_title_translated: '{word} — перевод: {translations}',
+    translations_of: 'Перевод слова {word} на русский: {translations}.',
+    translation_label: 'Перевод',
     entries: '{count, plural, one {# статья} few {# статьи} many {# статей} other {# статьи}}',
     pronounce: 'Произнести {word}',
     obsolete: 'устаревшее',
@@ -164,7 +181,6 @@ export default {
     synonyms: 'Синонимы',
     antonyms: 'Антонимы',
     phrasal_variants: 'Фразовые варианты',
-    unavailable: 'Словарь сейчас недоступен — попробуйте через минуту.',
     report_button: 'Сообщить об ошибке',
     report_hint:
       'Что-то не так со словом «{word}» — значение, перевод, форма? Напишите владельцу этого словаря: жалоба попадёт в его очередь модерации.',
@@ -205,6 +221,7 @@ export default {
   footer: {
     code_license: 'Код: MIT',
     data_license: 'Данные: CC BY 4.0',
+    words: 'Все слова',
     issues: 'Задачи',
     discussions: 'Обсуждения',
     release_notes: 'История версий',

@@ -3,10 +3,12 @@ import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 import { Arrow } from '@/components/Arrow';
+import { JsonLd } from '@/components/JsonLd';
 import { Markdown } from '@/components/Markdown';
 import { INSTALL_SNIPPET, NODE_SNIPPET, PYTHON_SNIPPET } from '@/content/home';
 import { renderMarkdown } from '@/content/markdown';
-import { localeAlternates } from '@/core/site';
+import { pageMeta, SITE_VERSION } from '@/core/site';
+import { softwareSourceCodeJsonLd, webSiteJsonLd } from '@/core/structuredData';
 import { Link } from '@/i18n/navigation';
 import { LocaleParamsP } from '@/types/common';
 
@@ -16,18 +18,26 @@ const FEATURES = ['api', 'sdk', 'admin', 'data', 'ops', 'search'] as const;
 
 const fence = (lang: string, code: string) => `\`\`\`${lang}\n${code}\n\`\`\``;
 
-// title and description come from the layout; only the canonical/hreflang
-// pair is the home page's own (issue #350)
+// the start page has a title of its own words, outside the `%s · Vocab Bloom
+// Hub` template (issue #480); the description is the layout's
 export const generateMetadata = async ({ params }: LocaleParamsP): Promise<Metadata> => {
   const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'meta' });
 
-  return { alternates: localeAlternates(locale, '') };
+  return pageMeta({
+    locale,
+    path: '',
+    title: t('home_title'),
+    absoluteTitle: true,
+    description: t('description'),
+  });
 };
 
 export default async function HomePage({ params }: LocaleParamsP) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations('home');
+  const meta = await getTranslations('meta');
 
   const [install, node, python] = await Promise.all([
     renderMarkdown(fence('bash', INSTALL_SNIPPET), { fromFile: 'README.md', locale }),
@@ -37,6 +47,13 @@ export default async function HomePage({ params }: LocaleParamsP) {
 
   return (
     <div className="container">
+      {/* the site with its word search, and the project as software (issue #480) */}
+      <JsonLd
+        data={[
+          webSiteJsonLd({ locale, description: meta('description') }),
+          softwareSourceCodeJsonLd({ locale, description: meta('description'), version: SITE_VERSION }),
+        ]}
+      />
       <section className={styles.hero}>
         <h1>{t('hero_title')}</h1>
         <p>{t('hero_text')}</p>
