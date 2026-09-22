@@ -93,7 +93,9 @@ docker image prune -f              # the images of the previous build
 ```
 
 The old containers keep serving while the new images build; the switch itself takes seconds.
-A change to the documentation only rebuilds the website: `build site`, then `up -d site`.
+A change to the documentation only rebuilds the website: `build site`, then `up -d site`. The
+same steps with the backup and the checks around them, as an `update.sh`:
+[`deployment/vps.md`](./deployment/vps.md#update).
 
 ## Without Docker
 

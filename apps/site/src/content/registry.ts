@@ -76,6 +76,13 @@ export const DOC_PAGES: DocPageT[] = [
     titleRu: 'Reverse proxy',
   },
   {
+    slug: 'deployment/vps',
+    file: 'docs/deployment/vps.md',
+    section: DocSectionE.deployment,
+    title: 'A VPS from a git checkout',
+    titleRu: 'VPS из git-чекаута',
+  },
+  {
     slug: 'environment',
     file: 'docs/environment.md',
     translations: { [InterfaceLanguageEnum.ru]: 'docs/environment.ru.md' },

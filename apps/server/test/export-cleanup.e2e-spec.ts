@@ -13,6 +13,13 @@ import { createJwt } from '../core/utils/auth';
 
 type PendingExportsT = Map<string, { filePath: string; timeout: NodeJS.Timeout }>;
 
+const waitUntilGone = async (filePath: string, timeoutMs = 5000): Promise<void> => {
+  const deadline = Date.now() + timeoutMs;
+  while (existsSync(filePath) && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+};
+
 /**
  * An export archive waits 15 minutes for its download (issue #315): the
  * wait must neither keep the process alive nor survive a stop as a leaked
@@ -51,8 +58,9 @@ describe('Export archives on shutdown (e2e, issue #315)', () => {
 
     await app.close();
     expect(pending.size).toBe(0);
-    // unlink is fire-and-forget; give it a tick
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // unlink is fire-and-forget: poll for the file to be gone rather than
+    // wait a fixed tick, which a slow runner overran (issue #479)
+    await waitUntilGone(entry.filePath);
     expect(existsSync(entry.filePath)).toBe(false);
   });
 });

@@ -94,8 +94,8 @@ export default async function TranslationsStatisticsPage({ params }: CommonPageP
             dataSource={by_language.map((r) => ({
               ...r,
               language: r.language.toUpperCase(),
-              meaning_translations: r.meaning_translations.toLocaleString(),
-              short_translations: r.short_translations.toLocaleString(),
+              meaning_translations: r.meaning_translations.toLocaleString(locale),
+              short_translations: r.short_translations.toLocaleString(locale),
             }))}
             pagination={false}
             size="small"

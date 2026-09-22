@@ -1,0 +1,92 @@
+# Alert rules of the docker-compose.observability.yml stack (issue #479),
+# loaded by prometheus.yml. They fire in the Prometheus UI (/alerts) as they
+# are; to be notified, point Prometheus at an Alertmanager (`alerting:` in
+# prometheus.yml) — docs/observability.md#alerts. The thresholds suit one
+# instance on the full dictionary; tune `for` and the ratios to your traffic.
+groups:
+  - name: vocab-bloom-hub
+    rules:
+      # the scrape itself fails: the process is down, restarting, or unreachable
+      - alert: VbhInstanceDown
+        expr: up{job="vocab-bloom-hub"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Vocab Bloom Hub is not answering /metrics'
+          description: 'Prometheus could not scrape {{ $labels.instance }} for 2 minutes: the server is down, restarting, or the target address is wrong (docs/observability.md).'
+
+      # readiness answers 503 (database unreachable, shutting down, an import
+      # running or failed) and nothing answered 200 — needs something to poll
+      # GET /api/ready (an uptime check, a load balancer): the probe counts
+      # like any other request
+      - alert: VbhNotReady
+        expr: |
+          sum(increase(http_requests_total{route="/api/ready",status="503"}[5m])) > 0
+            and
+          sum(increase(http_requests_total{route="/api/ready",status="200"}[5m])) == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Vocab Bloom Hub reports not ready'
+          description: 'GET /api/ready has answered 503 only for 5 minutes. Its body names the reason: database_unreachable, shutting_down, importing or import_failed (docs/deployment/README.md#probes).'
+
+      # more than 5 % of the answers are 5xx, on real traffic
+      - alert: VbhHighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+            /
+          sum(rate(http_requests_total[5m])) > 0.05
+            and
+          sum(rate(http_requests_total[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Vocab Bloom Hub answers 5xx to more than 5 % of the requests'
+          description: '{{ $value | humanizePercentage }} of the requests failed over the last 5 minutes. Check the server log for the request ids of the errors (docs/observability.md#logs).'
+
+      # the slow tail of the public reads: p95 above one second
+      - alert: VbhSlowRequests
+        expr: |
+          histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{route=~"/api/v1/.*"}[10m]))) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Vocab Bloom Hub public reads are slow'
+          description: 'The p95 latency of /api/v1 is {{ $value | humanizeDuration }} over 10 minutes. On the full dictionary the hot reads answer in milliseconds when their indexes are used (docs/performance.md).'
+
+      # clients wait for a Postgres connection: the pool is exhausted
+      - alert: VbhDbPoolExhausted
+        expr: vbh_db_pool_connections{state="waiting"} > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Vocab Bloom Hub waits for Postgres connections'
+          description: '{{ $value }} clients have been waiting for a pool connection for 5 minutes. Raise DB_POOL_SIZE or look for slow queries (docs/environment.md).'
+
+      # an import or export that reports no progress for half an hour
+      - alert: VbhTransferStuck
+        expr: |
+          vbh_dictionary_transfer_in_progress == 1
+            and
+          changes(vbh_dictionary_transfer_progress_percent[30m]) == 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'A dictionary {{ $labels.kind }} has not progressed for 30 minutes'
+          description: 'The {{ $labels.kind }} is still marked in progress but its progress percentage has not changed. Check the server log; a stuck import holds readiness at 503 importing (docs/operations.md).'
+
+      # the event loop is blocked: the process cannot keep up
+      - alert: VbhEventLoopLag
+        expr: nodejs_eventloop_lag_p99_seconds > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Vocab Bloom Hub event loop lags'
+          description: 'The p99 event-loop lag is {{ $value | humanizeDuration }} over 10 minutes: the process is CPU-bound or blocked. CPU and memory are on the dashboard.'

@@ -63,10 +63,46 @@ jobs:
             exit 1
           fi
 
+  # Which packages changed since the previous tag (issue #479): a release
+  # that touched neither an SDK nor the public spec republishes nothing —
+  # the registries keep the version they have. The version bump itself is
+  # ignored in the comparison; the first tag ever publishes both. A manual
+  # run decides by its checkboxes instead
+  changes:
+    name: what changed since the previous tag
+    needs: guard
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      npm: ${{ steps.diff.outputs.npm }}
+      pypi: ${{ steps.diff.outputs.pypi }}
+    steps:
+      - name: Checkout with the tags
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Compare with the previous tag
+        id: diff
+        run: |
+          previous="$(git describe --tags --abbrev=0 "$RELEASE_TAG^" 2>/dev/null || true)"
+          changed() {
+            # a package changed unless the diff is empty; version-bump lines are ignored
+            [ -z "$previous" ] || ! git diff --quiet -I '"version": "' -I '^version = "' "$previous" "$RELEASE_TAG" -- "$@"
+          }
+          spec=apps/server/openapi/public-v1.json
+          if changed packages/npm-sdk "$spec"; then npm=true; else npm=false; fi
+          if changed packages/python-sdk "$spec"; then pypi=true; else pypi=false; fi
+          echo "previous tag: ${previous:-none}; npm=$npm pypi=$pypi"
+          echo "npm=$npm" >> "$GITHUB_OUTPUT"
+          echo "pypi=$pypi" >> "$GITHUB_OUTPUT"
+
   npm:
     name: publish @vocab-bloom-hub/client to npm
-    needs: guard
-    if: github.event_name == 'push' || inputs.npm
+    needs: [guard, changes]
+    # `always()` keeps the job eligible when `changes` was skipped (a manual run)
+    if: always() && needs.guard.result == 'success' && ((github.event_name == 'push' && needs.changes.outputs.npm == 'true') || inputs.npm)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: npm
@@ -114,8 +150,8 @@ jobs:
 
   pypi:
     name: publish vocab-bloom-hub to PyPI
-    needs: guard
-    if: github.event_name == 'push' || inputs.pypi
+    needs: [guard, changes]
+    if: always() && needs.guard.result == 'success' && ((github.event_name == 'push' && needs.changes.outputs.pypi == 'true') || inputs.pypi)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: pypi

@@ -169,6 +169,23 @@ pg_restore -d "$DATABASE_URL" --clean --if-exists vocab-bloom.dump
 > only way back), and on whatever schedule matches how often the dictionary is edited — a
 > dictionary loaded once and never edited needs one backup, after the load.
 
+### Scheduled backups
+
+A dictionary that is edited deserves a nightly dump. For the bundled Postgres, a cron entry on
+the host that keeps the last 14 dumps (the compose project lives in `/opt/vocab-bloom-hub`):
+
+```cron
+# /etc/cron.d/vocab-bloom-hub-backup — 03:10 every night, as the user who runs compose
+10 3 * * * deploy cd /opt/vocab-bloom-hub && docker compose exec -T postgres pg_dump -U vocab -Fc vocab_bloom > /var/backups/vocab-bloom-hub/vocab-bloom-$(date +\%F).dump && find /var/backups/vocab-bloom-hub -name 'vocab-bloom-*.dump' -mtime +14 -delete
+```
+
+For a Postgres of your own replace the `docker compose exec -T postgres pg_dump -U vocab …` with
+`pg_dump -Fc "$DATABASE_URL"`. Whatever the schedule, two things make it a backup rather than a
+file: the dumps leave the host (a copy to object storage or another machine — `rclone`,
+`restic`, the provider's snapshots), and a restore was tried once, into an empty database, the
+way the commands above show. A dump of the full dictionary is a few hundred megabytes
+([Size](#size)).
+
 ## Size
 
 The full English dictionary with translations into five languages:

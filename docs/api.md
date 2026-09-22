@@ -40,7 +40,7 @@ Swagger UI, the website's reference and the other ways to read the API are compa
   There are no API keys yet; put the instance behind a reverse proxy if you need per-client
   quotas.
 - **Cacheable.** Every successful `GET` carries `ETag`, `Last-Modified` and `Cache-Control:
-public, max-age=<PUBLIC_API_CACHE_MAX_AGE>`; conditional requests answer `304` — see
+public, max-age=<PUBLIC_API_CACHE_MAX_AGE>, stale-while-revalidate=<the same>`; conditional requests answer `304` — see
   [Caching](#caching). The search has a `GET` form for that reason.
 
 ### Endpoints
@@ -274,11 +274,11 @@ fields fail), which is what makes the schemas trustworthy for SDK generators.
 Dictionary data changes rarely, so the public `GET` reads are built to be cached by browsers,
 CDNs and reverse proxies. Every successful `GET` answer carries:
 
-| Header          | Value                                                                                                          |
-| --------------- | -------------------------------------------------------------------------------------------------------------- |
-| `ETag`          | weak, a hash of the JSON body: `W/"…"`. Changes exactly when the answer changes                                |
-| `Last-Modified` | the newest change anywhere in the dictionary (entries, words, meanings, translations), refreshed once a minute |
-| `Cache-Control` | `public, max-age=<PUBLIC_API_CACHE_MAX_AGE>` (default `3600`); `public, no-cache` when the variable is `0`     |
+| Header          | Value                                                                                                                                                                                                                                                                |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ETag`          | weak, a hash of the JSON body: `W/"…"`. Changes exactly when the answer changes                                                                                                                                                                                      |
+| `Last-Modified` | the newest change anywhere in the dictionary (entries, words, meanings, translations), refreshed once a minute                                                                                                                                                       |
+| `Cache-Control` | `public, max-age=<PUBLIC_API_CACHE_MAX_AGE>, stale-while-revalidate=<the same>` (default `3600`): a shared cache keeps the answer for an hour and may serve it stale for another while it revalidates in the background; `public, no-cache` when the variable is `0` |
 
 `HEAD` answers with the same three headers as the `GET` of that URL, so a cache that checks
 freshness with `HEAD` sees the validators it stored. A client that sends the tag back

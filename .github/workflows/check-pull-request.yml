@@ -319,6 +319,12 @@ jobs:
           # the prerendered robots.txt, sitemap.xml and canonical links
           echo 'NEXT_PUBLIC_SITE_URL=https://site.ci.example' >> .env
 
+      # the alert rules and the scrape config of the observability overlay
+      # (issue #479) are checked by Prometheus's own tool, in the image's layout
+      - name: Prometheus config and alert rules are valid
+        run: |
+          docker run --rm -v "$PWD/observability:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.5.0 check config /etc/prometheus/prometheus.yml
+
       # the build override: the images of this checkout, not the published ones
       - name: Build images and start
         run: docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build --wait --wait-timeout 300

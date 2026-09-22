@@ -156,7 +156,7 @@ compose stack does it.
 
 The instance with its bundled database, the website and the metrics stack, on one host — what a
 full installation looks like. No checkout is needed, but the observability overlay mounts its
-configuration from an `observability/` folder next to the compose files, so those four small
+configuration from an `observability/` folder next to the compose files, so those five small
 files come along:
 
 ```bash
@@ -167,6 +167,7 @@ curl -fsSLO $BASE/docker-compose.yml
 curl -fsSLO $BASE/docker-compose.observability.yml
 curl -fsSL  $BASE/.env.example -o .env
 for f in prometheus.yml \
+         alerts.yml \
          grafana/dashboards/vocab-bloom-hub.json \
          grafana/provisioning/dashboards/provider.yml \
          grafana/provisioning/datasources/prometheus.yml; do
@@ -221,7 +222,8 @@ domain: [`reverse-proxy.md`](./reverse-proxy.md).
 
 ## Building the images yourself
 
-Forks and unpublished changes build from the checkout with the override file:
+Forks and unpublished changes build from the checkout with the override file (a whole
+installation done this way, on a VPS, with its update script: [`vps.md`](./vps.md)):
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
@@ -273,9 +275,10 @@ The packages live at <https://github.com/Fristail27?tab=packages>.
   compose healthchecks use the liveness one, so a container with an unreachable database stays
   up (restarting it would not help) and reports `503` on `/api/ready`.
 - **Metrics with dashboards**: `docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d`
-  adds a local Prometheus + Grafana with a provisioned dashboard — the files it needs and the
-  whole stack in one place: [Everything together](#everything-together);
-  the metrics themselves: [`../observability.md`](../observability.md#prometheus--grafana-in-docker).
+  adds a local Prometheus + Grafana with a provisioned dashboard and alert rules — the files
+  it needs and the whole stack in one place: [Everything together](#everything-together);
+  the metrics themselves: [`../observability.md`](../observability.md#prometheus--grafana-in-docker),
+  the alerts: [`../observability.md`](../observability.md#alerts).
 - **Upgrade**: back up the database, bump `VBH_TAG`, `docker compose pull && docker compose up -d`;
   migrations run when the new server starts, rollback is the backup — step by step, for a build
   from a checkout too: [`../upgrading.md`](../upgrading.md); what it does to the database:

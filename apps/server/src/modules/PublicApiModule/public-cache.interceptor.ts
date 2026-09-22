@@ -8,7 +8,7 @@ import { publicCacheControl, weakEtagOf } from '../../core/utils/http-cache';
 
 /**
  * Caching headers of the public GET reads (issue #274): `Cache-Control:
- * public, max-age=<PUBLIC_API_CACHE_MAX_AGE>`, a weak `ETag` hashed from
+ * public, max-age=<PUBLIC_API_CACHE_MAX_AGE>, stale-while-revalidate=<the same>`, a weak `ETag` hashed from
  * the JSON body and `Last-Modified` from the dictionary's newest change.
  * Express compares them with `If-None-Match` / `If-Modified-Since` while
  * sending and answers `304 Not Modified` without a body when they match.

@@ -11,7 +11,8 @@
 | эта страница                                   | Сборка и запуск двух процессов, пробы, аккуратная остановка, systemd / PM2     |
 | [`docker.md`](./docker.md)                     | Три образа, `docker-compose.yml`, первый старт, сборка образов                 |
 | [`reverse-proxy.md`](./reverse-proxy.md)       | TLS, один origin для обоих приложений, приватный админский API (Caddy / nginx) |
-| [`examples/`](./examples/)                     | systemd-юниты для обоих процессов и файл процессов PM2                         |
+| [`vps.md`](./vps.md)                           | Чекаут на VPS: сборка образов на месте, обновление через `git pull`            |
+| [`examples/`](./examples/)                     | systemd-юниты, файл процессов PM2, nginx для пары хостов сайт + админка        |
 | [`../database.md`](../database.md)             | Postgres внутри compose или отдельно, миграции, бэкапы, размер                 |
 | [`../environment.md`](../environment.md)       | Все переменные окружения                                                       |
 | [`../operations.md`](../operations.md)         | Бэкапы, обновление, откат, обновление датасета                                 |

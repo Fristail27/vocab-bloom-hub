@@ -50,7 +50,7 @@ describe('GET /api/v1/openapi.json (e2e, issue #273)', () => {
     expect(res.headers['content-type']).toMatch(/application\/json/);
     expect(res.headers['x-api-version']).toBe('1');
     expect(res.headers.etag).toMatch(/^W\/"/);
-    expect(res.headers['cache-control']).toBe('public, max-age=3600');
+    expect(res.headers['cache-control']).toBe('public, max-age=3600, stale-while-revalidate=3600');
 
     const document = res.body as OpenAPIObject;
     expect(document.openapi).toMatch(/^3\./);
