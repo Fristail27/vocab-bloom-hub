@@ -1,6 +1,7 @@
 import type { PublicWordsV1ResT } from 'server/types';
 
 import { serverApiBase } from './apiBase';
+import { internalApiHeaders } from './internalApi';
 import { nodeFetch } from './nodeFetch';
 
 /**
@@ -146,15 +147,29 @@ const sleep = (ms: number): Promise<void> =>
     timer.unref?.();
   });
 
-/** The index of this process */
-export const headwordIndex: HeadwordIndexHandleT = createHeadwordIndex({
-  fetch: nodeFetch,
+/**
+ * Where the process keeps its one index (issue #483). Next bundles a module
+ * once per route that imports it — the browse page, the sitemap index and
+ * the sitemap chunks each got an instance of this file, three indices and
+ * three walks of the whole list. A module-level variable is per bundle;
+ * `globalThis` is per process, like the store of cache-handler.js
+ */
+export const HEADWORD_INDEX_GLOBAL_KEY = Symbol.for('vocab-bloom-hub.site.headwordIndex');
+
+type GlobalWithIndexT = typeof globalThis & { [HEADWORD_INDEX_GLOBAL_KEY]?: HeadwordIndexHandleT };
+
+/** The index of this process, whichever route bundle asks */
+export const headwordIndex: HeadwordIndexHandleT = ((globalThis as GlobalWithIndexT)[
+  HEADWORD_INDEX_GLOBAL_KEY
+] ??= createHeadwordIndex({
+  // the site's own traffic, exempt from the public rate budget when INTERNAL_API_TOKEN is set
+  fetch: (url) => nodeFetch(url, internalApiHeaders()),
   sleep,
   now: () => Date.now(),
   // eslint-disable-next-line no-console -- the site has no logger; the warning is for the operator
   warn: (message) => console.warn(message),
   apiBase: serverApiBase,
-});
+}));
 
 /** How long a consumer waits for the first walk before answering "not yet" */
 export const FIRST_WALK_WAIT_MS = 15_000;

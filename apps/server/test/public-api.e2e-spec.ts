@@ -13,7 +13,12 @@ import { EnPartOfSpeechE, EnWordFormsE } from '../types';
 const E2E_USERNAME = 'e2e-admin';
 const E2E_PASSWORD = 'e2e-password';
 
-const ENV_KEYS = ['PUBLIC_API_ENABLED', 'ADMIN_API_ENABLED', 'PUBLIC_API_RATE_LIMIT'] as const;
+const ENV_KEYS = [
+  'PUBLIC_API_ENABLED',
+  'ADMIN_API_ENABLED',
+  'PUBLIC_API_RATE_LIMIT',
+  'INTERNAL_API_TOKEN',
+] as const;
 
 // The public, read-only prefix (issue #271): no auth, the { data, meta }
 // envelope, one error shape, the version header, the rate limit and the
@@ -210,6 +215,26 @@ describe('public API /api/v1 (e2e, issue #271)', () => {
     const limited = await request(server()).get('/api/v1/search?search=a').set(ip).expect(429);
     expect(limited.body).toEqual({ statusCode: 429, message: 'too_many_requests', error: true });
     expect(limited.headers['x-api-version']).toBe('1');
+  });
+
+  it("does not count requests carrying INTERNAL_API_TOKEN — the website's own traffic", async () => {
+    process.env.PUBLIC_API_RATE_LIMIT = '2/60';
+    process.env.INTERNAL_API_TOKEN = 'e2e-internal-token-0123456789';
+    const ip = { 'X-Forwarded-For': '203.0.113.9' };
+    const internal = { ...ip, 'X-Internal-Token': 'e2e-internal-token-0123456789' };
+    for (let i = 0; i < 4; i += 1) {
+      const res = await request(server()).get('/api/v1/search?search=a').set(internal).expect(200);
+      expect(res.headers['x-ratelimit-remaining']).toBeUndefined();
+    }
+    // the same address without the token, or with a wrong one, is a public client
+    await request(server()).get('/api/v1/search?search=a').set(ip).expect(200);
+    await request(server())
+      .get('/api/v1/search?search=a')
+      .set({ ...ip, 'X-Internal-Token': 'not-the-token-but-long-enough' })
+      .expect(200);
+    await request(server()).get('/api/v1/search?search=a').set(ip).expect(429);
+    // …while the exemption holds after that address's budget is gone
+    await request(server()).get('/api/v1/search?search=a').set(internal).expect(200);
   });
 
   it('no longer serves the pre-public-API search aliases (removed in the beta, issue #395)', async () => {

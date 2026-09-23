@@ -5,7 +5,11 @@ import {
   DEFAULT_PUBLIC_API_RATE_LIMIT,
   getApiSurfaces,
   getPublicApiCacheMaxAge,
+  getInternalApiToken,
   getPublicApiRateLimit,
+  INTERNAL_API_TOKEN_HEADER,
+  isInternalRequest,
+  parseInternalApiToken,
   parsePublicApiCacheMaxAge,
   isAdminApiPath,
   isPublicApiPath,
@@ -39,6 +43,26 @@ describe('public API configuration (issue #271)', () => {
     expect(getPublicApiCacheMaxAge({ PUBLIC_API_CACHE_MAX_AGE: 'abc' })).toBe(DEFAULT_PUBLIC_API_CACHE_MAX_AGE);
     expect(getPublicApiCacheMaxAge({ PUBLIC_API_CACHE_MAX_AGE: '60' })).toBe(60);
     expect(() => assertPublicApiConfig({ PUBLIC_API_CACHE_MAX_AGE: '1h' })).toThrow(ConfigurationError);
+  });
+
+  it('reads INTERNAL_API_TOKEN, refuses a short one, and recognizes the header it exempts', () => {
+    expect(parseInternalApiToken(undefined)).toBeNull();
+    expect(parseInternalApiToken('  ')).toBeNull();
+    expect(parseInternalApiToken(' 0123456789abcdef ')).toBe('0123456789abcdef');
+    expect(() => parseInternalApiToken('short')).toThrow(ConfigurationError);
+    expect(() => assertPublicApiConfig({ INTERNAL_API_TOKEN: 'short' })).toThrow(ConfigurationError);
+    // the runtime reader never throws: startup validation already did
+    expect(getInternalApiToken({ INTERNAL_API_TOKEN: 'short' })).toBeNull();
+
+    const env = { INTERNAL_API_TOKEN: '0123456789abcdef' };
+    expect(isInternalRequest({ [INTERNAL_API_TOKEN_HEADER]: '0123456789abcdef' }, env)).toBe(true);
+    expect(isInternalRequest({ [INTERNAL_API_TOKEN_HEADER]: ['0123456789abcdef'] }, env)).toBe(true);
+    expect(isInternalRequest({ [INTERNAL_API_TOKEN_HEADER]: '0123456789abcdeX' }, env)).toBe(false);
+    expect(isInternalRequest({ [INTERNAL_API_TOKEN_HEADER]: '0123456789abcdef0' }, env)).toBe(false);
+    expect(isInternalRequest({}, env)).toBe(false);
+    // no token configured: nothing is exempt, whatever the header says
+    expect(isInternalRequest({ [INTERNAL_API_TOKEN_HEADER]: '' }, {})).toBe(false);
+    expect(isInternalRequest({ [INTERNAL_API_TOKEN_HEADER]: 'anything-at-all-here' }, {})).toBe(false);
   });
 
   it('reads the surface flags, both on by default, and rejects garbage', () => {

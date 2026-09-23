@@ -11,10 +11,10 @@ const TIMEOUT_MS = 30_000;
  * walk is a process-level job with nothing to do with the render, so it
  * speaks HTTP by itself and answers a plain `Response`
  */
-export const nodeFetch = (url: string): Promise<Response> =>
+export const nodeFetch = (url: string, headers: Record<string, string> = {}): Promise<Response> =>
   new Promise((resolve, reject) => {
     const client = url.startsWith('https:') ? https : http;
-    const request = client.get(url, { headers: { accept: 'application/json' } }, (res) => {
+    const request = client.get(url, { headers: { accept: 'application/json', ...headers } }, (res) => {
       const chunks: Buffer[] = [];
       res.on('data', (chunk: Buffer) => chunks.push(chunk));
       res.on('error', reject);

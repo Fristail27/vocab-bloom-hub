@@ -108,6 +108,7 @@ dictionary. Off by default; to have it:
 
 ```dotenv
 COMPOSE_PROFILES=db,site
+INTERNAL_API_TOKEN=<openssl rand -hex 32>          # the site's own API traffic, outside the public rate limit
 # SITE_PORT=3242                                   # the host port
 ```
 
@@ -118,6 +119,12 @@ admin UI stays on another hostname or off (`ADMIN_API_ENABLED=false`). Like the 
 site calls the API under its own origin (`NEXT_PUBLIC_BASE_API_URL=/api`) and forwards `/api/*`
 to `API_INTERNAL_URL` itself when no proxy does. The site of a given tag documents that tag;
 the word pages are rendered on request and cached for an hour.
+
+`INTERNAL_API_TOKEN` is a secret the two containers share (both read `.env`): the site's
+server-side requests to the API — a word page being rendered, the daily walk of
+`GET /api/v1/words` behind its sitemaps and `/word/browse` — carry it and are not counted against
+`PUBLIC_API_RATE_LIMIT`. Without it they all come from the site's one address and share one
+budget: the walk empties it, and a word page rendered in the meantime answers `500`.
 
 > [!IMPORTANT]
 > The public origin of the site — the canonical and hreflang links, the social cards,
