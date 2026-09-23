@@ -164,11 +164,22 @@ and PR templates and the pages without a translation are English only.
 > Any change to a page with translations must be applied to every one of them in the same PR so
 > they stay in sync section by section.
 
+### Reviewing a translation
+
+The translated texts — the READMEs under `docs/`, the translated pages, the interface messages
+of both apps (`apps/site/messages/*.ts`, `apps/frontend/messages/*.ts`) — are machine-made until
+a native speaker has read them. A review is a pull request: the fixes, if any, plus one line at
+the top of the file with the language, your login, the date and the commit of `main` you read —
+`<!-- reviewed: de · @login · 2026-10-03 · 32148f5 -->` in Markdown (after the title),
+`// reviewed: de · @login · 2026-10-03 · 32148f5` first in a `.ts` file. Keep the lines of earlier
+reviews above yours. A review with nothing to fix is that one line, and it is welcome.
+
 ### Pull Request Checklist
 
 - [ ] Code builds successfully
 - [ ] Changes were tested
 - [ ] Documentation updated if necessary
+- [ ] A translation you read as a native speaker carries its `reviewed:` line ([above](#reviewing-a-translation))
 - [ ] No unnecessary files included
 
 The `check-pull-request` workflow runs the linters, the typecheck of every workspace, the
