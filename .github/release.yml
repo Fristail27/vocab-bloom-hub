@@ -1,8 +1,11 @@
 # Categories of the generated release notes (gh release create --generate-notes)
 changelog:
   exclude:
+    # the bot's login carries the suffix; the label catches the same PRs
     authors:
-      - dependabot
+      - dependabot[bot]
+    labels:
+      - dependencies
   categories:
     - title: Features
       labels:

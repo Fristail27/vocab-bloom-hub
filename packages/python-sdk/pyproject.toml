@@ -8,7 +8,7 @@ requires-python = ">=3.10"
 authors = [{ name = "Aleksei Ryzhov (Fristail27)" }]
 keywords = ["dictionary", "vocabulary", "english", "api-client", "sdk", "vocab-bloom-hub"]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
   "Intended Audience :: Science/Research",
   "Programming Language :: Python :: 3",
@@ -16,6 +16,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Text Processing :: Linguistic",
   "Typing :: Typed",
 ]
