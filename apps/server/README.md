@@ -1,6 +1,6 @@
 # Vocab Bloom Hub — Backend API
 
-Backend API for **Vocab Bloom Hub**, a modular open-source platform for vocabulary data, linguistic analysis, and multilingual dictionary services.
+API of **Vocab Bloom Hub**, a self-hosted English dictionary: the public read-only dictionary API under `/api/v1`, the admin API and the dictionary import.
 
 Built with **NestJS + TypeScript**.
 

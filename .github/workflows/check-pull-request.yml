@@ -129,11 +129,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # the oldest and the newest interpreter the package claims (pyproject
-    # classifiers 3.10–3.13, issue #409)
+    # classifiers 3.10–3.14, issue #409)
     strategy:
       fail-fast: false
       matrix:
-        python: ['3.10', '3.13']
+        python: ['3.10', '3.14']
     steps:
       - name: Checkout
         uses: actions/checkout@v7

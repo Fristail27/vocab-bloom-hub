@@ -1,6 +1,6 @@
 # Vocab Bloom Hub — Frontend
 
-Web interface for **Vocab Bloom Hub**, a modular open-source platform for working with vocabulary, linguistics data, and multilingual dictionaries.
+Admin UI of **Vocab Bloom Hub**, a self-hosted English dictionary with a public API: the dictionary editor, search, imports, suggestions moderation and settings of an instance.
 
 Built with **Next.js**.
 
