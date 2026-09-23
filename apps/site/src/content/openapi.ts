@@ -177,30 +177,3 @@ export const sampleBody = (schema: SchemaT, spec: OpenApiSpecT): Record<string, 
   Object.fromEntries(
     (schema.required ?? []).map((name) => [name, sampleValue(schema.properties?.[name], name, spec)]),
   );
-
-/** A copy-and-run curl line for an endpoint: path params filled in, a body of the required fields */
-export const buildCurlExample = (endpoint: EndpointT, baseUrl: string, spec: OpenApiSpecT): string => {
-  const { operation } = endpoint;
-  let path = endpoint.path;
-  for (const param of operation.parameters ?? []) {
-    if (param.in === 'path') {
-      path = path.replace(
-        `{${param.name}}`,
-        encodeURIComponent(String(sampleValue(param.schema, param.name, spec))),
-      );
-    }
-  }
-  const url = `${baseUrl.replace(/\/api\/?$/, '')}${path}`;
-
-  const bodySchema = jsonSchemaOf(operation.requestBody?.content);
-  if (!bodySchema) return `curl '${url}'`;
-
-  const resolved = bodySchema.$ref ? spec.components.schemas[refName(bodySchema.$ref)] : bodySchema;
-  const body = JSON.stringify(sampleBody(resolved, spec));
-
-  return [
-    `curl -X ${endpoint.method} '${url}'`,
-    `  -H 'Content-Type: application/json'`,
-    `  -d '${body}'`,
-  ].join(' \\\n');
-};

@@ -3,17 +3,13 @@ import React from 'react';
 import { Arrow } from '@/components/Arrow';
 import { Link } from '@/i18n/navigation';
 
-import {
-  buildCurlExample,
-  EndpointT,
-  jsonSchemaOf,
-  OpenApiSpecT,
-  refName,
-  schemaAnchor,
-} from '@/content/openapi';
+import { highlightCode } from '@/content/highlight';
+import { EndpointT, jsonSchemaOf, OpenApiSpecT, refName, schemaAnchor } from '@/content/openapi';
+import { buildSnippetRequest, snippetsOf } from '@/content/snippets';
 
 import styles from '../api.module.scss';
 import { PropertiesTable, TableLabelsT } from './PropertiesTable';
+import { Snippets } from './Snippets';
 import { TypeLabel } from './TypeLabel';
 
 export type OperationLabelsT = TableLabelsT & {
@@ -28,13 +24,21 @@ export type OperationLabelsT = TableLabelsT & {
 
 type OperationP = { endpoint: EndpointT; spec: OpenApiSpecT; baseUrl: string; labels: OperationLabelsT };
 
-/** One endpoint of the reference: the route, its parameters, body, responses and a curl example */
+/** One endpoint of the reference: the route, its parameters, body, responses and the request in several languages */
 export const Operation = ({ endpoint, spec, baseUrl, labels }: OperationP) => {
   const { operation, method, path, slug } = endpoint;
   const parameters = operation.parameters ?? [];
   const bodySchema = jsonSchemaOf(operation.requestBody?.content);
   const body = bodySchema?.$ref ? spec.components.schemas[refName(bodySchema.$ref)] : bodySchema;
   const tryable = !path.endsWith('/openapi.json');
+  // the snippets are highlighted here, on the server; the tabs are the client's
+  const snippets = snippetsOf(buildSnippetRequest(endpoint, baseUrl, spec)).map(
+    ({ id, label, highlight, code }) => ({
+      id,
+      label,
+      html: highlightCode(code, highlight),
+    }),
+  );
 
   return (
     <section id={slug} className={styles.operation}>
@@ -130,7 +134,7 @@ export const Operation = ({ endpoint, spec, baseUrl, labels }: OperationP) => {
       </ul>
 
       <h4>{labels.example}</h4>
-      <pre className={styles.pre}>{buildCurlExample(endpoint, baseUrl, spec)}</pre>
+      <Snippets items={snippets} title={labels.example} />
       {tryable && (
         <p className={styles.tryIt}>
           <Link href={`/playground?endpoint=${slug}`}>

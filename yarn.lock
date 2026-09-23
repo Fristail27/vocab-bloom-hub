@@ -12471,6 +12471,7 @@ __metadata:
     dotenv: "npm:^17.4.2"
     dotenv-cli: "npm:^11.0.0"
     hast-util-to-string: "npm:^3.0.1"
+    highlight.js: "npm:~11.11.0"
     identity-obj-proxy: "npm:^3.0.0"
     next: "npm:16.3.5"
     next-intl: "npm:4.14.5"

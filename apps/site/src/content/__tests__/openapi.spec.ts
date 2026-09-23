@@ -1,11 +1,4 @@
-import {
-  buildCurlExample,
-  describeType,
-  endpointSlug,
-  listEndpoints,
-  OpenApiSpecT,
-  sampleBody,
-} from '../openapi';
+import { describeType, endpointSlug, listEndpoints, OpenApiSpecT, sampleBody } from '../openapi';
 
 const spec: OpenApiSpecT = {
   openapi: '3.0.0',
@@ -91,15 +84,5 @@ describe('the public OpenAPI document as the reference reads it', () => {
 
   it('builds a body of the required fields only, with sample values', () => {
     expect(sampleBody(spec.components.schemas.SearchDTO, spec)).toEqual({ search: 'run' });
-  });
-
-  it('builds a runnable curl line: path params filled in, JSON body for a POST', () => {
-    const [meanings, search] = listEndpoints(spec);
-    expect(buildCurlExample(meanings, 'https://x.example/api', spec)).toBe(
-      "curl 'https://x.example/api/v1/words/run/meanings'",
-    );
-    expect(buildCurlExample(search, 'https://x.example/api', spec)).toBe(
-      "curl -X POST 'https://x.example/api/v1/search' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"search\":\"run\"}'",
-    );
   });
 });
