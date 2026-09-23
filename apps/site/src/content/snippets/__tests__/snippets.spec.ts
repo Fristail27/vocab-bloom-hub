@@ -138,6 +138,13 @@ describe('the exact text', () => {
 });
 
 describe('the literals', () => {
+  it('escape the backslash and the quote of a string, in that order', () => {
+    const tricky = "it's a \\ path";
+    expect(jsLiteral(tricky)).toBe("'it\\'s a \\\\ path'");
+    expect(phpLiteral(tricky)).toBe("'it\\'s a \\\\ path'");
+    expect(pythonLiteral('say "hi" \\ there')).toBe('"say \\"hi\\" \\\\ there"');
+  });
+
   it('write a body the way each language does', () => {
     const body = { search: 'run', with_meanings: true, limit: 5, level: ['A1'], note: null };
     expect(jsLiteral(body)).toBe(

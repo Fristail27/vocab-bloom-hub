@@ -4,6 +4,11 @@
 
 const indent = (depth: number): string => '  '.repeat(depth);
 
+// a string inside quotes: the backslash first, then the quote, so a sample
+// value can never end the literal (the samples are ours, the rule is cheap)
+const quoted = (value: string, quote: "'" | '"'): string =>
+  quote + value.replace(/\\/g, '\\\\').replace(new RegExp(quote, 'g'), `\\${quote}`) + quote;
+
 /** A JavaScript object literal, single quotes, unquoted keys where the language allows */
 export const jsLiteral = (value: unknown, depth = 0): string => {
   if (Array.isArray(value)) return `[${value.map((item) => jsLiteral(item, depth)).join(', ')}]`;
@@ -14,7 +19,7 @@ export const jsLiteral = (value: unknown, depth = 0): string => {
     });
     return `{\n${entries.join(',\n')}\n${indent(depth)}}`;
   }
-  if (typeof value === 'string') return `'${value.replace(/'/g, "\\'")}'`;
+  if (typeof value === 'string') return quoted(value, "'");
   return String(value);
 };
 
@@ -30,7 +35,7 @@ export const pythonLiteral = (value: unknown, depth = 0): string => {
     );
     return `{\n${entries.join(',\n')}\n${indent(depth)}}`;
   }
-  if (typeof value === 'string') return `"${value.replace(/"/g, '\\"')}"`;
+  if (typeof value === 'string') return quoted(value, '"');
   return String(value);
 };
 
@@ -44,7 +49,7 @@ export const phpLiteral = (value: unknown, depth = 0): string => {
     );
     return `[\n${entries.join(',\n')}\n${indent(depth)}]`;
   }
-  if (typeof value === 'string') return `'${value.replace(/'/g, "\\'")}'`;
+  if (typeof value === 'string') return quoted(value, "'");
   return String(value);
 };
 
