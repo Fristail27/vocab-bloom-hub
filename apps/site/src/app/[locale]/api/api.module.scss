@@ -198,8 +198,42 @@
   font-weight: 700;
 }
 
+.snippets {
+  margin: 0;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 8px;
+}
+
+.tab,
+.tabActive {
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--fg);
+}
+
+.tabActive {
+  color: var(--fg);
+  border-color: var(--fg);
+}
+
 .pre {
   margin: 0;
+  font-family: var(--font-mono);
   background: var(--code-bg);
   border: 1px solid var(--border);
   border-radius: 8px;
