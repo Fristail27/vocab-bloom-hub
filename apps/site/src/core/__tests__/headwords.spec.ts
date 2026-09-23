@@ -1,5 +1,6 @@
 import {
   createHeadwordIndex,
+  HEADWORD_INDEX_GLOBAL_KEY,
   HEADWORDS_PER_SITEMAP,
   HeadwordIndexDepsT,
   INDEX_TTL_MS,
@@ -173,6 +174,28 @@ describe('the headword index', () => {
     expect(await index.get()).toBeNull();
     await new Promise((resolve) => setImmediate(resolve));
     expect((await index.get())?.words).toEqual(['a']);
+  });
+});
+
+describe('the index of the process', () => {
+  type SlotT = typeof globalThis & { [HEADWORD_INDEX_GLOBAL_KEY]?: unknown };
+  const slot = globalThis as SlotT;
+
+  afterEach(() => {
+    delete slot[HEADWORD_INDEX_GLOBAL_KEY];
+  });
+
+  it('is one object however many bundles load the module (issue #483)', () => {
+    // Next compiles the module once per route that imports it; each copy must find the same index
+    const loaded: unknown[] = [];
+    for (let i = 0; i < 2; i += 1) {
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports -- a fresh module instance per iteration
+        loaded.push((require('../headwords') as { headwordIndex: unknown }).headwordIndex);
+      });
+    }
+    expect(loaded[0]).toBe(loaded[1]);
+    expect(slot[HEADWORD_INDEX_GLOBAL_KEY]).toBe(loaded[0]);
   });
 });
 

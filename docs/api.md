@@ -38,7 +38,9 @@ Swagger UI, the website's reference and the other ways to read the API are compa
   (`<requests>/<seconds>`, default `100/60`); every request costs one unit, the batch lookup
   included. Exceeding it answers `429` with the error above.
   There are no API keys yet; put the instance behind a reverse proxy if you need per-client
-  quotas.
+  quotas. The one exemption is the instance's own website: its server-side requests carry
+  `INTERNAL_API_TOKEN` as `X-Internal-Token` and are not counted
+  ([`environment.md`](./environment.md)).
 - **Cacheable.** Every successful `GET` carries `ETag`, `Last-Modified` and `Cache-Control:
 public, max-age=<PUBLIC_API_CACHE_MAX_AGE>, stale-while-revalidate=<the same>`; conditional requests answer `304` — see
   [Caching](#caching). The search has a `GET` form for that reason.

@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { ConfigurationError } from '../../../configuration';
 
 export const PUBLIC_API_PREFIX = '/api/v1';
@@ -50,6 +51,55 @@ export const getPublicApiRateLimit = (env: NodeJS.ProcessEnv = process.env): Rat
  */
 export const PUBLIC_API_THROTTLE = {
   default: { limit: () => getPublicApiRateLimit().limit, ttl: () => getPublicApiRateLimit().ttl },
+};
+
+/**
+ * The header the instance's own website sends with its server-side requests
+ * (the word pages, the headword walk behind the sitemaps and the browse
+ * index): a request carrying the configured `INTERNAL_API_TOKEN` is not
+ * counted against the public rate budget. Without the exemption the site
+ * shares one client IP — and one budget — with its own thousand-request
+ * walk, and a word page rendered during the walk gets `429` and fails.
+ */
+export const INTERNAL_API_TOKEN_HEADER = 'x-internal-token';
+/** Shorter secrets are refused at startup: the header bypasses the rate limit */
+export const INTERNAL_API_TOKEN_MIN_LENGTH = 16;
+
+/** `INTERNAL_API_TOKEN`: unset or blank means no exemption; a short value throws */
+export const parseInternalApiToken = (raw: string | undefined): string | null => {
+  const value = raw?.trim();
+  if (!value) return null;
+  if (value.length < INTERNAL_API_TOKEN_MIN_LENGTH) {
+    throw new ConfigurationError(
+      `INTERNAL_API_TOKEN must be at least ${INTERNAL_API_TOKEN_MIN_LENGTH} characters (e.g. \`openssl rand -hex 32\`); got ${value.length}.`,
+    );
+  }
+  return value;
+};
+
+// Read per request, like the rate limit; an invalid value failed startup already
+export const getInternalApiToken = (env: NodeJS.ProcessEnv = process.env): string | null => {
+  try {
+    return parseInternalApiToken(env.INTERNAL_API_TOKEN);
+  } catch {
+    return null;
+  }
+};
+
+const headerValue = (value: string | string[] | undefined): string | undefined =>
+  Array.isArray(value) ? value[0] : value;
+
+/** Whether a request carries the instance's own token (a constant-time comparison) */
+export const isInternalRequest = (
+  headers: Record<string, string | string[] | undefined>,
+  env: NodeJS.ProcessEnv = process.env,
+): boolean => {
+  const token = getInternalApiToken(env);
+  const sent = headerValue(headers[INTERNAL_API_TOKEN_HEADER]);
+  if (!token || !sent) return false;
+  const expected = Buffer.from(token);
+  const given = Buffer.from(sent);
+  return expected.length === given.length && timingSafeEqual(expected, given);
 };
 
 // Seconds a shared cache may keep a public GET answer (Cache-Control
@@ -120,6 +170,7 @@ export const isAdminApiPath = (path: string): boolean =>
 export const assertPublicApiConfig = (env: NodeJS.ProcessEnv = process.env): void => {
   parsePublicApiRateLimit(env.PUBLIC_API_RATE_LIMIT);
   parsePublicApiCacheMaxAge(env.PUBLIC_API_CACHE_MAX_AGE);
+  parseInternalApiToken(env.INTERNAL_API_TOKEN);
   const surfaces = getApiSurfaces(env);
   if (!surfaces.publicApi && !surfaces.adminApi) {
     throw new ConfigurationError(
