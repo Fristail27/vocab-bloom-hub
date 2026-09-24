@@ -3,6 +3,7 @@
 </p>
 
 <h1 align="center">Vocab Bloom Hub</h1>
+<!-- reviewed: zh · @assassinationss · 2026-09-24 · 32148f5 -->
 
 <p align="center">
   一部自托管的英语词典：300 000 个词条，包含释义、例句、词形、翻译和词语关联，配有公共 API、管理界面、两个 SDK、一个网站和一个开放数据集。
