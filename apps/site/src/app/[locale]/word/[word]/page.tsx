@@ -11,11 +11,13 @@ import { WordSearch } from '@/components/WordSearch';
 import { DictionaryUnavailableError, fetchHeadword } from '@/core/dictionary';
 import { pageMeta, trimDescription } from '@/core/site';
 import { breadcrumbJsonLd, definedTermJsonLd } from '@/core/structuredData';
-import { leadDefinition, localeFirst, localeTranslations } from '@/core/wordPage';
+import { flagOf } from '@/core/languageFlags';
+import { leadDefinition, localeTranslations, translationLanguages } from '@/core/wordPage';
 import { Link } from '@/i18n/navigation';
 import { LocaleParamsP } from '@/types/common';
 
 import styles from '../word.module.scss';
+import { ForLanguage, TranslationLanguageProvider, TranslationPicker } from './_components/TranslationLanguage';
 
 type WordPageP = LocaleParamsP<{ word: string }>;
 
@@ -101,15 +103,29 @@ const grammarOf = (entry: PublicWordV1T, t: TranslateT): string[] =>
     entry.verb___phrasal_object_pattern && t(`phrasal_${entry.verb___phrasal_object_pattern}`),
   ].filter((item): item is string => Boolean(item));
 
-// The translation languages present in a list (issue #410): a label per
-// item is shown only when the list mixes languages, so a single-language
-// dictionary reads as before
-const mixesLanguages = (items: ReadonlyArray<{ language: string }>): boolean =>
-  new Set(items.map((item) => item.language)).size > 1;
+// the language of a translation as its flag (issue #520); the code for a screen reader
+const LanguageTag = ({ language }: { language: string }) => (
+  <span className={styles.flagTag} role="img" aria-label={language} title={language}>
+    {flagOf(language)}
+  </span>
+);
 
-const LanguageTag = ({ language }: { language: string }) => <small className={styles.tag}>{language}</small>;
+type ShortTranslationT = PublicWordV1T['short_translations'][number];
 
-const Meaning = ({ meaning, locale, t }: { meaning: PublicWordV1MeaningT; locale: string; t: TranslateT }) => (
+// The short translations of an entry (issue #520): a line per item, the
+// chosen language's shown, the others in the HTML but hidden
+const ShortTranslations = ({ items }: { items: ShortTranslationT[] }) => (
+  <ul className={styles.short}>
+    {items.map((item) => (
+      <ForLanguage key={item.id} language={item.language} as="li">
+        <LanguageTag language={item.language} />
+        <span>{item.description}</span>
+      </ForLanguage>
+    ))}
+  </ul>
+);
+
+const Meaning = ({ meaning, t }: { meaning: PublicWordV1MeaningT; t: TranslateT }) => (
   <li>
     {meaning.title && <span className={styles.meaningTitle}>{meaning.title}</span>}
     {meaning.meaning_level && <span className={styles.tag}> {meaning.meaning_level}</span>}
@@ -134,11 +150,11 @@ const Meaning = ({ meaning, locale, t }: { meaning: PublicWordV1MeaningT; locale
     )}
     {meaning.translations.length > 0 && (
       <p className={styles.translations}>
-        {localeFirst(meaning.translations, locale).map((translation) => (
-          <span key={translation.id} lang={translation.language} dir="auto" title={translation.definition}>
-            {mixesLanguages(meaning.translations) && <LanguageTag language={translation.language} />}
-            {translation.title}
-          </span>
+        {meaning.translations.map((translation) => (
+          <ForLanguage key={translation.id} language={translation.language}>
+            <LanguageTag language={translation.language} />
+            <span title={translation.definition}>{translation.title}</span>
+          </ForLanguage>
         ))}
       </p>
     )}
@@ -161,7 +177,7 @@ const Meaning = ({ meaning, locale, t }: { meaning: PublicWordV1MeaningT; locale
   </li>
 );
 
-const Entry = ({ entry, locale, t }: { entry: PublicWordV1T; locale: string; t: TranslateT }) => {
+const Entry = ({ entry, t }: { entry: PublicWordV1T; t: TranslateT }) => {
   const grammar = grammarOf(entry, t);
 
   return (
@@ -190,20 +206,11 @@ const Entry = ({ entry, locale, t }: { entry: PublicWordV1T; locale: string; t: 
         </p>
       )}
       {entry.description && <p className={styles.description}>{entry.description}</p>}
-      {entry.short_translations.length > 0 && (
-        <p className={styles.short}>
-          {localeFirst(entry.short_translations, locale).map((item) => (
-            <span key={item.id} lang={item.language} dir="auto">
-              {mixesLanguages(entry.short_translations) && <LanguageTag language={item.language} />}
-              {item.description}
-            </span>
-          ))}
-        </p>
-      )}
+      {entry.short_translations.length > 0 && <ShortTranslations items={entry.short_translations} />}
       {entry.meanings.length > 0 && (
         <ol className={styles.meanings}>
           {entry.meanings.map((meaning) => (
-            <Meaning key={meaning.id} meaning={meaning} locale={locale} t={t} />
+            <Meaning key={meaning.id} meaning={meaning} t={t} />
           ))}
         </ol>
       )}
@@ -238,6 +245,7 @@ export default async function WordPage({ params }: WordPageP) {
   const { locale, word } = await headwordOf(params);
   setRequestLocale(locale);
   const t = await getTranslations('word');
+  const nav = await getTranslations('nav');
   const headword = await fetchHeadword(word);
 
   if (headword.kind === 'not_found') notFound();
@@ -249,72 +257,81 @@ export default async function WordPage({ params }: WordPageP) {
   const transcription = data.find((entry) => entry.transcription)?.transcription;
   // the locale's translations on the first screen, before the entries
   const translations = localeTranslations(data, locale);
+  // one translation language at a time (issue #520): the locale's own when the headword has it, else the first
+  const languages = translationLanguages(data, locale);
+  const ownLanguage = locale === 'en' ? null : locale;
+  const defaultLanguage = ownLanguage && languages.includes(ownLanguage) ? ownLanguage : (languages[0] ?? null);
 
   return (
-    <div className={`container ${styles.page}`}>
-      {/* structured data for search engines (issues #350, #480): the trail and the term in its dictionary */}
-      <JsonLd
-        data={[
-          breadcrumbJsonLd(locale, [
-            { name: t('index_title'), path: '/word' },
-            { name: meta.word, path: wordPath(meta.word) },
-          ]),
-          definedTermJsonLd({ locale, word: meta.word, description: leadDefinition(data) }),
-        ]}
-      />
-      <div className={styles.headword}>
-        <h1>{meta.word}</h1>
-        <Pronounce word={meta.word} />
-        {transcription && <span className={styles.transcription}>{ipa(transcription)}</span>}
-      </div>
-      {translations.length > 0 && (
-        <p className={styles.lead}>
-          <span className={styles.leadLabel}>{t('translation_label')}:</span>{' '}
-          <span lang={locale} dir="auto">
-            {translations.join(', ')}
-          </span>
-        </p>
-      )}
-      <div className={styles.metaRow}>
-        <p className={styles.meta}>{t('entries', { count: meta.count })}</p>
-        <ReportMistake
-          headword={meta.word}
-          entries={data.map((entry) => ({
-            id: entry.id,
-            part_of_speech: entry.part_of_speech,
-            description: entry.description ?? '',
-            transcription: entry.transcription ?? '',
-            meanings: entry.meanings.map((meaning) => ({
-              id: meaning.id,
-              title: meaning.title ?? '',
-              definition: meaning.definition ?? '',
-              translations: meaning.translations.map((translation) => ({
-                id: translation.id,
-                title: translation.title ?? '',
-                definition: translation.definition ?? '',
-              })),
-            })),
-            short_translations: entry.short_translations.map((item) => ({
-              id: item.id,
-              description: item.description ?? '',
-            })),
-          }))}
+    <TranslationLanguageProvider available={languages} defaultLanguage={defaultLanguage}>
+      <div className={`container ${styles.page}`}>
+        {/* structured data for search engines (issues #350, #480): the trail and the term in its dictionary */}
+        <JsonLd
+          data={[
+            breadcrumbJsonLd(locale, [
+              { name: t('index_title'), path: '/word' },
+              { name: meta.word, path: wordPath(meta.word) },
+            ]),
+            definedTermJsonLd({ locale, word: meta.word, description: leadDefinition(data) }),
+          ]}
         />
+        <div className={styles.headword}>
+          <h1>{meta.word}</h1>
+          <Pronounce word={meta.word} />
+          {transcription && <span className={styles.transcription}>{ipa(transcription)}</span>}
+        </div>
+        {translations.length > 0 && (
+          <p className={styles.lead}>
+            <span className={styles.leadLabel}>{t('translation_label')}:</span>{' '}
+            <span lang={locale} dir="auto">
+              {translations.join(', ')}
+            </span>
+          </p>
+        )}
+        <div className={styles.metaRow}>
+          <div className={styles.metaLeft}>
+            <p className={styles.meta}>{t('entries', { count: meta.count })}</p>
+            <TranslationPicker label={nav('language')} />
+          </div>
+          <ReportMistake
+            headword={meta.word}
+            entries={data.map((entry) => ({
+              id: entry.id,
+              part_of_speech: entry.part_of_speech,
+              description: entry.description ?? '',
+              transcription: entry.transcription ?? '',
+              meanings: entry.meanings.map((meaning) => ({
+                id: meaning.id,
+                title: meaning.title ?? '',
+                definition: meaning.definition ?? '',
+                translations: meaning.translations.map((translation) => ({
+                  id: translation.id,
+                  title: translation.title ?? '',
+                  definition: translation.definition ?? '',
+                })),
+              })),
+              short_translations: entry.short_translations.map((item) => ({
+                id: item.id,
+                description: item.description ?? '',
+              })),
+            }))}
+          />
+        </div>
+        {data.map((entry) => (
+          <Entry key={entry.id} entry={entry} t={t} />
+        ))}
+        <div className={styles.footer}>
+          <p>
+            {t('from_api')} <code>GET /api/v1/words/{encodeURIComponent(meta.word)}</code> —{' '}
+            <Link href={`/playground?endpoint=get-words-word`}>{t('try_in_playground')}</Link>
+            {' · '}
+            <Link href="/docs/data-license">{t('license_note')}</Link>
+            {' · '}
+            <Link href="/docs/data">{t('ai_note')}</Link>
+          </p>
+          <WordSearch />
+        </div>
       </div>
-      {data.map((entry) => (
-        <Entry key={entry.id} entry={entry} locale={locale} t={t} />
-      ))}
-      <div className={styles.footer}>
-        <p>
-          {t('from_api')} <code>GET /api/v1/words/{encodeURIComponent(meta.word)}</code> —{' '}
-          <Link href={`/playground?endpoint=get-words-word`}>{t('try_in_playground')}</Link>
-          {' · '}
-          <Link href="/docs/data-license">{t('license_note')}</Link>
-          {' · '}
-          <Link href="/docs/data">{t('ai_note')}</Link>
-        </p>
-        <WordSearch />
-      </div>
-    </div>
+    </TranslationLanguageProvider>
   );
 }

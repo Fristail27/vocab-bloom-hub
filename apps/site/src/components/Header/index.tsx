@@ -5,6 +5,7 @@ import { LanguageSwitch } from '@/components/LanguageSwitch';
 import { REPO_URL } from '@/content/repo';
 import { Link } from '@/i18n/navigation';
 
+import { NavMenu } from './NavMenu';
 import styles from './styles.module.scss';
 
 export const Header = async () => {
@@ -18,7 +19,7 @@ export const Header = async () => {
           <img src="/logo.svg" alt="" width={28} height={28} />
           <span>Vocab Bloom Hub</span>
         </Link>
-        <nav className={styles.nav}>
+        <NavMenu label="Menu">
           <Link href="/docs">{t('docs')}</Link>
           <Link href="/api">{t('api')}</Link>
           <Link href="/playground">{t('playground')}</Link>
@@ -28,7 +29,7 @@ export const Header = async () => {
             {t('github')}
           </a>
           <LanguageSwitch />
-        </nav>
+        </NavMenu>
       </div>
     </header>
   );
