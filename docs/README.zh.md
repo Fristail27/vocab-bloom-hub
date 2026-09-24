@@ -3,6 +3,7 @@
 </p>
 
 <h1 align="center">Vocab Bloom Hub</h1>
+<!-- reviewed: zh · @assassinationss · 2026-09-24 · 32148f5 -->
 
 <p align="center">
   一部自托管的英语词典：300 000 个词条，包含释义、例句、词形、翻译和词语关联，配有公共 API、管理界面、两个 SDK、一个网站和一个开放数据集。
@@ -49,22 +50,22 @@
 ## 📖 这是什么
 
 一个由您自己运行的词典服务器。它自带数据、用于读取数据的 API、用于编辑数据的管理面板，
-以及可在其上构建应用的 SDK。
+以及可基于它构建应用的 SDK。
 
 **词典**
 
 - 89 000 个英语单词和 26 000 个短语，161 000 个义项，配有定义和例句
 - IPA 音标、CEFR 等级、语域和领域标签、屈折形式
-- 词条之间的同义词和反义词关联，短语动词与其基础动词相关联
+- 词头之间的同义词和反义词关联，短语动词与其基础动词相关联
 - 翻译成俄语、西班牙语、法语、德语、葡萄牙语、中文和阿拉伯语
 - 开放数据：[CC BY 4.0](../DATA_LICENSE.md)，发布在 HuggingFace 上，首次启动时加载到空实例中；
   由语言模型生成，未经人工校验
 
 **API** — `/api/v1`，只读，无需密钥
 
-- 带相关性分级和拼写容错的搜索；一个词条及其附带的全部内容
+- 带相关性分级和拼写容错的搜索；单个词头及其附带的全部内容
 - 带游标分页的筛选列表、随机词条、一次最多 50 个单词的批量查询
-- 按客户端限速，每个响应都带 ETag 缓存，并提供可用于生成客户端的 OpenAPI 文档
+- 按客户端限速，每个响应都经 ETag 缓存，并提供可用于生成客户端的 OpenAPI 文档
 
 **SDK** — 由该 OpenAPI 文档生成
 
@@ -84,19 +85,19 @@
 健康探针、Prometheus 指标、JSON 日志。
 
 > [!NOTE]
-> 状态：`1.0`，稳定版：`/api/v1` 下的公共 API 遵循语义化版本；不兼容的变更意味着新的主版本。
+> 状态：`1.0`，稳定版：`/api/v1` 下的公共 API 遵循语义化版本；不兼容的变更将引入新的主版本。
 
 ---
 
 ## ⚡ 快速开始
 
-三种方式，从最快捷到最灵活。它们最终都会得到管理面板、API 和已加载的词典：
+三种方式，从最快捷到最灵活。三种方式的最终结果都是管理面板、API 和已加载好的词典：
 使用 Docker 时位于 <http://localhost:3241> 和 <http://localhost:3240>，
 不使用 Docker 时位于 <http://localhost:3000> 和 <http://localhost:3010>。
 
 ### 1. 运行已发布的镜像
 
-无需检出仓库 — 一个文件夹、两个文件、Docker：
+无需克隆仓库 — 一个文件夹、两个文件、Docker：
 
 ```bash
 mkdir vocab-bloom-hub && cd vocab-bloom-hub
@@ -158,8 +159,8 @@ yarn site:build && yarn start:site             # 网站 :3020，可选，在另�
 
 ### 用于开发
 
-无需数据库：没有 `DATABASE_URL` 时服务器使用本地 SQLite 文件，并且每个应用在
-更改时自动重启。
+无需数据库：没有 `DATABASE_URL` 时服务器使用本地 SQLite 文件，并且每个应用在代码
+变更时自动重启。
 
 ```bash
 printf 'NODE_ENV=development\nADMIN_USERNAME=admin\nADMIN_PASSWORD=change-me\nNEXT_PUBLIC_BASE_API_URL=http://localhost:3010/api\n' > .env
@@ -169,7 +170,7 @@ yarn dev                                       # API :3010，管理面板 :3000�
 > [!IMPORTANT]
 > 请在管理面板中使用 _Import dictionary_ 加载词典。
 
-面向贡献者的其他内容：[`CONTRIBUTING.md`](../CONTRIBUTING.md)。
+贡献者需要的其他一切：[`CONTRIBUTING.md`](../CONTRIBUTING.md)。
 
 ### 下一步
 
@@ -190,7 +191,7 @@ yarn dev                                       # API :3010，管理面板 :3000�
 
 欢迎贡献。[`CONTRIBUTING.md`](../CONTRIBUTING.md) 介绍了工作流程（分支命名、提交信息、
 PR 检查清单）、技术栈和仓库结构、每个脚本、文档索引和路线图；[行为准则](../CODE_OF_CONDUCT.md)
-适用于每一次互动。发现了 bug 或有想法？请开一个
+适用于所有交流互动。发现了 bug 或有想法？请开一个
 [issue](https://github.com/Fristail27/vocab-bloom-hub/issues/new/choose) — 模板会引导您。
 
 ---
