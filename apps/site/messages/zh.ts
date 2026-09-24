@@ -1,3 +1,4 @@
+// reviewed: zh · @assassinationss · 2026-09-24 · bd845a9
 export default {
   meta: {
     title: 'Vocab Bloom Hub',
