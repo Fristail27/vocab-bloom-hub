@@ -613,13 +613,27 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
       expect((past.body as PublicWordV1ResT).data).toMatchObject({ word: 'ran' });
     });
 
-    it('draws every matching entry, not only the first one', async () => {
-      const seen = new Set<number>();
-      for (let i = 0; i < 40 && seen.size < 2; i += 1) {
-        const res = await request(server()).get('/api/v1/random?word_level=B1&word_level=B2').expect(200);
-        seen.add((res.body as PublicWordV1ResT).data.id);
-      }
-      expect([...seen].sort()).toEqual([ids.sprint, ids.runNoun].sort());
+    // The draw is a random pivot in the id range of the whole table, then
+    // the first match at or after it, wrapping around to the last match
+    // before it. Pinning the pivot instead of sampling: "sprint" (the first
+    // id) is only reached from the lowest pivot, so a sampled test lost it
+    // in 40 draws about once in five hundred runs
+    it('reaches every matching entry: at the pivot, after it and by wrapping around', async () => {
+      const draw = async (fraction: number): Promise<number> => {
+        const random = jest.spyOn(Math, 'random').mockReturnValue(fraction);
+        try {
+          const res = await request(server()).get('/api/v1/random?word_level=B1&word_level=B2').expect(200);
+          return (res.body as PublicWordV1ResT).data.id;
+        } finally {
+          random.mockRestore();
+        }
+      };
+      // the lowest pivot is "sprint" itself
+      expect(await draw(0)).toBe(ids.sprint);
+      // a pivot between the two matches walks forward to the noun "run"
+      expect(await draw(0.5)).toBe(ids.runNoun);
+      // the highest pivot has no match after it: the last match before it
+      expect(await draw(0.999)).toBe(ids.runNoun);
     });
 
     it('answers 404 when nothing matches', async () => {
