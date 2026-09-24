@@ -1,3 +1,4 @@
+// reviewed: zh · @assassinationss · 2026-09-24 · bd845a9
 export default {
   meta: {
     title: 'Vocab Bloom Hub',
@@ -16,7 +17,7 @@ export default {
     language: '语言',
   },
   home: {
-    hero_title: '一部可以与你的应用并肩运行的词典',
+    hero_title: '一部可以跑在你应用旁边的词典',
     hero_text:
       'Vocab Bloom Hub 是一部自托管的英语词典——30 万个条目，包含释义、例句、词形变化，以及俄语、西班牙语、法语、德语、葡萄牙语、中文和阿拉伯语的翻译——通过公共只读 API 提供，并配有 SDK、管理界面和已发布的数据集。一条命令即可安装，代码采用 MIT 许可证，数据采用 CC BY 4.0 许可证。',
     cta_getting_started: '快速开始',
@@ -43,7 +44,7 @@ export default {
         '词典以 CC BY 4.0 许可证发布在 HuggingFace 上，并会自动加载到空实例中；导出功能可以在各环境之间迁移词典，离线环境也不例外。',
       ops_title: '为运维而生',
       ops_text:
-        '健康与就绪探针、优雅停机、启动时自动迁移、Prometheus 指标、带请求 ID 的结构化 JSON 日志——一个服务要交给他人运行所需要的一切。',
+        '健康与就绪探针、优雅停机、启动时自动迁移、Prometheus 指标、带请求 ID 的结构化 JSON 日志——一个服务交给他人运行所需的一切。',
       search_title: '搜索',
       search_text:
         '基于 Postgres 索引的精确、前缀、模糊和翻译四级搜索：在完整词典上，热点读取也能在毫秒内响应。',
@@ -86,7 +87,7 @@ export default {
     title: '公共 API v1',
     intro: '只读词典 API 的参考文档，由服务器发布的 OpenAPI 文档生成——SDK 也是基于同一份契约构建的。',
     base_url: '基础 URL',
-    base_url_text: '每个实例都在自己的源下提供 API；下面的示例使用占位符。',
+    base_url_text: '每个实例都在自己的源站上提供 API；下面的示例使用占位符。',
     contract: '契约',
     contract_text: 'OpenAPI 3 文档，每个实例都在此路径提供',
     contract_file: '已提交的文件',
@@ -116,7 +117,7 @@ export default {
   playground: {
     title: '演练场',
     intro:
-      '公共 API 的每个端点都以表单形式呈现。请求会发送到本站旁边运行的词典——你看到的就是客户端得到的，包括封装格式。',
+      '公共 API 的每个端点都以表单形式呈现。请求会发送到与本站一同部署的词典——你看到的就是客户端得到的，包括封装格式。',
     reference_link: '参考文档解释了每个字段。',
     endpoints: '端点',
     send: '发送请求',
@@ -136,7 +137,7 @@ export default {
     search_label: '搜索词典',
     search_button: '搜索',
     search_empty: '未找到任何结果。',
-    search_fuzzy: '没有精确匹配——以下是最接近的拼写。',
+    search_fuzzy: '没有精确匹配——以下是拼写最接近的结果。',
     search_error: '词典没有响应。',
     examples_title: '不妨从这些词开始',
     random: '随机一个词',
@@ -188,7 +189,7 @@ export default {
     report_entry: '哪个条目？',
     report_entry_any: '整个单词',
     report_message: '哪里有错',
-    report_placeholder: '哪里有错，最好也说明正确的应该是什么（至少 10 个字符）…',
+    report_placeholder: '哪里有错，最好也说明正确的内容是什么（至少 10 个字符）…',
     report_send: '发送报告',
     report_sending: '发送中…',
     report_cancel: '取消',
@@ -197,7 +198,7 @@ export default {
     report_queue_full: '队列目前已满——请等所有者处理完毕后再试。',
     report_error: '报告未能到达词典——请稍后再试。',
     report_too_short: '请至少用 {min} 个字符描述错误。',
-    report_mode: '发送什么',
+    report_mode: '报告形式',
     report_mode_text: '用文字描述',
     report_mode_edit: '编辑条目',
     suggest_edit_hint:
