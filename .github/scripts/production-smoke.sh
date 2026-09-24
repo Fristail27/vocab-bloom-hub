@@ -65,8 +65,8 @@ wait_for "$START_TIMEOUT" "readiness ($SERVER_URL/api/ready = 200)" is_ready
 # liveness carries the package version; readiness is the bare ok
 HEALTH="$(curl -sf "$SERVER_URL/api/health")"
 echo "health: $HEALTH"
-echo "$HEALTH" | grep -q '"status":"ok"' || fail "unexpected /api/health body: $HEALTH"
-echo "$HEALTH" | grep -q '"version":"' || fail "/api/health carries no version: $HEALTH"
+echo "$HEALTH" | grep >/dev/null '"status":"ok"' || fail "unexpected /api/health body: $HEALTH"
+echo "$HEALTH" | grep >/dev/null '"version":"' || fail "/api/health carries no version: $HEALTH"
 [ "$(curl -sf "$SERVER_URL/api/ready")" = '{"status":"ok"}' ] || fail "unexpected /api/ready body"
 
 # the public API answers through the production build
@@ -79,7 +79,7 @@ wait_for 30 "login page ($FRONT_URL/en/login = 200)" login_is_up
 
 # the security headers every installation must send (issue #479): the admin
 # UI refuses framing, the server answers through helmet
-has_header() { curl -s -D - -o /dev/null "$1" | grep -qi "^$2"; }
+has_header() { curl -s -D - -o /dev/null "$1" | grep -i >/dev/null "^$2"; }
 has_header "$FRONT_URL/en/login" 'x-frame-options: DENY' || fail "the admin UI does not send X-Frame-Options: DENY"
 has_header "$FRONT_URL/en/login" 'x-content-type-options: nosniff' || fail "the admin UI does not send X-Content-Type-Options"
 has_header "$FRONT_URL/en/login" 'referrer-policy:' || fail "the admin UI does not send Referrer-Policy"

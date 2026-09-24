@@ -8,6 +8,9 @@
 # and curl + openssl + python3 (the PBKDF2 of the login hash). Ports: SERVER_PORT / FRONT_PORT / SITE_PORT (the compose
 # defaults 3240 / 3241 / 3242); the website checks run when the `site` profile is on.
 set -euo pipefail
+# A body piped into grep is read to the end (`grep >/dev/null`, never `grep -q`):
+# with pipefail, `grep -q` quitting at the first match makes curl fail with EPIPE
+# on a body it has not finished writing — the sitemap check flaked on that
 
 ENV_FILE="${ENV_FILE:-.env}"
 # empty when the variable is not in the file: grep's exit status must not stop the script (set -e)
@@ -38,7 +41,7 @@ wait_for() {
 # --- probes and the public API
 wait_for 120 "readiness ($SERVER_URL/api/ready = 200)" test "$(http_status "$SERVER_URL/api/ready")" = 200
 [ "$(curl -sf "$SERVER_URL/api/ready")" = '{"status":"ok"}' ] || fail "unexpected /api/ready body"
-curl -sf "$SERVER_URL/api/health" | grep -q '"status":"ok"' || fail "/api/health is not ok"
+curl -sf "$SERVER_URL/api/health" | grep >/dev/null '"status":"ok"' || fail "/api/health is not ok"
 [ "$(http_status "$SERVER_URL/api/v1/meta")" = 200 ] || fail "/api/v1/meta is not 200"
 echo "ok: probes and /api/v1/meta"
 
@@ -47,7 +50,7 @@ wait_for 60 "login page ($FRONT_URL/en/login = 200)" test "$(http_status "$FRONT
 [ "$(http_status -L "$FRONT_URL/")" = 200 ] || fail "/ does not reach the login page"
 
 # the security headers every installation must send (issue #479)
-has_header() { curl -s -D - -o /dev/null "$1" | grep -qi "^$2"; }
+has_header() { curl -s -D - -o /dev/null "$1" | grep -i >/dev/null "^$2"; }
 has_header "$FRONT_URL/en/login" 'x-frame-options: DENY' || fail "the admin UI does not send X-Frame-Options: DENY"
 has_header "$FRONT_URL/en/login" 'x-content-type-options: nosniff' || fail "the admin UI does not send X-Content-Type-Options"
 has_header "$SERVER_URL/api/v1/meta" 'x-content-type-options: nosniff' || fail "the server does not send X-Content-Type-Options"
@@ -65,11 +68,11 @@ slot=$(( $(date +%s) / 60 ))
 proof="$(printf '%s' "$slot:$salt" | openssl dgst -sha256 -mac HMAC -macopt "key:$login_hash" -r | cut -d' ' -f1)"
 headers="$(curl -s -D - -o /dev/null -H 'Content-Type: application/json' \
   -d "{\"hash\":\"$proof\",\"salt\":\"$salt\"}" "$SERVER_URL/api/auth/login")"
-echo "$headers" | grep -q '^HTTP/[0-9.]* 20[01]' || fail "login failed: $(echo "$headers" | head -1)"
+echo "$headers" | grep >/dev/null '^HTTP/[0-9.]* 20[01]' || fail "login failed: $(echo "$headers" | head -1)"
 cookie="$(echo "$headers" | grep -i '^set-cookie: bearer=' || true)"
 [ -n "$cookie" ] || fail "login did not set the bearer cookie"
-echo "$cookie" | grep -qi 'httponly' || fail "bearer cookie is not HttpOnly"
-if echo "$cookie" | grep -qi 'secure'; then fail "bearer cookie is Secure over plain http — the login could never work here"; fi
+echo "$cookie" | grep -i >/dev/null 'httponly' || fail "bearer cookie is not HttpOnly"
+if echo "$cookie" | grep -i >/dev/null 'secure'; then fail "bearer cookie is Secure over plain http — the login could never work here"; fi
 echo "ok: admin login over http sets an HttpOnly, non-secure cookie"
 
 # --- with the cookie, the admin API answers
@@ -83,14 +86,14 @@ salt="$(openssl rand -hex 16)"
 proof="$(printf '%s' "$slot:$salt" | openssl dgst -sha256 -mac HMAC -macopt "key:$login_hash" -r | cut -d' ' -f1)"
 headers="$(curl -s -D - -o /dev/null -H 'Content-Type: application/json' \
   -d "{\"hash\":\"$proof\",\"salt\":\"$salt\"}" "$FRONT_URL/api/auth/login")"
-echo "$headers" | grep -q '^HTTP/[0-9.]* 20[01]' || fail "login through the frontend origin failed: $(echo "$headers" | head -1)"
-echo "$headers" | grep -qi '^set-cookie: bearer=' || fail "login through the frontend origin set no bearer cookie"
+echo "$headers" | grep >/dev/null '^HTTP/[0-9.]* 20[01]' || fail "login through the frontend origin failed: $(echo "$headers" | head -1)"
+echo "$headers" | grep -i >/dev/null '^set-cookie: bearer=' || fail "login through the frontend origin set no bearer cookie"
 [ "$(http_status -H "Cookie: bearer=$token" "$FRONT_URL/api/en/dictionary/import/status")" = 200 ] || fail "admin API through the frontend origin refused the cookie"
 [ "$(http_status "$FRONT_URL/api/v1/meta")" = 200 ] || fail "/api/v1/meta through the frontend origin is not 200"
 echo "ok: /api on the frontend origin reaches the server"
 
 # --- the website (profile `site`, issue #277): static pages, and the API through its origin
-if echo ",$(env_value COMPOSE_PROFILES)," | grep -q ',site,'; then
+if echo ",$(env_value COMPOSE_PROFILES)," | grep >/dev/null ',site,'; then
   wait_for 60 "website ($SITE_URL/en = 200)" test "$(http_status "$SITE_URL/en")" = 200
   [ "$(http_status "$SITE_URL/en/docs/deployment/docker")" = 200 ] || fail "a documentation page is not 200"
   [ "$(http_status "$SITE_URL/en/api")" = 200 ] || fail "the API reference is not 200"
@@ -106,10 +109,10 @@ if echo ",$(env_value COMPOSE_PROFILES)," | grep -q ',site,'; then
   # files must carry it instead of the development default
   PUBLIC_ORIGIN="$(env_value NEXT_PUBLIC_SITE_URL)"
   if [ -n "$PUBLIC_ORIGIN" ]; then
-    curl -sf "$SITE_URL/robots.txt" | grep -q "$PUBLIC_ORIGIN/sitemap.xml" || fail "robots.txt does not name $PUBLIC_ORIGIN"
-    curl -sf "$SITE_URL/sitemap.xml" | grep -q "<loc>$PUBLIC_ORIGIN/" || fail "sitemap.xml does not list $PUBLIC_ORIGIN"
-    curl -sf "$SITE_URL/en" | grep -q "rel=\"canonical\" href=\"$PUBLIC_ORIGIN/en\"" || fail "the canonical link of /en is not under $PUBLIC_ORIGIN"
-    curl -sf "$SITE_URL/robots.txt" "$SITE_URL/sitemap.xml" | grep -q 'localhost:3020' && fail "the development origin leaked into robots.txt / sitemap.xml"
+    curl -sf "$SITE_URL/robots.txt" | grep >/dev/null "$PUBLIC_ORIGIN/sitemap.xml" || fail "robots.txt does not name $PUBLIC_ORIGIN"
+    curl -sf "$SITE_URL/sitemap.xml" | grep >/dev/null "<loc>$PUBLIC_ORIGIN/" || fail "sitemap.xml does not list $PUBLIC_ORIGIN"
+    curl -sf "$SITE_URL/en" | grep >/dev/null "rel=\"canonical\" href=\"$PUBLIC_ORIGIN/en\"" || fail "the canonical link of /en is not under $PUBLIC_ORIGIN"
+    curl -sf "$SITE_URL/robots.txt" "$SITE_URL/sitemap.xml" | grep >/dev/null 'localhost:3020' && fail "the development origin leaked into robots.txt / sitemap.xml"
     echo "ok: the website is built for $PUBLIC_ORIGIN"
   fi
   echo "ok: the website renders and reaches the API"
