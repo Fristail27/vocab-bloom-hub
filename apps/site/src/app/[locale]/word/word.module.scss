@@ -89,7 +89,7 @@
 }
 
 .entry {
-  padding: 20px 0;
+  padding: 28px 0;
   border-top: 1px solid var(--border);
 }
 
@@ -97,12 +97,12 @@
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 10px;
-  margin: 0 0 8px;
+  gap: 8px 10px;
+  margin: 0 0 12px;
 
   h2 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1.4rem;
   }
 }
 
@@ -132,12 +132,147 @@
   }
 }
 
+// the short translations, the chosen language's lines (issue #520)
 .short {
-  margin: 0 0 14px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
   font-size: 1.05rem;
 
-  span + span::before {
-    content: ' · ';
+  li {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0 0 6px;
+  }
+
+  // `display: flex` would override the `hidden` attribute of the other languages
+  li[hidden] {
+    display: none;
+  }
+}
+
+// the flag of a translation's language
+.flagTag {
+  flex: none;
+  font-size: 0.95em;
+}
+
+// the languages of the headword, one pressed (issue #520)
+.picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.flag,
+.flagActive {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--fg);
+    background: var(--surface);
+  }
+}
+
+.flagActive {
+  color: var(--fg);
+  border-color: var(--fg);
+  background: var(--surface);
+}
+
+.flagCode {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+.metaLeft {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+// the grammar flags / patterns line of an entry (issue #399)
+.grammar {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
+
+  code {
+    font-size: 0.85rem;
+  }
+}
+
+// the short translations, a line per language (issue #520)
+.shortBlock {
+  margin: 0 0 18px;
+}
+
+.short {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0 0 6px;
+  }
+
+  .tag {
+    flex: none;
+    min-width: 28px;
+    text-align: center;
+  }
+}
+
+.moreLanguages {
+  margin: 4px 0 0;
+
+  summary {
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 0.9rem;
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    &::before {
+      content: '▸';
+      display: inline-block;
+      width: 1em;
+      transition: transform 0.15s;
+    }
+
+    &:hover {
+      color: var(--fg);
+    }
+  }
+
+  &[open] summary {
+    margin-bottom: 8px;
+
+    &::before {
+      transform: rotate(90deg);
+    }
+  }
+
+  .short {
     color: var(--muted);
   }
 }
@@ -148,7 +283,13 @@
   padding-inline-start: 22px;
 
   > li {
-    margin: 0 0 16px;
+    margin: 0 0 22px;
+    padding-inline-start: 4px;
+
+    &::marker {
+      color: var(--muted);
+      font-weight: 600;
+    }
   }
 }
 
@@ -161,8 +302,10 @@
 }
 
 .examplesList {
-  margin: 4px 0 6px;
-  padding: 0 0 0 16px;
+  margin: 6px 0 8px;
+  padding: 0;
+  padding-inline-start: 12px;
+  border-inline-start: 2px solid var(--border);
   color: var(--muted);
   font-style: italic;
   list-style: none;
@@ -177,13 +320,21 @@
 }
 
 .translations {
-  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 6px 0 0;
   color: var(--fg);
   font-size: 0.95rem;
 
-  span + span::before {
-    content: ' · ';
-    color: var(--muted);
+  > span {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  > span[hidden] {
+    display: none;
   }
 }
 
@@ -202,10 +353,10 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px 14px;
-  margin: 10px 0 0;
+  margin: 14px 0 0;
+  font-size: 0.9rem;
   padding: 0;
   list-style: none;
-  font-size: 0.9rem;
 
   small {
     color: var(--muted);
@@ -286,4 +437,20 @@
   gap: 16px;
   margin: 16px 0;
   color: var(--muted);
+}
+
+// a phone: the headword smaller, the report button on its own line
+@media (max-width: 640px) {
+  .headword h1 {
+    font-size: 2rem;
+  }
+
+  .metaRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .meanings {
+    padding-inline-start: 18px;
+  }
 }

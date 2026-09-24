@@ -1,6 +1,6 @@
 import type { PublicWordV1T } from 'server/types';
 
-import { leadDefinition, localeFirst, localeTranslations } from '../wordPage';
+import { leadDefinition, localeFirst, localeTranslations, translationLanguages } from '../wordPage';
 
 const entry = (overrides: Partial<PublicWordV1T>): PublicWordV1T =>
   ({ meanings: [], short_translations: [], description: null, ...overrides }) as PublicWordV1T;
@@ -41,5 +41,26 @@ describe('leadDefinition', () => {
     ).toBe('to move fast');
     expect(leadDefinition([entry({ description: 'a plant' })])).toBe('a plant');
     expect(leadDefinition([entry({})])).toBeUndefined();
+  });
+});
+
+describe('translationLanguages (issue #520)', () => {
+  const entry = (short: string[], meanings: string[][]) =>
+    ({
+      short_translations: short.map((language, id) => ({ id, language, description: language })),
+      meanings: meanings.map((languages, id) => ({
+        id,
+        translations: languages.map((language, n) => ({ id: n, language, title: language })),
+      })),
+    }) as unknown as import('server/types').PublicWordV1T;
+  const entries = [entry(['ru', 'es'], [['fr', 'ru']]), entry(['de'], [['es', 'zh']])];
+
+  it("lists every language once, the locale's first, the rest as they appear", () => {
+    expect(translationLanguages(entries, 'es')).toEqual(['es', 'ru', 'fr', 'de', 'zh']);
+    expect(translationLanguages(entries, 'en')).toEqual(['ru', 'es', 'fr', 'de', 'zh']);
+  });
+
+  it('is empty for a headword without translations', () => {
+    expect(translationLanguages([entry([], [[]])], 'ru')).toEqual([]);
   });
 });

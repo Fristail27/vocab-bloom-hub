@@ -13,6 +13,11 @@ test.describe('word pages', () => {
     await expect(page.getByRole('link', { name: 'sprint' })).toHaveAttribute('href', /\/en\/word\/sprint$/);
     // the page names the API call it renders
     await expect(page.getByText('GET /api/v1/words/run')).toBeVisible();
+    // one translation language at a time (issue #520): the fixture has Russian only, so it
+    // shows by default, flagged, and there is nothing to pick from
+    await expect(page.getByText('бежать').first()).toBeVisible();
+    await expect(page.getByRole('img', { name: 'ru' }).first()).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Language' })).toHaveCount(0);
   });
 
   // issue #480: the Russian copy leads with the Russian translation — in the
@@ -26,6 +31,8 @@ test.describe('word pages', () => {
       'Перевод слова run на русский: бежать. definition of to move fast',
     );
     await expect(page.getByText('Перевод: бежать')).toBeVisible();
+    // …and the entry's own short translation is in the open
+    await expect(page.getByText('бежать').nth(1)).toBeVisible();
     // the English copy has no such lead
     await page.goto('/en/word/run');
     await expect(page).toHaveTitle('run — meanings, forms, translations · Vocab Bloom Hub');

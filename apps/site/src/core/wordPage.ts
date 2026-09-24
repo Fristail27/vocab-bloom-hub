@@ -42,3 +42,21 @@ export const leadDefinition = (entries: readonly PublicWordV1T[]): string | unde
   }
   return entries.find((entry) => entry.description?.trim())?.description?.trim();
 };
+
+/**
+ * The languages a headword has translations in — short translations and the
+ * meanings' — once each, the locale's own language first, the rest in the
+ * order they appear. The page shows one language at a time and offers these
+ * to pick from (issue #520)
+ */
+export const translationLanguages = (entries: readonly PublicWordV1T[], locale: string): string[] => {
+  const seen = new Set<string>();
+  for (const entry of entries) {
+    for (const item of entry.short_translations) seen.add(item.language);
+    for (const meaning of entry.meanings) for (const item of meaning.translations) seen.add(item.language);
+  }
+  return localeFirst(
+    [...seen].map((language) => ({ language })),
+    locale,
+  ).map((item) => item.language);
+};

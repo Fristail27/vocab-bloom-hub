@@ -7,6 +7,7 @@
 }
 
 .inner {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 24px;
@@ -48,12 +49,108 @@
   }
 }
 
-@media (max-width: 640px) {
+// the menu button, shown on a narrow screen only
+.toggle {
+  display: none;
+  margin-inline-start: auto;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: var(--surface);
+  }
+}
+
+// three bars, drawn with the element and its two pseudo-elements; a cross when open
+.toggleIcon {
+  position: relative;
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+  transition: background 0.15s;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    width: 18px;
+    height: 2px;
+    background: currentColor;
+    border-radius: 1px;
+    transition: transform 0.15s;
+  }
+
+  &::before {
+    top: -6px;
+  }
+
+  &::after {
+    top: 6px;
+  }
+}
+
+.toggle[aria-expanded='true'] .toggleIcon {
+  background: transparent;
+
+  &::before {
+    transform: translateY(6px) rotate(45deg);
+  }
+
+  &::after {
+    transform: translateY(-6px) rotate(-45deg);
+  }
+}
+
+// the brand text goes first, the row of links fits until about 900px
+@media (max-width: 1000px) {
   .brand span {
     display: none;
   }
+}
+
+@media (max-width: 900px) {
+  .toggle {
+    display: inline-flex;
+  }
 
   .nav {
-    gap: 12px;
+    // a panel under the header, the full width of the page
+    display: none;
+    position: absolute;
+    top: 60px;
+    inset-inline: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    margin: 0;
+    padding: 8px 0 12px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow);
+
+    a {
+      padding: 10px 24px;
+      font-size: 1.05rem;
+    }
+
+    // the language switch, on a line of its own under the links
+    > span {
+      margin: 8px 24px 0;
+    }
+  }
+
+  .nav[data-open] {
+    display: flex;
   }
 }
