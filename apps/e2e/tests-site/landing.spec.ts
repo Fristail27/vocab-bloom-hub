@@ -3,6 +3,13 @@ import path from 'node:path';
 
 import { expect, test } from '@playwright/test';
 
+// the interface texts the landing is asserted against: the catalogs themselves, so a
+// native speaker's review of a translation does not have to touch this test
+import ar from '../../site/messages/ar';
+import de from '../../site/messages/de';
+import es from '../../site/messages/es';
+import zh from '../../site/messages/zh';
+
 // the monorepo version the site was built with (scripts/bump-version.mjs keeps every package.json equal)
 const siteVersion = (
   JSON.parse(readFileSync(path.resolve('../site/package.json'), 'utf8')) as { version: string }
@@ -46,26 +53,22 @@ test.describe('landing', () => {
   test('renders in Spanish, German, Chinese and Arabic', async ({ page }) => {
     await page.goto('/es');
     await expect(page.locator('html')).toHaveAttribute('lang', 'es');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'Un diccionario que puedes ejecutar junto a tu aplicación',
-    );
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(es.home.hero_title);
 
     await page.goto('/de');
     await expect(page.locator('html')).toHaveAttribute('lang', 'de');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'Ein Wörterbuch, das neben deiner App läuft',
-    );
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(de.home.hero_title);
 
     // issue #463: the first non-Latin interface language
     await page.goto('/zh');
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('一部可以与你的应用并肩运行的词典');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(zh.home.hero_title);
 
     // issue #464: the first right-to-left interface language
     await page.goto('/ar');
     await expect(page.locator('html')).toHaveAttribute('lang', 'ar');
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('قاموس يمكنك تشغيله إلى جانب تطبيقك');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(ar.home.hero_title);
   });
 
   test('the language switch keeps the page', async ({ page }) => {
