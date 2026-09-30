@@ -5,6 +5,7 @@ import { AdminGuard } from '../../../AuthModule/guards/admin.guard';
 import { EnChangesService } from './enChanges.service';
 import { ForgetChangeAuthorReqDTO } from './dto/ForgetChangeAuthorReq.dto';
 import { ListChangesQueryDTO } from './dto/ListChangesQuery.dto';
+import { ApiDatasetQuery } from '../../../DatasetsModule/api-dataset-query';
 
 /**
  * The history of the edits of the active dataset (issue #531), admin only:
@@ -12,6 +13,8 @@ import { ListChangesQueryDTO } from './dto/ListChangesQuery.dto';
  * before EnController so the routes are not swallowed by GET /api/en/:id
  */
 @ApiTags('En_Changes')
+// the dataset the request works on (issue #540)
+@ApiDatasetQuery()
 @Controller('/api/en/changes')
 export class EnChangesController {
   constructor(private readonly enChangesService: EnChangesService) {}

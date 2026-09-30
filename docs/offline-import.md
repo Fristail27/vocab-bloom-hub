@@ -4,7 +4,7 @@ The dictionary import normally downloads the published dataset from HuggingFace.
 without internet access — corporate networks, air-gapped labs, CI — and admins who edited an
 exported dataset can load the same files from a local source instead:
 
-- **files uploaded through the admin UI** — the zip that _Export dictionary_ produces (the
+- **files uploaded through the admin UI** — the zip that _Export_ on the card of a dataset produces (the
   _Archive_ tab), or the dataset files in their own slots with the manifest either as a file or
   typed by hand (the _Separate files_ tab);
 - **a directory or zip on the server** — inside the folder named by `DICTIONARY_IMPORT_DIR`
@@ -62,9 +62,11 @@ its `version` is stored as _Your version_ after the import (and its synonym / an
 refine the progress bar); without it the version stays unknown. The terms an export writes into
 the manifest — `source`, `license`, `license_url`, `attribution`, `attribution_url`, `notice`
 ([`DATA_LICENSE.md`](../DATA_LICENSE.md)) — say where the export was taken from. The terms of the dataset
-the import fills are the ones the code states for it and do not change with an import; a
-manifest that names another `source` than that dataset is refused (`dataset_source_mismatch`):
-datasets are never mixed ([`datasets.md`](./datasets.md#datasets-are-never-mixed)). Line counts for the progress bar
+the import fills are the ones the code states for it — or its owner, for a
+[dataset of the instance's own](./datasets.md#datasets-of-the-instances-own) — and do not change
+with an import; a manifest that names another `source` than that dataset is refused
+(`dataset_source_mismatch`), and so is one that names another `license` than a dataset of the
+owner's has: datasets are never mixed ([`datasets.md`](./datasets.md#datasets-are-never-mixed)). Line counts for the progress bar
 are always taken from the files themselves, so a hand-assembled dataset needs no bookkeeping.
 
 **The history of edits** travels with the data
@@ -96,18 +98,18 @@ accepts and ignores it — the terms of a dataset are the ones the code states.
 > **The version of the entries edited on the instance.** Every entry line carries a `version`:
 > the one of the dataset it came from, or `custom_version` once the entry was edited in the admin
 > UI. `custom_version` is a mark of the instance and says nothing to whoever takes the copy, so
-> the export page has a setting for it, _Version of the entries edited here_
+> the export has a setting for it, _Version of the entries edited here_
 > (`GET /api/en/dictionary/export?edited_version=2.1.0`): the edited entries are written under
 > that version. The dictionary itself is not changed, and an export without the setting writes
 > `custom_version` as before. An entry whose changes were all taken back carries the version of
 > its dataset again and is exported under it. The version of the dataset as a whole is `version` of
 > `manifest.json`.
 
-1. On instance A open _Managing → Export dictionary_ (or call `GET /api/en/dictionary/export`
+1. On instance A open _Managing → Datasets → Export_ on the card of the dataset (or call `GET /api/en/dictionary/export`
    and download the archive from `GET /api/en/dictionary/export/download/:exportId`). You get
    `vocab-bloom-hub-en-export.zip`.
 2. Copy the zip to a machine that can reach instance B.
-3. On instance B open _Managing → Import dictionary → Archive_, drop the zip into the upload
+3. On instance B open _Managing → Datasets → Import → Archive_ on the card of the dataset, drop the zip into the upload
    area and press _Start importing_. The progress stream is the same as for the HuggingFace
    import; the manifest version is stored as _Your version_ when the import completes.
 

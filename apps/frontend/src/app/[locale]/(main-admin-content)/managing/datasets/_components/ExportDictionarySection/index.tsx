@@ -17,8 +17,9 @@ import styles from './styles.module.scss';
 const { Text } = Typography;
 
 type ExportDictionarySectionP = {
-  // the active dataset (issue #527): the export is taken from it and carries
-  // its terms; without it the terms of the project's own dataset are shown
+  // the dataset of the card the export was opened from (issues #527, #540):
+  // the export is taken from it and carries its terms; without it the terms
+  // of the project's own dataset are shown
   dataset?: DatasetT | undefined;
 };
 
@@ -96,9 +97,12 @@ export const ExportDictionarySection: React.FC<ExportDictionarySectionP> = ({ da
       }
     };
 
-    const res = await EnApi.exportDictionary(handleChunk, onError, {
-      edited_version: version || undefined,
-    });
+    const res = await EnApi.exportDictionary(
+      handleChunk,
+      onError,
+      { edited_version: version || undefined },
+      dataset?.name,
+    );
     if ('error' in res) {
       onError(res.message);
       return;

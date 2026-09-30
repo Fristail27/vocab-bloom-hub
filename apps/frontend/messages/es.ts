@@ -31,6 +31,13 @@ export default {
     [ErrorCodes.suggestion_invalid]: 'Los cambios propuestos tienen un formato incorrecto',
     [ErrorCodes.suggestion_not_applicable]:
       'Nada que aplicar: un reporte de texto o un reporte que ya recibió un veredicto',
+    [ErrorCodes.dataset_name_reserved]:
+      'Este nombre pertenece a un conjunto de datos o a una fuente del catálogo',
+    [ErrorCodes.dataset_already_exists]: 'Ya existe un conjunto de datos con este nombre',
+    [ErrorCodes.dataset_terms_fixed]:
+      'Las condiciones de un conjunto de datos del catálogo son las de su fuente',
+    [ErrorCodes.dataset_license_invalid]:
+      'Elija una licencia de la lista, o indique el nombre, el enlace y el texto de la suya',
     [ErrorCodes.datasets_not_supported]:
       'Esta base de datos no tiene esquemas: varios conjuntos de datos requieren Postgres',
     [ErrorCodes.dataset_not_found]: 'No se encontró el conjunto de datos',
@@ -57,6 +64,24 @@ export default {
     home: 'Inicio',
     theme: 'Tema oscuro',
     language: 'Idioma de la interfaz',
+  },
+  // the switch of the dataset that is edited and what it is (issue #540)
+  edited_dataset: {
+    switch: 'El conjunto de datos que se edita',
+    switch_prefix: 'Editando:',
+    block: 'El conjunto de datos que se edita',
+    editing: 'Está editando',
+    active: 'activo',
+    not_served: 'no servido',
+    own: 'propio',
+    catalog: 'del catálogo',
+    source: 'Fuente',
+    license: 'Licencia',
+    entries: 'Entradas',
+    not_served_note:
+      'La API y el sitio web sirven «{active}». Lo que cambie aquí es público en la pestaña de este conjunto de datos de la página de una palabra, y se servirá por completo cuando lo active.',
+    public_source_note:
+      'Una edición de «{title}» marca la entrada como modificada: a sus lectores se les indica qué entradas difieren de lo que publicó la fuente.',
   },
   footer: {
     docs: 'Documentación',
@@ -236,9 +261,7 @@ export default {
     edit: 'Editar datos',
     edit_word: 'Editar palabra',
     back_to_managing: 'Volver a la gestión de palabras',
-    import_dictionary: 'Importar diccionario',
     bulk_request: 'Petición masiva',
-    export_dictionary: 'Exportar diccionario',
     datasets: 'Conjuntos de datos',
   },
   // the datasets of the instance (issue #527): the catalog, the terms and the instruction
@@ -282,7 +305,14 @@ export default {
     deleted: 'El conjunto de datos se eliminó',
     how_to_install: 'Cómo instalarlo',
     update: 'Actualizar con un archivo más reciente',
-    open_import: 'Abrir la página de importación',
+    // everything done with a dataset starts on its card (issue #540)
+    catalog_title: 'El catálogo',
+    edit_words: 'Editar sus palabras',
+    import: 'Importar',
+    export: 'Exportar',
+    details: 'Detalles',
+    import_title: 'Importar a «{name}»',
+    export_title: 'Exportar «{name}»',
     about_default:
       'El conjunto de datos del proyecto: entradas generadas por modelos de lenguaje, con niveles MCER y traducciones a siete idiomas. Toda instancia empieza con él; se carga y se actualiza en la página de importación.',
     about_wiktionary:
@@ -352,6 +382,50 @@ export default {
     done_update: 'El conjunto de datos está actualizado.',
     done_summary: 'Sustituidas: {updated} · añadidas: {added} · conservadas con sus ediciones: {kept}',
     too_large: 'El archivo es mayor de lo que acepta el servidor',
+    // the datasets of the instance's own (issue #540)
+    own_title: 'Conjuntos de datos de esta instancia',
+    own_intro:
+      'Un diccionario propio, junto a los del catálogo: se crea vacío bajo la licencia que usted elija, se llena eligiéndolo como el conjunto de datos que se edita o con una importación, y se sirve cuando lo active. Su fuente en la API es su nombre.',
+    own_empty: 'Todavía no hay ningún conjunto de datos propio',
+    own_create_button: 'Crear un conjunto de datos',
+    own_create_title: 'Un nuevo conjunto de datos de esta instancia',
+    own_create: 'Crear',
+    own_created: '«{name}» se ha creado. Elíjalo como el conjunto de datos que se edita para llenarlo.',
+    own_edit: 'Editar las condiciones',
+    own_edit_title: 'Las condiciones de «{name}»',
+    own_save: 'Guardar',
+    own_saved: 'Las condiciones se guardaron',
+    status_own: 'propio',
+    label_created: 'Creado',
+    own_field_name: 'Nombre',
+    own_field_name_hint:
+      'Letras latinas minúsculas, dígitos y «_», empezando por una letra. Nombra el conjunto de datos en la API y no se puede cambiar.',
+    own_field_title: 'Título',
+    own_field_license_name: 'El nombre de la licencia',
+    own_field_license_url: 'Dónde se lee la licencia',
+    own_field_license_text: 'El texto de la licencia, completo',
+    own_field_attribution_hint: 'La línea que debe mostrar quien muestre los datos.',
+    own_field_attribution_url: 'Adónde lleva la atribución (opcional)',
+    own_required: 'Obligatorio',
+    own_name_pattern: 'Letras latinas minúsculas, dígitos y «_», empezando por una letra; de 2 a 40 caracteres',
+    own_name_reserved: 'Este nombre pertenece a un conjunto de datos o a una fuente del catálogo',
+    own_url_invalid: 'Un enlace que empiece por http:// o https://',
+    own_license_own: 'Una licencia propia…',
+    own_license_own_hint:
+      'Cuando ninguna de las licencias de arriba encaja: su nombre, un enlace y su texto completo. El texto viaja con los datos: en la API, en las páginas de palabras y en cada exportación.',
+    own_license_is_standard: 'Esta licencia está en la lista: elíjala allí',
+    own_license_tag: 'licencia propia',
+    own_license_text: 'El texto de la licencia',
+    own_license_change_title: 'Está cambiando la licencia de este conjunto de datos',
+    own_license_change_given:
+      'Quien ya tomó los datos conserva el derecho de usarlos bajo la licencia con la que los tomó: una licencia concedida no se retira.',
+    own_license_change_reports:
+      'Las correcciones que enviaron los lectores se aceptaron bajo la licencia que indicaba el formulario de reporte cuando las enviaron.',
+    own_license_change_served:
+      'A partir de ahora, la API, las páginas de palabras y las exportaciones de este conjunto de datos llevan la nueva licencia.',
+    own_license_change_journal:
+      'El cambio queda registrado en los eventos de la instancia, con la licencia anterior y la nueva.',
+    own_license_change_confirm: 'Entiendo, cambiar la licencia',
   },
   import_dictionary: {
     your_version: 'Tu versión',
@@ -390,8 +464,6 @@ export default {
     data_attribution: 'Atribución:',
     up_to_date: 'Ya tienes la última versión del diccionario',
     update_available: 'Hay una versión más reciente del dataset',
-    published_is_own:
-      'El conjunto de datos publicado es el del proyecto y se importa en el conjunto «default». «{name}» es un conjunto de datos de otra fuente: se actualiza en la página de conjuntos de datos, con el archivo de su fuente.',
     start_update: 'Actualizar el diccionario',
     update_summary:
       'Actualización terminada: {updated} entradas actualizadas, {added} añadidas, {kept} conservadas con tus ediciones',
@@ -428,10 +500,6 @@ export default {
     server_file_empty: 'No hay datasets en el directorio de importación',
     import_dir_hint:
       'Configura DICTIONARY_IMPORT_DIR en el servidor para elegir datasets de una carpeta montada',
-    dataset_target: 'Importar en',
-    dataset_active: '{name} — el conjunto de datos activo',
-    dataset_hint:
-      'Importar en otro conjunto de datos no afecta al activo: la API lo sigue sirviendo hasta que active el nuevo.',
   },
   bulk_request: {
     license_note:

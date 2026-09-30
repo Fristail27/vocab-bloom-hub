@@ -30,6 +30,11 @@ export default {
     [ErrorCodes.suggestion_invalid]: 'Предложенные изменения некорректны',
     [ErrorCodes.suggestion_not_applicable]:
       'Нечего применять: текстовая жалоба или жалоба, по которой уже есть вердикт',
+    [ErrorCodes.dataset_name_reserved]: 'Это имя принадлежит датасету или источнику каталога',
+    [ErrorCodes.dataset_already_exists]: 'Датасет с таким именем уже есть',
+    [ErrorCodes.dataset_terms_fixed]: 'Условия датасета из каталога — это условия его источника',
+    [ErrorCodes.dataset_license_invalid]:
+      'Выберите лицензию из списка или укажите название, ссылку и текст своей',
     [ErrorCodes.datasets_not_supported]: 'В этой базе нет схем: для нескольких датасетов нужен Postgres',
     [ErrorCodes.dataset_not_found]: 'Датасет не найден',
     [ErrorCodes.dataset_name_invalid]: 'Экземпляр не знает датасета с таким именем',
@@ -54,6 +59,24 @@ export default {
     home: 'На главную',
     theme: 'Тёмная тема',
     language: 'Язык интерфейса',
+  },
+  // the switch of the dataset that is edited and what it is (issue #540)
+  edited_dataset: {
+    switch: 'Редактируемый датасет',
+    switch_prefix: 'Правка:',
+    block: 'Редактируемый датасет',
+    editing: 'Вы редактируете',
+    active: 'активен',
+    not_served: 'не отдаётся',
+    own: 'свой',
+    catalog: 'из каталога',
+    source: 'Источник',
+    license: 'Лицензия',
+    entries: 'Статей',
+    not_served_note:
+      'API и сайт отдают «{active}». То, что вы меняете здесь, видно на вкладке этого датасета на странице слова, а целиком он будет отдаваться, когда вы его активируете.',
+    public_source_note:
+      'Правка «{title}» помечает статью как изменённую: её читателям сообщается, какие статьи отличаются от опубликованного источником.',
   },
   footer: {
     docs: 'Документация',
@@ -233,9 +256,7 @@ export default {
     edit: 'Редактировать',
     edit_word: 'Редактирование слова',
     back_to_managing: 'Вернуться к управлению словами',
-    import_dictionary: 'Загрузить словарь',
     bulk_request: 'Массовый запрос',
-    export_dictionary: 'Выгрузить словарь',
     datasets: 'Датасеты',
   },
   // the datasets of the instance (issue #527): the catalog, the terms and the instruction
@@ -277,7 +298,14 @@ export default {
     deleted: 'Датасет удалён',
     how_to_install: 'Как установить',
     update: 'Обновить из нового файла',
-    open_import: 'Открыть страницу импорта',
+    // everything done with a dataset starts on its card (issue #540)
+    catalog_title: 'Каталог',
+    edit_words: 'Редактировать слова',
+    import: 'Загрузить',
+    export: 'Сохранить',
+    details: 'Подробнее',
+    import_title: 'Загрузка в «{name}»',
+    export_title: 'Сохранение «{name}»',
     about_default:
       'Датасет проекта: записи сгенерированы языковыми моделями, с уровнями CEFR и переводами на семь языков. С него начинает каждый экземпляр; загружается и обновляется на странице импорта.',
     about_wiktionary:
@@ -344,6 +372,49 @@ export default {
     done_update: 'Датасет обновлён.',
     done_summary: 'Заменено: {updated} · добавлено: {added} · сохранено с вашими правками: {kept}',
     too_large: 'Файл больше, чем принимает сервер',
+    // the datasets of the instance's own (issue #540)
+    own_title: 'Датасеты этого экземпляра',
+    own_intro:
+      'Собственный словарь рядом с датасетами каталога: создаётся пустым под выбранной вами лицензией, наполняется, если выбрать его редактируемым датасетом, или импортом, и начинает отдаваться, когда вы его активируете. Его источник в API — его имя.',
+    own_empty: 'Своих датасетов пока нет',
+    own_create_button: 'Создать датасет',
+    own_create_title: 'Новый датасет этого экземпляра',
+    own_create: 'Создать',
+    own_created: '«{name}» создан. Выберите его редактируемым датасетом, чтобы наполнить.',
+    own_edit: 'Изменить условия',
+    own_edit_title: 'Условия «{name}»',
+    own_save: 'Сохранить',
+    own_saved: 'Условия сохранены',
+    status_own: 'свой',
+    label_created: 'Создан',
+    own_field_name: 'Имя',
+    own_field_name_hint:
+      'Строчные латинские буквы, цифры и «_», первой идёт буква. Это имя датасета в API, изменить его нельзя.',
+    own_field_title: 'Название',
+    own_field_license_name: 'Название лицензии',
+    own_field_license_url: 'Где прочитать лицензию',
+    own_field_license_text: 'Текст лицензии полностью',
+    own_field_attribution_hint: 'Строка, которую обязан показывать тот, кто показывает данные.',
+    own_field_attribution_url: 'Куда ведёт атрибуция (необязательно)',
+    own_required: 'Обязательное поле',
+    own_name_pattern: 'Строчные латинские буквы, цифры и «_», первой идёт буква; от 2 до 40 символов',
+    own_name_reserved: 'Это имя принадлежит датасету или источнику каталога',
+    own_url_invalid: 'Ссылка, начинающаяся с http:// или https://',
+    own_license_own: 'Своя лицензия…',
+    own_license_own_hint:
+      'Когда ни одна из лицензий выше не подходит: её название, ссылка и полный текст. Текст идёт вместе с данными — в API, на страницах слов и в каждом экспорте.',
+    own_license_is_standard: 'Эта лицензия есть в списке: выберите её там',
+    own_license_tag: 'своя лицензия',
+    own_license_text: 'Текст лицензии',
+    own_license_change_title: 'Вы меняете лицензию этого датасета',
+    own_license_change_given:
+      'Тот, кто уже взял данные, сохраняет право пользоваться ими по лицензии, под которой он их взял: выданная лицензия не отзывается.',
+    own_license_change_reports:
+      'Исправления, присланные читателями, приняты под той лицензией, которую называла форма жалобы в момент отправки.',
+    own_license_change_served: 'Отныне API, страницы слов и экспорты этого датасета несут новую лицензию.',
+    own_license_change_journal:
+      'Изменение записывается в журнал событий экземпляра вместе с лицензией до и после.',
+    own_license_change_confirm: 'Понимаю, сменить лицензию',
   },
   import_dictionary: {
     your_version: 'Ваша Версия',
@@ -382,8 +453,6 @@ export default {
     data_attribution: 'Атрибуция:',
     up_to_date: 'У вас уже актуальная версия словаря',
     update_available: 'Доступна новая версия датасета',
-    published_is_own:
-      'Опубликованный датасет принадлежит проекту и импортируется в датасет «default». «{name}» — датасет другого источника: он обновляется на странице датасетов, из файла своего источника.',
     start_update: 'Обновить словарь',
     update_summary:
       'Обновление завершено: обновлено статей — {updated}, добавлено — {added}, сохранено с вашими правками — {kept}',
@@ -420,10 +489,6 @@ export default {
     server_file_empty: 'В папке импорта нет датасетов',
     import_dir_hint:
       'Задайте DICTIONARY_IMPORT_DIR на сервере, чтобы выбирать датасеты из примонтированной папки',
-    dataset_target: 'Импортировать в',
-    dataset_active: '{name} — активный датасет',
-    dataset_hint:
-      'Импорт в другой датасет не затрагивает активный: API продолжает отдавать его, пока вы не активируете новый.',
   },
   bulk_request: {
     license_note:

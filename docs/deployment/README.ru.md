@@ -143,7 +143,7 @@ CI на каждый pull request собирает и запускает product
   датасет с HuggingFace — или самый новый датасет из `DICTIONARY_IMPORT_DIR` — в фоне, логирует
   прогресс и отвечает `503 importing` на `/api/ready`, пока не закончит
   ([`docker.md`](./docker.md#first-start-the-dictionary-loads-itself)).
-- **Из админки** — _Import dictionary_: с HuggingFace или из архива, когда у хоста нет доступа
+- **Из админки** — _Managing → Datasets → Import_ на карточке датасета проекта: с HuggingFace или из архива, когда у хоста нет доступа
   в интернет ([`../offline-import.md`](../offline-import.md)). Импорт несколько минут стримит
   прогресс; прокси не должен буферизовать этот поток. Одновременно идёт один импорт; второй
   отклоняется с `409`.

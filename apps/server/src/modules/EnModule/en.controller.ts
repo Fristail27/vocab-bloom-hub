@@ -33,8 +33,11 @@ import { AddWordFormReqDTO } from './dto/AddWordFormReq.dto';
 import { EditWordFormReqDTO } from './dto/EditWordFormReq.dto';
 import { EditCommonInfoOfWordReqDTO } from './dto/EditCommonInfoOfWordReq.dto';
 import { EditPhrasalBaseReqDTO } from './dto/EditPhrasalBase.dto';
+import { ApiDatasetQuery } from '../DatasetsModule/api-dataset-query';
 
 @ApiTags('En_Words')
+// the dataset the request works on (issue #540)
+@ApiDatasetQuery()
 @Controller('/api/en/')
 export class EnController {
   constructor(private readonly enService: EnService) {}

@@ -21,6 +21,7 @@ import {
   translationRecord,
   translationSnapshot,
 } from '../../utils/changes/snapshots';
+import { scoped } from '../../../../core/utils/dataset-scope';
 
 @Injectable()
 export class EnMeaningTranslationService {
@@ -28,11 +29,21 @@ export class EnMeaningTranslationService {
 
   constructor(
     @InjectRepository(EnMeaning)
-    private readonly enMeaningsRep: Repository<EnMeaning>,
+    private readonly activeEnMeaningsRep: Repository<EnMeaning>,
 
     @InjectRepository(EnMeaningTranslation)
-    private readonly enMeaningTranslationRep: Repository<EnMeaningTranslation>,
+    private readonly activeEnMeaningTranslationRep: Repository<EnMeaningTranslation>,
   ) {}
+
+  // the dataset the request works on (issue #540): the active one, or the
+  // one the switch of the admin UI names
+  private get enMeaningsRep(): Repository<EnMeaning> {
+    return scoped(this.activeEnMeaningsRep);
+  }
+
+  private get enMeaningTranslationRep(): Repository<EnMeaningTranslation> {
+    return scoped(this.activeEnMeaningTranslationRep);
+  }
 
   async addMeaningTranslation(
     body: AddMeaningTranslationReqT,

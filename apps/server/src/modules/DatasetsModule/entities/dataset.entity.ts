@@ -6,6 +6,8 @@ const timestamp = (): 'timestamptz' | 'datetime' => (checkIsPostgres() ? 'timest
 /**
  * The registry of the instance's dictionary datasets (issue #527): one row
  * per dataset with the schema its tables live in and the terms of its data.
+ * A row marked `own` is a dataset of the instance's own (issue #540), whose
+ * terms are the ones its owner stated.
  * Operational data of this instance, in `public` with the settings — never
  * part of an export.
  */
@@ -27,6 +29,11 @@ export class Dataset {
   @Column({ type: 'varchar', length: 64 })
   source!: string;
 
+  // the name for a reader (issue #540): the catalog's for a dataset of the
+  // catalog, the owner's for a dataset of the instance's own
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  title!: string | null;
+
   @Column({ type: 'varchar', length: 8, default: 'en' })
   language!: string;
 
@@ -47,6 +54,16 @@ export class Dataset {
 
   @Column({ type: 'text', nullable: true })
   notice!: string | null;
+
+  // the text of a license of the owner's own, in full (issue #540); the
+  // notices of a source of the catalog come from the catalog
+  @Column({ type: 'text', nullable: true })
+  license_text!: string | null;
+
+  // created by the admin (issue #540): its terms are the owner's, whatever the
+  // catalog of a later version calls a dataset of the same name
+  @Column({ type: 'boolean', default: false })
+  own!: boolean;
 
   @Column({ type: timestamp(), nullable: true })
   imported_at!: Date | null;

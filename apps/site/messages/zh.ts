@@ -133,6 +133,8 @@ export default {
   terms: {
     title: '词典数据的使用条款',
     intro: '本站词语的来源，以及展示它们所依据的条款。',
+    // the name of the served dataset for a reader (issue #540)
+    dataset: '数据集',
     source: '来源',
     license: '许可',
     attribution: '署名',

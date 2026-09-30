@@ -170,7 +170,7 @@ yarn dev                                       # API :3010, админка :3000
 ```
 
 > [!IMPORTANT]
-> Загрузите словарь через _Import dictionary_ в админке.
+> Загрузите словарь через _Managing → Datasets → Import_ на карточке датасета проекта в админке.
 
 Всё остальное для контрибьюторов: [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 

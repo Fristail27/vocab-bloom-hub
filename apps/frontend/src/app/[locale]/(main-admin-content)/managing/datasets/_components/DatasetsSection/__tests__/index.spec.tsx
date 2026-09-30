@@ -11,6 +11,9 @@ jest.mock('next-intl', () => ({
   useLocale: () => 'en',
 }));
 
+const push = jest.fn();
+jest.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh: jest.fn() }) }));
+
 jest.mock('@/core/api/EnApi', () => ({
   EnApi: {
     getDatasets: jest.fn(),
@@ -18,6 +21,11 @@ jest.mock('@/core/api/EnApi', () => ({
     installDataset: jest.fn(),
     activateDataset: jest.fn(),
     deleteDataset: jest.fn(),
+    createDataset: jest.fn(),
+    updateDataset: jest.fn(),
+    getImportSources: jest.fn(),
+    getImportStatus: jest.fn(async () => ({ running: false })),
+    getDatasetManifest: jest.fn(),
   },
 }));
 
@@ -29,6 +37,7 @@ const listOf = (over: Record<string, Partial<DatasetT>> = {}, supported = true):
   const datasets = DATASET_CATALOG.map((entry) => ({
     name: entry.name,
     title: entry.title,
+    own: false,
     installed: entry.name === 'default',
     source: entry.source,
     language: entry.language,
@@ -38,6 +47,7 @@ const listOf = (over: Record<string, Partial<DatasetT>> = {}, supported = true):
     attribution: entry.attribution,
     attribution_url: entry.attribution_url,
     notice: entry.notice || null,
+    license_text: null,
     active: entry.name === 'default',
     is_default: entry.name === 'default',
     created_at: entry.name === 'default' ? '2026-09-27T10:00:00.000Z' : null,
@@ -115,25 +125,54 @@ describe('DatasetsSection', () => {
     expect(cardOf('wordnet').queryByText('share_alike')).not.toBeInTheDocument();
   });
 
-  it('has nothing to type the terms in and no way to make a dataset of a name', () => {
+  it('has nothing to type the terms of the catalog in', () => {
     renderSection(listOf({ wiktionary: INSTALLED }));
 
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    expect(screen.queryByText('edit_terms')).not.toBeInTheDocument();
-    expect(screen.queryByText('create_title')).not.toBeInTheDocument();
+    for (const entry of DATASET_CATALOG) {
+      expect(cardOf(entry.name).queryByRole('button', { name: 'own_edit' })).not.toBeInTheDocument();
+    }
   });
 
-  it('offers the instruction for a dataset that is not installed, the import page for the one of the project', () => {
+  it('offers the instruction for a dataset that is not installed, the import and the export for the one of the project', () => {
     renderSection(listOf());
 
     expect(cardOf('wiktionary').getByRole('button', { name: 'how_to_install' })).toBeInTheDocument();
     expect(cardOf('wiktionary').queryByRole('button', { name: 'activate' })).not.toBeInTheDocument();
     expect(cardOf('wiktionary').queryByRole('button', { name: 'delete' })).not.toBeInTheDocument();
-    expect(cardOf('default').getByText('open_import').closest('a')).toHaveAttribute(
-      'href',
-      '/en/managing/import-dictionary',
-    );
+    // nothing to export or edit in a dataset that is not there
+    expect(cardOf('wiktionary').queryByRole('button', { name: 'export' })).not.toBeInTheDocument();
+    expect(cardOf('wiktionary').queryByRole('button', { name: 'edit_words' })).not.toBeInTheDocument();
+    expect(cardOf('default').getByRole('button', { name: 'import' })).toBeInTheDocument();
+    expect(cardOf('default').getByRole('button', { name: 'export' })).toBeInTheDocument();
     expect(cardOf('default').queryByRole('button', { name: 'how_to_install' })).not.toBeInTheDocument();
+    // the project's dataset is never deleted
+    expect(cardOf('default').queryByRole('button', { name: 'delete' })).not.toBeInTheDocument();
+  });
+
+  // issue #540: everything done with a dataset starts on its card
+  it('imports into a dataset and exports it from its card, in a dialog named after it', async () => {
+    (EnApi.getImportSources as jest.Mock).mockResolvedValue({ import_dir_configured: false, files: [] });
+    (EnApi.getDatasetManifest as jest.Mock).mockResolvedValue({ version: '1.0.0' });
+    renderSection(listOf());
+
+    fireEvent.click(cardOf('default').getByRole('button', { name: 'import' }));
+    const importing = within(screen.getByRole('dialog'));
+    expect(importing.getByText(/^import_title /)).toHaveTextContent('Vocab Bloom Hub English dataset');
+    expect(importing.getByText('start_importing')).toBeInTheDocument();
+    fireEvent.click(importing.getByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    fireEvent.click(cardOf('default').getByRole('button', { name: 'export' }));
+    const exporting = within(screen.getByRole('dialog'));
+    expect(exporting.getByText(/^export_title /)).toHaveTextContent('Vocab Bloom Hub English dataset');
+    expect(exporting.getByText('start_exporting')).toBeInTheDocument();
+  });
+
+  it('opens the words of a dataset for editing: chosen in the switch, the managing page', () => {
+    renderSection(listOf());
+    fireEvent.click(cardOf('default').getByRole('button', { name: 'edit_words' }));
+    expect(push).toHaveBeenCalledWith('/en/managing');
   });
 
   it('says where to download the file, under which terms the data comes and what to know', () => {
@@ -482,7 +521,7 @@ describe('DatasetsSection', () => {
     renderSection(listOf({}, false));
 
     expect(screen.getByTestId('datasets-unsupported')).toHaveTextContent('not_supported');
-    expect(screen.getAllByTestId(/^dataset-/)).toHaveLength(4);
+    expect(screen.getAllByTestId(/^dataset-[a-z_]+$/)).toHaveLength(4);
     expect(screen.queryByRole('button', { name: 'activate' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'delete' })).not.toBeInTheDocument();
 
@@ -504,5 +543,157 @@ describe('DatasetsSection', () => {
     );
 
     await waitFor(() => expect(cardOf('wordnet').getByText('status_installed')).toBeInTheDocument());
+  });
+
+  // issue #540: the datasets of the instance's own, under the cards of the catalog
+  describe('the datasets of the instance’s own', () => {
+    const MINE: DatasetT = {
+      name: 'my_words',
+      title: 'My words',
+      own: true,
+      installed: true,
+      source: 'my_words',
+      language: 'en',
+      version: null,
+      license: 'CC-BY-4.0',
+      license_url: 'https://creativecommons.org/licenses/by/4.0/',
+      attribution: 'The words of the owner',
+      attribution_url: null,
+      notice: null,
+      license_text: null,
+      active: false,
+      is_default: false,
+      created_at: '2026-09-30T10:00:00.000Z',
+      imported_at: null,
+    };
+    const withOwn = (...own: DatasetT[]): DatasetsListT => {
+      const list = listOf();
+      return { ...list, datasets: [...list.datasets, ...own] };
+    };
+    const type = (testId: string, value: string) => {
+      const field = screen.getByTestId(testId);
+      fireEvent.change(field, { target: { value } });
+    };
+    const pickLicense = async (label: string) => {
+      const select = screen.getByTestId('own-dataset-license');
+      fireEvent.mouseDown(select.querySelector('.ant-select-selector') ?? select);
+      fireEvent.click(await screen.findByTitle(label));
+    };
+
+    it('lists them under the catalog with the terms their owner stated', () => {
+      renderSection(
+        withOwn(MINE, {
+          ...MINE,
+          name: 'house',
+          title: 'House rules',
+          source: 'house',
+          license: 'House License 1.0',
+          license_url: 'https://example.org/license',
+          license_text: 'Read it aloud.',
+        }),
+      );
+
+      const mine = cardOf('my_words');
+      expect(mine.getByText('status_own')).toBeInTheDocument();
+      expect(mine.getByRole('link', { name: /CC-BY-4\.0/ })).toHaveAttribute(
+        'href',
+        'https://creativecommons.org/licenses/by/4.0/',
+      );
+      expect(mine.getByRole('button', { name: 'activate' })).toBeInTheDocument();
+      expect(mine.getByRole('button', { name: 'delete' })).toBeInTheDocument();
+      const house = cardOf('house');
+      expect(house.getByRole('link', { name: 'House License 1.0' })).toHaveAttribute(
+        'href',
+        'https://example.org/license',
+      );
+      expect(house.getByText('own_license_tag')).toBeInTheDocument();
+      expect(house.getByText('own_license_text')).toBeInTheDocument();
+    });
+
+    it('creates an empty dataset under a license of the list', async () => {
+      (EnApi.createDataset as jest.Mock).mockResolvedValue(MINE);
+      renderSection(withOwn());
+      expect(screen.getByText('own_empty')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('own-dataset-create'));
+      type('own-dataset-name', 'my_words');
+      type('own-dataset-title', 'My words');
+      type('own-dataset-attribution', 'The words of the owner');
+      fireEvent.click(screen.getByRole('button', { name: 'own_create' }));
+
+      await waitFor(() =>
+        expect(EnApi.createDataset).toHaveBeenCalledWith({
+          name: 'my_words',
+          title: 'My words',
+          license: { spdx: 'CC-BY-4.0' },
+          attribution: 'The words of the owner',
+          attribution_url: null,
+        }),
+      );
+      await waitFor(() => expect(EnApi.getDatasets).toHaveBeenCalled());
+    });
+
+    it('creates a dataset under a license of the owner’s own, and refuses a name of the catalog', async () => {
+      (EnApi.createDataset as jest.Mock).mockResolvedValue(MINE);
+      renderSection(withOwn());
+
+      fireEvent.click(screen.getByTestId('own-dataset-create'));
+      type('own-dataset-name', 'wiktionary');
+      type('own-dataset-title', 'House rules');
+      type('own-dataset-attribution', 'The house');
+      await pickLicense('own_license_own');
+      await screen.findByTestId('own-dataset-license-name');
+      type('own-dataset-license-name', 'House License 1.0');
+      type('own-dataset-license-url', 'https://example.org/license');
+      type('own-dataset-license-text', 'Read it aloud.');
+      fireEvent.click(screen.getByRole('button', { name: 'own_create' }));
+
+      expect(await screen.findByText('own_name_reserved')).toBeInTheDocument();
+      expect(EnApi.createDataset).not.toHaveBeenCalled();
+
+      type('own-dataset-name', 'house');
+      fireEvent.click(screen.getByRole('button', { name: 'own_create' }));
+      await waitFor(() =>
+        expect(EnApi.createDataset).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: 'house',
+            license: { name: 'House License 1.0', url: 'https://example.org/license', text: 'Read it aloud.' },
+          }),
+        ),
+      );
+    });
+
+    it('corrects the title freely, and changes the license only once the warning is confirmed', async () => {
+      (EnApi.updateDataset as jest.Mock).mockResolvedValue(MINE);
+      renderSection(withOwn(MINE));
+
+      fireEvent.click(screen.getByTestId('dataset-edit-my_words'));
+      type('own-dataset-title', 'My own words');
+      expect(screen.queryByTestId('own-dataset-license-warning')).not.toBeInTheDocument();
+
+      await pickLicense('Creative Commons Zero v1.0 Universal (CC0-1.0)');
+      expect(await screen.findByTestId('own-dataset-license-warning')).toHaveTextContent(
+        'own_license_change_given',
+      );
+      const save = screen.getByRole('button', { name: 'own_save' });
+      expect(save).toBeDisabled();
+
+      fireEvent.click(screen.getByTestId('own-dataset-license-confirm'));
+      expect(save).toBeEnabled();
+      fireEvent.click(save);
+      await waitFor(() =>
+        expect(EnApi.updateDataset).toHaveBeenCalledWith('my_words', {
+          title: 'My own words',
+          attribution: 'The words of the owner',
+          attribution_url: null,
+          license: { spdx: 'CC0-1.0' },
+        }),
+      );
+    });
+
+    it('creates nothing on SQLite', () => {
+      renderSection({ ...withOwn(), supported: false });
+      expect(screen.getByTestId('own-dataset-create')).toBeDisabled();
+    });
   });
 });

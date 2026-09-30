@@ -135,6 +135,8 @@ export default {
   terms: {
     title: 'Terms of the dictionary data',
     intro: 'Where the words of this site come from and under which terms they are shown.',
+    // the name of the served dataset for a reader (issue #540)
+    dataset: 'Dataset',
     source: 'Source',
     license: 'License',
     attribution: 'Attribution',

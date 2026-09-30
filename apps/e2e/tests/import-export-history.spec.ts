@@ -1,5 +1,5 @@
 import { statSync } from 'node:fs';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { API_URL } from '../config';
 import { seedWord } from '../helpers/seed';
@@ -37,6 +37,13 @@ const datasetLine = (word: string) =>
     meanings: [],
   }) + '\n';
 
+// the export of the dataset of the project, from its card on the datasets page (issue #540)
+const openExport = async (page: Page): Promise<void> => {
+  await page.goto('/en/managing/datasets');
+  await page.getByTestId('dataset-export-default').click();
+  await expect(page.getByRole('dialog')).toContainText('Export “Vocab Bloom Hub English dataset”');
+};
+
 // The heavy managing flows end to end (issue #353): an upload import with the
 // live NDJSON progress, the export download, and the audit rows both leave.
 // The tests build on each other, so they run in this order (workers: 1).
@@ -45,7 +52,10 @@ test.describe('import, export and history', () => {
     page,
     request,
   }) => {
-    await page.goto('/en/managing/import-dictionary');
+    // the import is an action of a dataset, on its card (issue #540)
+    await page.goto('/en/managing/datasets');
+    await page.getByTestId('dataset-import-default').click();
+    await expect(page.getByRole('dialog')).toContainText('Import into “Vocab Bloom Hub English dataset”');
     await page.getByRole('tab', { name: 'Separate files' }).click();
 
     await page
@@ -74,7 +84,7 @@ test.describe('import, export and history', () => {
   });
 
   test('the export streams its progress and downloads the archive', async ({ page }) => {
-    await page.goto('/en/managing/export-dictionary');
+    await openExport(page);
 
     const downloading = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Start exporting' }).click();
@@ -93,7 +103,7 @@ test.describe('import, export and history', () => {
   test('the export takes the version of the edited entries, and nothing that is not a version', async ({
     page,
   }) => {
-    await page.goto('/en/managing/export-dictionary');
+    await openExport(page);
     const version = page.getByLabel('Version of the entries edited here');
     const start = page.getByRole('button', { name: 'Start exporting' });
     await expect(page.getByText('The dictionary itself is not changed.', { exact: false })).toBeVisible();

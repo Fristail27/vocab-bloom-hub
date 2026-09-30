@@ -16,6 +16,7 @@ import {
   EnWordFormsE,
   WordLevelE,
 } from '../../../../../types';
+import { scoped } from '../../../../core/utils/dataset-scope';
 
 // simple-array serializes an empty list as '' (sqlite) or '{}' (postgres text[])
 const EMPTY_ARRAY_LITERALS = ['', '{}'];
@@ -26,20 +27,42 @@ const NON_WORD_TYPES = [EnPartOfSpeechE.phrase, EnPartOfSpeechE.grammar_pattern]
 export class EnStatisticsService {
   constructor(
     @InjectRepository(EnEntry)
-    private readonly enEntriesRep: Repository<EnEntry>,
+    private readonly activeEnEntriesRep: Repository<EnEntry>,
 
     @InjectRepository(EnWord)
-    private readonly enWordsRep: Repository<EnWord>,
+    private readonly activeEnWordsRep: Repository<EnWord>,
 
     @InjectRepository(EnMeaning)
-    private readonly enMeaningsRep: Repository<EnMeaning>,
+    private readonly activeEnMeaningsRep: Repository<EnMeaning>,
 
     @InjectRepository(EnMeaningTranslation)
-    private readonly enMeaningTranslationsRep: Repository<EnMeaningTranslation>,
+    private readonly activeEnMeaningTranslationsRep: Repository<EnMeaningTranslation>,
 
     @InjectRepository(EnShortTranslation)
-    private readonly enShortTranslationsRep: Repository<EnShortTranslation>,
+    private readonly activeEnShortTranslationsRep: Repository<EnShortTranslation>,
   ) {}
+
+  // the dataset the request works on (issue #540): the active one, or the
+  // one the switch of the admin UI names
+  private get enEntriesRep(): Repository<EnEntry> {
+    return scoped(this.activeEnEntriesRep);
+  }
+
+  private get enWordsRep(): Repository<EnWord> {
+    return scoped(this.activeEnWordsRep);
+  }
+
+  private get enMeaningsRep(): Repository<EnMeaning> {
+    return scoped(this.activeEnMeaningsRep);
+  }
+
+  private get enMeaningTranslationsRep(): Repository<EnMeaningTranslation> {
+    return scoped(this.activeEnMeaningTranslationsRep);
+  }
+
+  private get enShortTranslationsRep(): Repository<EnShortTranslation> {
+    return scoped(this.activeEnShortTranslationsRep);
+  }
 
   // "Words" baseline: base forms excluding phrases and grammar patterns
   private get baseWordsWhere() {

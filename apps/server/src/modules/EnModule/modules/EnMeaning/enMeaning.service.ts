@@ -21,6 +21,7 @@ import {
 } from '../../utils/changes/snapshots';
 import { normalizeWordLinks, WORD_LINK_KINDS, WordLinkKindT } from '../../utils/normalizeWordLinks';
 import { loadEntries, resolveBaseFormHeadwords } from '../../utils/findBaseFormHeadwords';
+import { scoped } from '../../../../core/utils/dataset-scope';
 
 const LINK_LABELS: Record<WordLinkKindT, string> = { synonyms: 'Synonyms', antonyms: 'Antonyms' };
 const MISSING_LINK_ERRORS: Record<WordLinkKindT, ErrorCodes> = {
@@ -50,13 +51,23 @@ export class EnMeaningService {
 
   constructor(
     @InjectRepository(EnWord)
-    private readonly enWordsRep: Repository<EnWord>,
+    private readonly activeEnWordsRep: Repository<EnWord>,
 
     @InjectRepository(EnMeaning)
-    private readonly enMeaningsRep: Repository<EnMeaning>,
+    private readonly activeEnMeaningsRep: Repository<EnMeaning>,
 
     private readonly enMeaningTranslationService: EnMeaningTranslationService,
   ) {}
+
+  // the dataset the request works on (issue #540): the active one, or the
+  // one the switch of the admin UI names
+  private get enWordsRep(): Repository<EnWord> {
+    return scoped(this.activeEnWordsRep);
+  }
+
+  private get enMeaningsRep(): Repository<EnMeaning> {
+    return scoped(this.activeEnMeaningsRep);
+  }
 
   /**
    * Turns a list of linked words (synonyms or antonyms) into links to existing

@@ -709,6 +709,7 @@ export interface components {
       count: number;
       entries: components['schemas']['PublicWordV1T'][];
       dataset: string;
+      title?: string;
       active: boolean;
       source: string;
       dataset_version: string | null;
@@ -777,6 +778,7 @@ export interface components {
       attribution: string;
       notice: string;
       dataset?: string;
+      title?: string;
       source?: string;
       attribution_url?: string | null;
       license_text?: string;

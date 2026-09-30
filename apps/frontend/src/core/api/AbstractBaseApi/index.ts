@@ -1,5 +1,7 @@
 import { ErrorResT } from 'server/types';
 import { ErrorCodes } from 'server/core/constants/error_codes';
+import { DATASET_QUERY_PARAM, isDatasetScopedRoute } from 'server/core/constants/datasets';
+import { readEditedDataset } from '@/components/EditedDataset/cookie';
 
 type QueryScalarT = string | number | boolean;
 // an array value is sent as a repeated key (?a=1&a=2), which is how the
@@ -49,6 +51,27 @@ export class AbstractBaseApi {
     return undefined;
   }
 
+  /**
+   * The dataset the switch of the admin UI names (issue #540); undefined for
+   * the active one. In the browser the cookie of the switch; during
+   * server-side rendering the Server*Api wrappers read it from the request.
+   */
+  static async getDataset(): Promise<string | undefined> {
+    return typeof document === 'undefined' ? undefined : readEditedDataset();
+  }
+
+  /**
+   * The query of a request, with the dataset of the switch for the admin
+   * routes of the dictionary; a request that names its dataset keeps it
+   */
+  private static async withDataset(endpoint: string, query?: ApiQueryT): Promise<ApiQueryT | undefined> {
+    const base = this.baseURL;
+    if (!endpoint.startsWith(base) || !isDatasetScopedRoute(endpoint.slice(base.length))) return query;
+    if (query?.[DATASET_QUERY_PARAM]) return query;
+    const dataset = await this.getDataset();
+    return dataset ? { ...query, [DATASET_QUERY_PARAM]: dataset } : query;
+  }
+
   private static async buildAuthHeader(): Promise<Record<string, string>> {
     const token = await this.getToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
@@ -57,7 +80,7 @@ export class AbstractBaseApi {
   static async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T | ErrorResT> {
     const { query, headers = {}, body, ...fetchOptions } = options;
     try {
-      const url = this.buildUrl(endpoint, query);
+      const url = this.buildUrl(endpoint, await this.withDataset(endpoint, query));
 
       const res = await fetch(url, {
         credentials: 'include',
@@ -116,7 +139,7 @@ export class AbstractBaseApi {
     const isMultipart = typeof FormData !== 'undefined' && body instanceof FormData;
 
     try {
-      const url = this.buildUrl(endpoint, query);
+      const url = this.buildUrl(endpoint, await this.withDataset(endpoint, query));
 
       const res = await fetch(url, {
         credentials: 'include',
@@ -176,7 +199,7 @@ export class AbstractBaseApi {
     const { query, headers = {}, body, ...fetchOptions } = options;
 
     try {
-      const url = this.buildUrl(endpoint, query);
+      const url = this.buildUrl(endpoint, await this.withDataset(endpoint, query));
 
       const res = await fetch(url, {
         credentials: 'include',

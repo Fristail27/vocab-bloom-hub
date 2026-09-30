@@ -17,8 +17,8 @@ The **database behind `DATABASE_URL`** is the only state of an instance:
   several datasets ([`datasets.md`](./datasets.md)), every one of them, each in a schema of its
   own inside the same database;
 - the registry of the datasets (`datasets`) with the terms of each, and which one is active;
-- the `settings` table, including the version of the active dataset
-  (`en_dataset_version`, shown by `GET /api/v1/meta`);
+- the `settings` table, including `en_dataset_version`, a mirror of the version of the active
+  dataset (the registry is what `GET /api/v1/meta` reports);
 - the `migrations` table — which schema migrations have been applied — and the
   `dataset_migrations` of every dataset.
 
@@ -57,7 +57,7 @@ installation with the website adds its start page (`GET /en`, `200`) to the same
 
 ## Database backup vs dictionary export
 
-The admin UI has _Export dictionary_ (`GET /api/en/dictionary/export`). It is not a backup:
+The admin UI has _Export_ on the card of a dataset (`GET /api/en/dictionary/export`). It is not a backup:
 
 |                    | Database backup (`pg_dump`)                           | Dictionary export (dataset)                                       |
 | ------------------ | ----------------------------------------------------- | ----------------------------------------------------------------- |
@@ -122,8 +122,9 @@ schema; rolling those back is just starting the previous build again.
 ## Dataset updates vs code updates
 
 The dictionary content and the code are versioned independently: the code has releases, the
-dataset has its own version (`manifest.json`, stored after import as `en_dataset_version`,
-exposed by `GET /api/v1/meta` as `dataset_version`). Upgrading the code never changes the
+dataset has its own version (`manifest.json`, kept in the registry of datasets after the import,
+mirrored in the settings as `en_dataset_version`, exposed by `GET /api/v1/meta` as
+`dataset_version`; read-only in the settings — only an import writes it). Upgrading the code never changes the
 dictionary; loading a newer dataset never changes the code.
 
 Both are about the project's own dataset, the `default` one. A dataset converted from a public
@@ -131,8 +132,8 @@ source is updated by converting the newer dump and importing it — into the sam
 update mode, or into a new one that is activated when it is ready and the old one deleted
 ([`datasets.md`](./datasets.md)).
 
-The import page shows both versions side by side — _Your version_ (`en_dataset_version` from
-the settings) against _Latest version_ (the published `manifest.json`) — and offers two ways to
+The import of the project's dataset shows both versions side by side — _Your version_ (the registry of
+datasets) against _Latest version_ (the published `manifest.json`) — and offers two ways to
 load a newer dataset:
 
 - **Update the dictionary** — the one-click update, shown when the versions differ. It runs the

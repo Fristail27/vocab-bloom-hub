@@ -170,7 +170,7 @@ yarn dev                                       # API :3010, Admin :3000, Website
 ```
 
 > [!IMPORTANT]
-> Laden Sie das Wörterbuch mit _Import dictionary_ im Admin-Panel.
+> Laden Sie das Wörterbuch mit _Managing → Datasets → Import_ im Admin-Panel.
 
 Alles Weitere für Mitwirkende: [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 

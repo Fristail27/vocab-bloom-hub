@@ -1,0 +1,15 @@
+.form {
+  margin-block-start: 16px;
+}
+
+.warning {
+  margin-block-end: 24px;
+}
+
+.points {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 12px;
+  padding-inline-start: 20px;
+}

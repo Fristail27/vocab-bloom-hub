@@ -3,8 +3,8 @@ import { expect, test } from '@playwright/test';
 // Every dashboard button must lead to a live page — shipped regressions
 // included links pointing at routes that no longer existed
 const dashboardLinks = [
-  { name: 'Import Dictionary', path: '/en/managing/import-dictionary' },
-  { name: 'Export Dictionary', path: '/en/managing/export-dictionary' },
+  // the import and the export are actions of a dataset, on its card (issue #540)
+  { name: 'Datasets', path: '/en/managing/datasets' },
   { name: 'Add word', path: '/en/managing/add-word' },
   { name: 'Bulk request', path: '/en/managing/bulk-request' },
   { name: 'Edit data', path: '/en/managing' },

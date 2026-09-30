@@ -136,6 +136,8 @@ export default {
   terms: {
     title: 'Bedingungen für die Wörterbuchdaten',
     intro: 'Woher die Wörter dieser Website stammen und unter welchen Bedingungen sie gezeigt werden.',
+    // the name of the served dataset for a reader (issue #540)
+    dataset: 'Datensatz',
     source: 'Quelle',
     license: 'Lizenz',
     attribution: 'Namensnennung',

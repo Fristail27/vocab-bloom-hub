@@ -142,6 +142,7 @@ export const fetchDatasetTerms = async (): Promise<DatasetTermsT> => {
     const { data } = (await res.json()) as PublicMetaV1ResT;
     if (!data.source) return OWN_DATASET_TERMS;
     return {
+      ...(data.title && { title: data.title }),
       source: data.source,
       license: data.license,
       license_url: data.license_url,

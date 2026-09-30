@@ -28,6 +28,10 @@ export default {
     [ErrorCodes.suggestion_queue_full]: 'قائمة انتظار الاقتراحات ممتلئة',
     [ErrorCodes.suggestion_invalid]: 'التغييرات المقترحة غير سليمة البنية',
     [ErrorCodes.suggestion_not_applicable]: 'لا شيء لتطبيقه: بلاغ نصي، أو بلاغ صدر فيه قرار بالفعل',
+    [ErrorCodes.dataset_name_reserved]: 'هذا الاسم يخصّ مجموعة بيانات أو مصدرًا في الفهرس',
+    [ErrorCodes.dataset_already_exists]: 'توجد بالفعل مجموعة بيانات بهذا الاسم',
+    [ErrorCodes.dataset_terms_fixed]: 'شروط مجموعة البيانات من الفهرس هي شروط مصدرها',
+    [ErrorCodes.dataset_license_invalid]: 'اختر رخصة من القائمة، أو أدخل اسم رخصتك ورابطها ونصّها',
     [ErrorCodes.datasets_not_supported]: 'قاعدة البيانات هذه بلا مخططات: تعدّد مجموعات البيانات يتطلب Postgres',
     [ErrorCodes.dataset_not_found]: 'لم يُعثر على مجموعة البيانات',
     [ErrorCodes.dataset_name_invalid]: 'لا يعرف هذا المثيل مجموعة بيانات بهذا الاسم',
@@ -51,6 +55,24 @@ export default {
     home: 'الصفحة الرئيسية',
     theme: 'الوضع الداكن',
     language: 'لغة الواجهة',
+  },
+  // the switch of the dataset that is edited and what it is (issue #540)
+  edited_dataset: {
+    switch: 'مجموعة البيانات قيد التحرير',
+    switch_prefix: 'التحرير:',
+    block: 'مجموعة البيانات قيد التحرير',
+    editing: 'أنت تحرّر',
+    active: 'نشطة',
+    not_served: 'غير مُقدَّمة',
+    own: 'خاصة بك',
+    catalog: 'من الفهرس',
+    source: 'المصدر',
+    license: 'الرخصة',
+    entries: 'المدخلات',
+    not_served_note:
+      'تقدّم الواجهة البرمجية والموقع «{active}». ما تغيّره هنا علنيّ في تبويب مجموعة البيانات هذه في صفحة الكلمة، ويُقدَّم كاملًا حين تنشّطها.',
+    public_source_note:
+      'تعديل «{title}» يَسِم المدخل بأنه معدَّل: يُخبَر قرّاؤه بالمدخلات التي تختلف عمّا نشره المصدر.',
   },
   footer: {
     docs: 'التوثيق',
@@ -230,9 +252,7 @@ export default {
     edit: 'تعديل البيانات',
     edit_word: 'تعديل الكلمة',
     back_to_managing: 'العودة إلى إدارة الكلمات',
-    import_dictionary: 'استيراد القاموس',
     bulk_request: 'طلب جماعي',
-    export_dictionary: 'تصدير القاموس',
     datasets: 'مجموعات البيانات',
   },
   // the datasets of the instance (issue #527): the catalog, the terms and the instruction
@@ -273,7 +293,14 @@ export default {
     deleted: 'حُذفت مجموعة البيانات',
     how_to_install: 'طريقة التثبيت',
     update: 'التحديث من ملف أحدث',
-    open_import: 'فتح صفحة الاستيراد',
+    // everything done with a dataset starts on its card (issue #540)
+    catalog_title: 'الفهرس',
+    edit_words: 'تعديل كلماتها',
+    import: 'استيراد',
+    export: 'تصدير',
+    details: 'التفاصيل',
+    import_title: 'استيراد إلى «{name}»',
+    export_title: 'تصدير «{name}»',
     about_default:
       'مجموعة بيانات المشروع: مداخل ولّدتها نماذج لغوية، مع مستويات CEFR وترجمات إلى سبع لغات. يبدأ بها كل مثيل؛ وتُحمَّل وتُحدَّث من صفحة الاستيراد.',
     about_wiktionary:
@@ -338,6 +365,49 @@ export default {
     done_update: 'حُدّثت مجموعة البيانات.',
     done_summary: 'استُبدل: {updated} · أُضيف: {added} · أُبقي بتعديلاتك: {kept}',
     too_large: 'الملف أكبر ممّا يقبله الخادم',
+    // the datasets of the instance's own (issue #540)
+    own_title: 'مجموعات بيانات هذا المثيل',
+    own_intro:
+      'قاموس خاص بك إلى جانب مجموعات الفهرس: يُنشأ فارغًا بالرخصة التي تختارها، ويُملأ باختياره مجموعةً للتحرير أو بالاستيراد، ويُقدَّم حين تفعّله. مصدره في الواجهة البرمجية هو اسمه.',
+    own_empty: 'لا توجد مجموعة بيانات خاصة بك بعد',
+    own_create_button: 'إنشاء مجموعة بيانات',
+    own_create_title: 'مجموعة بيانات جديدة لهذا المثيل',
+    own_create: 'إنشاء',
+    own_created: 'أُنشئت «{name}». اخترها مجموعةً للتحرير لتملأها.',
+    own_edit: 'تعديل الشروط',
+    own_edit_title: 'شروط «{name}»',
+    own_save: 'حفظ',
+    own_saved: 'حُفظت الشروط',
+    status_own: 'خاصة بك',
+    label_created: 'تاريخ الإنشاء',
+    own_field_name: 'الاسم',
+    own_field_name_hint:
+      'حروف لاتينية صغيرة وأرقام و«_»، ويبدأ بحرف. يسمّي المجموعة في الواجهة البرمجية ولا يمكن تغييره.',
+    own_field_title: 'العنوان',
+    own_field_license_name: 'اسم الرخصة',
+    own_field_license_url: 'أين تُقرأ الرخصة',
+    own_field_license_text: 'نص الرخصة كاملًا',
+    own_field_attribution_hint: 'السطر الذي على كل من يعرض البيانات أن يعرضه.',
+    own_field_attribution_url: 'إلى أين تقود النسبة (اختياري)',
+    own_required: 'مطلوب',
+    own_name_pattern: 'حروف لاتينية صغيرة وأرقام و«_»، ويبدأ بحرف؛ من 2 إلى 40 حرفًا',
+    own_name_reserved: 'هذا الاسم يخصّ مجموعة بيانات أو مصدرًا في الفهرس',
+    own_url_invalid: 'رابط يبدأ بـ http:// أو https://',
+    own_license_own: 'رخصة خاصة بي…',
+    own_license_own_hint:
+      'حين لا تناسب أيٌّ من الرخص أعلاه: اسمها ورابطها ونصّها كاملًا. يرافق النص البيانات — في الواجهة البرمجية وفي صفحات الكلمات وفي كل ملف تصدير.',
+    own_license_is_standard: 'هذه الرخصة موجودة في القائمة: اخترها من هناك',
+    own_license_tag: 'رخصة خاصة',
+    own_license_text: 'نص الرخصة',
+    own_license_change_title: 'أنت تغيّر رخصة هذه المجموعة',
+    own_license_change_given:
+      'من أخذ البيانات يحتفظ بحق استعمالها بالرخصة التي أخذها بها: الرخصة الممنوحة لا تُسترد.',
+    own_license_change_reports:
+      'التصحيحات التي أرسلها القرّاء قُبلت بالرخصة التي كان نموذج البلاغ يذكرها حين أرسلوها.',
+    own_license_change_served:
+      'من الآن تحمل الواجهة البرمجية وصفحات الكلمات وملفات التصدير لهذه المجموعة الرخصة الجديدة.',
+    own_license_change_journal: 'يُسجَّل التغيير في أحداث المثيل مع الرخصة قبله وبعده.',
+    own_license_change_confirm: 'فهمت، غيّر الرخصة',
   },
   import_dictionary: {
     your_version: 'إصدارك',
@@ -376,8 +446,6 @@ export default {
     data_attribution: 'الإسناد:',
     up_to_date: 'لديك بالفعل أحدث إصدار من القاموس',
     update_available: 'يتوفر إصدار أحدث من مجموعة البيانات',
-    published_is_own:
-      'مجموعة البيانات المنشورة هي مجموعة المشروع وتُستورد إلى المجموعة «default». «{name}» مجموعة بيانات من مصدر آخر: تُحدَّث في صفحة مجموعات البيانات من ملف مصدرها.',
     start_update: 'تحديث القاموس',
     update_summary: 'اكتمل التحديث: {updated} مدخلًا حُدّث، و{added} أُضيف، و{kept} أُبقي عليه مع تعديلاتك',
     auto_import_running: 'يجري تحميل القاموس تلقائيًا: {stage} {percent}%',
@@ -412,10 +480,6 @@ export default {
     server_file_placeholder: 'أو اختر مجموعة بيانات على الخادم',
     server_file_empty: 'لا توجد مجموعات بيانات في مجلد الاستيراد',
     import_dir_hint: 'اضبط DICTIONARY_IMPORT_DIR على الخادم لاختيار مجموعات البيانات من مجلد مُركَّب',
-    dataset_target: 'الاستيراد إلى',
-    dataset_active: '{name} — مجموعة البيانات النشطة',
-    dataset_hint:
-      'الاستيراد إلى مجموعة أخرى لا يمسّ المجموعة النشطة: تواصل الواجهة البرمجية تقديمها حتى تفعّل المجموعة الجديدة.',
   },
   bulk_request: {
     license_note:

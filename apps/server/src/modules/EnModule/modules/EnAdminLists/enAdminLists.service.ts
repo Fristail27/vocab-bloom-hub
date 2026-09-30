@@ -25,6 +25,7 @@ import { LIST_DEFAULT_LIMIT, PaginationQueryDTO } from './dto/PaginationQuery.dt
 import { escapeLike } from '../EnSearch/utils/escapeLike';
 import { foldedWord } from '../../utils/foldedWord';
 import { normalizeWordLinks } from '../../utils/normalizeWordLinks';
+import { scoped } from '../../../../core/utils/dataset-scope';
 
 type PageT = { page: number; limit: number; after?: number | undefined };
 type WordLinksT = { synonyms: string[]; antonyms: string[] };
@@ -43,14 +44,32 @@ const toCount = (value: unknown): number => Number(value) || 0;
 export class EnAdminListsService {
   constructor(
     @InjectRepository(EnWord)
-    private readonly enWordsRep: Repository<EnWord>,
+    private readonly activeEnWordsRep: Repository<EnWord>,
     @InjectRepository(EnMeaning)
-    private readonly enMeaningsRep: Repository<EnMeaning>,
+    private readonly activeEnMeaningsRep: Repository<EnMeaning>,
     @InjectRepository(EnMeaningTranslation)
-    private readonly enMeaningTranslationsRep: Repository<EnMeaningTranslation>,
+    private readonly activeEnMeaningTranslationsRep: Repository<EnMeaningTranslation>,
     @InjectRepository(EnShortTranslation)
-    private readonly enShortTranslationsRep: Repository<EnShortTranslation>,
+    private readonly activeEnShortTranslationsRep: Repository<EnShortTranslation>,
   ) {}
+
+  // the dataset the request works on (issue #540): the active one, or the
+  // one the switch of the admin UI names
+  private get enWordsRep(): Repository<EnWord> {
+    return scoped(this.activeEnWordsRep);
+  }
+
+  private get enMeaningsRep(): Repository<EnMeaning> {
+    return scoped(this.activeEnMeaningsRep);
+  }
+
+  private get enMeaningTranslationsRep(): Repository<EnMeaningTranslation> {
+    return scoped(this.activeEnMeaningTranslationsRep);
+  }
+
+  private get enShortTranslationsRep(): Repository<EnShortTranslation> {
+    return scoped(this.activeEnShortTranslationsRep);
+  }
 
   private pageOf(query: PaginationQueryDTO): PageT {
     return {

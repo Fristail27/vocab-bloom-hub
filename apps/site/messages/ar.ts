@@ -135,6 +135,8 @@ export default {
   terms: {
     title: 'شروط بيانات القاموس',
     intro: 'من أين تأتي كلمات هذا الموقع وبأي شروط تُعرض.',
+    // the name of the served dataset for a reader (issue #540)
+    dataset: 'مجموعة البيانات',
     source: 'المصدر',
     license: 'الرخصة',
     attribution: 'النسبة',

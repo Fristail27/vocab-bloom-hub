@@ -168,7 +168,7 @@ yarn dev                                       # API :3010，管理面板 :3000�
 ```
 
 > [!IMPORTANT]
-> 请在管理面板中使用 _Import dictionary_ 加载词典。
+> 请在管理面板中使用 _Managing → Datasets → Import_ 加载词典。
 
 贡献者需要的其他一切：[`CONTRIBUTING.md`](../CONTRIBUTING.md)。
 

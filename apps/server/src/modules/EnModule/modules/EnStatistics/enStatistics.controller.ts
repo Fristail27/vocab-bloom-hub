@@ -3,8 +3,11 @@ import { ApiTags } from '@nestjs/swagger';
 import { AdminGuard } from '../../../AuthModule/guards/admin.guard';
 import { EnStatisticsService } from './enStatistics.service';
 import { EnIssuesStatisticsT, EnStatisticsT, EnTranslationsStatisticsT } from '../../../../../types';
+import { ApiDatasetQuery } from '../../../DatasetsModule/api-dataset-query';
 
 @ApiTags('En_Statistics')
+// the dataset the request works on (issue #540)
+@ApiDatasetQuery()
 @Controller('/api/en/statistics')
 export class EnStatisticsController {
   constructor(private readonly enStatisticsService: EnStatisticsService) {}

@@ -12,6 +12,7 @@ import { escapeLike } from './utils/escapeLike';
 import { foldedWord, likeIgnoringCase } from '../../utils/foldedWord';
 import { WordRowsService } from '../../word-rows.service';
 import { SEARCH_ITEM_RELATIONS } from '../../utils/wordRelations';
+import { scoped } from '../../../../core/utils/dataset-scope';
 
 /**
  * Terms shorter than this get the short-term flow (issue #292): the exact
@@ -35,10 +36,16 @@ type OrderedIdsT = {
 export class EnSearchService {
   constructor(
     @InjectRepository(EnWord)
-    private readonly enWordsRep: Repository<EnWord>,
+    private readonly activeEnWordsRep: Repository<EnWord>,
     private readonly wordRows: WordRowsService,
     @Optional() private readonly metrics?: MetricsService,
   ) {}
+
+  // the dataset the request works on (issue #540): the active one, or the
+  // one the switch of the admin UI names
+  private get enWordsRep(): Repository<EnWord> {
+    return scoped(this.activeEnWordsRep);
+  }
 
   private async getExactMatchesAndPhrasalVerbsIds(search: string, type: EnEntryTypesE | undefined) {
     const exactSet = new Set<number>();

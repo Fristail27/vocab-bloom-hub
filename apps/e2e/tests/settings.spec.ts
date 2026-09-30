@@ -11,6 +11,11 @@ test.describe('settings management', () => {
     const versionRow = page.getByRole('row').filter({ has: page.locator('code', { hasText: /^version$/ }) });
     await expect(versionRow).toHaveCount(1);
     await expect(versionRow.getByRole('button')).toHaveCount(0);
+    // the version of the served dataset is what its file said, written by an import only (issue #540)
+    const datasetVersionRow = page
+      .getByRole('row')
+      .filter({ has: page.locator('code', { hasText: /^en_dataset_version$/ }) });
+    await expect(datasetVersionRow.getByRole('button')).toHaveCount(0);
 
     // add
     await page.getByPlaceholder('field name').fill('e2e_theme');

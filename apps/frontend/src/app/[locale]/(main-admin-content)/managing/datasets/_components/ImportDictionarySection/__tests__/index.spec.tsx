@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { App } from 'antd';
-import { ImportDictionaryChunkT } from 'server/types';
+import { DatasetT, ImportDictionaryChunkT } from 'server/types';
 import { EnDictionaryImportPhasesE } from 'server/src/modules/EnModule/modules/EnImportDictionary/constants';
 
 jest.mock('next-intl', () => ({
@@ -14,6 +14,7 @@ jest.mock('@/core/api/EnApi', () => ({
     uploadDictionary: jest.fn(),
     getImportSources: jest.fn(),
     getImportStatus: jest.fn(),
+    getDatasetManifest: jest.fn(),
   },
 }));
 
@@ -36,11 +37,31 @@ const completedChunks = [
   { stage: EnDictionaryImportPhasesE.completed, percent: 100 } as ImportDictionaryChunkT,
 ];
 
-const renderSection = (props: React.ComponentProps<typeof ImportDictionarySection> = {}) =>
+// the dataset of the card the dialog was opened from (issue #540): the project's own, active, by default
+const datasetOf = (over: Partial<DatasetT> = {}): DatasetT =>
+  ({
+    name: 'default',
+    title: 'Vocab Bloom Hub English dataset',
+    own: false,
+    installed: true,
+    source: 'vocab-bloom-hub',
+    version: null,
+    active: true,
+    is_default: true,
+    ...over,
+  }) as DatasetT;
+
+const renderSection = (over: Partial<DatasetT> = {}, onFinished?: () => void) =>
   render(
     <App>
-      <ImportDictionarySection {...props} />
+      <ImportDictionarySection dataset={datasetOf(over)} onFinished={onFinished} />
     </App>,
+  );
+
+// the version of the published dataset the dialog reads when it opens
+const published = (version: string | null) =>
+  (EnApi.getDatasetManifest as jest.Mock).mockResolvedValue(
+    version ? { version } : { error: true, message: 'dataset_manifest_not_found' },
   );
 
 describe('ImportDictionarySection', () => {
@@ -52,6 +73,7 @@ describe('ImportDictionarySection', () => {
       revisions: [],
     });
     (EnApi.getImportStatus as jest.Mock).mockResolvedValue({ running: false });
+    published(null);
   });
 
   it('доводит прогресс до 100% и прячет кнопку после успешного импорта', async () => {
@@ -93,19 +115,22 @@ describe('ImportDictionarySection', () => {
     );
   });
 
-  it('показывает версии из пропсов и подсказку об актуальной версии', () => {
-    renderSection({ yourVersion: '0.2.0', latestVersion: '0.2.0' });
+  it('показывает версии датасета и опубликованного датасета и подсказку об актуальной версии', async () => {
+    published('0.2.0');
+    renderSection({ version: '0.2.0' });
 
     expect(screen.getByText(/your_version: 0\.2\.0/)).toBeInTheDocument();
-    expect(screen.getByText(/latest_version: 0\.2\.0/)).toBeInTheDocument();
+    expect(await screen.findByText(/latest_version: 0\.2\.0/)).toBeInTheDocument();
     expect(screen.getByText('up_to_date')).toBeInTheDocument();
     // re-import stays possible even when the versions match
     expect(screen.getByText('start_importing')).toBeInTheDocument();
   });
 
-  it('не показывает подсказку, когда доступна более новая версия', () => {
-    renderSection({ yourVersion: '0.1.0', latestVersion: '0.2.0' });
+  it('не показывает подсказку, когда доступна более новая версия', async () => {
+    published('0.2.0');
+    renderSection({ version: '0.1.0' });
 
+    expect(await screen.findByText('update_available')).toBeInTheDocument();
     expect(screen.queryByText('up_to_date')).not.toBeInTheDocument();
   });
 
@@ -278,26 +303,33 @@ describe('ImportDictionarySection', () => {
     });
 
     it('never shows the up-to-date hint for a local source', async () => {
-      renderSection({ yourVersion: '0.2.0', latestVersion: '0.2.0' });
-      expect(screen.getByText('up_to_date')).toBeInTheDocument();
+      published('0.2.0');
+      renderSection({ version: '0.2.0' });
+      expect(await screen.findByText('up_to_date')).toBeInTheDocument();
       await openTab('source_archive', 'upload_text');
       expect(screen.queryByText('up_to_date')).not.toBeInTheDocument();
     });
   });
 });
 
-// The dataset an import writes into (issue #527)
-describe('ImportDictionarySection: the target dataset', () => {
-  const datasets = {
-    supported: true,
-    active: 'default',
-    datasets: [
-      { name: 'default', title: 'Own', installed: true, version: '1.0.0', active: true, is_default: true },
-      { name: 'wiktionary', title: 'Wiktionary', installed: true, version: '2026.09', active: false },
-      // a dataset of the catalog the instance does not hold is no target of an import
-      { name: 'wordnet', title: 'WordNet', installed: false, version: null, active: false },
-    ],
-  } as unknown as React.ComponentProps<typeof ImportDictionarySection>['datasets'];
+// The dataset an import writes into (issues #527, #540): the one of the card the dialog was opened from
+describe('ImportDictionarySection: the dataset of the card', () => {
+  const mockUploadStreaming = () =>
+    (EnApi.uploadDictionary as jest.Mock).mockImplementation(
+      async (_files: unknown, _manual: unknown, handleChunk: HandleChunkT) => {
+        completedChunks.forEach(handleChunk);
+        return { success: true };
+      },
+    );
+  const uploadArchive = async () => {
+    await screen.findByText('upload_text');
+    fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement, {
+      target: { files: [new File(['zip'], 'export.zip', { type: 'application/zip' })] },
+    });
+    await screen.findByText('export.zip');
+    fireEvent.click(screen.getByText('start_importing'));
+    await screen.findByText('100.00%');
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -307,104 +339,53 @@ describe('ImportDictionarySection: the target dataset', () => {
       revisions: [],
     });
     (EnApi.getImportStatus as jest.Mock).mockResolvedValue({ running: false });
+    published('1.1.0');
   });
 
-  it('offers no choice on a driver without schemas and names no dataset in the request', async () => {
+  it('names no dataset for the active one, as before', async () => {
     mockImportStreaming(completedChunks);
-    renderSection({ datasets: { ...datasets!, supported: false } });
+    const finished = jest.fn();
+    renderSection({ version: '1.0.0' }, finished);
 
-    expect(screen.queryByText('dataset_target')).not.toBeInTheDocument();
+    expect(await screen.findByText('update_available')).toBeInTheDocument();
     fireEvent.click(screen.getByText('start_importing'));
     await screen.findByText('100.00%');
     expect(EnApi.importDictionary).toHaveBeenCalledWith({}, expect.any(Function), expect.any(Function));
+    // the card behind the dialog reads its dataset again
+    expect(finished).toHaveBeenCalled();
   });
 
-  it('imports into the active dataset by default, without naming it', async () => {
+  it('names the project dataset when another one is served, and offers it the published dataset', async () => {
     mockImportStreaming(completedChunks);
-    renderSection({ datasets, yourVersion: '1.0.0' });
+    renderSection({ active: false, version: '1.0.0' });
 
-    expect(screen.getByText('dataset_target')).toBeInTheDocument();
-    expect(screen.queryByText('dataset_hint')).not.toBeInTheDocument();
+    expect(await screen.findByText('start_update')).toBeInTheDocument();
     fireEvent.click(screen.getByText('start_importing'));
     await screen.findByText('100.00%');
-    expect(EnApi.importDictionary).toHaveBeenCalledWith({}, expect.any(Function), expect.any(Function));
-  });
-
-  it('names the dataset the page was opened for and shows the version that dataset holds', async () => {
-    (EnApi.uploadDictionary as jest.Mock).mockImplementation(
-      async (_files: unknown, _manual: unknown, handleChunk: HandleChunkT) => {
-        completedChunks.forEach(handleChunk);
-        return { success: true };
-      },
+    expect(EnApi.importDictionary).toHaveBeenCalledWith(
+      { dataset: 'default' },
+      expect.any(Function),
+      expect.any(Function),
     );
-    renderSection({ datasets, yourVersion: '1.0.0', initialTarget: 'wiktionary' });
-
-    expect(screen.getByText('dataset_hint')).toBeInTheDocument();
-    expect(screen.getByText('your_version: 2026.09')).toBeInTheDocument();
-
-    // an export of such a dataset goes into it: the request names the dataset
-    fireEvent.click(screen.getByRole('tab', { name: 'source_archive' }));
-    await screen.findByText('upload_text');
-    fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement, {
-      target: { files: [new File(['zip'], 'export.zip', { type: 'application/zip' })] },
-    });
-    await screen.findByText('export.zip');
-    fireEvent.click(screen.getByText('start_importing'));
-    await screen.findByText('100.00%');
-    expect((EnApi.uploadDictionary as jest.Mock).mock.calls[0][1]).toEqual({ dataset: 'wiktionary' });
   });
 
-  // issue #530: the published dataset is the project's own. Its version says nothing about a
-  // dataset of another source, and it does not go into one
-  it('compares the version with the published dataset for the dataset of the project only', () => {
-    renderSection({ datasets, yourVersion: '1.0.0', latestVersion: '1.1.0', initialTarget: 'wiktionary' });
+  // issue #530: the published dataset is the project's own; a dataset of the owner's takes its exports
+  it('offers a dataset of the owner’s no published dataset, and names it in the upload', async () => {
+    mockUploadStreaming();
+    renderSection({ name: 'my_words', title: 'My words', own: true, active: false, is_default: false });
 
-    expect(screen.getByText('your_version: 2026.09')).toBeInTheDocument();
-    expect(screen.queryByText('update_available')).not.toBeInTheDocument();
-    expect(screen.queryByText('start_update')).not.toBeInTheDocument();
-    expect(screen.getByTestId('published-not-for-target')).toHaveTextContent('published_is_own');
-    expect(screen.getByText('start_importing').closest('button')).toBeDisabled();
-    expect(EnApi.importDictionary).not.toHaveBeenCalled();
+    expect(screen.queryByRole('tab', { name: 'source_huggingface' })).not.toBeInTheDocument();
+    expect(EnApi.getDatasetManifest).not.toHaveBeenCalled();
+    expect(screen.getByText(/your_version: —/)).toBeInTheDocument();
+    await uploadArchive();
+    expect((EnApi.uploadDictionary as jest.Mock).mock.calls[0][1]).toEqual({ dataset: 'my_words' });
   });
 
-  it('does the same when the dataset of another source is the active one', () => {
-    const active = {
-      ...datasets!,
-      active: 'wiktionary',
-      datasets: datasets!.datasets.map((dataset) => ({ ...dataset, active: dataset.name === 'wiktionary' })),
-    };
-    // the settings mirror the version of the active dataset
-    renderSection({ datasets: active, yourVersion: '2026.09', latestVersion: '2026.09' });
+  it('names no dataset when the dataset of the owner’s is the active one', async () => {
+    mockUploadStreaming();
+    renderSection({ name: 'my_words', own: true, active: true, is_default: false });
 
-    expect(screen.queryByText('update_available')).not.toBeInTheDocument();
-    expect(screen.queryByText('up_to_date')).not.toBeInTheDocument();
-    expect(screen.getByTestId('published-not-for-target')).toBeInTheDocument();
-    expect(screen.getByText('start_importing').closest('button')).toBeDisabled();
-  });
-
-  it('offers the update of the project dataset as before', () => {
-    renderSection({ datasets, yourVersion: '1.0.0', latestVersion: '1.1.0' });
-
-    expect(screen.getByText('update_available')).toBeInTheDocument();
-    expect(screen.getByText('start_update')).toBeInTheDocument();
-    expect(screen.queryByTestId('published-not-for-target')).not.toBeInTheDocument();
-    expect(screen.getByText('start_importing').closest('button')).toBeEnabled();
-  });
-
-  it('ignores a dataset of the link that is not installed', () => {
-    renderSection({ datasets, initialTarget: 'wordnet' });
-
-    expect(screen.queryByText('dataset_hint')).not.toBeInTheDocument();
-  });
-
-  it('offers no choice while the default dataset is the only one installed', () => {
-    renderSection({
-      datasets: {
-        ...datasets!,
-        datasets: datasets!.datasets.filter((dataset) => dataset.name !== 'wiktionary'),
-      },
-    });
-
-    expect(screen.queryByText('dataset_target')).not.toBeInTheDocument();
+    await uploadArchive();
+    expect((EnApi.uploadDictionary as jest.Mock).mock.calls[0][1]).toEqual({ dataset: undefined });
   });
 });

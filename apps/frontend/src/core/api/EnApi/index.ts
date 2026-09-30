@@ -52,7 +52,9 @@ import {
   GetEnTranslationsStatisticsResT,
   GetWordByIdResT,
   GetDatasetManifestResT,
+  CreateDatasetReqT,
   DatasetResT,
+  UpdateDatasetReqT,
   DeleteDatasetResT,
   GetDatasetUpdatesResT,
   GetDatasetsResT,
@@ -77,6 +79,7 @@ import {
 } from 'server/types';
 import { CheckWordResT } from 'server/types';
 import { ErrorCodes } from 'server/core/constants/error_codes';
+import { DATASET_QUERY_PARAM } from 'server/core/constants/datasets';
 
 export class EnApi extends AbstractBaseApi {
   static async checkWord(word: string, pos: EnPartOfSpeechE, forPhrasal?: boolean): Promise<CheckWordResT> {
@@ -89,11 +92,11 @@ export class EnApi extends AbstractBaseApi {
     return this.post<AddResT>(`${this.baseURL}/en/add/word`, data);
   }
 
-  // Reads through the public prefix and unwraps the v1 envelope for the
-  // admin components
+  // The search of the admin UI (issue #540): the flat search of the public
+  // API on the dataset the switch names — the public prefix serves the
+  // active dataset only
   static async search(search: string): Promise<SearchResT> {
-    const res = await this.publicSearch({ search, limit: 100 });
-    return 'error' in res ? res : res.data;
+    return this.get<SearchResT>(`${this.baseURL}/en/search`, { query: { search, limit: 100 } });
   }
 
   // Mirrors the raw endpoint contract: every filter the DTO accepts is passed
@@ -355,12 +358,16 @@ export class EnApi extends AbstractBaseApi {
     return this.readNdjsonStream(reader, handleChunk, onError);
   }
 
+  /** An export of a dataset: the one named, else the one the switch of the header names (issue #540) */
   static async exportDictionary(
     handleChunk: (ch: ImportDictionaryChunkT) => void,
     onError: (err: string) => void,
     query: ExportDictionaryQueryT = {},
+    dataset?: string,
   ): Promise<{ success: boolean } | ErrorResT> {
-    const reader = await AbstractBaseApi.stream(`${this.baseURL}/en/dictionary/export`, { query });
+    const reader = await AbstractBaseApi.stream(`${this.baseURL}/en/dictionary/export`, {
+      query: { ...query, ...(dataset && { [DATASET_QUERY_PARAM]: dataset }) },
+    });
 
     if ('error' in reader) {
       return reader;
@@ -417,6 +424,16 @@ export class EnApi extends AbstractBaseApi {
     }
 
     return this.readNdjsonStream(reader, handleChunk, onError);
+  }
+
+  /** An empty dataset of the instance's own under the license the owner chose (issue #540) */
+  static async createDataset(body: CreateDatasetReqT): Promise<DatasetResT> {
+    return this.post<DatasetResT>(`${this.baseURL}/en/datasets`, body);
+  }
+
+  /** The terms of a dataset of the owner's: the title, the attribution, the license */
+  static async updateDataset(name: string, body: UpdateDatasetReqT): Promise<DatasetResT> {
+    return this.patch<DatasetResT>(`${this.baseURL}/en/datasets/${encodeURIComponent(name)}`, body);
   }
 
   static async activateDataset(name: string): Promise<DatasetResT> {

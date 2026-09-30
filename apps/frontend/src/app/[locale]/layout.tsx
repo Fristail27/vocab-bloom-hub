@@ -10,6 +10,8 @@ import { AntdRegistry } from '@ant-design/nextjs-registry';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { Provider } from '@/components/Provider';
+import { EditedDatasetProvider } from '@/components/EditedDataset';
+import { ServerEnApi } from '@/core/api/EnApi/ServerEnApi';
 import { ServerAuthApi } from '@/core/api/AuthApi/ServerAuthApi';
 import { ServerSettingsApi } from '@/core/api/SettingsApi/ServerSettingsApi';
 import { getThemeVariablesLink } from '@/helpers/getThemeLink';
@@ -56,6 +58,8 @@ export default async function RootLayout({ children, params }: RootLayoutP) {
   const settings = await ServerSettingsApi.getSettings();
   // admin-only on the server: asked only with a session, so the login page stays quiet
   const update = isAuth ? await getUpdateCheck() : null;
+  // the datasets the switch of the dataset that is edited offers (issue #540); asked with a session only
+  const datasets = isAuth ? await ServerEnApi.getDatasets() : null;
   return (
     <html lang={locale} dir={localeDirection(locale)} className={`${geistSans.variable} ${geistMono.variable}`}>
       <head>
@@ -67,9 +71,11 @@ export default async function RootLayout({ children, params }: RootLayoutP) {
           <App className={styles.antdAppContainer}>
             <Provider theme={theme} isAuth={isAuth}>
               <NextIntlClientProvider messages={messages}>
-                <Header />
-                <main className={styles.mainContainer}>{children}</main>
-                <Footer settings={settings} update={update} />
+                <EditedDatasetProvider initial={datasets && !('error' in datasets) ? datasets : undefined}>
+                  <Header />
+                  <main className={styles.mainContainer}>{children}</main>
+                  <Footer settings={settings} update={update} />
+                </EditedDatasetProvider>
               </NextIntlClientProvider>
             </Provider>
           </App>

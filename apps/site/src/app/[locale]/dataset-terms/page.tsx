@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 import { fetchDatasetTerms } from '@/core/dictionary';
+import { findStandardLicense } from 'server/core/constants/data_licenses';
 import { licenseLabel, OWN_DATASET_SOURCE } from '@/core/datasetTerms';
 import { pageMeta } from '@/core/site';
 import { Link } from '@/i18n/navigation';
@@ -41,14 +42,22 @@ export default async function DatasetTermsPage({ params }: LocaleParamsP) {
   const t = await getTranslations('terms');
   const terms = await fetchDatasetTerms();
   const isOwnData = terms.source === OWN_DATASET_SOURCE;
-  // CC BY-SA and the like: what is built on the data stays under the same license
-  const isShareAlike = /-SA-/.test(terms.license);
+  // CC BY-SA and the like: what is built on the data stays under the same license. A
+  // license of the list says whether it is (ODbL is, issue #540), another one its identifier
+  const isShareAlike = findStandardLicense(terms.license)?.share_alike ?? /-SA-/.test(terms.license);
 
   return (
     <div className={`container ${styles.page}`}>
       <h1>{t('title')}</h1>
       <p className={styles.intro}>{t('intro')}</p>
       <dl className={styles.terms}>
+        {/* a dataset of the instance's own is named by its owner (issue #540) */}
+        {terms.title && (
+          <>
+            <dt>{t('dataset')}</dt>
+            <dd data-testid="terms-dataset">{terms.title}</dd>
+          </>
+        )}
         <dt>{t('source')}</dt>
         <dd>
           <code>{terms.source}</code>

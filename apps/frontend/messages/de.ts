@@ -32,6 +32,12 @@ export default {
     [ErrorCodes.suggestion_invalid]: 'Die vorgeschlagenen Änderungen sind fehlerhaft formatiert',
     [ErrorCodes.suggestion_not_applicable]:
       'Nichts anzuwenden: eine Textmeldung oder eine Meldung, die bereits ein Urteil erhalten hat',
+    [ErrorCodes.dataset_name_reserved]: 'Dieser Name gehört einem Datensatz oder einer Quelle des Katalogs',
+    [ErrorCodes.dataset_already_exists]: 'Ein Datensatz mit diesem Namen existiert bereits',
+    [ErrorCodes.dataset_terms_fixed]:
+      'Die Bedingungen eines Datensatzes aus dem Katalog sind die seiner Quelle',
+    [ErrorCodes.dataset_license_invalid]:
+      'Wählen Sie eine Lizenz aus der Liste oder geben Sie Name, Link und Text Ihrer eigenen an',
     [ErrorCodes.datasets_not_supported]:
       'Diese Datenbank hat keine Schemas: mehrere Datensätze brauchen Postgres',
     [ErrorCodes.dataset_not_found]: 'Der Datensatz wurde nicht gefunden',
@@ -58,6 +64,24 @@ export default {
     home: 'Startseite',
     theme: 'Dunkles Design',
     language: 'Sprache der Oberfläche',
+  },
+  // the switch of the dataset that is edited and what it is (issue #540)
+  edited_dataset: {
+    switch: 'Der bearbeitete Datensatz',
+    switch_prefix: 'Bearbeitung:',
+    block: 'Der bearbeitete Datensatz',
+    editing: 'Sie bearbeiten',
+    active: 'aktiv',
+    not_served: 'nicht ausgeliefert',
+    own: 'eigener',
+    catalog: 'aus dem Katalog',
+    source: 'Quelle',
+    license: 'Lizenz',
+    entries: 'Einträge',
+    not_served_note:
+      'Die API und die Website liefern „{active}“ aus. Was Sie hier ändern, ist auf dem Reiter dieses Datensatzes einer Wortseite öffentlich und wird vollständig ausgeliefert, sobald Sie ihn aktivieren.',
+    public_source_note:
+      'Eine Bearbeitung von „{title}“ markiert den Eintrag als geändert: Seinen Lesern wird angezeigt, welche Einträge von dem abweichen, was die Quelle veröffentlicht hat.',
   },
   footer: {
     docs: 'Dokumentation',
@@ -237,9 +261,7 @@ export default {
     edit: 'Daten bearbeiten',
     edit_word: 'Wort bearbeiten',
     back_to_managing: 'Zurück zur Wortverwaltung',
-    import_dictionary: 'Wörterbuch importieren',
     bulk_request: 'Massenanfrage',
-    export_dictionary: 'Wörterbuch exportieren',
     datasets: 'Datensätze',
   },
   // the datasets of the instance (issue #527): the catalog, the terms and the instruction
@@ -282,7 +304,14 @@ export default {
     deleted: 'Der Datensatz wurde gelöscht',
     how_to_install: 'So wird installiert',
     update: 'Aus neuerer Datei aktualisieren',
-    open_import: 'Importseite öffnen',
+    // everything done with a dataset starts on its card (issue #540)
+    catalog_title: 'Der Katalog',
+    edit_words: 'Wörter bearbeiten',
+    import: 'Importieren',
+    export: 'Exportieren',
+    details: 'Details',
+    import_title: 'In „{name}“ importieren',
+    export_title: '„{name}“ exportieren',
     about_default:
       'Der Datensatz des Projekts: von Sprachmodellen erzeugte Einträge mit CEFR-Niveaus und Übersetzungen in sieben Sprachen. Jede Instanz beginnt mit ihm; geladen und aktualisiert wird er auf der Importseite.',
     about_wiktionary:
@@ -352,6 +381,51 @@ export default {
     done_update: 'Der Datensatz ist aktualisiert.',
     done_summary: 'Ersetzt: {updated} · hinzugefügt: {added} · mit Ihren Änderungen behalten: {kept}',
     too_large: 'Die Datei ist größer, als der Server annimmt',
+    // the datasets of the instance's own (issue #540)
+    own_title: 'Datensätze dieser Instanz',
+    own_intro:
+      'Ein eigenes Wörterbuch neben denen des Katalogs: leer angelegt unter der Lizenz Ihrer Wahl, gefüllt, indem Sie es als bearbeiteten Datensatz wählen oder importieren, ausgeliefert, sobald Sie es aktivieren. Seine Quelle in der API ist sein Name.',
+    own_empty: 'Noch kein eigener Datensatz',
+    own_create_button: 'Datensatz anlegen',
+    own_create_title: 'Ein neuer Datensatz dieser Instanz',
+    own_create: 'Anlegen',
+    own_created: '„{name}“ ist angelegt. Wählen Sie ihn als bearbeiteten Datensatz, um ihn zu füllen.',
+    own_edit: 'Bedingungen bearbeiten',
+    own_edit_title: 'Die Bedingungen von „{name}“',
+    own_save: 'Speichern',
+    own_saved: 'Die Bedingungen sind gespeichert',
+    status_own: 'eigener',
+    label_created: 'Angelegt',
+    own_field_name: 'Name',
+    own_field_name_hint:
+      'Lateinische Kleinbuchstaben, Ziffern und „_“, beginnend mit einem Buchstaben. Er benennt den Datensatz in der API und lässt sich nicht ändern.',
+    own_field_title: 'Titel',
+    own_field_license_name: 'Der Name der Lizenz',
+    own_field_license_url: 'Wo die Lizenz nachzulesen ist',
+    own_field_license_text: 'Der Text der Lizenz im vollen Wortlaut',
+    own_field_attribution_hint: 'Die Zeile, die zeigen muss, wer die Daten zeigt.',
+    own_field_attribution_url: 'Wohin die Namensnennung führt (optional)',
+    own_required: 'Pflichtfeld',
+    own_name_pattern:
+      'Lateinische Kleinbuchstaben, Ziffern und „_“, beginnend mit einem Buchstaben; 2 bis 40 Zeichen',
+    own_name_reserved: 'Dieser Name gehört einem Datensatz oder einer Quelle des Katalogs',
+    own_url_invalid: 'Ein Link, der mit http:// oder https:// beginnt',
+    own_license_own: 'Eine eigene Lizenz…',
+    own_license_own_hint:
+      'Wenn keine der Lizenzen oben passt: ihr Name, ein Link und ihr voller Wortlaut. Der Text begleitet die Daten – in der API, auf den Wortseiten und in jedem Export.',
+    own_license_is_standard: 'Diese Lizenz steht in der Liste: Wählen Sie sie dort',
+    own_license_tag: 'eigene Lizenz',
+    own_license_text: 'Der Text der Lizenz',
+    own_license_change_title: 'Sie ändern die Lizenz dieses Datensatzes',
+    own_license_change_given:
+      'Wer die Daten bereits übernommen hat, behält das Recht, sie unter der Lizenz zu nutzen, unter der er sie übernommen hat: Eine erteilte Lizenz wird nicht zurückgenommen.',
+    own_license_change_reports:
+      'Die Korrekturen, die Leser gesendet haben, wurden unter der Lizenz angenommen, die das Meldeformular beim Absenden nannte.',
+    own_license_change_served:
+      'Ab jetzt tragen die API, die Wortseiten und die Exporte dieses Datensatzes die neue Lizenz.',
+    own_license_change_journal:
+      'Die Änderung wird in den Ereignissen der Instanz festgehalten, mit der Lizenz vorher und nachher.',
+    own_license_change_confirm: 'Verstanden, Lizenz ändern',
   },
   import_dictionary: {
     your_version: 'Ihre Version',
@@ -390,8 +464,6 @@ export default {
     data_attribution: 'Namensnennung:',
     up_to_date: 'Sie haben bereits die neueste Version des Wörterbuchs',
     update_available: 'Eine neuere Datensatzversion ist verfügbar',
-    published_is_own:
-      'Der veröffentlichte Datensatz ist der des Projekts und wird in den Datensatz „default“ importiert. „{name}“ ist ein Datensatz einer anderen Quelle: Er wird auf der Seite der Datensätze aktualisiert, aus der Datei seiner Quelle.',
     start_update: 'Wörterbuch aktualisieren',
     update_summary:
       'Update abgeschlossen: {updated} Einträge aktualisiert, {added} hinzugefügt, {kept} mit Ihren Bearbeitungen behalten',
@@ -428,10 +500,6 @@ export default {
     server_file_empty: 'Keine Datensätze im Importverzeichnis',
     import_dir_hint:
       'Setzen Sie DICTIONARY_IMPORT_DIR auf dem Server, um Datensätze aus einem eingebundenen Ordner zu wählen',
-    dataset_target: 'Importieren in',
-    dataset_active: '{name} – der aktive Datensatz',
-    dataset_hint:
-      'Ein Import in einen anderen Datensatz berührt den aktiven nicht: Die API liefert ihn weiter, bis Sie den neuen aktivieren.',
   },
   bulk_request: {
     license_note:

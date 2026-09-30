@@ -52,7 +52,7 @@ The download and the import take a few minutes each. Meanwhile:
 When it is done `/api/ready` is `200` and `GET /api/v1/meta` shows the counts and
 `dataset_version`. Later starts do nothing. An interrupted import resumes on the next start. A
 failed one (HuggingFace unreachable) answers `503 import_failed`, and the next start tries
-again — or import from a file on the admin's import page. `DICTIONARY_AUTO_IMPORT=false` keeps
+again — or import from a file through the card of the dataset on the admin's datasets page. `DICTIONARY_AUTO_IMPORT=false` keeps
 an instance empty on purpose.
 
 Everything the containers need comes from `.env` ([`../environment.md`](../environment.md));

@@ -26,6 +26,7 @@ import {
 import { ErrorCodes } from '../../../core/constants/error_codes';
 import { AuditService } from '../AuditModule/audit.service';
 import { SettingsService } from '../SettingsModule/settings.service';
+import { DatasetsService } from '../DatasetsModule/datasets.service';
 import { DATASET_VERSION_SETTINGS_FIELD } from '../EnModule/modules/EnImportDictionary/constants';
 import { EnEntry } from '../EnModule/entities/en_entry.entity';
 import { EnWord } from '../EnModule/entities/en_word.entity';
@@ -37,6 +38,7 @@ import { ListSuggestionsQueryDTO } from './dto/ListSuggestionsQuery.dto';
 import { CreateSuggestionV1ReqDTO } from './dto/CreateSuggestionV1Req.dto';
 import { EDITABLE_FIELDS, MAX_OPEN_SUGGESTIONS, SUGGESTION_VALUE_MAX_LENGTH } from './constants';
 import { LIST_DEFAULT_LIMIT } from '../EnModule/modules/EnAdminLists/dto/PaginationQuery.dto';
+import { scoped } from '../../core/utils/dataset-scope';
 
 @Injectable()
 export class SuggestionsService {
@@ -49,19 +51,47 @@ export class SuggestionsService {
 
   constructor(
     @InjectRepository(Suggestion)
-    private readonly suggestionsRep: Repository<Suggestion>,
+    private readonly activeSuggestionsRep: Repository<Suggestion>,
     @InjectRepository(EnEntry)
-    private readonly entriesRep: Repository<EnEntry>,
+    private readonly activeEntriesRep: Repository<EnEntry>,
     @InjectRepository(EnWord)
-    private readonly wordsRep: Repository<EnWord>,
+    private readonly activeWordsRep: Repository<EnWord>,
     @InjectRepository(EnMeaning)
-    private readonly meaningsRep: Repository<EnMeaning>,
+    private readonly activeMeaningsRep: Repository<EnMeaning>,
     @InjectRepository(EnMeaningTranslation)
-    private readonly meaningTranslationsRep: Repository<EnMeaningTranslation>,
+    private readonly activeMeaningTranslationsRep: Repository<EnMeaningTranslation>,
     @InjectRepository(EnShortTranslation)
-    private readonly shortTranslationsRep: Repository<EnShortTranslation>,
+    private readonly activeShortTranslationsRep: Repository<EnShortTranslation>,
     private readonly settingsService: SettingsService,
+    // the registry of datasets, global; absent in the unit tests that build the service by hand
+    @Optional() private readonly datasets?: DatasetsService,
   ) {}
+
+  // the dataset the request works on (issue #540): the active one, or the
+  // one the switch of the admin UI names
+  private get suggestionsRep(): Repository<Suggestion> {
+    return scoped(this.activeSuggestionsRep);
+  }
+
+  private get entriesRep(): Repository<EnEntry> {
+    return scoped(this.activeEntriesRep);
+  }
+
+  private get wordsRep(): Repository<EnWord> {
+    return scoped(this.activeWordsRep);
+  }
+
+  private get meaningsRep(): Repository<EnMeaning> {
+    return scoped(this.activeMeaningsRep);
+  }
+
+  private get meaningTranslationsRep(): Repository<EnMeaningTranslation> {
+    return scoped(this.activeMeaningTranslationsRep);
+  }
+
+  private get shortTranslationsRep(): Repository<EnShortTranslation> {
+    return scoped(this.activeShortTranslationsRep);
+  }
 
   /** The public intake (issue #327): validates the target, stores the report */
   async create(body: CreateSuggestionV1ReqDTO): Promise<PublicSuggestionCreatedV1T> {
@@ -320,7 +350,10 @@ export class SuggestionsService {
     };
   }
 
+  // the version of the served dataset the report is about: the registry's, what its file said (issue #530)
   private async getDatasetVersion(): Promise<string | null> {
+    const active = this.datasets?.getActive();
+    if (active) return active.version;
     try {
       return await this.settingsService.findOne(DATASET_VERSION_SETTINGS_FIELD);
     } catch (error) {

@@ -199,12 +199,12 @@ The version that records a dataset of a public source by what its file says
   `UPDATE_CHECK=false` already, and asks nothing;
 - `dataset_version` of `/api/v1/meta` changes for such a dataset at its next installation, from a
   day to a day or an edition. It was never promised a format;
-- the import page offers the update of the published dataset for the dataset of the project
+- the import of the project's dataset offers the update of the published dataset
   only. It used to offer it for a dataset of another source too, and the server refused.
 
 ## The dictionary is updated separately
 
 A new version of the code does not change the dictionary data, and a new dataset revision does
-not need a new version of the code. The import page of the admin UI says when a newer dataset
+not need a new version of the code. The import of the project's dataset in the admin UI says when a newer dataset
 exists; what an update replaces and what it keeps:
 [`operations.md`](./operations.md#dataset-updates-vs-code-updates).

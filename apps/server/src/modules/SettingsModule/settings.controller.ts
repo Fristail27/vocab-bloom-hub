@@ -4,6 +4,11 @@ import { AdminGuard } from '../AuthModule/guards/admin.guard';
 import type { AddSettingResT, UpdateCheckResT } from '../../../types/settings/SettingsApiTypes';
 import { AddSettingReqDTO } from './dto/AddSettingReq.dto';
 import { UpdateCheckService } from './update-check.service';
+import { DATASET_VERSION_SETTINGS_FIELD } from '../EnModule/modules/EnImportDictionary/constants';
+
+// `version` is the version of the code, `en_dataset_version` the version of
+// the served dataset as its file said it (issue #540): neither is typed in
+const READ_ONLY_FIELDS: ReadonlySet<string> = new Set(['version', DATASET_VERSION_SETTINGS_FIELD]);
 
 @Controller('/api/settings')
 export class SettingsController {
@@ -15,7 +20,7 @@ export class SettingsController {
   @UseGuards(AdminGuard)
   @Post('add')
   async addField(@Body() body: AddSettingReqDTO): Promise<AddSettingResT> {
-    if (body.field === 'version') {
+    if (READ_ONLY_FIELDS.has(body.field)) {
       return { success: false };
     }
     return this.settingsService.create(body.field, body.value);
@@ -47,7 +52,7 @@ export class SettingsController {
   @UseGuards(AdminGuard)
   @Patch('update')
   async updateField(@Body() body: AddSettingReqDTO): Promise<AddSettingResT> {
-    if (body.field === 'version') {
+    if (READ_ONLY_FIELDS.has(body.field)) {
       return { success: false };
     }
     return this.settingsService.update(body.field, body.value);
@@ -56,7 +61,7 @@ export class SettingsController {
   @UseGuards(AdminGuard)
   @Delete('by-field/:fieldName')
   async deleteField(@Param('fieldName') fieldName: string): Promise<AddSettingResT> {
-    if (fieldName === 'version') {
+    if (READ_ONLY_FIELDS.has(fieldName)) {
       return { success: false };
     }
     return this.settingsService.remove(fieldName);

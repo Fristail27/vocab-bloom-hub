@@ -23,3 +23,22 @@ export const DATASET_REMOVED_AT_SETTINGS_FIELD = 'dataset_removed_at';
 
 export const datasetSchemaOf = (name: string): string =>
   name === DEFAULT_DATASET_NAME ? DEFAULT_DATASET_SCHEMA : `${DATASET_SCHEMA_PREFIX}${name}`;
+
+/**
+ * The query parameter that names the dataset an admin request of the
+ * dictionary works on (issue #540); without it, the active one
+ */
+export const DATASET_QUERY_PARAM = 'dataset';
+
+// the datasets themselves, the import (which names its target in its own
+// request) and the journal of the instance are no part of one dataset
+const OUTSIDE_A_DATASET = /^\/en\/(datasets|dictionary\/import|audit)(\/|$)/;
+
+/**
+ * Whether a route of the API — its path after the `/api` prefix, e.g.
+ * `/en/words` — works on the dataset a request names (issue #540): the admin
+ * routes of the dictionary. The admin UI sends the dataset of its switch to
+ * these routes and to no other.
+ */
+export const isDatasetScopedRoute = (route: string): boolean =>
+  route.startsWith('/en/') && !OUTSIDE_A_DATASET.test(route);

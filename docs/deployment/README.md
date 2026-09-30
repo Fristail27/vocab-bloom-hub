@@ -141,7 +141,7 @@ A fresh instance has an empty dictionary. Two ways to fill it:
   HuggingFace — or the newest dataset in `DICTIONARY_IMPORT_DIR` — in the background, logs the
   progress and answers `503 importing` on `/api/ready` until it is done
   ([`docker.md`](./docker.md#first-start-the-dictionary-loads-itself)).
-- **From the admin UI** — _Import dictionary_: from HuggingFace, or from an archive when the
+- **From the admin UI** — _Managing → Datasets → Import_ on the card of the project's dataset: from HuggingFace, or from an archive when the
   host has no internet access ([`../offline-import.md`](../offline-import.md)). The import
   streams its progress for a few minutes; the proxy must not buffer that stream. One import at
   a time; a second one is refused with `409`.

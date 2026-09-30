@@ -3,7 +3,7 @@
 import React from 'react';
 import { App, Button, Progress, Tabs, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
-import { DatasetsListT, ImportDictionaryChunkT, ImportSourceFileT, ImportSourceKindE } from 'server/types';
+import { DatasetT, ImportDictionaryChunkT, ImportSourceFileT, ImportSourceKindE } from 'server/types';
 import { DEFAULT_DATASET_NAME } from 'server/core/constants/datasets';
 import { EnDictionaryImportPhasesE } from 'server/src/modules/EnModule/modules/EnImportDictionary/constants';
 import { ErrorCodes } from 'server/core/constants/error_codes';
@@ -22,39 +22,22 @@ const EMPTY_MANUAL_MANIFEST: ManualManifestT = { version: '', synonym_links: '',
 const { Text } = Typography;
 
 type ImportDictionarySectionP = {
-  // dataset version of the last successful import, from the settings store
-  yourVersion?: string | undefined;
-  // dataset version from the published manifest, fetched server-side;
-  // undefined when the dataset has no manifest yet
-  latestVersion?: string | undefined;
-  // the datasets of the instance (issue #527); absent when the list could not be read
-  datasets?: DatasetsListT | undefined;
-  // the dataset the page was opened for (the "import into it" link of the datasets page)
-  initialTarget?: string | undefined;
+  // the dataset the import fills: the one of the card it was opened from (issue #540)
+  dataset: DatasetT;
+  // called when an import has finished, whatever its outcome
+  onFinished?: () => void;
 };
 
-export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
-  yourVersion,
-  latestVersion: latestVersionProp,
-  datasets,
-  initialTarget,
-}) => {
-  // Where the import writes (issue #527): the active dataset or another one
-  // the instance holds. A dataset of a public source is installed on the
-  // datasets page, from the file of its source; what is imported here is a
-  // dataset in the project's format — the published one, an export. Only a
-  // driver with schemas offers the choice, and only when there is one.
-  const installed = (datasets?.datasets ?? []).filter((d) => d.installed);
-  const canChooseTarget = !!datasets?.supported && installed.length > 1;
-  const activeName = datasets?.active ?? DEFAULT_DATASET_NAME;
-  const [target, setTarget] = React.useState<string>(
-    canChooseTarget && initialTarget && installed.some((d) => d.name === initialTarget)
-      ? initialTarget
-      : activeName,
-  );
+/**
+ * An import into one dataset (issues #269, #527, #540), opened from its card
+ * on the datasets page. What is imported here is a dataset in the project's
+ * format: the published one — into the project's dataset only — an export,
+ * the files of one. A dataset of a public source is updated from the file of
+ * its source instead.
+ */
+export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({ dataset, onFinished }) => {
   // what the request names: nothing for the active dataset, as before
-  const targetName = !canChooseTarget || target === activeName ? undefined : target;
-  const intoActive = targetName === undefined;
+  const targetName = dataset.active ? undefined : dataset.name;
   const [percents, setPercents] = React.useState<number>(0);
   const [status, setStatus] = React.useState<ImportStatusE>(ImportStatusE.idle);
   const [statusMessage, setStatusMessage] = React.useState<string>('');
@@ -66,19 +49,19 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
   } | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = React.useState<number>(0);
   // The published dataset is the project's own and goes into the project's
-  // dataset only: its version is compared with that one, and an import of it
-  // into a dataset of a public source would be refused (issue #530). Those
-  // are updated on the datasets page, from the file of their source.
-  const ownTarget = (targetName ?? activeName) === DEFAULT_DATASET_NAME;
-  const [activeVersion, setInstalledVersion] = React.useState<string | undefined>(yourVersion);
-  // the version the chosen dataset holds: the active one's from the settings, another one's from the registry
-  const installedVersion = intoActive
-    ? activeVersion
-    : (datasets?.datasets.find((d) => d.name === targetName)?.version ?? undefined);
-  const [latestVersion, setLatestVersion] = React.useState<string | undefined>(latestVersionProp);
+  // dataset only: its version is compared with that one, and the tab of it
+  // is offered there only (issue #530)
+  const ownTarget = dataset.name === DEFAULT_DATASET_NAME;
+  const [installedVersion, setInstalledVersion] = React.useState<string | undefined>(
+    dataset.version ?? undefined,
+  );
+  // the version of the published dataset, read when the dialog opens; undefined when it has no manifest yet
+  const [latestVersion, setLatestVersion] = React.useState<string | undefined>(undefined);
   // where the next import reads from (issue #269): the published dataset, an
   // archive (uploaded or picked on the server) or the dataset files in slots
-  const [sourceTab, setSourceTab] = React.useState<ImportSourceTabE>(ImportSourceTabE.huggingface);
+  const [sourceTab, setSourceTab] = React.useState<ImportSourceTabE>(
+    ownTarget ? ImportSourceTabE.huggingface : ImportSourceTabE.archive,
+  );
   const [archive, setArchive] = React.useState<File | null>(null);
   const [serverFiles, setServerFiles] = React.useState<ImportSourceFileT[]>([]);
   // version tags of the published dataset (issue #322); '' = the moving main
@@ -112,6 +95,18 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
     (fromHuggingFace && ownTarget) ||
     (sourceTab === ImportSourceTabE.archive && (!!archive || !!serverPath)) ||
     (sourceTab === ImportSourceTabE.files && JSONL_SLOTS.some((slot) => !!slotFiles[slot]));
+
+  React.useEffect(() => {
+    if (!ownTarget) return undefined;
+    let cancelled = false;
+    (async () => {
+      const res = await EnApi.getDatasetManifest();
+      if (!cancelled && !('error' in res)) setLatestVersion(res.version);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ownTarget]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -227,6 +222,7 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
       );
     };
     const res = await runImport();
+    onFinished?.();
     if ('error' in res) {
       onError(res.message);
       return;
@@ -238,7 +234,7 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
       return;
     }
 
-    if (seenDatasetVersion && intoActive) {
+    if (seenDatasetVersion) {
       setInstalledVersion(seenDatasetVersion);
     }
     setStatus(ImportStatusE.success);
@@ -255,56 +251,38 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({
 
   return (
     <div className={styles.importDictionarySection}>
-      {canChooseTarget && (
-        <div className={styles.target}>
-          <Select<string>
-            label={t('dataset_target')}
-            value={target}
-            disabled={inProgress}
-            onChange={(value) => setTarget(value)}
-            options={[
-              { value: activeName, label: t('dataset_active', { name: activeName }) },
-              ...installed
-                .filter((d) => d.name !== activeName)
-                .map((d) => ({ value: d.name, label: `${d.name} — ${d.title}` })),
-            ]}
-          />
-          {!intoActive && <Text type="secondary">{t('dataset_hint')}</Text>}
-        </div>
-      )}
       <Tabs
         activeKey={sourceTab}
         onChange={(key) => !inProgress && setSourceTab(key as ImportSourceTabE)}
         items={[
-          {
-            key: ImportSourceTabE.huggingface,
-            label: t('source_huggingface'),
-            children: (
-              <div className={styles.hfTab}>
-                <Text strong>
-                  {t('latest_version')}: {latestVersion || '—'}
-                </Text>
-                {revisions.length > 0 && (
-                  <Select<string>
-                    label={t('revision')}
-                    value={revision}
-                    disabled={inProgress}
-                    onChange={(value) => setRevision(value)}
-                    options={[
-                      { value: '', label: t('revision_latest') },
-                      ...revisions.map((tag) => ({ value: tag, label: tag })),
-                    ]}
-                  />
-                )}
-                {updateAvailable && !inProgress && <Text type="warning">{t('update_available')}</Text>}
-                {!ownTarget && (
-                  <Text type="secondary" data-testid="published-not-for-target">
-                    {t('published_is_own', { name: targetName ?? activeName })}
-                  </Text>
-                )}
-              </div>
-            ),
-          },
+          ...(ownTarget
+            ? [
+                {
+                  key: ImportSourceTabE.huggingface,
+                  label: t('source_huggingface'),
+                  children: (
+                    <div className={styles.hfTab}>
+                      <Text strong>
+                        {t('latest_version')}: {latestVersion || '—'}
+                      </Text>
+                      {revisions.length > 0 && (
+                        <Select<string>
+                          label={t('revision')}
+                          value={revision}
+                          disabled={inProgress}
+                          onChange={(value) => setRevision(value)}
+                          options={[
+                            { value: '', label: t('revision_latest') },
+                            ...revisions.map((tag) => ({ value: tag, label: tag })),
+                          ]}
+                        />
+                      )}
+                      {updateAvailable && !inProgress && <Text type="warning">{t('update_available')}</Text>}
+                    </div>
+                  ),
+                },
+              ]
+            : []),
           {
             key: ImportSourceTabE.archive,
             label: t('source_archive'),
