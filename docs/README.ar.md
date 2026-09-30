@@ -169,7 +169,7 @@ yarn dev                                       # الواجهة البرمجية
 ```
 
 > [!IMPORTANT]
-> حمّل القاموس عبر _Import dictionary_ في لوحة الإدارة.
+> حمّل القاموس عبر _Managing → Datasets → Import_ في لوحة الإدارة.
 
 كل ما تبقى للمساهمين: [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 

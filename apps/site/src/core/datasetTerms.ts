@@ -8,6 +8,8 @@ export const OWN_DATASET_SOURCE = 'vocab-bloom-hub';
  * attribution of that source, not the project's
  */
 export type DatasetTermsT = {
+  /** The name of the served dataset for a reader (issue #540); absent from an instance that does not send it */
+  title?: string;
   source: string;
   /** SPDX identifier */
   license: string;

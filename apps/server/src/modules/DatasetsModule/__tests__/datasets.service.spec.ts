@@ -67,6 +67,7 @@ describe('DatasetsService on SQLite', () => {
     expect(datasets.find((dataset) => dataset.name === 'wiktionary')).toEqual({
       name: 'wiktionary',
       title: 'English Wiktionary',
+      own: false,
       installed: false,
       source: 'wiktionary',
       language: 'en',
@@ -75,6 +76,7 @@ describe('DatasetsService on SQLite', () => {
       attribution: expect.stringContaining('Wiktionary contributors'),
       attribution_url: 'https://en.wiktionary.org',
       notice: null,
+      license_text: null,
       version: null,
       active: false,
       is_default: false,

@@ -208,3 +208,48 @@ describe('AbstractBaseApi.baseURL (issue #316)', () => {
     expect(AbstractBaseApi.baseURL).toBe('https://dict.example.com/api');
   });
 });
+
+// issue #540: the admin routes of the dictionary get the dataset the switch of the header names
+describe('AbstractBaseApi: the dataset that is edited', () => {
+  let fetchMock: FetchMock;
+
+  beforeAll(() => {
+    process.env.NEXT_PUBLIC_BASE_API_URL = BASE;
+  });
+
+  beforeEach(() => {
+    fetchMock = jest.fn();
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    document.cookie = 'edited_dataset=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  });
+
+  const urlOf = (call: number): URL => new URL(fetchMock.mock.calls[call][0]);
+
+  it('sends nothing without a choice: the active dataset', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) });
+    await AbstractBaseApi.get(`${BASE}/en/words`, { query: { page: 2 } });
+    expect(urlOf(0).searchParams.get('dataset')).toBeNull();
+    expect(urlOf(0).searchParams.get('page')).toBe('2');
+  });
+
+  it('names the chosen dataset on the routes of the dictionary, and on no other', async () => {
+    document.cookie = 'edited_dataset=my_words; path=/';
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) });
+
+    await AbstractBaseApi.get(`${BASE}/en/words`, { query: { page: 2 } });
+    await AbstractBaseApi.post(`${BASE}/en/add/word`, {});
+    await AbstractBaseApi.get(`${BASE}/en/datasets`);
+    await AbstractBaseApi.get(`${BASE}/en/audit`);
+    await AbstractBaseApi.post(`${BASE}/en/dictionary/import`, {});
+    await AbstractBaseApi.get(`${BASE}/v1/words/run`);
+    await AbstractBaseApi.get(`${BASE}/settings`);
+
+    expect(urlOf(0).searchParams.get('dataset')).toBe('my_words');
+    expect(urlOf(0).searchParams.get('page')).toBe('2');
+    expect(urlOf(1).searchParams.get('dataset')).toBe('my_words');
+    for (const call of [2, 3, 4, 5, 6]) expect(urlOf(call).searchParams.get('dataset')).toBeNull();
+  });
+});

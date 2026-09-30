@@ -12,12 +12,15 @@ import {
   EnShortTranslationsListT,
   EnWordsListT,
 } from '../../../../../types';
+import { ApiDatasetQuery } from '../../../DatasetsModule/api-dataset-query';
 
 /**
  * Admin-only paginated listings behind the bulk-request page. Registered
  * before EnController so these GET routes are not swallowed by GET /api/en/:id
  */
 @ApiTags('En_Admin_Lists')
+// the dataset the request works on (issue #540)
+@ApiDatasetQuery()
 @Controller('/api/en')
 export class EnAdminListsController {
   constructor(private readonly enAdminListsService: EnAdminListsService) {}

@@ -4,12 +4,13 @@ import React from 'react';
 import { Alert } from 'antd';
 import { useTranslations } from 'next-intl';
 import { DatasetT } from 'server/types';
-import { OWN_DATASET_SOURCE } from 'server/core/constants/datasets';
+import { isPublicSourceDataset } from 'server/core/constants/dataset_catalog';
 import styles from './styles.module.scss';
 
 /**
- * The dataset an edit is made in (issue #531): the active one, given by the
- * page that shows the word. The dialogs of the word card read it from here —
+ * The dataset an edit is made in (issue #531): the one the switch of the
+ * header names, else the active one (issue #540), given by the page that
+ * shows the word. The dialogs of the word card read it from here —
  * they open in a portal, the context reaches them all the same.
  */
 export const EditedDatasetContext = React.createContext<DatasetT | undefined>(undefined);
@@ -17,11 +18,12 @@ export const EditedDatasetContext = React.createContext<DatasetT | undefined>(un
 /**
  * Whether the dataset being edited holds what people wrote: a dataset of a
  * public source carries no notice about generated text, so nothing generated
- * by a model is added to it — the forms offer no way to
+ * by a model is added to it — the forms offer no way to. The project's
+ * dataset and the datasets of the instance's own take it (issue #540).
  */
 export const useWrittenByPeopleOnly = (): boolean => {
   const dataset = React.useContext(EditedDatasetContext);
-  return !!dataset && dataset.source !== OWN_DATASET_SOURCE;
+  return !!dataset && isPublicSourceDataset(dataset);
 };
 
 /** The provider a server page wraps its form in */
@@ -59,7 +61,7 @@ export const EditLicenseNote: React.FC = () => {
               dataset.license
             )}
             . {t('editing_license_effect')}
-            {dataset.source !== OWN_DATASET_SOURCE && <> {t('editing_no_generated')}</>}
+            {isPublicSourceDataset(dataset) && <> {t('editing_no_generated')}</>}
           </>
         }
       />

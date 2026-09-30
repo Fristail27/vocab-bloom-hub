@@ -194,7 +194,7 @@ export const InstallDataset: React.FC<InstallDatasetP> = ({
       onCancel={onClose}
       closable={!busy}
       // a click outside closes the dialog like the cross and Escape do; not while an installation runs
-      maskClosable={!busy}
+      mask={{ closable: !busy }}
       keyboard={!busy}
       footer={[
         <Button key="close" onClick={onClose} disabled={busy}>

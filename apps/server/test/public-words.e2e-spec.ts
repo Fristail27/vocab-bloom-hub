@@ -670,6 +670,7 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
         notice: expect.stringContaining('language models'),
         // issue #527: the dataset the instance serves and where its data comes from
         dataset: 'default',
+        title: 'Vocab Bloom Hub English dataset',
         source: 'vocab-bloom-hub',
         attribution_url: 'https://huggingface.co/datasets/Fristail27/vocab-bloom-hub-en',
         // issue #531: a license named by its link has no notice to carry in full
@@ -693,14 +694,28 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
       });
     });
 
-    it('reports the dataset version recorded by the last import', async () => {
-      await request(server())
+    // issue #540: a version is what the file of a dataset said, written by an import only
+    it('reports the dataset version the registry holds, which the settings cannot change', async () => {
+      const before = (await request(server()).get('/api/v1/meta').expect(200)).body as PublicMetaV1ResT;
+      const added = await request(server())
         .post('/api/settings/add')
         .set(auth)
         .send({ field: 'en_dataset_version', value: '2026.08.1' })
         .expect(201);
-      const res = await request(server()).get('/api/v1/meta').expect(200);
-      expect((res.body as PublicMetaV1ResT).data.dataset_version).toBe('2026.08.1');
+      expect(added.body).toEqual({ success: false });
+      const updated = await request(server())
+        .patch('/api/settings/update')
+        .set(auth)
+        .send({ field: 'en_dataset_version', value: '2026.08.1' })
+        .expect(200);
+      expect(updated.body).toEqual({ success: false });
+      await request(server()).delete('/api/settings/by-field/en_dataset_version').set(auth).expect(200);
+
+      const after = (await request(server()).get('/api/v1/meta').expect(200)).body as PublicMetaV1ResT;
+      expect(after.data.dataset_version).toBe(before.data.dataset_version);
+      // and the reads of every dataset say the same of the served one
+      const groups = await request(server()).get('/api/v1/words/run/datasets').expect(200);
+      expect(groups.body.data[0].dataset_version).toBe(before.data.dataset_version);
     });
   });
 

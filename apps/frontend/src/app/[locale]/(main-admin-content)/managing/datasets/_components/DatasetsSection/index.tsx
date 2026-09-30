@@ -1,40 +1,55 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { Alert, App, Button, Card, Popconfirm, Tag, Typography } from 'antd';
+import { useRouter } from 'next/navigation';
+import { Alert, App, Modal, Typography } from 'antd';
 import { useLocale, useTranslations } from 'next-intl';
 import { DATASET_CATALOG, DatasetCatalogEntryT } from 'server/core/constants/dataset_catalog';
 import { DatasetT, DatasetUpdateT, DatasetsListT } from 'server/types';
 import { EnApi } from '@/core/api/EnApi';
+import { useEditedDataset } from '@/components/EditedDataset';
+import { ImportDictionarySection } from '../ImportDictionarySection';
+import { ExportDictionarySection } from '../ExportDictionarySection';
+import { DatasetActionsT, DatasetCard } from './components/DatasetCard';
 import { InstallDataset } from './components/InstallDataset';
-import { formatCount, formatMegabytes } from './utils';
+import { OwnDatasetForm } from './components/OwnDatasetForm';
+import { OwnDatasets } from './components/OwnDatasets';
 import styles from './styles.module.scss';
 
-const { Paragraph, Text } = Typography;
+const { Title } = Typography;
 
 type DatasetsSectionP = {
   /** The list fetched with the page; absent when the request failed */
   initial?: DatasetsListT | undefined;
 };
 
+type TermsDialogT = { dataset?: DatasetT | undefined } | null;
+
 /**
- * The datasets of the instance (issue #527): every dataset the code can
- * hold, installed or not, with the terms it comes under. The catalog is
- * closed and its terms are stated in the code — nothing here is typed by an
- * admin. A dataset that is not installed offers the instruction: where to
- * download the file of its source, and the upload. On a driver without
- * schemas (SQLite) the cards are shown and nothing can be installed.
+ * The datasets of the instance (issues #527, #540), and everything that is
+ * done with one: every dataset of the catalog, installed or not, with the
+ * terms it comes under, and the datasets of the instance's own under them.
+ * A card activates its dataset, opens its words for editing, imports into
+ * it, exports it, installs or updates it from the file of its source and —
+ * for a dataset of the owner's — corrects its terms. On a driver without
+ * schemas (SQLite) the cards are shown and nothing can be installed or
+ * created; the one dataset is still imported and exported.
  */
 export const DatasetsSection: React.FC<DatasetsSectionP> = ({ initial }) => {
   const locale = useLocale();
+  const router = useRouter();
   const t = useTranslations('datasets');
   const tErr = useTranslations('errors');
   const { message } = App.useApp();
+  // stable: reads the datasets for the switch of the header, whatever it holds
+  const { reload: reloadSwitch, choose } = useEditedDataset();
 
   const [list, setList] = React.useState<DatasetsListT | undefined>(initial);
   const [busy, setBusy] = React.useState<string | null>(null);
   const [instruction, setInstruction] = React.useState<DatasetCatalogEntryT | null>(null);
+  const [importing, setImporting] = React.useState<DatasetT | null>(null);
+  const [exporting, setExporting] = React.useState<DatasetT | null>(null);
+  const [terms, setTerms] = React.useState<TermsDialogT>(null);
   // what the sources of the installed datasets have now (issue #530); a
   // notice, so a failure of the request is no error of the page
   const [updates, setUpdates] = React.useState<DatasetUpdateT[]>([]);
@@ -51,9 +66,11 @@ export const DatasetsSection: React.FC<DatasetsSectionP> = ({ initial }) => {
       return;
     }
     setList(res);
+    // the switch of the dataset that is edited offers what the instance holds now (issue #540)
+    void reloadSwitch();
     // the version that is installed may have changed: the notice is about it
     await checkUpdates();
-  }, [message, tErr, checkUpdates]);
+  }, [message, tErr, checkUpdates, reloadSwitch]);
 
   React.useEffect(() => {
     if (initial) void checkUpdates();
@@ -77,177 +94,58 @@ export const DatasetsSection: React.FC<DatasetsSectionP> = ({ initial }) => {
   };
 
   const supported = list?.supported ?? false;
+  // the state of a dataset of the catalog; a dataset of the owner's under its name is none of it (issue #540)
   const stateOf = (name: string): DatasetT | undefined =>
-    list?.datasets.find((dataset) => dataset.name === name);
+    list?.datasets.find((dataset) => dataset.name === name && !dataset.own);
 
-  const card = (entry: DatasetCatalogEntryT) => {
-    const state = stateOf(entry.name);
-    const installed = state?.installed ?? false;
-    const active = state?.active ?? false;
-    const fromSource = entry.install.kind === 'convert';
-    const update = installed ? updates.find((item) => item.name === entry.name) : undefined;
-
-    return (
-      <Card
-        key={entry.name}
-        data-testid={`dataset-${entry.name}`}
-        title={
-          <span className={styles.heading}>
-            <span className={styles.title}>{entry.title}</span>
-            <Text type="secondary" code>
-              {entry.name}
-            </Text>
-          </span>
-        }
-        extra={
-          <span className={styles.tags}>
-            {active && <Tag color="green">{t('status_active')}</Tag>}
-            {installed && !active && <Tag color="blue">{t('status_installed')}</Tag>}
-            {!installed && <Tag>{t('status_not_installed')}</Tag>}
-          </span>
-        }
-      >
-        <Paragraph>{t(`about_${entry.name}`)}</Paragraph>
-        <div className={styles.features}>
-          {entry.features.map((feature) => (
-            <Tag key={feature}>{t(`feature_${feature}`)}</Tag>
-          ))}
-        </div>
-
-        <dl className={styles.facts}>
-          <dt>{t('label_source')}</dt>
-          <dd>
-            <a href={entry.homepage} target="_blank" rel="noreferrer noopener">
-              {entry.homepage.replace(/^https:\/\//, '')}
-            </a>
-          </dd>
-          <dt>{t('label_license')}</dt>
-          <dd>
-            <a href={entry.license.url} target="_blank" rel="license noreferrer noopener">
-              {entry.license.name} ({entry.license.spdx})
-            </a>
-            {entry.share_alike && (
-              <Tag color="orange" className={styles.shareAlike}>
-                {t('share_alike')}
-              </Tag>
-            )}
-          </dd>
-          <dt>{t('label_attribution')}</dt>
-          <dd>{entry.attribution}</dd>
-          {entry.notice && (
-            <>
-              <dt>{t('label_notice')}</dt>
-              <dd>{entry.notice}</dd>
-            </>
-          )}
-          <dt>{t('label_size')}</dt>
-          <dd>
-            {t('size', {
-              entries: formatCount(entry.size.entries, locale),
-              senses: formatCount(entry.size.senses, locale),
-              size: formatMegabytes(entry.size.database_mb, locale),
-            })}
-          </dd>
-          {installed && (
-            <>
-              <dt>{t('label_version')}</dt>
-              <dd>{state?.version ?? '—'}</dd>
-              {update && (
-                <>
-                  <dt>{t('label_source_version')}</dt>
-                  <dd data-testid={`dataset-source-version-${entry.name}`}>
-                    {update.latest ?? t('source_unknown')}
-                    {update.checked_at && (
-                      <Text type="secondary" className={styles.checked}>
-                        {t('source_checked', { date: new Date(update.checked_at).toLocaleString(locale) })}
-                      </Text>
-                    )}
-                  </dd>
-                </>
-              )}
-              <dt>{t('label_imported')}</dt>
-              <dd>{state?.imported_at ? new Date(state.imported_at).toLocaleString(locale) : t('never')}</dd>
-            </>
-          )}
-        </dl>
-
-        {update?.installed && !update.comparable && (
-          <Paragraph type="secondary" data-testid={`dataset-version-unknown-${entry.name}`}>
-            {t('version_unknown')}
-          </Paragraph>
-        )}
-        {update?.update_available && (
-          <Alert
-            type="warning"
-            showIcon
-            className={styles.update}
-            data-testid={`dataset-update-${entry.name}`}
-            title={t('update_available', { latest: update.latest ?? '', installed: update.installed ?? '' })}
-            description={
-              <>
-                {t('update_hint')}{' '}
-                {update.url && (
-                  <a href={update.url} target="_blank" rel="noreferrer noopener">
-                    {t('update_open')}
-                  </a>
-                )}
-              </>
-            }
-          />
-        )}
-
-        <div className={styles.actions}>
-          {supported && installed && !active && (
-            <Popconfirm
-              title={t('activate_confirm', { name: entry.title })}
-              okText={t('activate')}
-              cancelText={t('cancel')}
-              onConfirm={() =>
-                run(
-                  `activate ${entry.name}`,
-                  () => EnApi.activateDataset(entry.name),
-                  t('activated', { name: entry.title }),
-                )
-              }
-            >
-              <Button type="primary" loading={busy === `activate ${entry.name}`}>
-                {t('activate')}
-              </Button>
-            </Popconfirm>
-          )}
-          {fromSource ? (
-            <Button type={installed ? 'default' : 'primary'} onClick={() => setInstruction(entry)}>
-              {t(installed ? 'update' : 'how_to_install')}
-            </Button>
-          ) : (
-            <Link href={`/${locale}/managing/import-dictionary`}>
-              <Button>{t('open_import')}</Button>
-            </Link>
-          )}
-          {supported && installed && !active && fromSource && (
-            <Popconfirm
-              title={t('delete_confirm', { name: entry.title })}
-              okText={t('delete')}
-              okButtonProps={{ danger: true }}
-              cancelText={t('cancel')}
-              onConfirm={() => run(`delete ${entry.name}`, () => EnApi.deleteDataset(entry.name), t('deleted'))}
-            >
-              <Button danger loading={busy === `delete ${entry.name}`}>
-                {t('delete')}
-              </Button>
-            </Popconfirm>
-          )}
-        </div>
-      </Card>
-    );
+  const actions: DatasetActionsT = {
+    activate: (dataset) =>
+      void run(
+        `activate ${dataset.name}`,
+        () => EnApi.activateDataset(dataset.name),
+        t('activated', { name: dataset.title }),
+      ),
+    // its words are edited through the switch of the header: the managing page opens on them
+    edit: (dataset) => {
+      choose(dataset.name);
+      router.push(`/${locale}/managing`);
+    },
+    import: setImporting,
+    export: setExporting,
+    install: setInstruction,
+    editTerms: (dataset) => setTerms({ dataset }),
+    remove: (dataset) =>
+      void run(`delete ${dataset.name}`, () => EnApi.deleteDataset(dataset.name), t('deleted')),
   };
+
+  const card = (entry: DatasetCatalogEntryT | undefined, dataset: DatasetT | undefined) => (
+    <DatasetCard
+      key={dataset?.name ?? entry?.name}
+      entry={entry}
+      dataset={dataset}
+      update={dataset?.installed ? updates.find((item) => item.name === dataset.name) : undefined}
+      supported={supported}
+      busy={busy}
+      actions={actions}
+    />
+  );
 
   return (
     <div className={styles.section}>
       {list && !supported && (
         <Alert type="info" showIcon title={t('not_supported')} data-testid="datasets-unsupported" />
       )}
-      {DATASET_CATALOG.map(card)}
+      <Title level={3} className={styles.sectionTitle}>
+        {t('catalog_title')}
+      </Title>
+      {DATASET_CATALOG.map((entry) => card(entry, stateOf(entry.name)))}
+      <OwnDatasets
+        datasets={list?.datasets.filter((dataset) => dataset.own) ?? []}
+        supported={supported}
+        onCreate={() => setTerms({})}
+        renderCard={(dataset) => card(undefined, dataset)}
+      />
+
       <InstallDataset
         entry={instruction}
         installed={instruction ? (stateOf(instruction.name)?.installed ?? false) : false}
@@ -255,6 +153,38 @@ export const DatasetsSection: React.FC<DatasetsSectionP> = ({ initial }) => {
         onClose={() => setInstruction(null)}
         onFinished={() => void reload()}
       />
+      <OwnDatasetForm
+        open={!!terms}
+        dataset={terms?.dataset}
+        onClose={() => setTerms(null)}
+        onSaved={() => {
+          setTerms(null);
+          void reload();
+        }}
+      />
+      {/* an import or an export keeps its dialog until it is closed: the stream is read by it */}
+      <Modal
+        open={!!importing}
+        title={importing ? t('import_title', { name: importing.title }) : ''}
+        footer={null}
+        width={760}
+        mask={{ closable: false }}
+        destroyOnHidden
+        onCancel={() => setImporting(null)}
+      >
+        {importing && <ImportDictionarySection dataset={importing} onFinished={() => void reload()} />}
+      </Modal>
+      <Modal
+        open={!!exporting}
+        title={exporting ? t('export_title', { name: exporting.title }) : ''}
+        footer={null}
+        width={640}
+        mask={{ closable: false }}
+        destroyOnHidden
+        onCancel={() => setExporting(null)}
+      >
+        {exporting && <ExportDictionarySection dataset={exporting} />}
+      </Modal>
     </div>
   );
 };

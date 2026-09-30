@@ -1,20 +1,21 @@
 # Datasets: several dictionaries in one instance
 
 An instance is born with one dictionary, the project's own dataset. It can hold more — the
-English Wiktionary, Open English WordNet, Princeton WordNet — each one complete and separate,
-**one of them served at a time**. Datasets are never mixed: an answer of the API comes from one
-source and carries the terms of that source.
+English Wiktionary, Open English WordNet, Princeton WordNet, and
+[dictionaries of the owner's own](#datasets-of-the-instances-own) — each one complete and
+separate, **one of them served at a time**. Datasets are never mixed: an answer of the API comes
+from one source and carries the terms of that source.
 
-|                     |                                                                                                                                    |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Needs               | PostgreSQL. On SQLite (development) there is the default dataset only and the page says so                                         |
-| Where               | Admin → **Managing → Datasets**; `/api/en/datasets` of the admin API                                                               |
-| Which datasets      | the ones the code knows: a closed catalog, with the license and the attribution of each stated in it                               |
-| A dataset is        | a Postgres schema with the dictionary tables in it, plus a row in the registry                                                     |
-| The default dataset | `default`, the tables in `public` an instance always had. It cannot be deleted                                                     |
-| Switching           | a click; the server re-opens its database connection on the other schema — no restart, no failed request                           |
-| Upgrading to this   | nothing to do: the migration registers the existing dictionary as `default` and leaves it in place                                 |
-| Editing             | every dataset can be edited; what was changed is kept as [a history](#editing-a-dataset-the-history-of-edits) and shown to readers |
+|                     |                                                                                                                                               |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Needs               | PostgreSQL. On SQLite (development) there is the default dataset only and the page says so                                                    |
+| Where               | Admin → **Managing → Datasets**; `/api/en/datasets` of the admin API                                                                          |
+| Which datasets      | the ones the code knows — a closed catalog, with the license and the attribution of each stated in it — and the owner's own                   |
+| A dataset is        | a Postgres schema with the dictionary tables in it, plus a row in the registry                                                                |
+| The default dataset | `default`, the tables in `public` an instance always had. It cannot be deleted                                                                |
+| Switching           | a click; the server re-opens its database connection on the other schema — no restart, no failed request                                      |
+| Upgrading to this   | nothing to do: the migration registers the existing dictionary as `default` and leaves it in place                                            |
+| Editing             | every dataset, [served or not](#the-dataset-that-is-edited); what was changed is kept as [a history](#editing-a-dataset-the-history-of-edits) |
 
 ## The catalog
 
@@ -22,7 +23,7 @@ The datasets page shows every dataset the instance can hold, installed or not:
 
 | Dataset               | Name                | Source in the API   | License                       | Installed from                                   |
 | --------------------- | ------------------- | ------------------- | ----------------------------- | ------------------------------------------------ |
-| The project's own     | `default`           | `vocab-bloom-hub`   | CC BY 4.0                     | the import page: HuggingFace or an export        |
+| The project's own     | `default`           | `vocab-bloom-hub`   | CC BY 4.0                     | its card: HuggingFace or an export               |
 | English Wiktionary    | `wiktionary`        | `wiktionary`        | CC BY-SA 4.0, **share-alike** | `kaikki.org-dictionary-English.jsonl.gz`, 0.5 GB |
 | Open English WordNet  | `wordnet`           | `wordnet`           | CC BY 4.0                     | `english-wordnet-2025.zip`, 10 MB                |
 | Princeton WordNet 3.1 | `wordnet_princeton` | `princeton-wordnet` | WordNet license               | `wn3.1.dict.tar.gz`, 16 MB                       |
@@ -30,9 +31,11 @@ The datasets page shows every dataset the instance can hold, installed or not:
 The terms of a dataset — license, attribution line, the notice for readers — are **stated in
 the code** (`apps/server/core/constants/dataset_catalog.ts`) and nowhere typed in: what a license
 asks for is a fact about the source, and the instance shows it as it is. A new version of the
-code that corrects an attribution line corrects it on every instance at its next start. There is
-no way to make a dataset of a name of one's own; a new source is a converter and an entry of the
-catalog ([converters' README](../apps/server/src/converters/README.md#adding-a-source)).
+code that corrects an attribution line corrects it on every instance at its next start. A new
+source is a converter and an entry of the catalog
+([converters' README](../apps/server/src/converters/README.md#adding-a-source)); a dictionary of
+one's own is [a dataset of the instance's own](#datasets-of-the-instances-own), next to the
+catalog.
 
 ## Installing a dataset
 
@@ -104,10 +107,18 @@ One import or installation runs at a time, and no dataset is activated or delete
 runs (`409 import_in_progress`, `409 datasets_busy`). On SQLite the routes that change the set
 of datasets answer `409 datasets_not_supported`.
 
-**A dataset of another instance.** An export is a dataset in the project's format and goes
-through the import page: with more than one dataset installed the page offers _Import into_,
-and `dataset` of the import request names a dataset of the catalog, installing it when it is
-not ([`offline-import.md`](./offline-import.md)).
+**A dataset of another instance.** An export is a dataset in the project's format and goes in
+through _Import_ on the card of the dataset it belongs to; `dataset` of the import request names
+it, a dataset of the catalog being installed when it is not
+([`offline-import.md`](./offline-import.md)).
+
+**Everything done with a dataset starts on its card** (issue #540): _Activate_, _Edit its
+words_ (chooses it in [the switch of the header](#the-dataset-that-is-edited) and opens
+_Managing_), _Import_ — the published dataset of the project, an archive or the files of a
+dataset; a dataset of a public source is updated from the file of its source instead — _Export_,
+_Edit the terms_ of a dataset of the owner's and _Delete_. A line says what the dataset is; what
+it holds and its terms in full open under _Details_. The old addresses of the import and the
+export pages lead to the datasets page.
 
 ## Versions and newer files of a source
 
@@ -130,11 +141,12 @@ same file report the same `dataset_version`.
   WordNet dataset.
 - **An installation takes no version from the admin.** Like the license and the attribution,
   the version of a file is a fact of the source. Two other ways into a dataset do carry a version
-  that somebody wrote: an export of another instance, imported on the import page, brings the
+  that somebody wrote: an export of another instance, imported through the card of a dataset, brings the
   version of its manifest, and a manifest filled in by hand there brings the one that was typed
-  ([`offline-import.md`](./offline-import.md)). The settings field `en_dataset_version`, which
-  mirrors the version of the active dataset and is what `GET /api/v1/meta` reports, can be
-  corrected by hand too; the registry and the card of the dataset keep what was installed.
+  ([`offline-import.md`](./offline-import.md)). The registry keeps what was installed and
+  `GET /api/v1/meta` reports it; the settings field `en_dataset_version` mirrors the version of
+  the active dataset for the readers of the settings and is not edited by hand — a version is
+  what the file said, and only an import or a switch of the dataset writes it.
 - **A dataset installed by an earlier version of the server** keeps the day of its installation
   until it is installed again: the server does not have the file any more.
 - The version is written into every entry of the dataset, into the registry and the manifest of
@@ -149,7 +161,7 @@ source has now, and a notice when the difference is worth an installation.
 | English Wiktionary   | `HEAD` of the extract on kaikki.org, for its `Last-Modified`            | when the extract of the source is **30 days or more** newer |
 | Open English WordNet | the latest release of `globalwordnet/english-wordnet` on the GitHub API | when its edition is newer than the installed one            |
 | Princeton WordNet    | nothing: frozen since 2011                                              | never                                                       |
-| the project's own    | nothing here: the import page compares it with the published dataset    | on the import page                                          |
+| the project's own    | nothing here: its import compares it with the published dataset         | in the import of its card                                   |
 
 - **A notice, not an update.** The file is downloaded and attached by the admin, as at the
   first installation; the link of the notice leads to the page of the source.
@@ -169,12 +181,83 @@ source has now, and a notice when the difference is worth an installation.
 - `GET /api/en/datasets/updates` (admin) answers what the card shows. Nothing of it is a part of
   the public API.
 
+## Datasets of the instance's own
+
+Next to the catalog an instance holds dictionaries of its owner: rows of the registry marked `own`. The mark is kept, not derived from the catalog: an entry a later version adds to the catalog under the name of a dataset of the owner's does not take it over — its terms stay the owner's, and the source is never installed into it (`409 dataset_already_exists`). The catalog stays closed — nothing about its four datasets becomes
+editable — and a dataset of one's own is where one's own words go, instead of into a dataset of
+a public source, where they would be served under the name and the license of somebody else.
+
+**Creating one.** _Managing → Datasets → Datasets of this instance → Create a dataset_, or
+`POST /api/en/datasets`:
+
+```json
+{
+  "name": "my_words",
+  "title": "My words",
+  "license": { "spdx": "CC-BY-4.0" },
+  "attribution": "Words collected by the owner of this site",
+  "attribution_url": "https://example.org/words"
+}
+```
+
+- `name` is lower-case latin, digits and `_`, 2 to 40 characters; it becomes the schema
+  `ds_<name>` and **the `source` of the data in the public API**. The names of the catalog — of
+  its datasets and of its sources — are refused (`409 dataset_name_reserved`), and so is a name
+  that is taken (`409 dataset_already_exists`).
+- The dataset is created **empty**: a schema with the dictionary tables and the dataset
+  migrations, a row in the registry. It is filled by choosing it as
+  [the dataset that is edited](#the-dataset-that-is-edited), or by an import of an export of it.
+- Any number of them. Activating and deleting work as for a dataset of the catalog.
+
+**The license** is one of a closed list — `CC0-1.0`, `CC-BY-4.0`, `CC-BY-SA-4.0`,
+`CC-BY-NC-4.0`, `ODbL-1.0` (`apps/server/core/constants/data_licenses.ts`, shared with the admin
+UI) — named by its SPDX identifier, or **a license of the owner's own** when none of them fits:
+
+```json
+{ "license": { "name": "House License 1.0", "url": "https://example.org/license", "text": "…" } }
+```
+
+The text of such a license is served in full as `license_text` — by `/api/v1/meta` while the
+dataset is active, in its group of `/api/v1/words/{word}/datasets`, on `/dataset-terms` of the
+website — and written into the `LICENSE` file of an export, the way the notice of WordNet is. A
+request that mixes the two, names a license the list does not have or leaves a part out answers
+`400 dataset_license_invalid`.
+
+**Correcting the terms.** _Edit the terms_ on the card, or `PATCH /api/en/datasets/{name}` with
+any of the fields above but `name`. The title and the attribution are corrections. **The license
+can be changed too, behind a warning** the dialog shows and asks to confirm:
+
+- whoever took the data keeps the right to use it under the license it was taken under — a
+  license that was given is not taken back;
+- the corrections of readers were accepted under the license the report form named when they
+  were sent;
+- the API, the word pages and the exports carry the new license from then on;
+- the change is written to the audit journal with the license before and after.
+
+A dataset of the catalog answers `409 dataset_terms_fixed`: its terms are the catalog's.
+
+What follows from a dataset of one's own:
+
+- **`title`** names it for readers: `/api/v1/meta` and every group of the read of every dataset
+  carry it, and the website names the tab of a word page by it.
+- **Generated entries are allowed.** A dataset of a public source refuses what a language model
+  generated (`generated_not_allowed`); the project's dataset and a dataset of the owner's take it —
+  the owner states whatever notice their readers need in the attribution.
+- **An export** names the dataset as its `source` in the manifest, with its license, and writes
+  the terms into `LICENSE`; **an import** into the dataset takes data of that source under that
+  license only (`409 dataset_source_mismatch` otherwise): data given under another license is not
+  relicensed by an import.
+- **"Modified"** means what it means for every dataset: an entry with edits in the history. For a
+  dataset of one's own every entry is the owner's; the history still tells what changed when.
+
 ## What a switch changes
 
-- **Every read and every edit** goes to the tables of the new active dataset: the public API,
-  the admin UI, the search, the export, the suggestions of the readers. The one exception is
-  the read of a headword from every dataset ([below](#reading-every-dataset-at-once)), which
-  answers from all of them whichever is active.
+- **Every read of the public API** goes to the tables of the new active dataset: the words, the
+  search, the list, the suggestions of the readers. The one exception is the read of a headword
+  from every dataset ([below](#reading-every-dataset-at-once)), which answers from all of them
+  whichever is active. The admin UI works on
+  [the dataset that is edited](#the-dataset-that-is-edited) — the active one, unless its switch
+  names another.
 - **`GET /api/v1/meta`** reports the dataset (`dataset`, `source`, `dataset_version`) and its
   terms (`license`, `license_url`, `attribution`, `attribution_url`, `notice`, and `license_text`
   — the notices of the source in full, where its license asks for them); every word of the public API names its `source`, and so does every part of a word served on its own and every edit of the history. The word pages of the website print the license and the
@@ -189,12 +272,49 @@ source has now, and a notice when the difference is worth an installation.
   ([`api.md`](./api.md#spellings-that-differ-by-case)).
 - **Ids are per dataset.** The entry with id 42 of one dataset has nothing to do with id 42 of
   another: a client that stored ids re-reads them by headword after a switch.
-- **The history of edits is per dataset** too: the _History_ page lists the edits of the active
-  dataset, and says of every event of the instance which dataset it was about.
+- **The history of edits is per dataset** too: the _History_ page lists the edits of the dataset
+  that is edited, and says of every event of the instance which dataset it was about.
 - **The moderation queue is per dataset**: a report about an entry stays with the dataset the
-  entry belongs to and comes back when that dataset is active again.
+  entry belongs to — a report is filed in the active one — and is moderated while that dataset
+  is the one that is edited.
 - **The automatic first-start import** (`DICTIONARY_AUTO_IMPORT`) fills `default` only, and only
   while `default` is the active dataset.
+
+## The dataset that is edited
+
+The admin edits any dataset the instance holds without serving it: an empty dataset is filled
+while the public API and the website go on serving the active one.
+
+- **One switch in the header of the admin UI**: the dataset that is edited. The active dataset
+  by default, any installed dataset on a choice; the choice is kept while the admin moves between
+  pages (a cookie), and falls back to the active dataset when the chosen one is deleted or
+  becomes the active one.
+- It applies to **everything the admin does with the dictionary**: adding and editing words,
+  meanings, translations and forms, deleting, the search, the lists, the statistics, the history
+  of edits and the queue of suggestions. The import and the export name the dataset of their
+  card.
+  The datasets page, the settings and the journal of the instance are no part of one dataset.
+- **Under the switch**, what the chosen dataset is: its title, source and license, the number of
+  its entries, whether it is the one that is served, whether it is a dataset of the catalog or
+  the owner's. For a dataset of a public source it reminds that an edit marks the entry as
+  modified.
+
+**In the API.** The admin routes of the dictionary (`/api/en/*` but `/api/en/datasets`,
+`/api/en/dictionary/import` and `/api/en/audit`) take an optional `?dataset=<name>`. Without it
+they work on the active dataset, as before; with another dataset they work on it through a
+connection on its schema — the one the [read of every dataset](#reading-every-dataset-at-once)
+keeps — and no statement names two schemas. The search of the admin UI is
+`GET /api/en/search`, the flat search of the public API on the dataset the request names; the
+public search serves the active dataset only. A name that is no dataset answers
+`400 dataset_name_invalid`, a dataset the instance does not hold `404 dataset_not_found`.
+
+- An edit leaves its row in `en_changes` **of the dataset it was made in**, and an audit row
+  names that dataset.
+- **An edit of a dataset that is not served is public at once** on the tab of that dataset of a
+  word page (`GET /api/v1/words/{word}/datasets`), and counts into the `Last-Modified` of the
+  reads of every dataset; nothing the active dataset serves changes.
+- "Report a mistake" is offered on the tab of the served dataset only: a report is filed in the
+  active dataset.
 
 ## Reading every dataset at once
 
@@ -305,12 +425,12 @@ data ([`data.md`](./data.md#personal-data)): _Take a name out of the history_ on
 page removes it from the history and the reports of **every dataset of the instance**; the
 edits stay.
 
-| Route                                | What it does                                                                                                                                              |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /api/v1/words/{word}/history`   | public: the edits of a headword that show, the latest first ([`api.md`](./api.md#the-history-of-a-headword))                                              |
-| `GET /api/en/changes`                | admin: the whole history of the active dataset; `headword`, `part_of_speech`, `search`, `author`, `entity`, `action`, `origin`, `active`, `page`, `limit` |
-| `POST /api/en/changes/{id}/revert`   | admin: takes one change back. `409 change_outdated`, `409 change_not_revertible`                                                                          |
-| `POST /api/en/changes/forget-author` | admin: `{ "author": "…" }` — takes a name out of every dataset; answers how many rows named it                                                            |
+| Route                                | What it does                                                                                                                                                                                              |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/v1/words/{word}/history`   | public: the edits of a headword that show, the latest first ([`api.md`](./api.md#the-history-of-a-headword))                                                                                              |
+| `GET /api/en/changes`                | admin: the whole history of the dataset a request names (`dataset`, the active one without it); `headword`, `part_of_speech`, `search`, `author`, `entity`, `action`, `origin`, `active`, `page`, `limit` |
+| `POST /api/en/changes/{id}/revert`   | admin: takes one change back. `409 change_outdated`, `409 change_not_revertible`                                                                                                                          |
+| `POST /api/en/changes/forget-author` | admin: `{ "author": "…" }` — takes a name out of every dataset; answers how many rows named it                                                                                                            |
 
 The history is a part of the data, and the _History_ page keeps it apart from the journal of
 the instance: **edits of the dictionary** on one tab — kept for good, exported with the dataset
@@ -332,7 +452,9 @@ the dataset it would go into: an export of a Wiktionary dataset does not land in
 dataset because the target was left on _the active dataset_, and the published dataset of the
 project does not land in an active Wiktionary. A dataset without a `source` in its manifest (an
 export of an older version, files assembled by hand) is taken for what the target holds. An
-installation cannot mix at all: the file of a source goes into the dataset of that source.
+installation cannot mix at all: the file of a source goes into the dataset of that source. A
+[dataset of the instance's own](#datasets-of-the-instances-own) takes the exports of itself
+under the license it has now, and nothing else.
 
 > [!WARNING]
 > **One server process per database.** A switch re-opens the connection of the process that
@@ -367,7 +489,8 @@ the folder they write is a dataset like an export.
 
 SQLite has no schemas, and it is the database of development only: the instance holds the
 default dataset, the datasets page shows the catalog and every instruction, and nothing can be
-installed — the page says why. A dataset of a public source needs PostgreSQL.
+installed or created — the page says why, and the switch of the dataset that is edited lists the
+one dataset. A dataset of a public source, and one of the owner's, needs PostgreSQL.
 
 ## In the database
 
@@ -377,6 +500,7 @@ public                 settings, datasets, audit_log, migrations, dataset_migrat
 ds_wiktionary          en_entries, en_words, en_meanings, …, en_changes, suggestions,
                        dataset_migrations
 ds_wordnet             the same tables, other rows
+ds_my_words            a dataset of the instance's own: the same tables
 ```
 
 The connection of the server carries `search_path = ds_<name>, public`: the dictionary tables
@@ -388,6 +512,11 @@ backed up and what a connection pooler has to pass through:
 ## Not there yet
 
 - A search across datasets: the headword read answers from every dataset
-  ([above](#reading-every-dataset-at-once)), the search from the active one.
+  ([above](#reading-every-dataset-at-once)), the search from the active one (the admin UI: from
+  the dataset that is edited).
+- _Report a mistake_ on the tab of a dataset that is not served: a report is filed in the active
+  dataset.
+- A license of its own for the edits of a dataset of a public source: an edit takes the license
+  of its dataset.
 - Datasets of other headword languages: the registry records the language of a dataset, the
   tables are the English ones.

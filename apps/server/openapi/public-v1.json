@@ -2938,6 +2938,9 @@
           "dataset": {
             "type": "string"
           },
+          "title": {
+            "type": "string"
+          },
           "active": {
             "type": "boolean"
           },
@@ -3219,6 +3222,9 @@
             "type": "string"
           },
           "dataset": {
+            "type": "string"
+          },
+          "title": {
             "type": "string"
           },
           "source": {

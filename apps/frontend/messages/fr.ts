@@ -31,6 +31,12 @@ export default {
     [ErrorCodes.suggestion_invalid]: 'Les modifications proposées sont mal formées',
     [ErrorCodes.suggestion_not_applicable]:
       'Rien à appliquer : un signalement textuel, ou un signalement qui a déjà reçu un verdict',
+    [ErrorCodes.dataset_name_reserved]: 'Ce nom appartient à un jeu de données ou à une source du catalogue',
+    [ErrorCodes.dataset_already_exists]: 'Un jeu de données de ce nom existe déjà',
+    [ErrorCodes.dataset_terms_fixed]:
+      'Les conditions d’un jeu de données du catalogue sont celles de sa source',
+    [ErrorCodes.dataset_license_invalid]:
+      'Choisissez une licence de la liste, ou indiquez le nom, le lien et le texte de la vôtre',
     [ErrorCodes.datasets_not_supported]:
       'Cette base de données n’a pas de schémas : plusieurs jeux de données nécessitent Postgres',
     [ErrorCodes.dataset_not_found]: 'Jeu de données introuvable',
@@ -58,6 +64,24 @@ export default {
     home: 'Accueil',
     theme: 'Thème sombre',
     language: 'Langue de l’interface',
+  },
+  // the switch of the dataset that is edited and what it is (issue #540)
+  edited_dataset: {
+    switch: 'Le jeu de données modifié',
+    switch_prefix: 'Modification :',
+    block: 'Le jeu de données modifié',
+    editing: 'Vous modifiez',
+    active: 'actif',
+    not_served: 'non servi',
+    own: 'le vôtre',
+    catalog: 'du catalogue',
+    source: 'Source',
+    license: 'Licence',
+    entries: 'Entrées',
+    not_served_note:
+      'L’API et le site servent « {active} ». Ce que vous changez ici est public dans l’onglet de ce jeu de données de la page d’un mot, et sera servi en entier une fois que vous l’aurez activé.',
+    public_source_note:
+      'Une modification de « {title} » marque l’entrée comme modifiée : ses lecteurs sont informés des entrées qui diffèrent de ce que la source a publié.',
   },
   footer: {
     docs: 'Documentation',
@@ -237,9 +261,7 @@ export default {
     edit: 'Modifier les données',
     edit_word: 'Modifier le mot',
     back_to_managing: 'Retour à la gestion des mots',
-    import_dictionary: 'Importer le dictionnaire',
     bulk_request: 'Requête en masse',
-    export_dictionary: 'Exporter le dictionnaire',
     datasets: 'Jeux de données',
   },
   // the datasets of the instance (issue #527): the catalog, the terms and the instruction
@@ -283,7 +305,14 @@ export default {
     deleted: 'Le jeu de données a été supprimé',
     how_to_install: 'Comment l’installer',
     update: 'Mettre à jour avec un fichier plus récent',
-    open_import: 'Ouvrir la page d’import',
+    // everything done with a dataset starts on its card (issue #540)
+    catalog_title: 'Le catalogue',
+    edit_words: 'Modifier ses mots',
+    import: 'Importer',
+    export: 'Exporter',
+    details: 'Détails',
+    import_title: 'Importer dans « {name} »',
+    export_title: 'Exporter « {name} »',
     about_default:
       'Le jeu de données du projet : des entrées générées par des modèles de langage, avec les niveaux CECRL et des traductions en sept langues. Toute instance commence avec lui ; il se charge et se met à jour sur la page d’import.',
     about_wiktionary:
@@ -353,6 +382,51 @@ export default {
     done_update: 'Le jeu de données est à jour.',
     done_summary: 'Remplacées : {updated} · ajoutées : {added} · conservées avec vos modifications : {kept}',
     too_large: 'Le fichier dépasse ce que le serveur accepte',
+    // the datasets of the instance's own (issue #540)
+    own_title: 'Jeux de données de cette instance',
+    own_intro:
+      'Un dictionnaire à vous, à côté de ceux du catalogue : créé vide sous la licence que vous choisissez, rempli en le choisissant comme jeu de données modifié ou par un import, servi dès que vous l’activez. Sa source dans l’API est son nom.',
+    own_empty: 'Aucun jeu de données à vous pour l’instant',
+    own_create_button: 'Créer un jeu de données',
+    own_create_title: 'Un nouveau jeu de données de cette instance',
+    own_create: 'Créer',
+    own_created: '« {name} » est créé. Choisissez-le comme jeu de données modifié pour le remplir.',
+    own_edit: 'Modifier les conditions',
+    own_edit_title: 'Les conditions de « {name} »',
+    own_save: 'Enregistrer',
+    own_saved: 'Les conditions sont enregistrées',
+    status_own: 'le vôtre',
+    label_created: 'Créé',
+    own_field_name: 'Nom',
+    own_field_name_hint:
+      'Lettres latines minuscules, chiffres et « _ », en commençant par une lettre. Il désigne le jeu de données dans l’API et ne peut pas être changé.',
+    own_field_title: 'Titre',
+    own_field_license_name: 'Le nom de la licence',
+    own_field_license_url: 'Où lire la licence',
+    own_field_license_text: 'Le texte de la licence, en entier',
+    own_field_attribution_hint: 'La ligne que doit afficher quiconque affiche les données.',
+    own_field_attribution_url: 'Où mène l’attribution (facultatif)',
+    own_required: 'Obligatoire',
+    own_name_pattern:
+      'Lettres latines minuscules, chiffres et « _ », en commençant par une lettre ; de 2 à 40 caractères',
+    own_name_reserved: 'Ce nom appartient à un jeu de données ou à une source du catalogue',
+    own_url_invalid: 'Un lien commençant par http:// ou https://',
+    own_license_own: 'Une licence à moi…',
+    own_license_own_hint:
+      'Quand aucune des licences ci-dessus ne convient : son nom, un lien et son texte en entier. Le texte accompagne les données — dans l’API, sur les pages de mots et dans chaque export.',
+    own_license_is_standard: 'Cette licence est dans la liste : choisissez-la là',
+    own_license_tag: 'licence propre',
+    own_license_text: 'Le texte de la licence',
+    own_license_change_title: 'Vous changez la licence de ce jeu de données',
+    own_license_change_given:
+      'Quiconque a pris les données garde le droit de les utiliser sous la licence sous laquelle il les a prises : une licence accordée n’est pas reprise.',
+    own_license_change_reports:
+      'Les corrections envoyées par les lecteurs ont été acceptées sous la licence que nommait le formulaire de signalement au moment de leur envoi.',
+    own_license_change_served:
+      'Désormais, l’API, les pages de mots et les exports de ce jeu de données portent la nouvelle licence.',
+    own_license_change_journal:
+      'Le changement est inscrit dans les événements de l’instance, avec la licence d’avant et celle d’après.',
+    own_license_change_confirm: 'Je comprends, changer la licence',
   },
   import_dictionary: {
     your_version: 'Votre version',
@@ -391,8 +465,6 @@ export default {
     data_attribution: 'Attribution :',
     up_to_date: 'Vous avez déjà la dernière version du dictionnaire',
     update_available: 'Une version plus récente du jeu de données est disponible',
-    published_is_own:
-      'Le jeu de données publié est celui du projet et s’importe dans le jeu « default ». « {name} » est un jeu de données d’une autre source : il se met à jour sur la page des jeux de données, avec le fichier de sa source.',
     start_update: 'Mettre à jour le dictionnaire',
     update_summary:
       'Mise à jour terminée : {updated} entrées mises à jour, {added} ajoutées, {kept} conservées avec vos modifications',
@@ -430,10 +502,6 @@ export default {
     server_file_empty: "Aucun jeu de données dans le répertoire d'import",
     import_dir_hint:
       'Définissez DICTIONARY_IMPORT_DIR sur le serveur pour choisir des jeux de données dans un dossier monté',
-    dataset_target: 'Importer dans',
-    dataset_active: '{name} — le jeu de données actif',
-    dataset_hint:
-      'Un import dans un autre jeu de données ne touche pas l’actif : l’API continue de le servir jusqu’à l’activation du nouveau.',
   },
   bulk_request: {
     license_note:

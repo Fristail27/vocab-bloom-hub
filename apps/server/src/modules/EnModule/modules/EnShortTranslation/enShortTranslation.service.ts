@@ -21,6 +21,7 @@ import {
   shortTranslationRecord,
   shortTranslationSnapshot,
 } from '../../utils/changes/snapshots';
+import { scoped } from '../../../../core/utils/dataset-scope';
 
 @Injectable()
 export class EnShortTranslationService {
@@ -28,11 +29,21 @@ export class EnShortTranslationService {
 
   constructor(
     @InjectRepository(EnWord)
-    private readonly enWordsRep: Repository<EnWord>,
+    private readonly activeEnWordsRep: Repository<EnWord>,
 
     @InjectRepository(EnShortTranslation)
-    private readonly enShortTranslationRep: Repository<EnShortTranslation>,
+    private readonly activeEnShortTranslationRep: Repository<EnShortTranslation>,
   ) {}
+
+  // the dataset the request works on (issue #540): the active one, or the
+  // one the switch of the admin UI names
+  private get enWordsRep(): Repository<EnWord> {
+    return scoped(this.activeEnWordsRep);
+  }
+
+  private get enShortTranslationRep(): Repository<EnShortTranslation> {
+    return scoped(this.activeEnShortTranslationRep);
+  }
 
   async addShortTranslation(
     body: AddShortTranslationReqDTO,

@@ -50,6 +50,10 @@ export class EnDatasetInstallService {
       if (!uploads.file) throw new BadRequestException(ErrorCodes.dataset_upload_missing);
       // refused before the file is looked at; the import claims the slot itself
       if (this.importStatus.running) throw new ConflictException(ErrorCodes.import_in_progress);
+      // a dataset of the owner's took the name of this entry before the catalog had it (issue #540)
+      if ((await this.datasets.installed()).some((dataset) => dataset.name === name && dataset.own)) {
+        throw new ConflictException(ErrorCodes.dataset_already_exists);
+      }
 
       const input = await this.inputOf(entry, uploads.file, work);
       if (uploads.pronunciations) await this.assertPronunciations(uploads.pronunciations);

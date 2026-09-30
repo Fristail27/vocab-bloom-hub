@@ -9,8 +9,11 @@ import {
 } from '../../../../../types';
 import { AddMeaningTranslationReqDTO } from './dto/AddMeaningTranslationReq.dto';
 import { EditMeaningTranslationReqDTO } from './dto/EditMeaningTranslationReq.dto';
+import { ApiDatasetQuery } from '../../../DatasetsModule/api-dataset-query';
 
 @ApiTags('En_Words')
+// the dataset the request works on (issue #540)
+@ApiDatasetQuery()
 @Controller('/api/en/word/')
 export class EnMeaningTranslationController {
   constructor(private readonly enMeaningTranslationService: EnMeaningTranslationService) {}

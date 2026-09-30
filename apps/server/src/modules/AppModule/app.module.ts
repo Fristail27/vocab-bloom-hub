@@ -14,6 +14,7 @@ import { typeOrmRoot } from '../../db/typeorm-root';
 import { DatasetsModule } from '../DatasetsModule/datasets.module';
 import { DatasetsService } from '../DatasetsModule/datasets.service';
 import { switchGateMiddleware } from '../DatasetsModule/switch-gate';
+import { datasetScopeMiddleware } from '../DatasetsModule/dataset-scope.middleware';
 import { HealthModule } from '../HealthModule/health.module';
 import { ImportStatusModule } from '../EnModule/modules/EnImportDictionary/importStatus.module';
 import { MetricsModule } from '../MetricsModule/metrics.module';
@@ -71,5 +72,9 @@ export class AppModule implements NestModule {
     // a switch of the active dataset re-opens the database connection: the
     // requests wait for it and it waits for them (issue #527)
     consumer.apply(switchGateMiddleware(this.datasets.gate)).forRoutes('*');
+    // the dataset an admin request of the dictionary works on, when it names
+    // one that is not active (issue #540); inside the gate, so no switch
+    // comes between the choice of its connection and the request
+    consumer.apply(datasetScopeMiddleware(this.datasets)).forRoutes('*');
   }
 }

@@ -1,4 +1,6 @@
-import { getActiveDatasetSource } from '../../../core/utils/active-dataset';
+// the dataset a request works on (issue #540): the active one for the public
+// API, the one an admin request names for the search of the admin UI
+import { currentDatasetSource } from '../../../core/utils/dataset-scope';
 import { EnChange } from '../../EnModule/entities/en_change.entity';
 import { EnWord } from '../../EnModule/entities/en_word.entity';
 import { EnMeaning } from '../../EnModule/entities/en_meaning.entity';
@@ -120,7 +122,7 @@ export const toPublicSearchWord = (
   base_phrasal: row.base_phrasal?.word?.word ?? null,
   forms: (row.forms ?? []).map(toPublicForm),
   ...(similarity !== undefined && { similarity }),
-  source: source ?? getActiveDatasetSource(),
+  source: source ?? currentDatasetSource(),
   modified: modified ?? false,
 });
 
@@ -166,5 +168,5 @@ export const toPublicChange = (row: EnChange, source?: string): PublicChangeV1T 
   origin: row.origin,
   author: row.author,
   // the dataset the edit was read from; the active one when none is named
-  source: source ?? getActiveDatasetSource(),
+  source: source ?? currentDatasetSource(),
 });

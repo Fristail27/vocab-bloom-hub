@@ -96,8 +96,10 @@ received one is asked separately.
 ## Datasets from other sources
 
 An instance on PostgreSQL keeps several datasets, one of them active
-([`datasets.md`](./datasets.md)). The datasets page of the admin UI installs a dataset of a
-public source from the file the source distributes — the server converts it:
+([`datasets.md`](./datasets.md)), and datasets of its owner's own, under a license the owner
+chooses ([`datasets.md`](./datasets.md#datasets-of-the-instances-own)). The datasets page of the
+admin UI installs a dataset of a public source from the file the source distributes — the server
+converts it:
 
 | Source                     | License of the data | What an entry has                                                                        | What it lacks                                     |
 | -------------------------- | ------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------- |
@@ -148,7 +150,7 @@ revision). The tags make revisions addressable:
 
 - HF serves any revision via `resolve/<revision>/…`, and the server imports one with
   `POST /api/en/dictionary/import` `{ "source": { "kind": "huggingface", "revision": "<tag>" } }`
-  — the admin import page offers the tags in a _Dataset version_ selector;
+  — the import of the project's dataset in the admin UI offers the tags in a _Dataset version_ selector;
 - `DICTIONARY_DATASET_VERSION=<tag>` pins the automatic first-start import
   ([environment.md](./environment.md)); unset means the moving `main`;
 - the list of tags comes from the HF refs API
@@ -193,7 +195,7 @@ next export):
 | Word pages of the website       | The license and the attribution of the dataset under every entry and next to _Report a mistake_; what was changed on the site                                |
 | `/dataset-terms` of the website | The terms of the active dataset, with the notices of its source in full                                                                                      |
 | Admin → _Datasets_              | The terms of every dataset of the catalog, as the code states them                                                                                           |
-| Admin → _Export dictionary_     | License, link and attribution line next to the download                                                                                                      |
+| Admin → _Datasets → Export_     | License, link and attribution line next to the download                                                                                                      |
 | HuggingFace dataset card        | `license: cc-by-4.0` front matter, `LICENSE`, `NOTICE`, this notice (the project's dataset)                                                                  |
 
 All of them but the dataset card carry the terms of the **active dataset**, and those are the

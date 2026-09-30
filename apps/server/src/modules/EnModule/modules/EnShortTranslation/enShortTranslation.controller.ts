@@ -9,8 +9,11 @@ import {
 } from '../../../../../types';
 import { AddShortTranslationReqDTO } from './dto/AddShortTranslationReq.dto';
 import { EditShortTranslationReqDTO } from './dto/EditShortTranslationReq.dto';
+import { ApiDatasetQuery } from '../../../DatasetsModule/api-dataset-query';
 
 @ApiTags('En_Words')
+// the dataset the request works on (issue #540)
+@ApiDatasetQuery()
 @Controller('/api/en/word/')
 export class EnShortTranslationController {
   constructor(private readonly enShortTranslationService: EnShortTranslationService) {}

@@ -8,6 +8,7 @@ import { EnMeaning } from './entities/en_meaning.entity';
 import { EnMeaningTranslation } from './entities/en_meaning_translation.entity';
 import { EnShortTranslation } from './entities/en_short_translation.entity';
 import { EnWordFormsE } from '../../../types';
+import { scopedDataSource } from '../../core/utils/dataset-scope';
 
 type PlainT = Record<string, unknown>;
 type RelationsT = FindOptionsRelations<EnWord>;
@@ -35,8 +36,16 @@ const articleKey = (headword: string, partOfSpeech: string | null): string =>
 export class WordRowsService {
   constructor(
     @InjectDataSource()
-    private readonly dataSource: DataSource,
+    private readonly activeDataSource: DataSource,
   ) {}
+
+  // the dataset the request works on (issue #540): the active one, or the
+  // one the switch of the admin UI names. An instance made on a connection
+  // of its own — the public reads of every dataset — serves requests that
+  // name no dataset, and stays on its connection
+  private get dataSource(): DataSource {
+    return scopedDataSource(this.activeDataSource);
+  }
 
   private get escape(): (name: string) => string {
     return (name) => this.dataSource.driver.escape(name);

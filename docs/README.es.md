@@ -169,7 +169,7 @@ yarn dev                                       # API :3010, administración :300
 ```
 
 > [!IMPORTANT]
-> Carga el diccionario con _Import dictionary_ en el panel de administración.
+> Carga el diccionario con _Managing → Datasets → Import_ en el panel de administración.
 
 Todo lo demás para contribuir: [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 

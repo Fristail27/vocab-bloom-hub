@@ -108,6 +108,7 @@ describe('a headword from every dataset (e2e, issue #528)', () => {
     const { entries, word, variants, count, ...terms } = data[0];
     expect(terms).toEqual({
       dataset: 'default',
+      title: served.title,
       active: true,
       source: served.source,
       dataset_version: served.dataset_version,

@@ -5,8 +5,11 @@ import { AdminGuard } from '../../../AuthModule/guards/admin.guard';
 import { AddMeaningResT, DeleteMeaningResT, EditMeaningResT } from '../../../../../types';
 import { AddMeaningReqDTO } from './dto/AddMeaningReq.dto';
 import { EditMeaningReqDTO } from './dto/EditMeaningReq.dto';
+import { ApiDatasetQuery } from '../../../DatasetsModule/api-dataset-query';
 
 @ApiTags('En_Words')
+// the dataset the request works on (issue #540)
+@ApiDatasetQuery()
 @Controller('/api/en/word/')
 export class EnMeaningController {
   constructor(private readonly enMeaningService: EnMeaningService) {}

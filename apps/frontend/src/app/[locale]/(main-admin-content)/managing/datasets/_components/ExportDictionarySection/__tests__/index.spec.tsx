@@ -35,6 +35,7 @@ const renderSection = (dataset?: DatasetT) =>
 const WIKTIONARY: DatasetT = {
   name: 'wiktionary',
   title: 'English Wiktionary',
+  own: false,
   installed: true,
   source: 'wiktionary',
   language: 'en',
@@ -44,6 +45,7 @@ const WIKTIONARY: DatasetT = {
   attribution: 'Wiktionary contributors',
   attribution_url: 'https://en.wiktionary.org',
   notice: null,
+  license_text: null,
   active: true,
   is_default: false,
   created_at: '2026-09-27T10:00:00.000Z',
@@ -70,9 +72,12 @@ describe('ExportDictionarySection', () => {
     fireEvent.change(screen.getByLabelText('export_edited_version'), { target: { value: ' 2.1.0 ' } });
     fireEvent.click(screen.getByRole('button', { name: 'start_exporting' }));
 
-    expect(EnApi.exportDictionary).toHaveBeenCalledWith(expect.any(Function), expect.any(Function), {
-      edited_version: '2.1.0',
-    });
+    expect(EnApi.exportDictionary).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.any(Function),
+      { edited_version: '2.1.0' },
+      undefined,
+    );
   });
 
   it('exports them as they are when no version is named, and takes nothing that is not a version', () => {
@@ -86,9 +91,12 @@ describe('ExportDictionarySection', () => {
 
     fireEvent.change(screen.getByLabelText('export_edited_version'), { target: { value: '' } });
     fireEvent.click(screen.getByRole('button', { name: 'start_exporting' }));
-    expect(EnApi.exportDictionary).toHaveBeenCalledWith(expect.any(Function), expect.any(Function), {
-      edited_version: undefined,
-    });
+    expect(EnApi.exportDictionary).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.any(Function),
+      { edited_version: undefined },
+      undefined,
+    );
   });
 
   it('скачивает и сохраняет файл после чанка completed', async () => {
@@ -152,7 +160,20 @@ describe('ExportDictionarySection', () => {
     expect(screen.getByText(/data_attribution/)).toHaveTextContent('CC BY 4.0');
   });
 
-  it("shows the terms of the active dataset when it is not the project's own (issue #527)", () => {
+  // issue #540: the export is an action of the card of a dataset, whatever the switch of the header names
+  it('exports the dataset of the card, by its name', () => {
+    mockExportStreaming([]);
+    renderSection(WIKTIONARY);
+    fireEvent.click(screen.getByText('start_exporting'));
+    expect(EnApi.exportDictionary).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.any(Function),
+      { edited_version: undefined },
+      'wiktionary',
+    );
+  });
+
+  it("shows the terms of the dataset when it is not the project's own (issue #527)", () => {
     renderSection(WIKTIONARY);
     expect(screen.getByRole('link', { name: 'CC-BY-SA-4.0' })).toHaveAttribute(
       'href',

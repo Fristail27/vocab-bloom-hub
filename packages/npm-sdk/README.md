@@ -128,8 +128,9 @@ The package ships ESM and CommonJS with a declaration file for each (`dist/index
 ## License
 
 MIT for the client. The dictionary data comes under the license of the dataset the instance
-serves — CC BY 4.0 for the project's own, the license of the source for another: read `license`,
-`attribution` and `license_text` from `meta()` and show them with the data. An entry the owner of
+serves — CC BY 4.0 for the project's own, the license of the source for another, the one its owner
+chose for a dataset of the instance's own: read `license`, `attribution` and `license_text` from
+`meta()` and show them with the data (`title` names the dataset). An entry the owner of
 the instance changed carries `modified: true`, and `client.history(headword)` says what was changed: say next
 to such an entry that it was changed. `wordDatasets(headword)` answers from every dataset of the
 instance: each group carries the terms of its own dataset, and entries taken from several groups

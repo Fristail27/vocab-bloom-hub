@@ -4,15 +4,19 @@ import { ErrorResT } from './errors';
  * A dictionary dataset an instance can hold (issue #527): an entry of the
  * catalog the code ships (core/constants/dataset_catalog.ts) with what the
  * instance knows about it — whether it is installed, which version, whether
- * it is the one being served. The terms are the catalog's, never typed by
- * an admin. On Postgres every installed dataset has a schema of its own; on
- * SQLite there is the default one only.
+ * it is the one being served. The terms of a dataset of the catalog are the
+ * catalog's, never typed by an admin; a dataset of the instance's own (issue
+ * #540) is created by the admin under the terms they state. On Postgres
+ * every installed dataset has a schema of its own; on SQLite there is the
+ * default one only.
  */
 export type DatasetT = {
   /** Lower-case identifier, `default` for the dataset the instance was born with */
   name: string;
   /** The name of the dataset for a reader */
   title: string;
+  /** A dataset of the instance's own (issue #540): no catalog entry stands behind it, its terms are the owner's */
+  own: boolean;
   /** Whether the instance holds it: a schema with its tables exists */
   installed: boolean;
   /** What the data is: `vocab-bloom-hub`, `wiktionary`, `wordnet`, … */
@@ -30,6 +34,8 @@ export type DatasetT = {
   attribution_url: string | null;
   /** The provenance notice to pass on to readers (e.g. machine-generated data); null when none applies */
   notice: string | null;
+  /** The text of a license of the owner's own, in full; null for a license named by its link */
+  license_text: string | null;
   active: boolean;
   is_default: boolean;
   /** When the dataset was installed; null while it is not */
@@ -49,6 +55,36 @@ export type DatasetProvenanceT = Pick<
   DatasetT,
   'source' | 'language' | 'license' | 'license_url' | 'attribution' | 'attribution_url' | 'notice'
 >;
+
+/**
+ * The license a dataset of the instance's own comes under (issue #540): one
+ * of the list (`core/constants/data_licenses.ts`) by its SPDX identifier, or
+ * a license of the owner's own — its name, a link and its text in full
+ */
+export type DatasetLicenseReqT = {
+  /** A license of the list; the other fields are left out */
+  spdx?: string;
+  /** A license of the owner's own: all three */
+  name?: string;
+  url?: string;
+  text?: string;
+};
+
+/** POST /api/en/datasets: an empty dataset of the instance's own */
+export type CreateDatasetReqT = {
+  name: string;
+  title: string;
+  license: DatasetLicenseReqT;
+  attribution: string;
+  attribution_url?: string | null;
+};
+
+/**
+ * PATCH /api/en/datasets/{name}: the terms of a dataset of the owner's. The
+ * title and the attribution are corrected freely; a new license is a
+ * decision the admin UI asks to confirm, and the audit journal keeps
+ */
+export type UpdateDatasetReqT = Partial<Omit<CreateDatasetReqT, 'name'>>;
 
 export type GetDatasetsResT = DatasetsListT | ErrorResT;
 export type DatasetResT = DatasetT | ErrorResT;

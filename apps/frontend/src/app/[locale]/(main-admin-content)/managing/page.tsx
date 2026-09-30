@@ -22,14 +22,9 @@ export default async function ManagingPage({ params }: CommonPageP) {
     <div className={styles.mainPage}>
       <Title level={2}>{t('managing')}</Title>
       <Breadcrumb items={breadCrumbs} />
-      {/* client-side navigation (issues #348, #405): an antd href button reloads the document */}
+      {/* client-side navigation (issues #348, #405): an antd href button reloads the document;
+          the import and the export are actions of a dataset, on its card (issue #540) */}
       <div className={styles.headerBtns}>
-        <Link href={`/${locale}/managing/import-dictionary`}>
-          <Button type="primary">{manageT('import_dictionary')}</Button>
-        </Link>
-        <Link href={`/${locale}/managing/export-dictionary`}>
-          <Button type="primary">{manageT('export_dictionary')}</Button>
-        </Link>
         <Link href={`/${locale}/managing/add-word`}>
           <Button type="primary">{manageT('add_word')}</Button>
         </Link>

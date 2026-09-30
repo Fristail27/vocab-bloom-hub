@@ -28,6 +28,7 @@ import type { ImportStatusT } from '../../../../../types';
 import { ErrorCodes } from '../../../../../core/constants/error_codes';
 import { MAX_UPLOAD_BYTES, UPLOAD_ARCHIVE_FIELD, UPLOAD_FILE_FIELDS } from './constants';
 import { ImportStatusService } from './importStatus.service';
+import { ApiDatasetQuery } from '../../../DatasetsModule/api-dataset-query';
 import { UploadedFilesByFieldT } from './sources';
 
 // Uploaded files land here until the import has unpacked them; multer
@@ -116,6 +117,8 @@ export class EnImportDictionaryController {
   }
 
   @UseGuards(AdminGuard)
+  // the export takes the dataset a request names (issue #540); the import names its target in its body
+  @ApiDatasetQuery()
   @Get('export')
   async exportDictionary(@Query() query: ExportDictionaryQueryDTO, @Res() res: Response): Promise<void> {
     return this.enImportDictionaryService.exportDictionary(res, { editedVersion: query.edited_version });

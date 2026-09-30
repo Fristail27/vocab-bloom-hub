@@ -15,6 +15,14 @@ export const UNNAMED_DATASET = 'active';
 export const datasetTitle = (name: string): string =>
   DATASET_CATALOG.find((entry) => entry.name === name)?.title ?? name;
 
+/**
+ * The name of the tab of a group: the title the instance gives the dataset
+ * (issue #540) — a dataset of the instance's own is in no catalog — else
+ * the one of the catalog, for an instance of 1.1 that sends none
+ */
+export const groupTitle = (group: Pick<PublicWordDatasetV1T, 'dataset' | 'title'>): string =>
+  group.title || datasetTitle(group.dataset);
+
 /** The same by what the public API calls the data: the instance that did not name its datasets still names the source */
 export const sourceTitle = (source: string): string =>
   DATASET_CATALOG.find((entry) => entry.source === source)?.title ?? source;
@@ -56,11 +64,11 @@ export const wordPanels = ({ headword, terms, groups }: WordPanelsP): WordPanelT
       : [];
   const panels = groups.some((group) => group.active)
     ? groups.flatMap((group): WordPanelT[] => {
-        if (group.active) return servedPanel(group.dataset, datasetTitle(group.dataset));
+        if (group.active) return servedPanel(group.dataset, groupTitle(group));
         if (group.entries.length === 0) return [];
-        return [panelOfGroup(group, datasetTitle(group.dataset))];
+        return [panelOfGroup(group, groupTitle(group))];
       })
-    : servedPanel(UNNAMED_DATASET, sourceTitle(terms.source));
+    : servedPanel(UNNAMED_DATASET, terms.title || sourceTitle(terms.source));
   const place = (panel: WordPanelT): number => {
     const index = TAB_ORDER.indexOf(panel.terms.source);
     return index === -1 ? TAB_ORDER.length : index;

@@ -25,6 +25,7 @@ import { ImportStatusModule } from './modules/EnImportDictionary/importStatus.mo
 import { EnDatasetInstallController } from './modules/EnDatasetInstall/enDatasetInstall.controller';
 import { EnDatasetInstallService } from './modules/EnDatasetInstall/enDatasetInstall.service';
 import { EnSearchService } from './modules/EnSearch/enSearch.service';
+import { EnSearchController } from './modules/EnSearch/enSearch.controller';
 import { EnStatisticsController } from './modules/EnStatistics/enStatistics.controller';
 import { EnStatisticsService } from './modules/EnStatistics/enStatistics.service';
 import { EnAdminListsController } from './modules/EnAdminLists/enAdminLists.controller';
@@ -62,6 +63,8 @@ import { EnChangesService } from './modules/EnChanges/enChanges.service';
     EnDatasetInstallController,
     // the history of edits (issue #531): /api/en/changes, before GET /api/en/:id as well
     EnChangesController,
+    // the search of the admin UI on the dataset that is edited (issue #540): /api/en/search
+    EnSearchController,
     EnController,
     EnShortTranslationController,
     EnMeaningTranslationController,

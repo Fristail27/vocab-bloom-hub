@@ -7,9 +7,13 @@ import {
   DatasetCatalogEntryT,
   findCatalogEntry,
   findCatalogEntryOfAdapter,
+  isPublicSourceDataset,
+  isReservedDatasetName,
   licenseFileOf,
+  licenseFileOfOwn,
   noticesText,
 } from '../dataset_catalog';
+import { STANDARD_DATA_LICENSES } from '../data_licenses';
 import { DATASET_TARGET_PATTERN, DEFAULT_DATASET_NAME, OWN_DATASET_SOURCE } from '../datasets';
 
 // The catalog is what an instance may hold and under which terms (issue
@@ -110,6 +114,61 @@ describe('the catalog of datasets', () => {
     expect(edited).toContain('Share-alike');
     expect(edited).toContain('This copy differs from its source: 12 of its entries were changed or added');
     expect(licenseFileOf(findCatalogEntry('wiktionary')!, { modified_entries: 0 })).not.toContain('differs');
+  });
+
+  it('keeps the names of the catalog, of its datasets and of its sources, from the datasets of the owner’s', () => {
+    for (const entry of DATASET_CATALOG) {
+      expect(isReservedDatasetName(entry.name)).toBe(true);
+      expect(isReservedDatasetName(entry.source)).toBe(true);
+    }
+    expect(isReservedDatasetName('my_words')).toBe(false);
+  });
+
+  it('refuses generated data in the datasets of public sources only', () => {
+    expect(isPublicSourceDataset({ name: 'default' })).toBe(false);
+    expect(isPublicSourceDataset({ name: 'my_words', own: true })).toBe(false);
+    expect(converted.every((entry) => isPublicSourceDataset({ name: entry.name }))).toBe(true);
+    // a dataset of the owner's under the name a later catalog gives a source is still the owner's
+    expect(isPublicSourceDataset({ name: 'wiktionary', own: true })).toBe(false);
+  });
+
+  it('offers the standard licenses with their links, and writes the LICENSE of a dataset of the owner’s', () => {
+    expect(STANDARD_DATA_LICENSES.map((license) => license.spdx)).toEqual([
+      'CC0-1.0',
+      'CC-BY-4.0',
+      'CC-BY-SA-4.0',
+      'CC-BY-NC-4.0',
+      'ODbL-1.0',
+    ]);
+    for (const license of STANDARD_DATA_LICENSES) expect(license.url).toMatch(/^https:\/\//);
+
+    const terms = {
+      title: 'My words',
+      license: 'CC-BY-SA-4.0',
+      license_url: 'https://creativecommons.org/licenses/by-sa/4.0/',
+      license_text: null,
+      attribution: 'The words of the owner',
+      attribution_url: 'https://example.org',
+      notice: null,
+    };
+    const standard = licenseFileOfOwn(terms);
+    expect(standard).toContain('My words\nSource: https://example.org\n');
+    expect(standard).toContain(
+      'License: Creative Commons Attribution-ShareAlike 4.0 International (CC-BY-SA-4.0), https://creativecommons.org/licenses/by-sa/4.0/',
+    );
+    expect(standard).toContain('Share-alike');
+
+    const custom = licenseFileOfOwn({
+      ...terms,
+      license: 'House License 1.0',
+      license_url: 'https://example.org/license',
+      license_text: 'Read it aloud.',
+      attribution_url: null,
+    });
+    expect(custom).not.toContain('Source:');
+    expect(custom).toContain('License: House License 1.0, https://example.org/license');
+    expect(custom).toContain('\n\n\nHouse License 1.0\n\nRead it aloud.\n');
+    expect(custom).not.toContain('Share-alike');
   });
 
   it('tells where to download every file of a source, the required one first', () => {

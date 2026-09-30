@@ -123,7 +123,7 @@ with its parameters bound and prints the sequential scans over the large tables.
 
 > [!NOTE]
 > The scenarios need the loaded dictionary (they look up the verb _run_). Load it with the
-> import page or `docs/offline-import.md`.
+> import of the project's dataset or `docs/offline-import.md`.
 
 ## The query-plan guard
 

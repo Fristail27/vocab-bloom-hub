@@ -135,6 +135,8 @@ export default {
   terms: {
     title: 'Условия использования данных словаря',
     intro: 'Откуда взяты слова этого сайта и на каких условиях они показываются.',
+    // the name of the served dataset for a reader (issue #540)
+    dataset: 'Датасет',
     source: 'Источник',
     license: 'Лицензия',
     attribution: 'Атрибуция',

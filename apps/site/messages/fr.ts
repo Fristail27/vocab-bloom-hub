@@ -136,6 +136,8 @@ export default {
   terms: {
     title: 'Conditions des données du dictionnaire',
     intro: 'D’où viennent les mots de ce site et sous quelles conditions ils sont affichés.',
+    // the name of the served dataset for a reader (issue #540)
+    dataset: 'Jeu de données',
     source: 'Source',
     license: 'Licence',
     attribution: 'Attribution',

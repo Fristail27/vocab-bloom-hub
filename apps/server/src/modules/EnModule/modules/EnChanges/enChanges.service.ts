@@ -18,6 +18,7 @@ import { isRevertible, revertChange } from '../../utils/changes/revertChange';
 import { LIST_DEFAULT_LIMIT } from '../EnAdminLists/dto/PaginationQuery.dto';
 import { escapeLike } from '../EnSearch/utils/escapeLike';
 import { ListChangesQueryDTO } from './dto/ListChangesQuery.dto';
+import { scopedDataSource } from '../../../../core/utils/dataset-scope';
 
 // the drivers bind a few hundred parameters at most
 const BATCH = 500;
@@ -52,10 +53,16 @@ export class EnChangesService {
 
   constructor(
     @InjectDataSource()
-    private readonly dataSource: DataSource,
+    private readonly activeDataSource: DataSource,
     // absent in the unit tests that build the service by hand
     @Optional() private readonly datasets?: DatasetsService,
   ) {}
+
+  // the dataset the request works on (issue #540): the active one, or the
+  // one the switch of the admin UI names
+  private get dataSource(): DataSource {
+    return scopedDataSource(this.activeDataSource);
+  }
 
   async list(query: ListChangesQueryDTO): Promise<ChangeListT> {
     const page = query.page ?? 1;

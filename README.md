@@ -169,7 +169,7 @@ yarn dev                                       # API :3010, admin :3000, website
 ```
 
 > [!IMPORTANT]
-> Load the dictionary with _Import dictionary_ in the admin panel.
+> Load the dictionary with _Managing → Datasets → Import_ in the admin panel.
 
 Everything else for contributors: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 

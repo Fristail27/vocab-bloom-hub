@@ -83,6 +83,7 @@ describe('a headword read from every dataset', () => {
       onActiveChanged: () => undefined,
       onRegistryChanged: (listener: () => void) => listeners.push(listener),
     } as unknown as DatasetsService;
+    // a settings field that differs from the registry is not what is served
     const settings = { findOne: async () => '1.0.1', getVersion: () => '1.1.0' };
     const meta = new PublicMetaService({} as never, settings as never, registry);
     service = new PublicWordDatasetsService(registry, meta);
@@ -117,10 +118,12 @@ describe('a headword read from every dataset', () => {
     ).toEqual([
       {
         dataset: 'default',
+        // the name for a reader (issue #540): the catalog's for a dataset of the catalog
+        title: 'Vocab Bloom Hub English dataset',
         active: true,
         source: 'vocab-bloom-hub',
-        // the version of the served dataset is the one the settings carry, as `/meta` answers it
-        dataset_version: '1.0.1',
+        // the version of a dataset is the registry's, what its file said; never the settings'
+        dataset_version: '1.0.0',
         license: 'CC-BY-4.0',
         license_url: 'https://creativecommons.org/licenses/by/4.0/',
         attribution: expect.any(String),
@@ -130,6 +133,7 @@ describe('a headword read from every dataset', () => {
       },
       {
         dataset: 'wordnet_princeton',
+        title: 'Princeton WordNet 3.1',
         active: false,
         source: 'princeton-wordnet',
         dataset_version: '3.1',

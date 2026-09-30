@@ -3,6 +3,8 @@ import type { Metadata } from 'next';
 import { SideMenu } from '@/components/SideMenu';
 import { AutoImportBanner } from '@/components/AutoImportBanner';
 import { UpdateNotice } from '@/components/UpdateNotice';
+import { EditedDatasetBlock } from '@/components/EditedDataset/EditedDatasetBlock';
+import { getServerDataset } from '@/core/api/AbstractBaseApi/ServerWrapper';
 import { getUpdateCheck } from '@/helpers/getUpdateCheck';
 import styles from './styles.module.scss';
 
@@ -16,6 +18,8 @@ type RootLayoutP = Readonly<{
 
 export default async function RootLayout({ children }: RootLayoutP) {
   const update = await getUpdateCheck();
+  // another dataset chosen in the switch, another page: what the page read of the previous one is dropped (issue #540)
+  const dataset = (await getServerDataset()) ?? '';
 
   return (
     <>
@@ -27,7 +31,9 @@ export default async function RootLayout({ children }: RootLayoutP) {
           {/* a newer release exists: a notice with the way to upgrade, never an upgrade (issue #477) */}
           <UpdateNotice update={update} />
           <AutoImportBanner />
-          {children}
+          {/* what the dataset that is edited is (issue #540) */}
+          <EditedDatasetBlock />
+          <React.Fragment key={dataset}>{children}</React.Fragment>
         </div>
       </div>
     </>

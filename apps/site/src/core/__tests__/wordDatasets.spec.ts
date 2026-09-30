@@ -1,7 +1,7 @@
 import type { PublicHeadwordV1ResT, PublicWordDatasetV1T, PublicWordV1T } from 'server/types';
 
 import { OWN_DATASET_TERMS } from '../datasetTerms';
-import { datasetTitle, defaultPanel, UNNAMED_DATASET, wordPanels } from '../wordDatasets';
+import { datasetTitle, defaultPanel, groupTitle, UNNAMED_DATASET, wordPanels } from '../wordDatasets';
 import { panelOfGroup } from '../wordPanel';
 
 const entry = (id: number, word: string): PublicWordV1T => ({ id, word }) as PublicWordV1T;
@@ -163,6 +163,29 @@ describe('datasetTitle', () => {
   it('names a dataset of the catalog by its title and any other by its name', () => {
     expect(datasetTitle('wordnet_princeton')).toBe('Princeton WordNet 3.1');
     expect(datasetTitle('a_later_one')).toBe('a_later_one');
+  });
+});
+
+// issue #540: a dataset of the instance's own is in no catalog, the instance names it
+describe('groupTitle', () => {
+  it('takes the title the instance gives a dataset, the catalog’s from an instance that sends none', () => {
+    expect(groupTitle({ dataset: 'my_words', title: 'My words' })).toBe('My words');
+    expect(groupTitle({ dataset: 'wiktionary' })).toBe('English Wiktionary');
+  });
+
+  it('names the tab of a dataset of the owner’s by its title', () => {
+    const panels = wordPanels({
+      headword: headword('run', [entry(9, 'run')]),
+      terms: OWN_DATASET_TERMS,
+      groups: [
+        group({ dataset: 'default', active: true, entries: [entry(9, 'run')] }),
+        group({ dataset: 'my_words', title: 'My words', source: 'my_words', entries: [entry(3, 'run')] }),
+      ],
+    });
+    expect(panels.map((panel) => [panel.dataset, panel.title])).toEqual([
+      ['default', 'Vocab Bloom Hub English dataset'],
+      ['my_words', 'My words'],
+    ]);
   });
 });
 

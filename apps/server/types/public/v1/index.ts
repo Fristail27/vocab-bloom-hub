@@ -265,11 +265,16 @@ export type PublicHeadwordHistoryV1ResT = PublicListResT<PublicChangeV1T, Public
 
 // The terms of one dataset of the instance, the ones `/meta` gives for the
 // dataset that is served: what a consumer of its entries has to show and to
-// keep. `license_text` holds the notices a source asks to be kept in full;
-// empty when the license is named by its link alone
+// keep. `license_text` holds the notices a source asks to be kept in full,
+// or the text of a license the owner of a dataset of the instance's own
+// stated (issue #540); empty when the license is named by its link alone
 export type PublicDatasetTermsV1T = {
   // the name of the dataset on this instance (`default`, `wiktionary`, …)
   dataset: string;
+  // The name of the dataset for a reader (issue #540): the title the catalog
+  // gives a dataset of a public source, the one its owner gave a dataset of
+  // the instance's own. Optional in the contract: an instance of 1.1 sends none
+  title?: string;
   // whether it is the dataset the other routes of the API serve
   active: boolean;
   source: string;
@@ -392,11 +397,15 @@ export type PublicMetaV1T = {
   // that dataset's. Always sent since 1.1; optional in the contract so a
   // client built on it still reads an instance of 1.0
   dataset?: string;
+  // the name of the served dataset for a reader (issue #540)
+  title?: string;
   source?: string;
   attribution_url?: string | null;
   // The notices the source of the dataset asks to be kept with its data, in
   // full (issue #531): the WordNet license and the one of CMUdict want their
-  // text on every copy. Empty when the license is named by its link alone.
+  // text on every copy; the text of a license the owner of a dataset of the
+  // instance's own stated (issue #540). Empty when the license is named by
+  // its link alone.
   // Optional in the contract like the fields above
   license_text?: string;
   // How many headwords of the served dataset have entries that were changed

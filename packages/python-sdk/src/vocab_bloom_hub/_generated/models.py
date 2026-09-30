@@ -438,6 +438,7 @@ class PublicMetaV1T(BaseModel):
     attribution: str
     notice: str
     dataset: str | None = None
+    title: str | None = None
     source: str | None = None
     attribution_url: str | None = None
     license_text: str | None = None
@@ -545,6 +546,7 @@ class PublicWordDatasetV1T(BaseModel):
     count: int
     entries: list[PublicWordV1T]
     dataset: str
+    title: str | None = None
     active: bool
     source: str
     dataset_version: str | None = Field(...)

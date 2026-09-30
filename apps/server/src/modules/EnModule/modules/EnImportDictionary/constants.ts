@@ -134,4 +134,7 @@ export const MAX_DATASET_FILE_BYTES = 2 * 1024 * 1024 * 1024;
 export const LEGACY_DATASET_TOTAL_LINES = 87074 + 912 + 28560 + 28;
 
 // Settings key holding the dataset version of the last successful import
+// A version is what the file of a dataset says (issue #530) and only an
+// import or a switch of the dataset writes it: the settings field mirrors
+// the registry for the readers of the settings and is not edited by hand
 export const DATASET_VERSION_SETTINGS_FIELD = 'en_dataset_version';

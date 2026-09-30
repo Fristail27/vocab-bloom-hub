@@ -1291,6 +1291,9 @@
       "dataset": {
         "type": "string"
       },
+      "title": {
+        "type": "string"
+      },
       "active": {
         "type": "boolean"
       },
@@ -1356,6 +1359,9 @@
         }
       },
       "dataset": {
+        "type": "string"
+      },
+      "title": {
         "type": "string"
       },
       "active": {
@@ -1639,6 +1645,9 @@
         "type": "string"
       },
       "dataset": {
+        "type": "string"
+      },
+      "title": {
         "type": "string"
       },
       "source": {

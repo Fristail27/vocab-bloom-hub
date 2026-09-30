@@ -22,9 +22,12 @@ import { ListSuggestionsQueryDTO } from './dto/ListSuggestionsQuery.dto';
 import { UpdateSuggestionStatusReqDTO } from './dto/UpdateSuggestionStatusReq.dto';
 import { SuggestionApplyService } from './suggestion-apply.service';
 import { SuggestionsService } from './suggestions.service';
+import { ApiDatasetQuery } from '../DatasetsModule/api-dataset-query';
 
 // The moderation queue of the reader reports (issue #327), admin only
 @ApiTags('Suggestions')
+// the dataset the request works on (issue #540)
+@ApiDatasetQuery()
 @Controller('/api/en/suggestions')
 export class SuggestionsController {
   constructor(
