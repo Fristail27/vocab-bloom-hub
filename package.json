@@ -1,12 +1,12 @@
 {
   "name": "vocab-bloom-hub",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
-  "description": "A self-hosted English dictionary: 300 000 entries with meanings, examples, forms, translations and word links behind a public API, an admin UI, two SDKs, a website and an open dataset.",
+  "description": "A self-hosted English dictionary: the project's own 300 000 entries with meanings, examples, forms, translations and word links, the English Wiktionary and WordNet as further datasets, dictionaries of your own — behind a public API, an admin UI, two SDKs and a website.",
   "homepage": "https://vocab-bloom-hub.com",
   "author": {
     "name": "Aleksei Ryzhov (Fristail27)",

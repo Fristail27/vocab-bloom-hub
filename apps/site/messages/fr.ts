@@ -4,7 +4,7 @@ export default {
     // the start page's own title: the words a person searches for, not the bare brand (issue #480)
     home_title: 'Vocab Bloom Hub — dictionnaire anglais-français avec API publique, auto-hébergé',
     description:
-      "Une plateforme de dictionnaire open source : un dictionnaire d'anglais auto-hébergé avec une API publique en lecture seule, des SDK pour Node.js et Python, une interface d'administration et un jeu de données publié.",
+      "Une plateforme de dictionnaire open source : un dictionnaire d'anglais auto-hébergé avec une API publique en lecture seule, des SDK pour Node.js et Python, une interface d'administration et plusieurs jeux de données — celui du projet, le Wiktionary anglais, WordNet et les vôtres.",
   },
   nav: {
     docs: 'Docs',
@@ -18,7 +18,7 @@ export default {
   home: {
     hero_title: 'Un dictionnaire à faire tourner à côté de votre application',
     hero_text:
-      "Vocab Bloom Hub est un dictionnaire d'anglais auto-hébergé — 300 000 entrées avec sens, exemples, formes fléchies et traductions en russe, espagnol, français, allemand, portugais, chinois et arabe — derrière une API publique en lecture seule, avec des SDK, une interface d'administration et un jeu de données publié. Une commande pour l'installer, MIT pour le code, CC BY 4.0 pour les données.",
+      "Vocab Bloom Hub est un dictionnaire d'anglais auto-hébergé — 300 000 entrées avec sens, exemples, formes fléchies et traductions en russe, espagnol, français, allemand, portugais, chinois et arabe — derrière une API publique en lecture seule, avec des SDK, une interface d'administration et un jeu de données publié. À côté, le Wiktionary anglais, WordNet et vos propres dictionnaires, chacun sous sa propre licence. Une commande pour l'installer, MIT pour le code, CC BY 4.0 pour les données du projet.",
     cta_getting_started: 'Démarrage',
     cta_start: 'Installer avec Docker',
     cta_api: "Référence de l'API",
@@ -37,10 +37,10 @@ export default {
         'Des clients typés pour Node.js / TypeScript et Python générés à partir du même document OpenAPI : une méthode par point de terminaison, itération par curseur, erreurs typées, cache ETag, nouvelles tentatives optionnelles, un DataFrame pour les notebooks.',
       admin_title: "Interface d'administration",
       admin_text:
-        'Modifiez mots, sens, traductions, synonymes et antonymes dans le navigateur, suivez les statistiques, importez et exportez tout le dictionnaire comme jeu de données.',
-      data_title: 'Jeu de données',
+        "Modifiez mots, sens, traductions, synonymes et antonymes de n'importe quel jeu de données dans le navigateur — chaque modification est conservée dans un historique que les lecteurs voient —, modérez les corrections qu'ils envoient, suivez les statistiques, installez, importez et exportez les jeux de données depuis leurs cartes.",
+      data_title: 'Jeux de données',
       data_text:
-        "Le dictionnaire est publié sur HuggingFace sous CC BY 4.0 et se charge tout seul dans une instance vide ; les exports le déplacent d'un environnement à l'autre, y compris hors ligne.",
+        'Le dictionnaire du projet est publié sur HuggingFace sous CC BY 4.0 et se charge tout seul dans une instance vide. Installez à côté le Wiktionary anglais ou WordNet à partir des fichiers que distribuent leurs sources, ou créez un jeu de données à vous sous la licence de votre choix — chacun complet, jamais mélangés, servis un à la fois et lus ensemble par une seule route.',
       ops_title: 'Conçu pour les opérateurs',
       ops_text:
         "Sondes de santé et de disponibilité, arrêt propre, migrations au démarrage, métriques Prometheus, journaux JSON structurés avec un identifiant de requête — ce qu'il faut à un service pour être exploité par quelqu'un d'autre.",
@@ -55,7 +55,7 @@ export default {
     sdk_python: 'Python',
     data_title: 'Données et licence',
     data_text:
-      "Le code est sous MIT. Les données du dictionnaire — servies par l'API, exportées en jeux de données, publiées sur HuggingFace — sont sous CC BY 4.0 : libres d'utilisation et d'adaptation, y compris commerciales, avec attribution. Elles sont en grande partie générées par des LLM et non vérifiées par des humains ; lisez ce que cela implique avant de vous y fier.",
+      "Le code est sous MIT. Les données du dictionnaire du projet — servies par l'API, exportées en jeux de données, publiées sur HuggingFace — sont sous CC BY 4.0 : libres d'utilisation et d'adaptation, y compris commerciales, avec attribution. Elles sont en grande partie générées par des LLM et non vérifiées par des humains ; lisez ce que cela implique avant de vous y fier. Un jeu de données d'une autre source garde la licence de cette source — Wiktionary impose le partage dans les mêmes conditions, les WordNet exigent leur avis sur chaque copie — et l'instance affiche les conditions du jeu de données qu'elle sert ; lisez-les avant de bâtir dessus.",
     data_link: 'À propos des données',
     license_link: 'Licence des données',
   },

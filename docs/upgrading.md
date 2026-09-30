@@ -202,6 +202,26 @@ The version that records a dataset of a public source by what its file says
 - the import of the project's dataset offers the update of the published dataset
   only. It used to offer it for a dataset of another source too, and the server refused.
 
+## Upgrading to a version with datasets of your own (1.1.0)
+
+The version that lets the admin create datasets of their own and edit any dataset without
+serving it ([`datasets.md`](./datasets.md#datasets-of-the-instances-own)) migrates the database
+by itself, like any other:
+
+- the registry of datasets gains `title`, `license_text` and `own` (two shared migrations,
+  `AddOwnDatasets` and `AddOwnDatasetMark`); every dataset of the catalog is registered as
+  the catalog's, nothing else changes in the data;
+- the public API gains fields and loses none: `title` in `/api/v1/meta` and in the groups of
+  `GET /api/v1/words/{word}/datasets`. The SDKs of 1.0 read the answers of the new server;
+- the admin routes of the dictionary take an optional `?dataset=`; without it they work on the
+  active dataset, as before. The admin UI has the switch of the dataset that is edited in its
+  header;
+- **`en_dataset_version` in the settings is read-only from here on**: the version of a dataset
+  is what its file said, written by an import — the settings field mirrors it. An instance whose
+  `en_dataset_version` was typed over by hand reports the version the registry holds;
+- the import and the export are actions of the card of a dataset on the datasets page; the
+  addresses `managing/import-dictionary` and `managing/export-dictionary` redirect there.
+
 ## The dictionary is updated separately
 
 A new version of the code does not change the dictionary data, and a new dataset revision does

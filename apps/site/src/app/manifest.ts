@@ -10,7 +10,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: SITE_NAME,
     short_name: SITE_NAME,
     description:
-      'An open-source dictionary platform: a self-hosted English dictionary with a public read-only API, SDKs for Node.js and Python, an admin UI and a published dataset.',
+      'An open-source dictionary platform: a self-hosted English dictionary with a public read-only API, SDKs for Node.js and Python, an admin UI and several datasets — the project’s own, the English Wiktionary, WordNet and your own.',
     start_url: '/',
     display: 'browser',
     background_color: '#ffffff',

@@ -2,7 +2,7 @@
 
 The **code** of Vocab Bloom Hub is released under the [MIT license](LICENSE). The **dictionary
 data of the project** — the entries, meanings, examples, translations and inflected forms an
-instance is born with, exported by _Export dictionary_, served by the public `/api/v1` and
+instance is born with, exported from the card of the dataset, served by the public `/api/v1` and
 published as the HuggingFace dataset
 [`Fristail27/vocab-bloom-hub-en`](https://huggingface.co/datasets/Fristail27/vocab-bloom-hub-en)
 — is licensed separately, under the
@@ -33,22 +33,32 @@ project's dataset is registered with on an instance.
 ## Datasets of other sources
 
 This license covers the project's own dataset and nothing else. An instance may hold datasets
-converted from public sources ([`docs/datasets.md`](docs/datasets.md)), and **each dataset keeps
-the license of its source**:
+converted from public sources and datasets of its owner's own
+([`docs/datasets.md`](docs/datasets.md)), and **each dataset keeps the license of its source**:
 
-| Dataset                         | License                                                                       |
-| ------------------------------- | ----------------------------------------------------------------------------- |
-| The project's own (`default`)   | CC BY 4.0, this file                                                          |
-| English Wiktionary (kaikki.org) | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) — share-alike |
-| Open English WordNet            | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                     |
-| Princeton WordNet 3.x           | [WordNet license](https://wordnet.princeton.edu/license-and-commercial-use)   |
-| CMU Pronouncing Dictionary      | BSD 2-Clause, the pronunciations of a WordNet dataset converted with them     |
+| Dataset                         | License                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------- |
+| The project's own (`default`)   | CC BY 4.0, this file                                                                  |
+| English Wiktionary (kaikki.org) | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) — share-alike         |
+| Open English WordNet            | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                             |
+| Princeton WordNet 3.x           | [WordNet license](https://wordnet.princeton.edu/license-and-commercial-use)           |
+| CMU Pronouncing Dictionary      | BSD 2-Clause, the pronunciations of a WordNet dataset converted with them             |
+| A dataset of the owner's own    | the license its owner chose: CC0, CC BY, CC BY-SA, CC BY-NC, ODbL or one of their own |
 
 While such a dataset is the active one, everything above — the manifest of an export,
 `/api/v1/meta`, the word pages — carries **its** terms, and whoever uses the data of that
 instance is bound by them. Datasets are never mixed, so an answer has one license. The
 converters and the code that serves the data stay MIT: the license of a source binds the data,
 not the program that reads it.
+
+> [!WARNING]
+> **Read the license of a source before you install its dataset**, and before you build on an
+> instance that serves it. Wiktionary is share-alike: a product built on an instance that
+> serves it, an export of it and the corrections readers send while it is served stay under
+> CC BY-SA 4.0. Princeton WordNet is not an open license in the Creative Commons sense: its
+> notice has to travel with every copy. The card of a dataset in the admin panel states the
+> terms in full before anything is installed; the instance shows the attribution and the
+> notices of the served dataset to its readers, and so must whoever takes the data further.
 
 The WordNet license and the one of the CMU Pronouncing Dictionary ask that their notice is kept
 **in full on every copy**. For the datasets that carry them the notices are stated in the code
@@ -159,8 +169,12 @@ not legal advice, and the text of each license decides.
 
 A self-hosted instance ships the terms of its active dataset in its exports and its
 `/api/v1/meta`, and the terms of every dataset it holds with the groups of
-`GET /api/v1/words/{word}/datasets`: a dataset is public from the moment it is installed. The terms of every dataset an instance can hold are stated in the code
-(`apps/server/core/constants/dataset_catalog.ts`) and cannot be edited on an instance: what you
-edit in a dataset stays under the license of that dataset. Data under other terms is another
-dataset — a source added to the catalog with its converter
+`GET /api/v1/words/{word}/datasets`: a dataset is public from the moment it is installed. The
+terms of the datasets of the catalog — the project's own and the public sources — are stated in
+the code (`apps/server/core/constants/dataset_catalog.ts`) and cannot be edited on an instance:
+what you edit in such a dataset stays under the license of that dataset. Your own words go into
+[a dataset of your own](docs/datasets.md#datasets-of-the-instances-own), created empty under a
+license you choose; its license can be changed later, but a license that was given is not taken
+back — whoever took the data under it keeps that right, and the change is journaled. A public
+source that is not in the catalog is added with its converter
 ([`apps/server/src/converters/README.md`](apps/server/src/converters/README.md)).

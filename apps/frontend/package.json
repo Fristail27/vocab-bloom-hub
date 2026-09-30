@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "license": "MIT",
   "description": "Admin UI of Vocab Bloom Hub (Next.js): the dictionary editor, search, imports, suggestions moderation and settings of a self-hosted instance.",

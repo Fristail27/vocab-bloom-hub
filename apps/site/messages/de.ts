@@ -4,7 +4,7 @@ export default {
     // the start page's own title: the words a person searches for, not the bare brand (issue #480)
     home_title: 'Vocab Bloom Hub — Englisch-Deutsch-Wörterbuch mit öffentlicher API, selbst gehostet',
     description:
-      'Eine Open-Source-Wörterbuchplattform: ein selbst gehostetes Englisch-Wörterbuch mit einer öffentlichen, nur lesenden API, SDKs für Node.js und Python, einer Admin-Oberfläche und einem veröffentlichten Datensatz.',
+      'Eine Open-Source-Wörterbuchplattform: ein selbst gehostetes Englisch-Wörterbuch mit einer öffentlichen, nur lesenden API, SDKs für Node.js und Python, einer Admin-Oberfläche und mehreren Datensätzen — dem eigenen des Projekts, dem englischen Wiktionary, WordNet und deinen eigenen.',
   },
   nav: {
     docs: 'Docs',
@@ -18,7 +18,7 @@ export default {
   home: {
     hero_title: 'Ein Wörterbuch, das neben deiner App läuft',
     hero_text:
-      'Vocab Bloom Hub ist ein selbst gehostetes Englisch-Wörterbuch — 300 000 Einträge mit Bedeutungen, Beispielen, flektierten Formen und Übersetzungen ins Russische, Spanische, Französische, Deutsche, Portugiesische, Chinesische und Arabische — hinter einer öffentlichen, nur lesenden API, mit SDKs, einer Admin-Oberfläche und einem veröffentlichten Datensatz. Ein Befehl zur Installation, MIT für den Code, CC BY 4.0 für die Daten.',
+      'Vocab Bloom Hub ist ein selbst gehostetes Englisch-Wörterbuch — 300 000 Einträge mit Bedeutungen, Beispielen, flektierten Formen und Übersetzungen ins Russische, Spanische, Französische, Deutsche, Portugiesische, Chinesische und Arabische — hinter einer öffentlichen, nur lesenden API, mit SDKs, einer Admin-Oberfläche und einem veröffentlichten Datensatz. Daneben das englische Wiktionary, WordNet und eigene Wörterbücher, jedes unter seiner eigenen Lizenz. Ein Befehl zur Installation, MIT für den Code, CC BY 4.0 für die Daten des Projekts.',
     cta_getting_started: 'Erste Schritte',
     cta_start: 'Mit Docker installieren',
     cta_api: 'API-Referenz',
@@ -37,10 +37,10 @@ export default {
         'Typisierte Clients für Node.js / TypeScript und Python, aus demselben OpenAPI-Dokument generiert: eine Methode pro Endpunkt, Cursor-Iteration, typisierte Fehler, ein ETag-Cache, optionale Wiederholungen, ein DataFrame für Notebooks.',
       admin_title: 'Admin-Oberfläche',
       admin_text:
-        'Bearbeite Wörter, Bedeutungen, Übersetzungen, Synonyme und Antonyme im Browser, behalte die Statistik im Blick, importiere und exportiere das ganze Wörterbuch als Datensatz.',
-      data_title: 'Datensatz',
+        'Bearbeite Wörter, Bedeutungen, Übersetzungen, Synonyme und Antonyme jedes Datensatzes im Browser — jede Änderung bleibt in einem Verlauf, den die Leser sehen —, moderiere die Korrekturen, die sie einsenden, behalte die Statistik im Blick, installiere, importiere und exportiere Datensätze von ihren Karten aus.',
+      data_title: 'Datensätze',
       data_text:
-        'Das Wörterbuch ist auf HuggingFace unter CC BY 4.0 veröffentlicht und lädt sich selbst in eine leere Instanz; Exporte bewegen es zwischen Umgebungen, auch offline.',
+        'Das Wörterbuch des Projekts ist auf HuggingFace unter CC BY 4.0 veröffentlicht und lädt sich selbst in eine leere Instanz. Installiere daneben das englische Wiktionary oder WordNet aus den Dateien, die ihre Quellen verbreiten, oder lege einen eigenen Datensatz unter einer Lizenz deiner Wahl an — jeder vollständig, nie vermischt, einer nach dem anderen ausgeliefert und von einer Route gemeinsam gelesen.',
       ops_title: 'Gebaut für den Betrieb',
       ops_text:
         'Health- und Readiness-Probes, sauberes Herunterfahren, Migrationen beim Start, Prometheus-Metriken, strukturierte JSON-Logs mit Request-ID — was ein Dienst braucht, damit ihn jemand anderes betreiben kann.',
@@ -55,7 +55,7 @@ export default {
     sdk_python: 'Python',
     data_title: 'Daten und Lizenz',
     data_text:
-      'Der Code steht unter MIT. Die Wörterbuchdaten — von der API ausgeliefert, als Datensätze exportiert, auf HuggingFace veröffentlicht — stehen unter CC BY 4.0: frei nutzbar und anpassbar, auch kommerziell, mit Namensnennung. Sie sind großteils LLM-generiert und nicht von Menschen geprüft; lies nach, was das bedeutet, bevor du dich darauf verlässt.',
+      'Der Code steht unter MIT. Die Wörterbuchdaten des Projekts — von der API ausgeliefert, als Datensätze exportiert, auf HuggingFace veröffentlicht — stehen unter CC BY 4.0: frei nutzbar und anpassbar, auch kommerziell, mit Namensnennung. Sie sind großteils LLM-generiert und nicht von Menschen geprüft; lies nach, was das bedeutet, bevor du dich darauf verlässt. Ein Datensatz einer anderen Quelle behält die Lizenz dieser Quelle — Wiktionary verlangt Weitergabe unter gleichen Bedingungen, die WordNets wollen ihren Hinweis auf jeder Kopie — und die Instanz zeigt die Bedingungen des Datensatzes, den sie ausliefert; lies sie, bevor du darauf aufbaust.',
     data_link: 'Über die Daten',
     license_link: 'Datenlizenz',
   },
