@@ -5,7 +5,7 @@ export default {
     // the start page's own title: the words a person searches for, not the bare brand (issue #480)
     home_title: 'Vocab Bloom Hub — 英汉词典，公共 API，可自行部署',
     description:
-      '一个开源词典平台：自托管的英语词典，提供公共只读 API、Node.js 和 Python 的 SDK、管理界面和已发布的数据集。',
+      '一个开源词典平台：自托管的英语词典，提供公共只读 API、Node.js 和 Python 的 SDK、管理界面和多个数据集——项目自己的数据集、英语 Wiktionary、WordNet 以及您自己的数据集。',
   },
   nav: {
     docs: '文档',
@@ -19,7 +19,7 @@ export default {
   home: {
     hero_title: '一部可以跑在你应用旁边的词典',
     hero_text:
-      'Vocab Bloom Hub 是一部自托管的英语词典——30 万个条目，包含释义、例句、词形变化，以及俄语、西班牙语、法语、德语、葡萄牙语、中文和阿拉伯语的翻译——通过公共只读 API 提供，并配有 SDK、管理界面和已发布的数据集。一条命令即可安装，代码采用 MIT 许可证，数据采用 CC BY 4.0 许可证。',
+      'Vocab Bloom Hub 是一部自托管的英语词典——30 万个条目，包含释义、例句、词形变化，以及俄语、西班牙语、法语、德语、葡萄牙语、中文和阿拉伯语的翻译——通过公共只读 API 提供，并配有 SDK、管理界面和已发布的数据集。在它旁边，还可以放置英语 Wiktionary、WordNet 和您自己的词典，各自采用自己的许可证。一条命令即可安装，代码采用 MIT 许可证，项目数据采用 CC BY 4.0 许可证。',
     cta_getting_started: '快速开始',
     cta_start: '使用 Docker 安装',
     cta_api: 'API 参考',
@@ -38,10 +38,10 @@ export default {
         '由同一份 OpenAPI 文档生成的 Node.js / TypeScript 和 Python 类型化客户端：每个端点一个方法，游标迭代，类型化的错误，ETag 缓存，可选的重试，以及供 notebook 使用的 DataFrame。',
       admin_title: '管理界面',
       admin_text:
-        '在浏览器中编辑单词、释义、翻译、同义词和反义词，查看统计数据，以数据集的形式导入和导出整部词典。',
+        '在浏览器中编辑任意数据集的单词、释义、翻译、同义词和反义词——每次修改都记录在读者可见的历史中——审核读者提交的更正，查看统计数据，并从数据集的卡片安装、导入和导出数据集。',
       data_title: '数据集',
       data_text:
-        '词典以 CC BY 4.0 许可证发布在 HuggingFace 上，并会自动加载到空实例中；导出功能可以在各环境之间迁移词典，离线环境也不例外。',
+        '项目的词典以 CC BY 4.0 许可证发布在 HuggingFace 上，并会自动加载到空实例中。您可以在它旁边从各来源分发的文件安装英语 Wiktionary 或 WordNet，也可以在自选的许可证下创建自己的数据集——每个数据集都是完整的，绝不混合，一次只提供一个，并由同一条路由一并读取。',
       ops_title: '为运维而生',
       ops_text:
         '健康与就绪探针、优雅停机、启动时自动迁移、Prometheus 指标、带请求 ID 的结构化 JSON 日志——一个服务交给他人运行所需的一切。',
@@ -55,7 +55,7 @@ export default {
     sdk_python: 'Python',
     data_title: '数据与许可证',
     data_text:
-      '代码采用 MIT 许可证。词典数据——由 API 提供、以数据集形式导出、发布在 HuggingFace 上——采用 CC BY 4.0 许可证：可自由使用和改编，包括商业用途，但需署名。数据大部分由 LLM 生成，未经人工校验；在依赖这些数据之前，请先了解这意味着什么。',
+      '代码采用 MIT 许可证。项目的词典数据——由 API 提供、以数据集形式导出、发布在 HuggingFace 上——采用 CC BY 4.0 许可证：可自由使用和改编，包括商业用途，但需署名。数据大部分由 LLM 生成，未经人工校验；在依赖这些数据之前，请先了解这意味着什么。来自其他来源的数据集保留该来源的许可证——Wiktionary 要求相同方式共享，各 WordNet 要求在每份副本中保留其声明——实例会显示其所提供数据集的条款；在基于它构建之前，请先阅读这些条款。',
     data_link: '关于数据',
     license_link: '数据许可证',
   },

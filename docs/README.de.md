@@ -5,7 +5,7 @@
 <h1 align="center">Vocab Bloom Hub</h1>
 
 <p align="center">
-  Ein selbst gehostetes englisches Wörterbuch: 300 000 Einträge mit Bedeutungen, Beispielen, Formen, Übersetzungen und Wortlinks hinter einer öffentlichen API, einer Admin-Oberfläche, zwei SDKs, einer Website und einem offenen Datensatz.
+  Ein selbst gehostetes englisches Wörterbuch: die eigenen 300 000 Einträge des Projekts mit Bedeutungen, Beispielen, Formen, Übersetzungen und Wortlinks, das englische Wiktionary und WordNet als weitere Datensätze, eigene Wörterbücher — hinter einer öffentlichen API, einer Admin-Oberfläche, zwei SDKs und einer Website.
 </p>
 
 <p align="center">
@@ -49,9 +49,10 @@
 ## 📖 Was es ist
 
 Ein Wörterbuchserver, den Sie selbst betreiben. Er bringt die Daten mit, eine API zum Lesen,
-ein Admin-Panel zum Bearbeiten und SDKs, um darauf aufzubauen.
+ein Admin-Panel zum Bearbeiten und SDKs, um darauf aufzubauen. Eine Instanz hält mehrere
+Wörterbücher — Datensätze — und liefert einen davon aus; die anderen werden daneben gelesen.
 
-**Das Wörterbuch**
+**Das Wörterbuch** — der eigene Datensatz des Projekts, mit dem eine Instanz beginnt
 
 - 89 000 englische Wörter und 26 000 Wendungen, 161 000 Bedeutungen mit Definitionen und Beispielen
 - IPA-Transkription, GER-Niveau, Register- und Fachgebietsangaben, flektierte Formen
@@ -60,10 +61,23 @@ ein Admin-Panel zum Bearbeiten und SDKs, um darauf aufzubauen.
 - offene Daten: [CC BY 4.0](../DATA_LICENSE.md), auf HuggingFace veröffentlicht, beim ersten
   Start in eine leere Instanz geladen; mit Sprachmodellen erzeugt, nicht von Menschen geprüft
 
+**Weitere Datensätze** — daneben installiert, jeder vollständig und unter der Lizenz seiner Quelle
+
+- das englische Wiktionary (CC BY-SA 4.0), Open English WordNet (CC BY 4.0) und Princeton
+  WordNet 3.1 (die WordNet-Lizenz), installiert aus den Dateien, die die Quellen verbreiten — der
+  Server konvertiert sie; IPA aus dem CMU Pronouncing Dictionary für die WordNets
+- eigene Datensätze: leer angelegt unter einer Lizenz Ihrer Wahl — CC0, CC BY, CC BY-SA,
+  CC BY-NC, ODbL oder eine eigene — und im Admin-Panel oder aus einem Export gefüllt
+- Datensätze werden nie vermischt: einer wird von der API und der Website ausgeliefert, jeder
+  installierte wird von `GET /api/v1/words/{word}/datasets` gelesen und als Tab einer Wortseite
+  gezeigt, unter seinen eigenen Bedingungen
+
 **Die API** — `/api/v1`, nur lesend, ohne Schlüssel
 
 - Suche mit Relevanzstufen und Tippfehlertoleranz; ein Stichwort mit allem, was dazugehört
 - gefilterte Listen mit Cursor-Paginierung, ein zufälliger Eintrag, eine Stapelabfrage von bis zu 50 Wörtern
+- ein Stichwort aus jedem Datensatz der Instanz auf einmal, der Verlauf seiner Änderungen, die
+  Bedingungen des ausgelieferten Datensatzes in `/meta` — seine Lizenz, Namensnennung und Hinweise
 - Ratenbegrenzung pro Client, jede Antwort mit ETag gecacht, ein OpenAPI-Dokument zum Generieren von Clients
 
 **Die SDKs** — aus diesem OpenAPI-Dokument generiert
@@ -73,19 +87,32 @@ ein Admin-Panel zum Bearbeiten und SDKs, um darauf aufzubauen.
 
 **Das Admin-Panel** — acht Oberflächensprachen
 
-- Wörter, Bedeutungen, Übersetzungen und Links bearbeiten; jede Änderung bleibt im Verlauf, mit
-  den Werten davor und danach, für Leser sichtbar und mit einem Klick zurückzunehmen
+- Wörter, Bedeutungen, Übersetzungen und Links jedes Datensatzes bearbeiten, ausgeliefert oder
+  nicht; jede Änderung bleibt im Verlauf, mit den Werten davor und danach, für Leser sichtbar und
+  mit einem Klick zurückzunehmen
 - die Korrekturen moderieren, die Leser von den Wortseiten schicken
 - Massenanfragen an ein Sprachmodell über einen gefilterten Ausschnitt des Wörterbuchs
-- das ganze Wörterbuch als Datensatz importieren und exportieren, online oder aus einer Datei
+- Datensätze von ihren Karten aus installieren, aktivieren, importieren, exportieren und löschen;
+  ein Hinweis, wenn eine Quelle eine neuere Datei hat und wenn eine neuere Version der App
+  erschienen ist
 
-**Die Website** — die Dokumentation, die API-Referenz, ein Playground, öffentliche Wortseiten
+**Die Website** — die Dokumentation, die API-Referenz mit Anfragebeispielen in fünf Sprachen und den beiden SDKs,
+ein Playground, öffentliche Wortseiten mit einem Tab je Datensatz, der das Wort enthält
 
 **Unter der Haube** — PostgreSQL (SQLite für die Entwicklung), Docker-Images, Migrationen beim
 Start, Health-Probes, Prometheus-Metriken, JSON-Logs.
 
 > [!NOTE]
-> Status: `1.0`, stabil: die öffentliche API unter `/api/v1` folgt der semantischen Versionierung; eine inkompatible Änderung bedeutet eine neue Hauptversion.
+> Status: `1.1`, stabil: die öffentliche API unter `/api/v1` folgt der semantischen Versionierung; eine inkompatible Änderung bedeutet eine neue Hauptversion.
+
+> [!IMPORTANT]
+> **Die Lizenz des ausgelieferten Datensatzes bindet, was Sie ausliefern.** Der Datensatz des
+> Projekts steht unter CC BY 4.0. Ein Datensatz einer öffentlichen Quelle behält die Lizenz dieser
+> Quelle: Wiktionary verlangt Weitergabe unter gleichen Bedingungen (was Sie darauf aufbauen,
+> bleibt unter CC BY-SA 4.0), die WordNets verlangen, dass ihr Hinweis jede Kopie begleitet. Lesen
+> Sie die Bedingungen auf der Karte eines Datensatzes, bevor Sie ihn installieren, und zeigen Sie
+> die `attribution` aus `GET /api/v1/meta` überall dort, wo Sie die Daten zeigen —
+> [`datasets.md`](datasets.md).
 
 ---
 
@@ -128,7 +155,7 @@ curl -s 'localhost:3240/api/v1/search/detailed?search=run&with_meanings=true'
 
 > [!TIP]
 > Um ein Release statt des Entwicklungs-Builds `main` zu pinnen, setzen Sie
-> `VBH_TAG=1.0.0` in der `.env`. Um die Website (Dokumentation, API-Referenz, Playground,
+> `VBH_TAG=1.1.0` in der `.env`. Um die Website (Dokumentation, API-Referenz, Playground,
 > Wortseiten) auf <http://localhost:3242> hinzuzufügen, setzen Sie `COMPOSE_PROFILES=db,site`.
 
 ### 2. Aus dem Repository starten
@@ -204,8 +231,12 @@ eine Idee? Öffnen Sie ein [Issue](https://github.com/Fristail27/vocab-bloom-hub
 ## 📄 Lizenz
 
 - **Code** — [MIT](../LICENSE) © Aleksei Ryzhov (Fristail27)
-- **Wörterbuchdaten** (Exporte, die öffentliche API, der HuggingFace-Datensatz) — [CC BY 4.0](../DATA_LICENSE.md): frei nutzbar und anpassbar, auch kommerziell, mit Namensnennung.
+- **Wörterbuchdaten des Projekts** (Exporte, die öffentliche API, der HuggingFace-Datensatz) — [CC BY 4.0](../DATA_LICENSE.md): frei nutzbar und anpassbar, auch kommerziell, mit Namensnennung.
+- **Weitere Datensätze einer Instanz** behalten die Lizenz ihrer Quelle — Wiktionary CC BY-SA 4.0,
+  Open English WordNet CC BY 4.0, Princeton WordNet seine eigene Lizenz — und ein eigener Datensatz
+  die Lizenz, die Sie gewählt haben: [`DATA_LICENSE.md`](../DATA_LICENSE.md#datasets-of-other-sources).
 
 > [!IMPORTANT]
-> Die Daten sind größtenteils LLM-generiert und nicht von Menschen geprüft — lesen Sie
-> [`data.md`](data.md), bevor Sie sich darauf verlassen.
+> Die Daten des Projekts sind größtenteils LLM-generiert und nicht von Menschen geprüft — lesen
+> Sie [`data.md`](data.md), bevor Sie sich darauf verlassen. Die Datensätze öffentlicher Quellen
+> sind, was Menschen geschrieben haben, unter den Bedingungen ihrer Quelle.

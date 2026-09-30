@@ -101,6 +101,12 @@ chooses ([`datasets.md`](./datasets.md#datasets-of-the-instances-own)). The data
 admin UI installs a dataset of a public source from the file the source distributes — the server
 converts it:
 
+> [!WARNING]
+> A dataset of a public source comes under the license of that source, not under CC BY 4.0, and
+> the license binds whoever serves and takes the data: Wiktionary is share-alike, the WordNets
+> want their notice on every copy. Read the terms on the card of the dataset before installing
+> it ([`DATA_LICENSE.md`](../DATA_LICENSE.md#datasets-of-other-sources)).
+
 | Source                     | License of the data | What an entry has                                                                        | What it lacks                                     |
 | -------------------------- | ------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------- |
 | English Wiktionary         | CC BY-SA 4.0        | definitions, examples, IPA, forms, synonyms and antonyms, translations as single words   | CEFR levels, definitions of the translated senses |

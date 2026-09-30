@@ -5,7 +5,7 @@
 <h1 align="center">Vocab Bloom Hub</h1>
 
 <p align="center">
-  Un diccionario de inglés autoalojado: 300 000 entradas con acepciones, ejemplos, formas, traducciones y enlaces entre palabras detrás de una API pública, una interfaz de administración, dos SDK, un sitio web y un dataset abierto.
+  Un diccionario de inglés autoalojado: las 300 000 entradas propias del proyecto con acepciones, ejemplos, formas, traducciones y enlaces entre palabras, el Wiktionary inglés y WordNet como datasets adicionales, diccionarios tuyos, detrás de una API pública, una interfaz de administración, dos SDK y un sitio web.
 </p>
 
 <p align="center">
@@ -49,9 +49,10 @@
 ## 📖 Qué es
 
 Un servidor de diccionario que ejecutas tú mismo. Trae los datos, una API para leerlos, un
-panel de administración para editarlos y SDK para construir encima.
+panel de administración para editarlos y SDK para construir encima. Una instancia guarda varios
+diccionarios —datasets— y sirve uno de ellos; los demás se leen a su lado.
 
-**El diccionario**
+**El diccionario** — el dataset propio del proyecto, con el que arranca una instancia
 
 - 89 000 palabras y 26 000 frases en inglés, 161 000 acepciones con definiciones y ejemplos
 - transcripción IPA, nivel CEFR, marcas de registro y de ámbito, formas flexionadas
@@ -60,10 +61,23 @@ panel de administración para editarlos y SDK para construir encima.
 - datos abiertos: [CC BY 4.0](../DATA_LICENSE.md), publicados en HuggingFace, cargados en una
   instancia vacía en el primer arranque; generados con modelos de lenguaje, sin verificación humana
 
+**Más datasets** — instalados junto a él, cada uno completo y bajo la licencia de su fuente
+
+- el Wiktionary inglés (CC BY-SA 4.0), Open English WordNet (CC BY 4.0) y Princeton WordNet 3.1
+  (la licencia de WordNet), instalados desde los archivos que distribuyen las fuentes: el servidor
+  los convierte; IPA del CMU Pronouncing Dictionary para los WordNet
+- datasets tuyos: creados vacíos bajo una licencia que eliges —CC0, CC BY, CC BY-SA, CC BY-NC,
+  ODbL o una propia— y rellenados en el panel de administración o desde una exportación
+- los datasets nunca se mezclan: la API y el sitio web sirven uno de ellos, cada uno de los
+  instalados se lee con `GET /api/v1/words/{word}/datasets` y se muestra como pestaña de una
+  página de palabra, bajo sus propios términos
+
 **La API** — `/api/v1`, solo lectura, sin claves
 
 - búsqueda con niveles de relevancia y tolerancia a erratas; un lema con todo lo que lleva
 - listas filtradas con paginación por cursor, una entrada aleatoria, una consulta por lotes de hasta 50 palabras
+- un lema de todos los datasets de la instancia a la vez, el historial de sus ediciones, los
+  términos del dataset servido en `/meta`: su licencia, atribución y avisos
 - límite de peticiones por cliente, cada respuesta cacheada con ETag, un documento OpenAPI para generar clientes
 
 **Los SDK** — generados a partir de ese documento OpenAPI
@@ -73,19 +87,31 @@ panel de administración para editarlos y SDK para construir encima.
 
 **El panel de administración** — ocho idiomas de interfaz
 
-- editar palabras, acepciones, traducciones y enlaces; cada cambio queda en un historial con los
-  valores anteriores y posteriores, visible para los lectores y reversible con un clic
+- editar palabras, acepciones, traducciones y enlaces de cualquier dataset, servido o no; cada
+  cambio queda en un historial con los valores anteriores y posteriores, visible para los lectores
+  y reversible con un clic
 - moderar las correcciones que los lectores envían desde las páginas de palabras
 - lanzar peticiones masivas a un modelo de lenguaje sobre un corte filtrado del diccionario
-- importar y exportar el diccionario entero como dataset, en línea o desde un archivo
+- instalar, activar, importar, exportar y borrar datasets desde sus tarjetas; un aviso cuando una
+  fuente tiene un archivo más nuevo y cuando sale una nueva versión de la aplicación
 
-**El sitio web** — la documentación, la referencia de la API, un playground, páginas públicas de palabras
+**El sitio web** — la documentación, la referencia de la API con fragmentos de petición en cinco
+lenguajes y en los dos SDK, un playground, páginas públicas de palabras con una pestaña por cada dataset que
+contiene la palabra
 
 **Por debajo** — PostgreSQL (SQLite para desarrollo), imágenes Docker, migraciones al arrancar,
 sondas de salud, métricas Prometheus, logs JSON.
 
 > [!NOTE]
-> Estado: `1.0`, versión estable: la API pública bajo `/api/v1` sigue el versionado semántico; un cambio incompatible implica una nueva versión mayor.
+> Estado: `1.1`, versión estable: la API pública bajo `/api/v1` sigue el versionado semántico; un cambio incompatible implica una nueva versión mayor.
+
+> [!IMPORTANT]
+> **La licencia del dataset servido obliga a lo que sirves.** El dataset del proyecto es CC BY
+> 4.0. Un dataset de una fuente pública conserva la licencia de esa fuente: Wiktionary es de
+> compartir igual (lo que construyas sobre él sigue bajo CC BY-SA 4.0), los WordNet piden que su
+> aviso acompañe a cada copia. Lee los términos en la tarjeta de un dataset antes de instalarlo y
+> muestra la `attribution` de `GET /api/v1/meta` allí donde muestres los datos:
+> [`datasets.md`](datasets.md).
 
 ---
 
@@ -127,7 +153,7 @@ curl -s 'localhost:3240/api/v1/search/detailed?search=run&with_meanings=true'
 ```
 
 > [!TIP]
-> Para fijar una versión en lugar de la compilación `main`, pon `VBH_TAG=1.0.0` en `.env`.
+> Para fijar una versión en lugar de la compilación `main`, pon `VBH_TAG=1.1.0` en `.env`.
 > Para añadir el sitio web (documentación, referencia de la API, playground, páginas de palabras)
 > en <http://localhost:3242>, pon `COMPOSE_PROFILES=db,site`.
 
@@ -203,8 +229,12 @@ la hoja de ruta; el [Código de conducta](../CODE_OF_CONDUCT.md) se aplica a tod
 ## 📄 Licencia
 
 - **Código**: [MIT](../LICENSE) © Aleksei Ryzhov (Fristail27)
-- **Datos del diccionario** (exportaciones, la API pública, el dataset de HuggingFace): [CC BY 4.0](../DATA_LICENSE.md): libres de usar y adaptar, también comercialmente, con atribución.
+- **Datos del diccionario del proyecto** (exportaciones, la API pública, el dataset de HuggingFace): [CC BY 4.0](../DATA_LICENSE.md): libres de usar y adaptar, también comercialmente, con atribución.
+- **Los demás datasets que guarda una instancia** conservan la licencia de su fuente —Wiktionary
+  CC BY-SA 4.0, Open English WordNet CC BY 4.0, Princeton WordNet su propia licencia— y un dataset
+  tuyo la licencia que elegiste: [`DATA_LICENSE.md`](../DATA_LICENSE.md#datasets-of-other-sources).
 
 > [!IMPORTANT]
-> Los datos son en gran parte generados por LLM y no verificados por personas; consulta
-> [`data.md`](data.md) antes de confiar en ellos.
+> Los datos del proyecto son en gran parte generados por LLM y no verificados por personas;
+> consulta [`data.md`](data.md) antes de confiar en ellos. Los datasets de fuentes públicas son lo
+> que escribieron personas, bajo los términos de su fuente.

@@ -28,7 +28,7 @@ No checkout needed — the compose file and the environment template are enough:
 mkdir vocab-bloom-hub && cd vocab-bloom-hub
 curl -fsSLO https://raw.githubusercontent.com/Fristail27/vocab-bloom-hub/main/docker-compose.yml
 curl -fsSL  https://raw.githubusercontent.com/Fristail27/vocab-bloom-hub/main/.env.example -o .env
-# edit .env: ADMIN_PASSWORD, POSTGRES_PASSWORD (and VBH_TAG to pin a release, e.g. 1.0.0)
+# edit .env: ADMIN_PASSWORD, POSTGRES_PASSWORD (and VBH_TAG to pin a release, e.g. 1.1.0)
 docker compose up -d               # pulls the images, starts Postgres, the API, the UI
 curl -s localhost:3240/api/ready   # {"status":"ok"} once migrations ran and the dictionary is in
 ```
@@ -183,7 +183,7 @@ done
 ```
 
 (`git clone` gives the same files. To pin a release, replace `main` in `BASE` with its tag,
-`v1.0.0`, and set `VBH_TAG=1.0.0`: the dashboard and the configuration then match the images.)
+`v1.1.0`, and set `VBH_TAG=1.1.0`: the dashboard and the configuration then match the images.)
 
 In `.env`:
 

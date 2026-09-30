@@ -4,7 +4,7 @@ export default {
     // the start page's own title: the words a person searches for, not the bare brand (issue #480)
     home_title: 'Vocab Bloom Hub — dicionário inglês-português com API pública, auto-hospedado',
     description:
-      'Uma plataforma de dicionário de código aberto: um dicionário de inglês auto-hospedado com uma API pública somente leitura, SDKs para Node.js e Python, uma interface de administração e um dataset publicado.',
+      'Uma plataforma de dicionário de código aberto: um dicionário de inglês auto-hospedado com uma API pública somente leitura, SDKs para Node.js e Python, uma interface de administração e vários datasets — o do próprio projeto, o Wiktionary em inglês, o WordNet e os seus.',
   },
   nav: {
     docs: 'Docs',
@@ -18,7 +18,7 @@ export default {
   home: {
     hero_title: 'Um dicionário para rodar ao lado do seu aplicativo',
     hero_text:
-      'O Vocab Bloom Hub é um dicionário de inglês auto-hospedado — 300 000 verbetes com significados, exemplos, formas flexionadas e traduções para russo, espanhol, francês, alemão, português, chinês e árabe — atrás de uma API pública somente leitura, com SDKs, uma interface de administração e um dataset publicado. Um comando para instalar, MIT para o código, CC BY 4.0 para os dados.',
+      'O Vocab Bloom Hub é um dicionário de inglês auto-hospedado — 300 000 verbetes com significados, exemplos, formas flexionadas e traduções para russo, espanhol, francês, alemão, português, chinês e árabe — atrás de uma API pública somente leitura, com SDKs, uma interface de administração e um dataset publicado. Ao lado dele, o Wiktionary em inglês, o WordNet e dicionários seus, cada um sob a própria licença. Um comando para instalar, MIT para o código, CC BY 4.0 para os dados do projeto.',
     cta_getting_started: 'Primeiros passos',
     cta_start: 'Instalar com Docker',
     cta_api: 'Referência da API',
@@ -37,10 +37,10 @@ export default {
         'Clientes tipados para Node.js / TypeScript e Python gerados a partir do mesmo documento OpenAPI: um método por endpoint, iteração por cursor, erros tipados, cache por ETag, novas tentativas opcionais, um DataFrame para notebooks.',
       admin_title: 'Interface de administração',
       admin_text:
-        'Edite palavras, significados, traduções, sinônimos e antônimos no navegador, acompanhe as estatísticas, importe e exporte o dicionário inteiro como dataset.',
-      data_title: 'Dataset',
+        'Edite palavras, significados, traduções, sinônimos e antônimos de qualquer dataset no navegador — cada alteração fica em um histórico que os leitores veem —, modere as correções que eles enviam, acompanhe as estatísticas, instale, importe e exporte datasets a partir dos seus cartões.',
+      data_title: 'Datasets',
       data_text:
-        'O dicionário é publicado no HuggingFace sob CC BY 4.0 e se carrega sozinho em uma instância vazia; as exportações o movem entre ambientes, inclusive offline.',
+        'O dicionário do projeto é publicado no HuggingFace sob CC BY 4.0 e se carrega sozinho em uma instância vazia. Instale ao lado dele o Wiktionary em inglês ou o WordNet a partir dos arquivos que suas fontes distribuem, ou crie um dataset seu sob a licença que escolher — cada um completo, nunca misturados, servidos um de cada vez e lidos juntos por uma única rota.',
       ops_title: 'Feito para operadores',
       ops_text:
         'Sondas de saúde e prontidão, desligamento gracioso, migrações na inicialização, métricas Prometheus, logs JSON estruturados com id de requisição — o que um serviço precisa para ser operado por outra pessoa.',
@@ -55,7 +55,7 @@ export default {
     sdk_python: 'Python',
     data_title: 'Dados e licença',
     data_text:
-      'O código é MIT. Os dados do dicionário — servidos pela API, exportados como datasets, publicados no HuggingFace — são CC BY 4.0: livres para usar e adaptar, inclusive comercialmente, com atribuição. Em grande parte são gerados por LLM e não verificados por humanos; leia o que isso significa antes de confiar neles.',
+      'O código é MIT. Os dados do dicionário do projeto — servidos pela API, exportados como datasets, publicados no HuggingFace — são CC BY 4.0: livres para usar e adaptar, inclusive comercialmente, com atribuição. Em grande parte são gerados por LLM e não verificados por humanos; leia o que isso significa antes de confiar neles. Um dataset de outra fonte mantém a licença dessa fonte — o Wiktionary exige compartilhamento pela mesma licença, os WordNet pedem o seu aviso em cada cópia — e a instância mostra as condições do dataset que serve; leia-as antes de construir sobre ele.',
     data_link: 'Sobre os dados',
     license_link: 'Licença dos dados',
   },

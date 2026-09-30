@@ -5,7 +5,7 @@
 <h1 align="center">Vocab Bloom Hub</h1>
 
 <p align="center">
-  A self-hosted English dictionary: 300 000 entries with meanings, examples, forms, translations and word links behind a public API, an admin UI, two SDKs, a website and an open dataset.
+  A self-hosted English dictionary: the project's own 300 000 entries with meanings, examples, forms, translations and word links, the English Wiktionary and WordNet as further datasets, dictionaries of your own — behind a public API, an admin UI, two SDKs and a website.
 </p>
 
 <p align="center">
@@ -49,9 +49,10 @@
 ## 📖 What it is
 
 A dictionary server you run yourself. It comes with the data, an API to read it, an admin
-panel to edit it, and SDKs to build on it.
+panel to edit it, and SDKs to build on it. An instance holds several dictionaries — datasets —
+and serves one of them; the others are read next to it.
 
-**The dictionary**
+**The dictionary** — the project's own dataset, the one an instance starts with
 
 - 89 000 English words and 26 000 phrases, 161 000 senses with definitions and examples
 - IPA transcription, CEFR level, register and domain labels, inflected forms
@@ -60,10 +61,23 @@ panel to edit it, and SDKs to build on it.
 - open data: [CC BY 4.0](DATA_LICENSE.md), published on HuggingFace, loaded into an empty
   instance on the first start; generated with language models, not human-verified
 
+**More datasets** — installed next to it, each one complete and under the license of its source
+
+- the English Wiktionary (CC BY-SA 4.0), Open English WordNet (CC BY 4.0) and Princeton
+  WordNet 3.1 (the WordNet license), installed from the files the sources distribute — the
+  server converts them; IPA from the CMU Pronouncing Dictionary for the WordNets
+- datasets of your own: created empty under a license you choose — CC0, CC BY, CC BY-SA,
+  CC BY-NC, ODbL or one of your own — and filled in the admin panel or from an export
+- datasets are never mixed: one of them is served by the API and the website, every installed
+  one is read by `GET /api/v1/words/{word}/datasets` and shown as a tab of a word page, under
+  its own terms
+
 **The API** — `/api/v1`, read-only, no keys
 
 - search with relevance tiers and typo tolerance; a headword with everything attached
 - filtered lists with cursor paging, a random entry, a batch lookup of up to 50 words
+- a headword from every dataset of the instance at once, the history of its edits, the terms
+  of the served dataset in `/meta` — its license, attribution and notices
 - rate-limited per client, every answer cached with an ETag, an OpenAPI document to generate from
 
 **The SDKs** — generated from that OpenAPI document
@@ -73,19 +87,28 @@ panel to edit it, and SDKs to build on it.
 
 **The admin panel** — eight interface languages
 
-- edit words, senses, translations and links; every change kept in a history with the values
-  before and after, shown to readers and undone in a click
+- edit words, senses, translations and links of any dataset, served or not; every change kept
+  in a history with the values before and after, shown to readers and undone in a click
 - moderate the corrections readers send from the word pages
 - run bulk requests to a language model over a filtered slice of the dictionary
-- import and export the whole dictionary as a dataset, online or from a file
+- install, activate, import, export and delete datasets from their cards; a notice when a
+  source has a newer file, and when a newer release of the app is out
 
-**The website** — the docs, the API reference, a playground, public word pages
+**The website** — the docs, the API reference with request snippets in five languages and the two SDKs, a
+playground, public word pages with a tab per dataset that holds the word
 
 **Under the hood** — PostgreSQL (SQLite for development), Docker images, migrations on start,
 health probes, Prometheus metrics, JSON logs.
 
 > [!NOTE]
-> Status: `1.0`, stable: the public API under `/api/v1` follows semantic versioning — a breaking change means a new major version.
+> Status: `1.1`, stable: the public API under `/api/v1` follows semantic versioning — a breaking change means a new major version.
+
+> [!IMPORTANT]
+> **The license of the served dataset binds what you serve.** The project's dataset is CC BY
+> 4.0. A dataset of a public source keeps the license of that source: Wiktionary is share-alike
+> (what you build on it stays under CC BY-SA 4.0), the WordNets ask that their notice travels
+> with every copy. Read the terms on the card of a dataset before you install it, and show the
+> `attribution` of `GET /api/v1/meta` wherever you show the data — [`docs/datasets.md`](docs/datasets.md).
 
 ---
 
@@ -127,7 +150,7 @@ curl -s 'localhost:3240/api/v1/search/detailed?search=run&with_meanings=true'
 ```
 
 > [!TIP]
-> To pin a release instead of the `main` development build, set `VBH_TAG=1.0.0` in `.env`.
+> To pin a release instead of the `main` development build, set `VBH_TAG=1.1.0` in `.env`.
 > To add the website (docs, API reference, playground, word pages) on <http://localhost:3242>, set
 > `COMPOSE_PROFILES=db,site`.
 
@@ -203,8 +226,12 @@ you.
 ## 📄 License
 
 - **Code** — [MIT](LICENSE) © Aleksei Ryzhov (Fristail27)
-- **Dictionary data** (exports, the public API, the HuggingFace dataset) — [CC BY 4.0](DATA_LICENSE.md): free to use and adapt, including commercially, with attribution.
+- **Dictionary data of the project** (exports, the public API, the HuggingFace dataset) — [CC BY 4.0](DATA_LICENSE.md): free to use and adapt, including commercially, with attribution.
+- **Other datasets an instance holds** keep the license of their source — Wiktionary CC BY-SA 4.0,
+  Open English WordNet CC BY 4.0, Princeton WordNet its own license — and a dataset of your own
+  the license you chose: [`DATA_LICENSE.md`](DATA_LICENSE.md#datasets-of-other-sources).
 
 > [!IMPORTANT]
-> The data is largely LLM-generated and not human-verified — see [`docs/data.md`](docs/data.md)
-> before relying on it.
+> The data of the project is largely LLM-generated and not human-verified — see
+> [`docs/data.md`](docs/data.md) before relying on it. The datasets of public sources are what
+> people wrote, under the terms of their source.

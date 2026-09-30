@@ -5,7 +5,7 @@
 <h1 align="center">Vocab Bloom Hub</h1>
 
 <p align="center">
-  Un dictionnaire d’anglais auto-hébergé : 300 000 entrées avec sens, exemples, formes, traductions et liens entre mots derrière une API publique, une interface d’administration, deux SDK, un site web et un jeu de données ouvert.
+  Un dictionnaire d’anglais auto-hébergé : les 300 000 entrées propres au projet avec sens, exemples, formes, traductions et liens entre mots, le Wiktionary anglais et WordNet comme jeux de données supplémentaires, vos propres dictionnaires — derrière une API publique, une interface d’administration, deux SDK et un site web.
 </p>
 
 <p align="center">
@@ -50,8 +50,10 @@
 
 Un serveur de dictionnaire que vous hébergez vous-même. Il est livré avec les données, une API
 pour les lire, un panneau d’administration pour les modifier et des SDK pour construire dessus.
+Une instance contient plusieurs dictionnaires — des jeux de données — et en sert un ; les autres
+se lisent à côté.
 
-**Le dictionnaire**
+**Le dictionnaire** — le jeu de données propre au projet, celui avec lequel une instance démarre
 
 - 89 000 mots et 26 000 expressions en anglais, 161 000 sens avec définitions et exemples
 - transcription API, niveau CECRL, marques de registre et de domaine, formes fléchies
@@ -60,10 +62,25 @@ pour les lire, un panneau d’administration pour les modifier et des SDK pour c
 - données ouvertes : [CC BY 4.0](../DATA_LICENSE.md), publiées sur HuggingFace, chargées dans
   une instance vide au premier démarrage ; générées par des modèles de langage, non vérifiées par des humains
 
+**D’autres jeux de données** — installés à côté, chacun complet et sous la licence de sa source
+
+- le Wiktionary anglais (CC BY-SA 4.0), Open English WordNet (CC BY 4.0) et Princeton WordNet 3.1
+  (la licence WordNet), installés depuis les fichiers que les sources distribuent — le serveur les
+  convertit ; la transcription API des WordNet vient du CMU Pronouncing Dictionary
+- vos propres jeux de données : créés vides sous une licence que vous choisissez — CC0, CC BY,
+  CC BY-SA, CC BY-NC, ODbL ou la vôtre — et remplis dans le panneau d’administration ou depuis un
+  export
+- les jeux de données ne sont jamais mélangés : l’API et le site web en servent un, chacun de
+  ceux installés se lit par `GET /api/v1/words/{word}/datasets` et s’affiche comme onglet d’une
+  page de mot, sous ses propres conditions
+
 **L’API** — `/api/v1`, lecture seule, sans clé
 
 - recherche par niveaux de pertinence avec tolérance aux fautes de frappe ; une vedette avec tout ce qui s’y rattache
 - listes filtrées paginées par curseur, une entrée aléatoire, une consultation par lot de 50 mots au plus
+- une vedette depuis tous les jeux de données de l’instance à la fois, l’historique de ses
+  modifications, les conditions du jeu de données servi dans `/meta` — sa licence, son attribution
+  et ses mentions
 - limitation de débit par client, chaque réponse mise en cache avec un ETag, un document OpenAPI pour générer des clients
 
 **Les SDK** — générés à partir de ce document OpenAPI
@@ -73,19 +90,32 @@ pour les lire, un panneau d’administration pour les modifier et des SDK pour c
 
 **Le panneau d’administration** — huit langues d’interface
 
-- modifier les mots, les sens, les traductions et les liens ; chaque changement reste dans un
-  historique avec les valeurs avant et après, visible des lecteurs et annulable en un clic
+- modifier les mots, les sens, les traductions et les liens de n’importe quel jeu de données,
+  servi ou non ; chaque changement reste dans un historique avec les valeurs avant et après,
+  visible des lecteurs et annulable en un clic
 - modérer les corrections que les lecteurs envoient depuis les pages de mots
 - lancer des requêtes en masse vers un modèle de langage sur une tranche filtrée du dictionnaire
-- importer et exporter le dictionnaire entier en jeu de données, en ligne ou depuis un fichier
+- installer, activer, importer, exporter et supprimer des jeux de données depuis leurs cartes ; un
+  avis quand une source a un fichier plus récent et quand une nouvelle version de l’application
+  est sortie
 
-**Le site web** — la documentation, la référence de l’API, un bac à sable, des pages de mots publiques
+**Le site web** — la documentation, la référence de l’API avec des extraits de requête en cinq
+langages et dans les deux SDK, un bac à sable, des pages de mots publiques avec un onglet par jeu de données qui
+contient le mot
 
 **Sous le capot** — PostgreSQL (SQLite pour le développement), images Docker, migrations au
 démarrage, sondes de santé, métriques Prometheus, journaux JSON.
 
 > [!NOTE]
-> Statut : `1.0`, version stable : l’API publique sous `/api/v1` suit le versionnage sémantique ; un changement incompatible implique une nouvelle version majeure.
+> Statut : `1.1`, version stable : l’API publique sous `/api/v1` suit le versionnage sémantique ; un changement incompatible implique une nouvelle version majeure.
+
+> [!IMPORTANT]
+> **La licence du jeu de données servi engage ce que vous servez.** Le jeu de données du projet
+> est en CC BY 4.0. Un jeu de données d’une source publique garde la licence de cette source :
+> Wiktionary est en partage à l’identique (ce que vous construisez dessus reste sous CC BY-SA 4.0),
+> les WordNet demandent que leur mention accompagne chaque copie. Lisez les conditions sur la
+> carte d’un jeu de données avant de l’installer, et affichez l’`attribution` de
+> `GET /api/v1/meta` partout où vous affichez les données — [`datasets.md`](datasets.md).
 
 ---
 
@@ -127,7 +157,7 @@ curl -s 'localhost:3240/api/v1/search/detailed?search=run&with_meanings=true'
 ```
 
 > [!TIP]
-> Pour épingler une version au lieu de la construction `main`, mettez `VBH_TAG=1.0.0` dans
+> Pour épingler une version au lieu de la construction `main`, mettez `VBH_TAG=1.1.0` dans
 > `.env`. Pour ajouter le site web (documentation, référence de l’API, bac à sable, pages de mots)
 > sur <http://localhost:3242>, mettez `COMPOSE_PROFILES=db,site`.
 
@@ -204,8 +234,13 @@ modèles vous guident.
 ## 📄 Licence
 
 - **Code** — [MIT](../LICENSE) © Aleksei Ryzhov (Fristail27)
-- **Données du dictionnaire** (exports, API publique, jeu de données HuggingFace) — [CC BY 4.0](../DATA_LICENSE.md) : libres d’utilisation et d’adaptation, y compris commerciales, avec attribution.
+- **Données du dictionnaire du projet** (exports, API publique, jeu de données HuggingFace) — [CC BY 4.0](../DATA_LICENSE.md) : libres d’utilisation et d’adaptation, y compris commerciales, avec attribution.
+- **Les autres jeux de données d’une instance** gardent la licence de leur source — Wiktionary
+  CC BY-SA 4.0, Open English WordNet CC BY 4.0, Princeton WordNet sa propre licence — et un jeu de
+  données à vous la licence que vous avez choisie :
+  [`DATA_LICENSE.md`](../DATA_LICENSE.md#datasets-of-other-sources).
 
 > [!IMPORTANT]
-> Les données sont en grande partie générées par des LLM et non vérifiées par des humains — lisez
-> [`data.md`](data.md) avant de vous y fier.
+> Les données du projet sont en grande partie générées par des LLM et non vérifiées par des
+> humains — lisez [`data.md`](data.md) avant de vous y fier. Les jeux de données des sources
+> publiques sont ce que des personnes ont écrit, sous les conditions de leur source.
