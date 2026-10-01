@@ -143,6 +143,24 @@ Reusable presentational primitives live in `src/core/ui/`; app-level composite c
 
 Everything an agent needs is vendor-neutral and lives once; there are no per-agent copies.
 
+### Working on a task
+
+- Start with `git status --short`; preserve unrelated changes. Read the nested `AGENTS.md` of
+  an app before editing it, including when the session starts at the repository root.
+- Use the pinned Yarn from `packageManager`; do not introduce npm/pnpm lockfiles. Check
+  `node --version` before Jest (24.9+). Use `uv` for the Python SDK.
+- Follow the nearest existing implementation and tests. For UI text, update all eight locale
+  catalogs of the affected app and preserve Arabic RTL behavior.
+- Run tests that exercise the changed behavior, then `yarn check`. For Python changes also run
+  `uv run ruff check .`, `uv run mypy` and `uv run pytest` in `packages/python-sdk`. If a check
+  cannot run, report the command and blocker; do not describe it as passing.
+- Browser tests boot isolated databases; use those fixtures for verification rather than
+  changing the developer's `.env` or importing into their database.
+- Finish with what changed, validation results and remaining limitations. Commit, push,
+  publish or deploy when the user requests it; otherwise leave the changes available for review.
+
+### Configuration
+
 - **Instructions**: this file (and the nested `AGENTS.md` in `apps/frontend` and `apps/site`, which
   `next dev` regenerates). The `CLAUDE.md` files hold only `@AGENTS.md`, the documented shim for
   Claude Code; Gemini CLI reads `AGENTS.md` through `context.fileName` in `.gemini/settings.json`.
@@ -159,6 +177,11 @@ Everything an agent needs is vendor-neutral and lives once; there are no per-age
   Jules, the Copilot CLI and the Copilot coding agent have no project file: add the same command in
   their global settings or UI. A key is optional — export `CONTEXT7_API_KEY` in the shell for higher
   rate limits, never put it in these files. A new MCP server goes into all of them.
+
+Codex's project configuration in `.codex/config.toml` reserves 64 KiB for project instructions
+(the root file is already close to the default 32 KiB) and allows 60 seconds for Context7's
+cold start. First-run checks and the trust requirement are in
+[`CONTRIBUTING.md`](./CONTRIBUTING.md#coding-agents).
 
 ## Conventions
 
