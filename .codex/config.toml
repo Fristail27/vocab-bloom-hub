@@ -1,6 +1,13 @@
 # Project-level Codex config (applies in trusted projects). MCP servers shared by every agent
 # are described in AGENTS.md ("Agent tooling").
+
+# The root AGENTS.md is close to Codex's default 32 KiB limit; leave room for
+# its growth and the nested Next.js instructions.
+project_doc_max_bytes = 65536
+
 [mcp_servers.context7]
 command = "npx"
 args = ["-y", "@upstash/context7-mcp"]
 env_vars = ["CONTEXT7_API_KEY"]
+# A cold npx download can exceed the default 10 seconds.
+startup_timeout_sec = 60
