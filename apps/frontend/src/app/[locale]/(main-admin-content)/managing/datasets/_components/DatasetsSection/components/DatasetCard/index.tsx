@@ -2,13 +2,22 @@
 
 import React from 'react';
 import { Alert, Button, Card, Collapse, Popconfirm, Tag, Typography } from 'antd';
+import {
+  DatabaseOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  EditOutlined,
+  FileTextOutlined,
+  InfoCircleOutlined,
+  UploadOutlined,
+} from '@ant-design/icons';
 import { useLocale, useTranslations } from 'next-intl';
 import { DatasetCatalogEntryT } from 'server/core/constants/dataset_catalog';
 import { findStandardLicense } from 'server/core/constants/data_licenses';
 import { DEFAULT_DATASET_NAME } from 'server/core/constants/datasets';
 import { DatasetT, DatasetUpdateT } from 'server/types';
 import { formatCount, formatMegabytes } from '../../utils';
-import styles from '../../styles.module.scss';
+import styles from './styles.module.scss';
 
 const { Paragraph, Text } = Typography;
 
@@ -67,13 +76,15 @@ export const DatasetCard: React.FC<DatasetCardP> = ({ entry, dataset, update, su
   const notice = entry?.notice || dataset?.notice || '';
 
   const details = (
-    <>
-      {entry && <Paragraph>{t(`about_${entry.name}`)}</Paragraph>}
+    <div className={styles.detailsContent}>
       {entry && (
-        <div className={styles.features}>
-          {entry.features.map((feature) => (
-            <Tag key={feature}>{t(`feature_${feature}`)}</Tag>
-          ))}
+        <div className={styles.overview}>
+          <Paragraph className={styles.description}>{t(`about_${entry.name}`)}</Paragraph>
+          <div className={styles.features}>
+            {entry.features.map((feature) => (
+              <Tag key={feature}>{t(`feature_${feature}`)}</Tag>
+            ))}
+          </div>
         </div>
       )}
       <dl className={styles.facts}>
@@ -89,12 +100,6 @@ export const DatasetCard: React.FC<DatasetCardP> = ({ entry, dataset, update, su
         </dd>
         <dt>{t('label_attribution')}</dt>
         <dd>{attribution}</dd>
-        {notice && (
-          <>
-            <dt>{t('label_notice')}</dt>
-            <dd>{notice}</dd>
-          </>
-        )}
         {entry && (
           <>
             <dt>{t('label_size')}</dt>
@@ -127,55 +132,78 @@ export const DatasetCard: React.FC<DatasetCardP> = ({ entry, dataset, update, su
           </>
         )}
       </dl>
-      {dataset?.license_text && (
-        <>
-          <Text strong>{t('own_license_text')}</Text>
-          <Paragraph className={styles.licenseText}>{dataset.license_text}</Paragraph>
-        </>
+      {notice && (
+        <div className={styles.notice}>
+          <InfoCircleOutlined aria-hidden />
+          <div>
+            <Text strong>{t('label_notice')}</Text>
+            <Paragraph>{notice}</Paragraph>
+          </div>
+        </div>
       )}
-    </>
+      {dataset?.license_text && (
+        <div className={styles.licenseText}>
+          <Text strong>{t('own_license_text')}</Text>
+          <Paragraph>{dataset.license_text}</Paragraph>
+        </div>
+      )}
+    </div>
   );
 
   return (
     <Card
-      size="small"
+      className={`${styles.card} ${active ? styles.active : ''}`}
+      classNames={{ header: styles.cardHeader, title: styles.cardTitle, body: styles.cardBody }}
       data-testid={`dataset-${name}`}
       title={
-        <span className={styles.heading}>
-          <span className={styles.title}>{title}</span>
-          <Text type="secondary" code>
-            {name}
-          </Text>
-        </span>
-      }
-      extra={
-        <span className={styles.tags}>
-          {own && <Tag color="purple">{t('status_own')}</Tag>}
-          {active && <Tag color="green">{t('status_active')}</Tag>}
-          {installed && !active && <Tag color="blue">{t('status_installed')}</Tag>}
-          {!installed && <Tag>{t('status_not_installed')}</Tag>}
-        </span>
+        <div className={styles.header}>
+          <div className={styles.identity}>
+            <span className={styles.avatar} aria-hidden>
+              <DatabaseOutlined />
+            </span>
+            <div className={styles.heading}>
+              <h4 className={styles.title}>{title}</h4>
+              <Text type="secondary" className={styles.name}>
+                {name}
+              </Text>
+            </div>
+          </div>
+          <div className={styles.tags}>
+            {own && <Tag color="purple">{t('status_own')}</Tag>}
+            {active && <Tag color="green">{t('status_active')}</Tag>}
+            {installed && !active && <Tag color="blue">{t('status_installed')}</Tag>}
+            {!installed && <Tag>{t('status_not_installed')}</Tag>}
+          </div>
+        </div>
       }
     >
       <dl className={styles.summary}>
-        <dt>{t('label_license')}</dt>
-        <dd data-testid={`dataset-license-${name}`}>
-          <a href={license.url} target="_blank" rel="license noreferrer noopener">
-            {license.spdx ? `${license.name} (${license.spdx})` : license.name}
-          </a>
-          {!license.spdx && <Tag className={styles.shareAlike}>{t('own_license_tag')}</Tag>}
-          {license.share_alike && (
-            <Tag color="orange" className={styles.shareAlike}>
-              {t('share_alike')}
-            </Tag>
-          )}
-        </dd>
+        <div className={styles.license}>
+          <dt>{t('label_license')}</dt>
+          <dd data-testid={`dataset-license-${name}`}>
+            <a href={license.url} target="_blank" rel="license noreferrer noopener">
+              {license.spdx ? `${license.name} (${license.spdx})` : license.name}
+            </a>
+            {!license.spdx && <Tag className={styles.shareAlike}>{t('own_license_tag')}</Tag>}
+            {license.share_alike && (
+              <Tag color="orange" className={styles.shareAlike}>
+                {t('share_alike')}
+              </Tag>
+            )}
+          </dd>
+        </div>
         {installed && (
           <>
-            <dt>{t('label_version')}</dt>
-            <dd>{dataset?.version ?? '—'}</dd>
-            <dt>{t('label_imported')}</dt>
-            <dd>{dataset?.imported_at ? new Date(dataset.imported_at).toLocaleString(locale) : t('never')}</dd>
+            <div>
+              <dt>{t('label_version')}</dt>
+              <dd>{dataset?.version ?? '—'}</dd>
+            </div>
+            <div>
+              <dt>{t('label_imported')}</dt>
+              <dd>
+                {dataset?.imported_at ? new Date(dataset.imported_at).toLocaleString(locale) : t('never')}
+              </dd>
+            </div>
           </>
         )}
       </dl>
@@ -219,7 +247,11 @@ export const DatasetCard: React.FC<DatasetCardP> = ({ entry, dataset, update, su
           </Popconfirm>
         )}
         {installed && dataset && (
-          <Button onClick={() => actions.edit(dataset)} data-testid={`dataset-edit-words-${name}`}>
+          <Button
+            icon={<EditOutlined aria-hidden />}
+            onClick={() => actions.edit(dataset)}
+            data-testid={`dataset-edit-words-${name}`}
+          >
             {t('edit_words')}
           </Button>
         )}
@@ -230,18 +262,30 @@ export const DatasetCard: React.FC<DatasetCardP> = ({ entry, dataset, update, su
         ) : (
           installed &&
           dataset && (
-            <Button onClick={() => actions.import(dataset)} data-testid={`dataset-import-${name}`}>
+            <Button
+              icon={<UploadOutlined aria-hidden />}
+              onClick={() => actions.import(dataset)}
+              data-testid={`dataset-import-${name}`}
+            >
               {t('import')}
             </Button>
           )
         )}
         {installed && dataset && (
-          <Button onClick={() => actions.export(dataset)} data-testid={`dataset-export-${name}`}>
+          <Button
+            icon={<DownloadOutlined aria-hidden />}
+            onClick={() => actions.export(dataset)}
+            data-testid={`dataset-export-${name}`}
+          >
             {t('export')}
           </Button>
         )}
         {own && dataset && (
-          <Button onClick={() => actions.editTerms(dataset)} data-testid={`dataset-edit-${name}`}>
+          <Button
+            icon={<FileTextOutlined aria-hidden />}
+            onClick={() => actions.editTerms(dataset)}
+            data-testid={`dataset-edit-${name}`}
+          >
             {t('own_edit')}
           </Button>
         )}
@@ -253,7 +297,13 @@ export const DatasetCard: React.FC<DatasetCardP> = ({ entry, dataset, update, su
             cancelText={t('cancel')}
             onConfirm={() => actions.remove(dataset)}
           >
-            <Button danger loading={busy === `delete ${name}`}>
+            <Button
+              danger
+              type="text"
+              icon={<DeleteOutlined aria-hidden />}
+              className={styles.remove}
+              loading={busy === `delete ${name}`}
+            >
               {t('delete')}
             </Button>
           </Popconfirm>
@@ -262,9 +312,27 @@ export const DatasetCard: React.FC<DatasetCardP> = ({ entry, dataset, update, su
 
       <Collapse
         ghost
-        size="small"
+        expandIconPlacement="end"
         className={styles.details}
-        items={[{ key: 'details', label: t('details'), children: details, forceRender: true }]}
+        classNames={{ header: styles.detailsHeader }}
+        styles={{
+          root: { borderBlockStart: '1px solid var(--ant-color-border-secondary)' },
+          header: { padding: '14px var(--dataset-card-padding)' },
+          body: { padding: '20px var(--dataset-card-padding) 24px' },
+        }}
+        items={[
+          {
+            key: 'details',
+            label: (
+              <span className={styles.detailsLabel}>
+                <InfoCircleOutlined aria-hidden />
+                {t('details')}
+              </span>
+            ),
+            children: details,
+            forceRender: true,
+          },
+        ]}
       />
     </Card>
   );
