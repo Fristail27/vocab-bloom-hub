@@ -2,7 +2,6 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger, PARAMS_PROVIDER_TOKEN } from 'nestjs-pino';
-import { __resetOutOfContextForTests } from 'nestjs-pino/PinoLogger';
 import request from 'supertest';
 import { App } from 'supertest/types';
 
@@ -22,14 +21,15 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{1
  */
 describe('Structured logging (e2e, issue #280)', () => {
   let app: INestApplication<App>;
-  let log: ReturnType<typeof captureLines>;
+  // nestjs-pino keeps one root logger for the module lifetime. Every boot uses
+  // the same configuration and capture stream; clearing its lines below gives
+  // each test fresh output without reaching into the package's private modules.
+  const log = captureLines();
   const server = () => app.getHttpServer();
 
   const boot = async (customize?: (builder: ReturnType<typeof Test.createTestingModule>) => void) => {
     process.env.ADMIN_USERNAME = 'e2e-admin';
     process.env.ADMIN_PASSWORD = 'e2e-password';
-    __resetOutOfContextForTests();
-    log = captureLines();
     const builder = Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PARAMS_PROVIDER_TOKEN)
       .useValue(createLoggerParams({ format: 'json', level: 'info', stream: log.stream }));

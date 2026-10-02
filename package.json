@@ -83,12 +83,12 @@
     "jest": "^30.5.2",
     "jest-environment-jsdom": "^30.5.2",
     "jiti": "^2.7.0",
-    "lint-staged": "^17.5.1",
-    "prettier": "^3.9.8",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.9",
     "semver": "^7.8.5",
-    "ts-jest": "^29.4.12",
+    "ts-jest": "^29.4.14",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.70.1"
+    "typescript-eslint": "^8.71.0"
   },
   "engines": {
     "node": ">=22.13",
