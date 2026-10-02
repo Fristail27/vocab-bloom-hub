@@ -26,6 +26,8 @@ def _print_dataset_attribution(meta: Meta) -> None:
         print(f"Attribution URL: {meta.attribution_url}")
     if meta.license_text:
         print(f"License text: {meta.license_text}")
+    if meta.notice:
+        print(f"Notice: {meta.notice}")
 
 
 def _print_word(word: Word) -> None:

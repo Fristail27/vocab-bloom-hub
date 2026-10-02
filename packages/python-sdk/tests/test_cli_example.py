@@ -131,6 +131,7 @@ def test_lookup_prints_definitions_empty_meanings_and_attribution(capsys: pytest
     assert "Attribution: Example Dictionary" in output.out
     assert "https://example.test/credits" in output.out
     assert "Please credit Example Dictionary." in output.out
+    assert "Notice: Example dataset notice." in output.out
     assert "run (noun)" in output.out
     assert "move quickly" in output.out
     assert "modified on this instance" in output.out
