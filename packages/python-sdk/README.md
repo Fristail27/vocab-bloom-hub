@@ -57,6 +57,15 @@ async with AsyncVocabBloomClient("https://dict.example.com") as client:
         ...
 ```
 
+## Standalone command-line example
+
+The SDK includes a runnable lookup example without adding an installed command. It requires Python 3.10+ and uses only the standard library and the SDK dependencies. Install the SDK, then run this from the Python SDK directory:
+
+    python -m pip install vocab-bloom-hub
+    python examples/lookup_word.py --base-url https://dict.example.com run
+
+See the complete [lookup example](examples/lookup_word.py). Its output includes dataset license and attribution details and marks entries modified on the instance.
+
 ## API
 
 | Method                                      | Endpoint                                       | Answer                                                                                                         |
