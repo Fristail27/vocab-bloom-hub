@@ -83,7 +83,7 @@ describe('public API responses match their OpenAPI schemas (e2e, issue #305)', (
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
     app.useGlobalFilters(new AllExceptionsFilter(app.get(HttpAdapterHost).httpAdapter));
-    await app.init();
+    await app.listen(0, '127.0.0.1');
     app.get(PublicOpenApiService).attach(app);
 
     const addWord = async (body: object): Promise<number> => {

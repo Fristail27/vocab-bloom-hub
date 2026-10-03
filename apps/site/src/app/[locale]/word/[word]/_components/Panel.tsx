@@ -1,3 +1,5 @@
+import { Origins } from '@/components/Origins';
+import { useTranslations } from 'next-intl';
 import React from 'react';
 import type { PublicChangeV1T } from 'server/types';
 
@@ -31,6 +33,7 @@ type PanelP = {
  * of a tab that was pressed.
  */
 export const Panel = ({ panel, history, locale, t, termsNames, languageLabel }: PanelP) => {
+  const p = useTranslations('provenance');
   const { entries, terms } = panel;
   // the other spellings of the headword, but for the ones the panel itself shows the entries of
   const shown = new Set(entries.map((entry) => entry.word));
@@ -47,6 +50,13 @@ export const Panel = ({ panel, history, locale, t, termsNames, languageLabel }: 
   return (
     <TranslationLanguageProvider available={languages} defaultLanguage={defaultLanguage}>
       <DatasetNote panel={panel} t={t} terms={termsNames} />
+      {terms.description && (
+        <p>
+          <strong>{p('description')}: </strong>
+          {terms.description}
+        </p>
+      )}
+      <Origins origins={terms.origins} title={p('dataset_sources')} />
       {translations.length > 0 && (
         <p className={styles.lead}>
           <span className={styles.leadLabel}>{t('translation_label')}:</span>{' '}

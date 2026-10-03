@@ -1,3 +1,4 @@
+import type { CopyWordSourceT, EnWordT, ForkProgressT, UpdateOriginsReqT } from 'server/types';
 import { AbstractBaseApi, type ApiQueryT, type DownloadedFileT } from '../AbstractBaseApi';
 import {
   AddMeaningReqT,
@@ -82,6 +83,24 @@ import { ErrorCodes } from 'server/core/constants/error_codes';
 import { DATASET_QUERY_PARAM } from 'server/core/constants/datasets';
 
 export class EnApi extends AbstractBaseApi {
+  static async forkDataset(name: string, body: CreateDatasetReqT) {
+    return this.post<ForkProgressT>(`${this.baseURL}/en/datasets/${encodeURIComponent(name)}/fork`, body);
+  }
+  static async forkStatus(name: string) {
+    return this.get<ForkProgressT>(`${this.baseURL}/en/datasets/${encodeURIComponent(name)}/fork-status`);
+  }
+  static async updateOrigins(id: number, body: UpdateOriginsReqT) {
+    return this.patch<EnWordT>(`${this.baseURL}/en/${id}/origins`, body);
+  }
+  static async previewCopy(dataset: string, id: number) {
+    return this.get<EnWordT & { copy_source: CopyWordSourceT }>(
+      `${this.baseURL}/en/copy-preview/${encodeURIComponent(dataset)}/${id}`,
+    );
+  }
+  static async searchDataset(dataset: string, search: string) {
+    return this.get<SearchResT>(`${this.baseURL}/en/search`, { query: { search, dataset, limit: 100 } });
+  }
+
   static async checkWord(word: string, pos: EnPartOfSpeechE, forPhrasal?: boolean): Promise<CheckWordResT> {
     return this.get<CheckWordResT>(`${this.baseURL}/en/check-word/${word}`, {
       query: { partOfSpeech: pos, forPhrasal },

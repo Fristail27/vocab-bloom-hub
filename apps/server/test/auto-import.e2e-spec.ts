@@ -72,7 +72,7 @@ describe('Automatic dictionary import (e2e, issue #268)', () => {
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
     app.useGlobalFilters(new AllExceptionsFilter(app.get(HttpAdapterHost).httpAdapter));
-    await app.init();
+    await app.listen(0, '127.0.0.1');
   };
 
   const waitForImport = async () => {
@@ -142,9 +142,14 @@ describe('Automatic dictionary import (e2e, issue #268)', () => {
     await waitForImport();
     // every boot starts from an empty database (on both drivers), so record the version by hand
     await app.close();
+    // Seed the recorded version before enabling the bootstrap. Otherwise its
+    // scheduled import races the insert and keeps using the database after close.
+    process.env.DICTIONARY_AUTO_IMPORT = 'false';
     await boot();
     await app.get(SettingsService).upsert(DATASET_VERSION_SETTINGS_FIELD, '9.9.9');
+    process.env.DICTIONARY_AUTO_IMPORT = 'true';
     await expect(app.get(DictionaryBootstrapService).run()).resolves.toBe('skipped');
+    expect(app.get(ImportStatusService).running).toBe(false);
   });
 
   it('reports 503 importing on the readiness probe while an automatic import runs, import_failed after a failure', async () => {

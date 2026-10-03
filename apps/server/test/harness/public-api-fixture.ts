@@ -14,7 +14,6 @@ process.env.DICTIONARY_AUTO_IMPORT = 'false';
 process.env.ADMIN_USERNAME ??= 'fixture-admin';
 process.env.ADMIN_PASSWORD ??= 'fixture-password';
 
-import http from 'node:http';
 import { ValidationPipe } from '@nestjs/common';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { AppModule } from '../../src/modules/AppModule/app.module';
@@ -22,9 +21,6 @@ import { AllExceptionsFilter } from '../../src/core/filters/all-exceptions.filte
 import { PublicOpenApiService } from '../../src/modules/PublicApiModule/public-openapi.service';
 import { createJwt } from '../../core/utils/auth';
 import { hashLoginString } from '../../core/utils/crypto';
-
-// one connection per request: the same keep-alive race as in the test suites
-http.globalAgent = new http.Agent({ keepAlive: false });
 
 const meaning = (title: string, extra: object = {}) => ({
   title,

@@ -1,3 +1,4 @@
+import { DICTIONARY_ENTITIES } from '../../EnModule/entities/dictionary-entities';
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { DataSource } from 'typeorm';
 import { ErrorCodes } from '../../../../core/constants/error_codes';
@@ -6,6 +7,7 @@ import { createDatasetSchema } from '../../../db/datasets';
 import { Settings } from '../../SettingsModule/entities/settings.entity';
 import { DatasetsService } from '../datasets.service';
 import { Dataset } from '../entities/dataset.entity';
+import { DATASET_VERSION_SETTINGS_FIELD } from '../../EnModule/modules/EnImportDictionary/constants';
 
 // the schemas are Postgres (test:postgres); here the registry and the rules
 jest.mock('../../../db/datasets', () => ({
@@ -48,6 +50,7 @@ describe('DatasetsService: the datasets of the instance’s own', () => {
     await created.onModuleInit();
     // what the driver would say on Postgres; the schema statements are mocked above
     Object.defineProperty(created, 'supported', { value: true });
+    jest.spyOn(created, 'reader').mockResolvedValue(dataSource);
     return created;
   };
 
@@ -57,7 +60,7 @@ describe('DatasetsService: the datasets of the instance’s own', () => {
     dataSource = new DataSource({
       type: 'better-sqlite3',
       database: ':memory:',
-      entities: [Dataset, Settings],
+      entities: [Dataset, Settings, ...DICTIONARY_ENTITIES],
       synchronize: true,
     });
     await dataSource.initialize();
@@ -117,6 +120,48 @@ describe('DatasetsService: the datasets of the instance’s own', () => {
       }),
     );
   });
+
+  it('stores an own version, journals edits, and preserves it when omitted', async () => {
+    expect(await service.create({ ...standard, version: ' 1.0.0 ' })).toMatchObject({ version: '1.0.0' });
+    record.mockClear();
+    expect(await service.updateTerms(standard.name, { title: 'Updated title' })).toMatchObject({
+      version: '1.0.0',
+    });
+    record.mockClear();
+    expect(await service.updateTerms(standard.name, { version: ' 1.0.0 ' })).toMatchObject({
+      version: '1.0.0',
+    });
+    expect(record).not.toHaveBeenCalled();
+    expect(await service.updateTerms(standard.name, { version: ' 2.0.0 ' })).toMatchObject({
+      version: '2.0.0',
+    });
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({ diff: { version: { before: '1.0.0', after: '2.0.0' } } }),
+    );
+    const stored = await dataSource.getRepository(Dataset).findOneByOrFail({ name: standard.name });
+    expect(stored.terms_updated_at).toBeInstanceOf(Date);
+  });
+
+  it.each([null, '', '   '])(
+    'clears an own version with %p and updates the active settings mirror',
+    async (version) => {
+      await service.create({ ...standard, version: '1.0.0' });
+      await dataSource.getRepository(Settings).save({ field: 'active_dataset', value: standard.name });
+      const active = await boot();
+      const heard: (string | null)[] = [];
+      active.onActiveChanged((dataset) => heard.push(dataset.version));
+      await active.updateTerms(standard.name, { version: '2.0.0' });
+      expect(
+        await dataSource.getRepository(Settings).findOneByOrFail({ field: DATASET_VERSION_SETTINGS_FIELD }),
+      ).toMatchObject({ value: '2.0.0' });
+      await active.updateTerms(standard.name, { version });
+      expect(active.getActive().version).toBeNull();
+      expect(heard).toEqual(['2.0.0', null]);
+      expect(
+        await dataSource.getRepository(Settings).findOneBy({ field: DATASET_VERSION_SETTINGS_FIELD }),
+      ).toBeNull();
+    },
+  );
 
   it('takes no name of the catalog, of its datasets or of its sources, and no name twice', async () => {
     for (const name of ['default', 'wiktionary', 'wordnet', 'wordnet_princeton']) {
@@ -216,6 +261,9 @@ describe('DatasetsService: the datasets of the instance’s own', () => {
   });
 
   it('edits nothing about a dataset of the catalog', async () => {
+    await expect(service.updateTerms('default', { version: '1.0.0' })).rejects.toThrow(
+      ErrorCodes.dataset_terms_fixed,
+    );
     await expect(service.updateTerms('default', { title: 'Mine now' })).rejects.toThrow(
       ErrorCodes.dataset_terms_fixed,
     );

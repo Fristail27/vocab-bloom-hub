@@ -1,6 +1,9 @@
 'use client';
 
 import React from 'react';
+import { OriginsEditor } from '@/components/Origins/Editor';
+import { Origins } from '@/components/Origins';
+import type { OriginT, ForkProgressT } from 'server/types';
 import { Alert, App, Checkbox, Form, Input, Modal, Select, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
 import { isReservedDatasetName } from 'server/core/constants/dataset_catalog';
@@ -11,7 +14,7 @@ import {
   STANDARD_DATA_LICENSES,
   findStandardLicense,
 } from 'server/core/constants/data_licenses';
-import { DATASET_NAME_PATTERN } from 'server/core/constants/datasets';
+import { DATASET_NAME_PATTERN, DATASET_VERSION_MAX_LENGTH } from 'server/core/constants/datasets';
 import { DatasetLicenseReqT, DatasetT, UpdateDatasetReqT } from 'server/types';
 import { EnApi } from '@/core/api/EnApi';
 import styles from './styles.module.scss';
@@ -22,6 +25,10 @@ const { Paragraph } = Typography;
 export const OWN_LICENSE = 'own';
 
 type FormValuesT = {
+  version?: string;
+  description?: string;
+  notice?: string;
+  origins?: OriginT[];
   name: string;
   title: string;
   license: string;
@@ -35,6 +42,8 @@ type FormValuesT = {
 type OwnDatasetFormP = {
   /** Open for a new dataset; closed when false */
   open: boolean;
+  parent?: DatasetT | undefined;
+  onForkStarted?: (progress: ForkProgressT) => void;
   /** The dataset whose terms are edited; absent for a new one */
   dataset?: DatasetT | undefined;
   onClose: () => void;
@@ -52,7 +61,11 @@ const initialOf = (dataset: DatasetT | undefined): Partial<FormValuesT> => {
   const standard = findStandardLicense(dataset.license);
   return {
     name: dataset.name,
+    description: dataset.description ?? '',
+    notice: dataset.notice ?? '',
+    origins: dataset.origins ?? [],
     title: dataset.title,
+    version: dataset.version ?? '',
     license: standard ? standard.spdx : OWN_LICENSE,
     ...(!standard && {
       license_name: dataset.license,
@@ -78,8 +91,16 @@ const sameLicense = (dataset: DatasetT, license: DatasetLicenseReqT): boolean =>
  * a decision: the dialog says what the change does and does not do, and
  * asks for it to be confirmed before it is sent.
  */
-export const OwnDatasetForm: React.FC<OwnDatasetFormP> = ({ open, dataset, onClose, onSaved }) => {
+export const OwnDatasetForm: React.FC<OwnDatasetFormP> = ({
+  open,
+  dataset,
+  parent,
+  onForkStarted,
+  onClose,
+  onSaved,
+}) => {
   const t = useTranslations('datasets');
+  const p = useTranslations('provenance');
   const tErr = useTranslations('errors');
   const { message } = App.useApp();
   const [form] = Form.useForm<FormValuesT>();
@@ -107,17 +128,40 @@ export const OwnDatasetForm: React.FC<OwnDatasetFormP> = ({ open, dataset, onClo
   React.useEffect(() => {
     if (!open) return;
     form.resetFields();
-    form.setFieldsValue(initialOf(dataset));
+    form.setFieldsValue(initialOf(dataset ?? parent));
+    if (parent)
+      form.setFieldsValue({
+        name: '',
+        title: p('fork_name', { name: parent.title }),
+        version: '',
+        description: '',
+        origins: [],
+      });
     setConfirmed(false);
-  }, [open, dataset, form]);
+  }, [open, dataset, parent, form, p]);
 
   const submit = async (values: FormValuesT) => {
     setSaving(true);
     const terms = {
       title: values.title,
+      version: values.version?.trim() || null,
+      description: values.description?.trim() || null,
+      notice: values.notice?.trim() || null,
+      origins: values.origins ?? [],
       attribution: values.attribution,
       attribution_url: values.attribution_url?.trim() || null,
     };
+    if (parent) {
+      const fork = await EnApi.forkDataset(parent.name, {
+        ...terms,
+        name: values.name,
+        license: licenseOf(values),
+      });
+      setSaving(false);
+      if ('error' in fork) message.error(tErr(fork.message));
+      else onForkStarted?.(fork);
+      return;
+    }
     const res = dataset
       ? await EnApi.updateDataset(dataset.name, {
           ...terms,
@@ -136,14 +180,20 @@ export const OwnDatasetForm: React.FC<OwnDatasetFormP> = ({ open, dataset, onClo
   return (
     <Modal
       open={open}
-      title={dataset ? t('own_edit_title', { name: dataset.title }) : t('own_create_title')}
+      title={
+        parent
+          ? p('fork_button')
+          : dataset
+            ? t('own_edit_title', { name: dataset.title })
+            : t('own_create_title')
+      }
       okText={dataset ? t('own_save') : t('own_create')}
       cancelText={t('cancel')}
       onOk={() => form.submit()}
       onCancel={onClose}
       confirmLoading={saving}
       okButtonProps={{ disabled: licenseChanged && !confirmed }}
-      mask={{ closable: false }}
+      mask={{ closable: true }}
       destroyOnHidden
       width={640}
     >
@@ -154,6 +204,13 @@ export const OwnDatasetForm: React.FC<OwnDatasetFormP> = ({ open, dataset, onClo
         data-testid="own-dataset-form"
         className={styles.form}
       >
+        {parent && (
+          <Alert
+            type="info"
+            title={p('fork', { name: parent.title, version: parent.version ?? p('unknown_version') })}
+          />
+        )}
+        {parent && <Origins origins={parent.origins} />}
         {!editing && (
           <Form.Item
             name="name"
@@ -178,6 +235,18 @@ export const OwnDatasetForm: React.FC<OwnDatasetFormP> = ({ open, dataset, onClo
           rules={[{ required: true, whitespace: true, message: t('own_required') }]}
         >
           <Input maxLength={DATASET_TITLE_MAX_LENGTH} data-testid="own-dataset-title" />
+        </Form.Item>
+        <Form.Item name="version" label={t('own_field_version')} extra={t('own_field_version_hint')}>
+          <Input maxLength={DATASET_VERSION_MAX_LENGTH} placeholder="1.0.0" data-testid="own-dataset-version" />
+        </Form.Item>
+        <Form.Item name="description" label={p('description')}>
+          <Input.TextArea rows={3} maxLength={10000} />
+        </Form.Item>
+        <Form.Item name="notice" label={p('dataset_notice')}>
+          <Input.TextArea rows={3} maxLength={10000} />
+        </Form.Item>
+        <Form.Item name="origins" label={p('sources')}>
+          <OriginsEditor context="dataset" />
         </Form.Item>
         <Form.Item name="license" label={t('label_license')} rules={[{ required: true }]}>
           <Select

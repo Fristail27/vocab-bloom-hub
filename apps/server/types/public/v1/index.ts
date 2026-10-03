@@ -1,3 +1,4 @@
+import type { OriginT, WordLicenseT } from '../../provenance';
 import type {
   EnAreaVariantsE,
   EnPartOfSpeechE,
@@ -110,6 +111,10 @@ export type PublicWordV1FormT = {
 // its forms — no meanings, no translations (the detailed search, the
 // headword and id reads carry those)
 export type PublicSearchWordV1T = {
+  origins?: OriginT[];
+  /** Terms of the datasets whose edits still contribute to this word. */
+  contributions?: OriginT[];
+  licenses?: WordLicenseT[];
   /** @asType integer */
   id: number;
   word: string;
@@ -188,6 +193,9 @@ export type PublicHeadwordV1ResT = PublicListResT<PublicWordV1T, PublicHeadwordV
 // The partial reads flatten the entries of a headword into one list; every
 // item names the entry it belongs to (`word_id`, `part_of_speech`)
 export type PublicEntryRefV1T = {
+  origins?: OriginT[];
+  contributions?: OriginT[];
+  licenses?: WordLicenseT[];
   /** @asType integer */
   word_id: number;
   part_of_speech: EnPartOfSpeechE;
@@ -235,6 +243,10 @@ export type PublicHeadwordLinksV1ResT = PublicListResT<PublicWordLinkV1T, Public
 // `author` names the reader whose correction was applied, when they asked
 // to be named
 export type PublicChangeV1T = {
+  inherited_from?: OriginT | null;
+  /** Terms captured when this edit was made, independent of later dataset changes. */
+  contribution?: OriginT | null;
+  reason?: string | null;
   created_at: string;
   // the spelling of the entry the edit belongs to, as `word` of the entry
   // says it: with `part_of_speech` it names the entry among the ones a
@@ -269,6 +281,9 @@ export type PublicHeadwordHistoryV1ResT = PublicListResT<PublicChangeV1T, Public
 // or the text of a license the owner of a dataset of the instance's own
 // stated (issue #540); empty when the license is named by its link alone
 export type PublicDatasetTermsV1T = {
+  origins?: OriginT[];
+  licenses?: WordLicenseT[];
+  description?: string | null;
   // the name of the dataset on this instance (`default`, `wiktionary`, …)
   dataset: string;
   // The name of the dataset for a reader (issue #540): the title the catalog
@@ -372,6 +387,9 @@ export type PublicDatasetCountsV1T = {
 };
 
 export type PublicMetaV1T = {
+  origins?: OriginT[];
+  licenses?: WordLicenseT[];
+  description?: string | null;
   api_version: string;
   // version of the server (package.json)
   app_version: string;

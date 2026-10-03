@@ -1,3 +1,11 @@
+import { WordCopyService, CopiedWordT } from './word-copy.service';
+import { EnChange } from './entities/en_change.entity';
+import { recordCopiedEdits } from './utils/changes/recordCopiedEdits';
+import { DatasetsService } from '../DatasetsModule/datasets.service';
+import { defaultOrigins } from '../../../core/utils/provenance';
+import { assertOrigins, assertOriginsEdit, assertCompatibleOrigins } from '../../core/utils/provenance';
+import { UpdateOriginsReqDTO } from './dto/UpdateOriginsReq.dto';
+import { IsNull } from 'typeorm';
 import {
   Inject,
   Optional,
@@ -30,10 +38,10 @@ import {
 import { ErrorCodes } from '../../../core/constants/error_codes';
 import { isPublicSourceDataset } from '../../../core/constants/dataset_catalog';
 import { prepareWordFromDB } from './utils/prepareWordFromDB';
-import { articleOf, recordChange } from './utils/changes/recordChange';
-import { ARTICLE_RELATIONS, deleteWordRows, dropEntryIfUnused } from './utils/changes/articles';
+import { wordKeyOf, recordChange } from './utils/changes/recordChange';
+import { WORD_CHANGE_RELATIONS, deleteWordRows, dropEntryIfUnused } from './utils/changes/words';
 import {
-  articleSnapshot,
+  fullWordSnapshot,
   changedFields,
   createdFields,
   deletedFields,
@@ -74,6 +82,8 @@ export class EnService {
     private readonly enShortTranslationService: EnShortTranslationService,
     private readonly enMeaningService: EnMeaningService,
     private readonly wordRows: WordRowsService,
+    @Optional() private readonly datasets?: DatasetsService,
+    @Optional() private readonly wordCopy?: WordCopyService,
   ) {}
 
   // the dataset the request works on (issue #540): the active one, or the
@@ -113,6 +123,7 @@ export class EnService {
       throw new ConflictException(ErrorCodes.word_already_exists);
     }
     const {
+      copy_source: _copySource,
       word: _word,
       base_form: _baseForm,
       short_translations: _shortTranslations,
@@ -162,11 +173,17 @@ export class EnService {
     return this.addEntry(em, word, type);
   }
 
-  private async addFormOfWord(em: EntityManager, wordForm: AddWordReqFormDTO, baseWord: EnWord) {
+  private async addFormOfWord(
+    em: EntityManager,
+    wordForm: AddWordReqFormDTO,
+    baseWord: EnWord,
+    copied = false,
+  ) {
     const { id: _id, word, ...f } = wordForm;
     const formEntry = await this.getOrAddEntry(em, word, EnEntryTypesE.word);
     const wordRow = await this.getWordRow(word, baseWord.part_of_speech, f.form_of_word, em);
     if (wordRow) {
+      if (copied) throw new ConflictException(ErrorCodes.word_already_exists);
       return wordRow;
     } else {
       return em.getRepository(EnWord).save({
@@ -190,7 +207,20 @@ export class EnService {
     }
   }
 
+  async previewCopy(dataset: string, id: number) {
+    if (!this.wordCopy) throw new ConflictException(ErrorCodes.datasets_not_supported);
+    return this.wordCopy.preview(dataset, id);
+  }
+
   async addWord(body: AddWordReqDTO): Promise<AddResT> {
+    if (!body.copy_source) return this.createWord(body);
+    if (!currentDataset().own || !this.wordCopy || body.copy_source.dataset === currentDataset().name) {
+      throw new ConflictException(ErrorCodes.copy_requires_own_dataset);
+    }
+    return this.wordCopy.withSource(body.copy_source, (snapshot) => this.createWord(body, snapshot));
+  }
+
+  private async createWord(body: AddWordReqDTO, copied?: CopiedWordT): Promise<AddResT> {
     this.assertNotGenerated(body.generated);
     let type = EnEntryTypesE.word;
     if (body.part_of_speech === EnPartOfSpeechE.phrase) {
@@ -199,12 +229,39 @@ export class EnService {
     if (body.part_of_speech === EnPartOfSpeechE.grammar_pattern) {
       type = EnEntryTypesE.grammar_pattern;
     }
+    const dataset = this.datasets ? await this.datasets.find(currentDataset().name) : null;
+    let origins = copied?.origins ?? (dataset ? defaultOrigins(dataset) : []);
+    if (body.origins) {
+      assertOriginsEdit(copied?.origins ?? [], body.origins);
+      origins = copied ? body.origins : [...origins, ...body.origins];
+    }
+    assertOrigins(origins);
+    if (dataset) assertCompatibleOrigins([...origins, ...(copied?.row.contributions ?? [])], dataset.license);
+    if (copied) {
+      if (
+        body.word !== copied.row.word.word ||
+        body.part_of_speech !== copied.row.part_of_speech ||
+        body.form_of_word !== EnWordFormsE.base_form
+      ) {
+        throw new BadRequestException(ErrorCodes.provenance_invalid);
+      }
+      const acquiredAt = new Date().toISOString();
+      origins = origins.map((origin) => ({
+        ...origin,
+        ...(origin.acquisitions && {
+          acquisitions: origin.acquisitions.map((event) =>
+            event.id === copied.acquisitionId ? { ...event, recorded_at: acquiredAt } : event,
+          ),
+        }),
+      }));
+    }
     const baseWord = await this.dataSource.transaction(async (em) => {
       const baseEntry = await this.getOrAddEntry(em, body.word, type);
       const baseWord = await this.addWordRow(em, baseEntry, body);
+      await em.getRepository(EnWord).update(baseWord.id, { origins });
 
       if (body.forms) {
-        for (const form of body.forms) await this.addFormOfWord(em, form, baseWord);
+        for (const form of body.forms) await this.addFormOfWord(em, form, baseWord, Boolean(copied));
       }
 
       if (body.meanings) {
@@ -218,6 +275,7 @@ export class EnService {
               ...m,
             },
             em,
+            Boolean(copied),
           );
         }
       }
@@ -240,25 +298,70 @@ export class EnService {
       // through the updates, and the history holds everything it came with
       const created = await em
         .getRepository(EnWord)
-        .findOneOrFail({ where: { id: baseWord.id }, relations: ARTICLE_RELATIONS });
-      await recordChange(em, {
-        ...articleOf(created),
-        entity: ChangeEntityE.word,
-        action: ChangeActionE.create,
-        diff: createdFields(articleSnapshot(created)),
-      });
+        .findOneOrFail({ where: { id: baseWord.id }, relations: WORD_CHANGE_RELATIONS });
+      if (copied) {
+        const inheritedFrom = {
+          ...copied.origin,
+          acquisitions: copied.origin.acquisitions?.map((event) =>
+            event.id === copied.acquisitionId ? { ...event, recorded_at: new Date().toISOString() } : event,
+          ),
+        };
+        const history = copied.history.map(({ id: _id, ...change }) => ({
+          ...change,
+          inherited_from:
+            change.inherited_from ?? origins.find((origin) => origin.id === copied.origin.id) ?? inheritedFrom,
+        }));
+        if (history.length) await em.getRepository(EnChange).save(history);
+        // Creating relational rows stamps user_modified; a pure copy must not.
+        await em
+          .getRepository(EnEntry)
+          .update({ word: created.word.word }, { user_modified: copied.row.word.user_modified });
+        await recordCopiedEdits(em, copied.row, created);
+      } else {
+        await recordChange(em, {
+          ...wordKeyOf(created),
+          entity: ChangeEntityE.word,
+          action: ChangeActionE.create,
+          diff: createdFields(fullWordSnapshot(created)),
+        });
+      }
       this.logger.log(`Word "${body.word}" (${body.part_of_speech}) created, id=${baseWord.id}`);
       return baseWord;
     });
 
     // the request echoed back plus the id of the created base entry
-    return { ...body, id: baseWord.id };
+    return { ...body, origins, id: baseWord.id };
+  }
+
+  async updateOrigins(id: number, request: UpdateOriginsReqDTO): Promise<EnWordT> {
+    const dataset = this.datasets ? await this.datasets.find(currentDataset().name) : null;
+    await this.dataSource.transaction(async (em) => {
+      const row = await em
+        .getRepository(EnWord)
+        .findOne({ where: { id, base_form: IsNull() }, relations: { word: true } });
+      if (!row) throw new NotFoundException(ErrorCodes.word_doesnt_found);
+      const before = row.origins ?? (dataset ? defaultOrigins(dataset) : []);
+      assertOriginsEdit(before, request.origins);
+      if (dataset) assertCompatibleOrigins(request.origins, dataset.license);
+      const diff = changedFields({ origins: before }, { origins: request.origins });
+      if (!diff) return;
+      await em.getRepository(EnWord).update(id, { origins: request.origins });
+      await recordChange(em, {
+        ...wordKeyOf(row),
+        entity: ChangeEntityE.word,
+        action: ChangeActionE.update,
+        diff,
+        reason: request.reason.trim(),
+      });
+    });
+    const rows = await this.wordRows.load([id], FULL_WORD_RELATIONS);
+    return prepareWordFromDB(rows[0]);
   }
 
   async deleteWord(id: number): Promise<DeleteResT> {
     const word = await this.enWordsRep.findOne({
       where: { id },
-      relations: { ...ARTICLE_RELATIONS, base_form: { word: true } },
+      relations: { ...WORD_CHANGE_RELATIONS, base_form: { word: true } },
     });
     if (!word) {
       this.logger.warn(`Delete requested for missing word, id=${id}`);
@@ -268,12 +371,12 @@ export class EnService {
     // no-op when the delete removes the entry itself (issue #328). What is
     // deleted is read before it is gone: the history keeps its values
     const isForm = Boolean(word.base_form);
-    const deleted = isForm ? formSnapshot(word) : articleSnapshot(word);
+    const deleted = isForm ? formSnapshot(word) : fullWordSnapshot(word);
 
     await this.dataSource.transaction(async (em) => {
       await deleteWordRows(em, word);
       await recordChange(em, {
-        ...articleOf(word),
+        ...wordKeyOf(word),
         entity: isForm ? ChangeEntityE.word_form : ChangeEntityE.word,
         action: ChangeActionE.delete,
         record: isForm ? formRecord(word) : null,
@@ -372,7 +475,7 @@ export class EnService {
     await this.dataSource.transaction(async (em) => {
       await em.getRepository(EnWord).save(word);
       await recordChange(em, {
-        ...articleOf(word),
+        ...wordKeyOf(word),
         entity: word.base_form ? ChangeEntityE.word_form : ChangeEntityE.word,
         action: ChangeActionE.update,
         record: recordBefore,
@@ -395,7 +498,7 @@ export class EnService {
     await this.dataSource.transaction(async (em) => {
       await em.getRepository(EnWord).save(word);
       await recordChange(em, {
-        ...articleOf(word),
+        ...wordKeyOf(word),
         entity: ChangeEntityE.word,
         action: ChangeActionE.update,
         diff: changedFields({ base_phrasal: baseBefore }, { base_phrasal: phrasalBase.word.word }),
@@ -465,7 +568,7 @@ export class EnService {
       });
       // a new form is an edit of its base word's entry (issue #328)
       await recordChange(em, {
-        ...articleOf(baseWord),
+        ...wordKeyOf(baseWord),
         entity: ChangeEntityE.word_form,
         action: ChangeActionE.create,
         record: formRecord(saved),
@@ -505,7 +608,7 @@ export class EnService {
 
       await wordsRep.save(word);
       await recordChange(em, {
-        ...articleOf(word),
+        ...wordKeyOf(word),
         entity: ChangeEntityE.word_form,
         action: ChangeActionE.update,
         record: recordBefore,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { App } from 'antd';
 import { DatasetT } from 'server/types';
 
@@ -11,6 +11,7 @@ jest.mock('next-intl', () => ({
 
 jest.mock('next/navigation', () => ({
   useParams: () => ({ wordId: '1' }),
+  useRouter: () => ({ push: jest.fn() }),
 }));
 
 jest.mock('@/core/api/EnApi', () => ({ EnApi: {} }));
@@ -88,7 +89,7 @@ describe('EditLicenseNote', () => {
     );
 
     expect(screen.getByTestId('edit-license-note')).toHaveTextContent('CC-BY-SA-4.0');
-    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('edit-license-note')).queryByRole('link')).not.toBeInTheDocument();
   });
 
   it('says nothing where the dataset is not known', () => {

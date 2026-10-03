@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Origins } from '@/components/Origins';
 import { Alert, Button, Card, Collapse, Popconfirm, Tag, Typography } from 'antd';
 import {
   DatabaseOutlined,
@@ -23,6 +24,7 @@ const { Paragraph, Text } = Typography;
 
 /** What a card asks of the page: the dialogs and the calls live there, one of each for every card */
 export type DatasetActionsT = {
+  fork?: (dataset: DatasetT) => void;
   activate: (dataset: DatasetT) => void;
   edit: (dataset: DatasetT) => void;
   import: (dataset: DatasetT) => void;
@@ -56,6 +58,7 @@ type DatasetCardP = {
 export const DatasetCard: React.FC<DatasetCardP> = ({ entry, dataset, update, supported, busy, actions }) => {
   const locale = useLocale();
   const t = useTranslations('datasets');
+  const p = useTranslations('provenance');
 
   const name = dataset?.name ?? entry?.name ?? '';
   const title = dataset?.title ?? entry?.title ?? name;
@@ -87,6 +90,8 @@ export const DatasetCard: React.FC<DatasetCardP> = ({ entry, dataset, update, su
           </div>
         </div>
       )}
+      {dataset?.description && <Paragraph>{dataset.description}</Paragraph>}
+      <Origins origins={dataset?.origins} />
       <dl className={styles.facts}>
         <dt>{t('label_source')}</dt>
         <dd>
@@ -177,6 +182,19 @@ export const DatasetCard: React.FC<DatasetCardP> = ({ entry, dataset, update, su
         </div>
       }
     >
+      {dataset?.origins
+        ?.flatMap((origin) =>
+          (origin.acquisitions ?? [])
+            .filter((event) => event.method === 'fork')
+            .map((event) => ({ origin, event })),
+        )
+        .sort((a, b) => (a.event.recorded_at ?? '').localeCompare(b.event.recorded_at ?? ''))
+        .slice(-1)
+        .map(({ origin, event }) => (
+          <Paragraph key={event.id}>
+            {p('fork', { name: origin.name, version: origin.version ?? p('unknown_version') })}
+          </Paragraph>
+        ))}
       <dl className={styles.summary}>
         <div className={styles.license}>
           <dt>{t('label_license')}</dt>
@@ -234,6 +252,11 @@ export const DatasetCard: React.FC<DatasetCardP> = ({ entry, dataset, update, su
       )}
 
       <div className={styles.actions}>
+        {installed && dataset && actions.fork && (
+          <Button disabled={!supported || !!busy} onClick={() => actions.fork?.(dataset)}>
+            {p('fork_button')}
+          </Button>
+        )}
         {supported && installed && !active && dataset && (
           <Popconfirm
             title={t('activate_confirm', { name: title })}

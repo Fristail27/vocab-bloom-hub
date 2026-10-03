@@ -1,3 +1,4 @@
+import { acknowledgeSourceEditing } from '../helpers/acknowledge-source';
 import { expect, test } from '@playwright/test';
 
 import { API_URL } from '../config';
@@ -43,4 +44,8 @@ test.describe('word management', () => {
     const res = await request.get(`${API_URL}/en/${id}`);
     expect(res.status()).toBe(404);
   });
+});
+
+test.beforeEach(async ({ page }) => {
+  await acknowledgeSourceEditing(page);
 });

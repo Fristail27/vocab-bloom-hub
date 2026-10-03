@@ -392,6 +392,10 @@ export interface components {
       meta: components['schemas']['PublicSearchV1MetaT'];
     };
     PublicSearchWordV1T: {
+      origins?: components['schemas']['OriginT'][];
+      /** @description Terms of the datasets whose edits still contribute to this word. */
+      contributions?: components['schemas']['OriginT'][];
+      licenses?: components['schemas']['WordLicenseT'][];
       id: number;
       word: string;
       part_of_speech: components['schemas']['EnPartOfSpeechE'];
@@ -418,6 +422,64 @@ export interface components {
       similarity?: number;
       source?: string;
       modified?: boolean;
+    };
+    OriginT: {
+      id: string;
+      name: string;
+      version: string | null;
+      url?: string;
+      record_url?: string;
+      licenses: components['schemas']['OriginLicenseT'][];
+      /**
+       * @description All obligations apply, or the source explicitly offers a choice.
+       * @enum {string}
+       */
+      license_relation: 'all' | 'any';
+      attribution: string;
+      notices: string[];
+      /**
+       * @description Dataset means that distribution between individual words is unknown.
+       * @enum {string}
+       */
+      scope: 'word' | 'dataset';
+      /** @enum {string} */
+      method: 'dataset' | 'manual';
+      recorded_at: string | null;
+      /** @description Copy/fork events belonging to this source snapshot; absent before any acquisition. */
+      acquisitions?: components['schemas']['OriginAcquisitionT'][];
+      /** @description Automatically inherited terms cannot be removed by ordinary editing. */
+      inherited: boolean;
+    };
+    /** @description A durable statement of terms, not a pointer to a mutable dataset registry. */
+    OriginLicenseT: {
+      spdx?: string;
+      name: string;
+      url: string;
+      /** @description Required for custom licenses; preserved verbatim when supplied. */
+      text?: string;
+    };
+    /** @description An acquisition of a source snapshot, without repeating its license terms. */
+    OriginAcquisitionT: {
+      id: string;
+      /** @enum {string} */
+      method: 'copy' | 'fork';
+      recorded_at: string | null;
+      revision?: string;
+      /** @description The intermediate dataset the material passed through; this adds no license obligations. */
+      via?: {
+        name: string;
+        version: string | null;
+        url?: string;
+      };
+    };
+    /** @description One license can occur more than once; origin_id refers to origins or contributions. */
+    WordLicenseT: {
+      origin_id: string;
+      spdx?: string;
+      name: string;
+      url: string;
+      /** @description Required for custom licenses; preserved verbatim when supplied. */
+      text?: string;
     };
     /** @enum {string} */
     EnPartOfSpeechE:
@@ -499,6 +561,10 @@ export interface components {
       meanings: components['schemas']['PublicWordV1MeaningT'][];
       short_translations: components['schemas']['PublicWordV1ShortTranslationT'][];
       phrasal_variants?: string[];
+      origins?: components['schemas']['OriginT'][];
+      /** @description Terms of the datasets whose edits still contribute to this word. */
+      contributions?: components['schemas']['OriginT'][];
+      licenses?: components['schemas']['WordLicenseT'][];
       id: number;
       word: string;
       part_of_speech: components['schemas']['EnPartOfSpeechE'];
@@ -569,6 +635,9 @@ export interface components {
       meta: components['schemas']['PublicHeadwordV1MetaT'];
     };
     PublicMeaningV1T: {
+      origins?: components['schemas']['OriginT'][];
+      contributions?: components['schemas']['OriginT'][];
+      licenses?: components['schemas']['WordLicenseT'][];
       word_id: number;
       part_of_speech: components['schemas']['EnPartOfSpeechE'];
       source?: string;
@@ -592,6 +661,9 @@ export interface components {
       meta: components['schemas']['PublicHeadwordV1MetaT'];
     };
     PublicWordFormV1T: {
+      origins?: components['schemas']['OriginT'][];
+      contributions?: components['schemas']['OriginT'][];
+      licenses?: components['schemas']['WordLicenseT'][];
       word_id: number;
       part_of_speech: components['schemas']['EnPartOfSpeechE'];
       source?: string;
@@ -607,6 +679,9 @@ export interface components {
       meta: components['schemas']['PublicHeadwordV1MetaT'];
     };
     PublicShortTranslationV1T: {
+      origins?: components['schemas']['OriginT'][];
+      contributions?: components['schemas']['OriginT'][];
+      licenses?: components['schemas']['WordLicenseT'][];
       word_id: number;
       part_of_speech: components['schemas']['EnPartOfSpeechE'];
       source?: string;
@@ -618,6 +693,9 @@ export interface components {
     };
     PublicMeaningTranslationV1T: {
       meaning_id: number;
+      origins?: components['schemas']['OriginT'][];
+      contributions?: components['schemas']['OriginT'][];
+      licenses?: components['schemas']['WordLicenseT'][];
       word_id: number;
       part_of_speech: components['schemas']['EnPartOfSpeechE'];
       source?: string;
@@ -631,6 +709,9 @@ export interface components {
     PublicWordLinkV1T: {
       meaning_id: number;
       word: string;
+      origins?: components['schemas']['OriginT'][];
+      contributions?: components['schemas']['OriginT'][];
+      licenses?: components['schemas']['WordLicenseT'][];
       word_id: number;
       part_of_speech: components['schemas']['EnPartOfSpeechE'];
       source?: string;
@@ -641,6 +722,10 @@ export interface components {
       meta: components['schemas']['PublicHeadwordV1MetaT'];
     };
     PublicChangeV1T: {
+      inherited_from?: components['schemas']['OriginT'] | null;
+      /** @description Terms captured when this edit was made, independent of later dataset changes. */
+      contribution?: components['schemas']['OriginT'] | null;
+      reason?: string | null;
       created_at: string;
       word: string;
       part_of_speech: string | null;
@@ -708,6 +793,9 @@ export interface components {
       variants: string[];
       count: number;
       entries: components['schemas']['PublicWordV1T'][];
+      origins?: components['schemas']['OriginT'][];
+      licenses?: components['schemas']['WordLicenseT'][];
+      description?: string | null;
       dataset: string;
       title?: string;
       active: boolean;
@@ -770,6 +858,9 @@ export interface components {
       short_translations: number;
     };
     PublicMetaV1T: {
+      origins?: components['schemas']['OriginT'][];
+      licenses?: components['schemas']['WordLicenseT'][];
+      description?: string | null;
       api_version: string;
       app_version: string;
       dataset_version: string | null;

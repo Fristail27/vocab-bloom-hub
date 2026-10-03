@@ -39,7 +39,7 @@ describe('Structured logging (e2e, issue #280)', () => {
     app.useLogger(app.get(Logger));
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
     app.useGlobalFilters(new AllExceptionsFilter(app.get(HttpAdapterHost).httpAdapter));
-    await app.init();
+    await app.listen(0, '127.0.0.1');
     log.lines.length = 0;
   };
 

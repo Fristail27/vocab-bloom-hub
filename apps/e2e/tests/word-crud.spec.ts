@@ -1,3 +1,4 @@
+import { acknowledgeSourceEditing } from '../helpers/acknowledge-source';
 import { APIRequestContext, expect, Page, test } from '@playwright/test';
 
 import { API_URL } from '../config';
@@ -184,4 +185,8 @@ test.describe('UI-driven word CRUD', () => {
       }),
     ]);
   });
+});
+
+test.beforeEach(async ({ page }) => {
+  await acknowledgeSourceEditing(page);
 });

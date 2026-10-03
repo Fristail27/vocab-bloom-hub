@@ -52,6 +52,7 @@ export type DataSetShortTranslationT = DataSetWordKeyT & EnShortTranslationDST;
 
 export type DataSetWordT = Omit<
   EnWord,
+  | 'contributions'
   | 'createdAt'
   | 'updateAt'
   | 'meanings'
@@ -88,6 +89,7 @@ export type DataSetWordT = Omit<
 
 export type DataSetPhraseT = Omit<
   EnWord,
+  | 'contributions'
   | 'createdAt'
   | 'updateAt'
   | 'meanings'
@@ -131,6 +133,9 @@ export type DataSetGrammarPatternT = DataSetPhraseT & { pattern: string[] };
  * instance knows — the id of the row, the id of the suggestion it came from
  */
 export type DataSetChangeT = {
+  inherited_from?: import('../../provenance').OriginT | null;
+  contribution?: import('../../provenance').OriginT | null;
+  reason?: string | null;
   created_at: string;
   headword: string;
   part_of_speech: string | null;

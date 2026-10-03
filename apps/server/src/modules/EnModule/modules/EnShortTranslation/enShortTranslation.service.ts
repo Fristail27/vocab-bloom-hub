@@ -13,7 +13,7 @@ import { ErrorCodes } from '../../../../../core/constants/error_codes';
 import { AddShortTranslationReqDTO } from './dto/AddShortTranslationReq.dto';
 import { EditShortTranslationReqDTO } from './dto/EditShortTranslationReq.dto';
 import { markEntryUserModified } from '../../utils/markEntryUserModified';
-import { articleOf, recordChange } from '../../utils/changes/recordChange';
+import { wordKeyOf, recordChange } from '../../utils/changes/recordChange';
 import {
   changedFields,
   createdFields,
@@ -71,7 +71,7 @@ export class EnShortTranslationService {
         return saved;
       }
       await recordChange(tx, {
-        ...articleOf(word),
+        ...wordKeyOf(word),
         entity: ChangeEntityE.short_translation,
         action: ChangeActionE.create,
         record: shortTranslationRecord(saved),
@@ -95,7 +95,7 @@ export class EnShortTranslationService {
       await em.getRepository(EnShortTranslation).delete({ id });
       if (!tr) return;
       await recordChange(em, {
-        ...articleOf(tr.word),
+        ...wordKeyOf(tr.word),
         entity: ChangeEntityE.short_translation,
         action: ChangeActionE.delete,
         record: shortTranslationRecord(tr),
@@ -132,7 +132,7 @@ export class EnShortTranslationService {
     await this.enShortTranslationRep.manager.transaction(async (em) => {
       await em.getRepository(EnShortTranslation).save(tr);
       await recordChange(em, {
-        ...articleOf(tr.word),
+        ...wordKeyOf(tr.word),
         entity: ChangeEntityE.short_translation,
         action: ChangeActionE.update,
         record: recordBefore,

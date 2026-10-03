@@ -1,5 +1,8 @@
 'use client';
 
+import { CopyWordPicker, CopyPreviewT } from '@/components/Origins/CopyWordPicker';
+import { OriginsEditor } from '@/components/Origins/Editor';
+import type { CopyWordSourceT, OriginT } from 'server/types';
 import React, { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { App, Button, Steps } from 'antd';
@@ -36,6 +39,8 @@ export const EnWordForm: React.FC = () => {
   const t = useTranslations('en_managing_words');
   const tError = useTranslations('errors');
   const { message } = App.useApp();
+  const [origins, setOrigins] = useState<OriginT[]>([]);
+  const [copySource, setCopySource] = useState<CopyWordSourceT>();
   const [step, setStep] = useState<number>(0);
   const [stepItems, setStepItems] = useState(getStepItems(t, true));
   const [word, setWord] = useState<string>('');
@@ -71,7 +76,11 @@ export const EnWordForm: React.FC = () => {
         ),
         forms: type === EnEntryTypesE.word ? forms.filter((c) => c.word.trim().length > 0) : [],
       };
-      const res = await EnApi.addWord(prepareWordPayload(body));
+      const res = await EnApi.addWord({
+        ...prepareWordPayload(body),
+        origins,
+        ...(copySource && { copy_source: copySource }),
+      });
       if ('error' in res) {
         const mes = tError(res.message);
         message.error(mes);
@@ -79,6 +88,8 @@ export const EnWordForm: React.FC = () => {
         const mes = t('added_success');
         message.success(mes);
         setWord('');
+        setOrigins([]);
+        setCopySource(undefined);
         setStatusOfPresence(StatusOfWordPresenceE.notChecked);
         setExistingWordId(null);
         setShortTranslations(DefaultShortTranslation);
@@ -159,6 +170,39 @@ export const EnWordForm: React.FC = () => {
     }
   };
 
+  const prefill = (source: CopyPreviewT) => {
+    const {
+      word: spelling,
+      part_of_speech: pos,
+      meanings: senses,
+      forms: inflections,
+      short_translations: translations,
+      origins: sources,
+      copy_source,
+      licenses: _licenses,
+      contributions: _contributions,
+      user_modified: _modified,
+      ...common
+    } = source;
+    setWord(spelling);
+    setType(
+      pos === EnPartOfSpeechE.phrase
+        ? EnEntryTypesE.phrase
+        : pos === EnPartOfSpeechE.grammar_pattern
+          ? EnEntryTypesE.grammar_pattern
+          : EnEntryTypesE.word,
+    );
+    setPartOfSpeech(pos);
+    setCommonInfo(common);
+    setMeanings(senses);
+    setForms(inflections);
+    setShortTranslations(translations);
+    setOrigins(sources ?? []);
+    setCopySource(copy_source);
+    setStatusOfPresence(StatusOfWordPresenceE.notChecked);
+    setStep(0);
+  };
+
   const onClickCommonNext = () => setStep(2);
   const onClickFormsNext = () => setStep(3);
   const onClickMeaningsNext = () => setStep(4);
@@ -166,6 +210,7 @@ export const EnWordForm: React.FC = () => {
   const onClickMeaningTranslationNext = () => setStep(6);
 
   useEffect(() => {
+    if (copySource) return;
     if (type === EnEntryTypesE.word) {
       setPartOfSpeech(null);
     }
@@ -175,7 +220,7 @@ export const EnWordForm: React.FC = () => {
     if (type === EnEntryTypesE.grammar_pattern) {
       setPartOfSpeech(EnPartOfSpeechE.grammar_pattern);
     }
-  }, [type]);
+  }, [type, copySource]);
   return (
     <div className={styles.addWordForm}>
       <div className={styles.leftContainer}>
@@ -201,8 +246,10 @@ export const EnWordForm: React.FC = () => {
         )}
       </div>
       <div className={styles.content}>
+        {step > 0 && <OriginsEditor context="word" value={origins} onChange={setOrigins} />}
         {step === stepItems.length - 7 && (
           <>
+            <CopyWordPicker onCopy={prefill} />
             <CheckWordBlock
               checkWord={checkWord}
               checking={isChecking}

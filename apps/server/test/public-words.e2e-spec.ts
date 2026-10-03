@@ -96,7 +96,7 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
     (app.getHttpAdapter().getInstance() as { set: (k: string, v: unknown) => void }).set('trust proxy', true);
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
     app.useGlobalFilters(new AllExceptionsFilter(app.get(HttpAdapterHost).httpAdapter));
-    await app.init();
+    await app.listen(0, '127.0.0.1');
 
     // insertion order fixes the ids the (word, id) ordering below relies on:
     // sprint, run (verb) + its two forms, run (noun), abandon, "put up with"
@@ -402,6 +402,9 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
       const moveFast = meanings.data.find((m) => m.title === 'to move fast')!;
       expect(body.data).toEqual([
         {
+          origins: expect.any(Array),
+          contributions: [],
+          licenses: expect.arrayContaining([expect.objectContaining({ spdx: 'CC-BY-4.0' })]),
           word: 'sprint',
           meaning_id: moveFast.id,
           word_id: ids.runVerb,
@@ -664,6 +667,9 @@ describe('public API reads /api/v1/words, /random, /meta (e2e, issue #272)', () 
         api_version: '1',
         app_version: expect.stringMatching(/^\d+\.\d+\.\d+/),
         dataset_version: null,
+        description: null,
+        origins: [],
+        licenses: [],
         license: 'CC-BY-4.0',
         license_url: 'https://creativecommons.org/licenses/by/4.0/',
         attribution: expect.stringContaining('CC BY 4.0'),

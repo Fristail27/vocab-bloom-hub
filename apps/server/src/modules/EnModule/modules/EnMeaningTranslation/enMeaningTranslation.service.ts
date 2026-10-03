@@ -13,7 +13,7 @@ import { ErrorCodes } from '../../../../../core/constants/error_codes';
 import { EnMeaningTranslation } from '../../entities/en_meaning_translation.entity';
 import { EnMeaning } from '../../entities/en_meaning.entity';
 import { markEntryUserModified } from '../../utils/markEntryUserModified';
-import { articleOf, recordChange } from '../../utils/changes/recordChange';
+import { wordKeyOf, recordChange } from '../../utils/changes/recordChange';
 import {
   changedFields,
   createdFields,
@@ -68,7 +68,7 @@ export class EnMeaningTranslationService {
         return saved;
       }
       await recordChange(tx, {
-        ...articleOf(meaning.word),
+        ...wordKeyOf(meaning.word),
         entity: ChangeEntityE.meaning_translation,
         action: ChangeActionE.create,
         record: translationRecord(saved, meaning),
@@ -103,7 +103,7 @@ export class EnMeaningTranslationService {
     await this.enMeaningTranslationRep.manager.transaction(async (em) => {
       await em.getRepository(EnMeaningTranslation).save(meaningTr);
       await recordChange(em, {
-        ...articleOf(meaningTr.meaning.word),
+        ...wordKeyOf(meaningTr.meaning.word),
         entity: ChangeEntityE.meaning_translation,
         action: ChangeActionE.update,
         record: recordBefore,
@@ -124,7 +124,7 @@ export class EnMeaningTranslationService {
       await em.getRepository(EnMeaningTranslation).delete({ id });
       if (!meaningTr) return;
       await recordChange(em, {
-        ...articleOf(meaningTr.meaning.word),
+        ...wordKeyOf(meaningTr.meaning.word),
         entity: ChangeEntityE.meaning_translation,
         action: ChangeActionE.delete,
         record: translationRecord(meaningTr, meaningTr.meaning),

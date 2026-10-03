@@ -516,7 +516,7 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
         expect(superseded.diff).toEqual({ description: { before: 'v1', after: 'mine' } });
       });
 
-      it('an article the dataset brings back takes the place of the one that was deleted', async () => {
+      it('a word the dataset brings back takes the place of the one that was deleted', async () => {
         // the admin deleted "give" as a verb, and edited "give" as a noun, which the dataset does not have
         await change('give', { action: ChangeActionE.delete });
         await change('give', { part_of_speech: 'noun' });

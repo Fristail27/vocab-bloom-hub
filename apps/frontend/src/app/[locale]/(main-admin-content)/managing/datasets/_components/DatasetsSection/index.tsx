@@ -1,10 +1,11 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
-import { Alert, App, Modal, Typography } from 'antd';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Alert, App, Modal, Progress, Typography } from 'antd';
 import { useLocale, useTranslations } from 'next-intl';
 import { DATASET_CATALOG, DatasetCatalogEntryT } from 'server/core/constants/dataset_catalog';
+import type { ForkProgressT } from 'server/types';
 import { DatasetT, DatasetUpdateT, DatasetsListT } from 'server/types';
 import { EnApi } from '@/core/api/EnApi';
 import { useEditedDataset } from '@/components/EditedDataset';
@@ -23,7 +24,7 @@ type DatasetsSectionP = {
   initial?: DatasetsListT | undefined;
 };
 
-type TermsDialogT = { dataset?: DatasetT | undefined } | null;
+type TermsDialogT = { dataset?: DatasetT | undefined; parent?: DatasetT | undefined } | null;
 
 /**
  * The datasets of the instance (issues #527, #540), and everything that is
@@ -37,6 +38,9 @@ type TermsDialogT = { dataset?: DatasetT | undefined } | null;
  */
 export const DatasetsSection: React.FC<DatasetsSectionP> = ({ initial }) => {
   const locale = useLocale();
+  const params = useSearchParams();
+  const p = useTranslations('provenance');
+  const [fork, setFork] = React.useState<ForkProgressT | null>(null);
   const router = useRouter();
   const t = useTranslations('datasets');
   const tErr = useTranslations('errors');
@@ -93,12 +97,46 @@ export const DatasetsSection: React.FC<DatasetsSectionP> = ({ initial }) => {
     await reload();
   };
 
+  React.useEffect(() => {
+    const named = params.get('fork');
+    const parent = list?.datasets.find((dataset) => dataset.name === named && dataset.installed);
+    if (parent && list?.supported) {
+      setTerms({ parent });
+      router.replace(`/${locale}/managing/datasets`);
+    }
+  }, [params, list, router, locale]);
+
+  React.useEffect(() => {
+    if (!fork || fork.state !== 'copying') return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const progress = await EnApi.forkStatus(fork.name);
+      if (cancelled) return;
+      if ('error' in progress) {
+        setFork({ ...fork, state: 'failed', failure: progress.message });
+        return;
+      }
+      setFork(progress);
+      if (progress.state === 'completed') {
+        message.success(p('fork_done'));
+        void reload();
+      }
+    }, 1000);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [fork, message, p, reload]);
+
   const supported = list?.supported ?? false;
+  const finalizingFork =
+    fork?.state === 'copying' && fork.total_tables > 0 && fork.completed_tables >= fork.total_tables;
   // the state of a dataset of the catalog; a dataset of the owner's under its name is none of it (issue #540)
   const stateOf = (name: string): DatasetT | undefined =>
     list?.datasets.find((dataset) => dataset.name === name && !dataset.own);
 
   const actions: DatasetActionsT = {
+    fork: (parent) => setTerms({ parent }),
     activate: (dataset) =>
       void run(
         `activate ${dataset.name}`,
@@ -132,6 +170,32 @@ export const DatasetsSection: React.FC<DatasetsSectionP> = ({ initial }) => {
 
   return (
     <div className={styles.section}>
+      {fork && (
+        <Alert
+          type={fork.state === 'failed' ? 'error' : fork.state === 'completed' ? 'success' : 'info'}
+          title={
+            fork.state === 'failed'
+              ? tErr(fork.failure ?? 'unknown_error')
+              : p(
+                  fork.state === 'completed'
+                    ? 'fork_done'
+                    : finalizingFork
+                      ? 'fork_finalizing'
+                      : 'fork_progress',
+                )
+          }
+          description={
+            <Progress
+              status={fork.state === 'completed' ? 'success' : fork.state === 'failed' ? 'exception' : 'active'}
+              percent={
+                fork.state === 'completed'
+                  ? 100
+                  : Math.min(99, Math.round((fork.completed_tables / Math.max(1, fork.total_tables)) * 100))
+              }
+            />
+          }
+        />
+      )}
       {list && !supported && (
         <Alert type="info" showIcon title={t('not_supported')} data-testid="datasets-unsupported" />
       )}
@@ -156,6 +220,12 @@ export const DatasetsSection: React.FC<DatasetsSectionP> = ({ initial }) => {
       <OwnDatasetForm
         open={!!terms}
         dataset={terms?.dataset}
+        parent={terms?.parent}
+        onForkStarted={(progress) => {
+          setFork(progress);
+          setTerms(null);
+          router.replace(`/${locale}/managing/datasets`);
+        }}
         onClose={() => setTerms(null)}
         onSaved={() => {
           setTerms(null);

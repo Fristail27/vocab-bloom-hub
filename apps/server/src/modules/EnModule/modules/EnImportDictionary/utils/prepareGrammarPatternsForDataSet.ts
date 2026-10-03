@@ -5,6 +5,7 @@ import { sortStrings } from './sortForDataSet';
 export const prepareGrammarPatternForDataSet = (word: EnWord): DataSetGrammarPatternT => {
   const { form_of_word: _f, ...w } = word;
   return {
+    origins: word.origins?.length ? word.origins : undefined,
     categories: sortStrings(w.categories),
     generated: Boolean(w.generated),
     pattern: w.pattern as string[],

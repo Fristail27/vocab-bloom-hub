@@ -9,6 +9,8 @@ import { EnMeaningTranslation } from './entities/en_meaning_translation.entity';
 import { EnShortTranslation } from './entities/en_short_translation.entity';
 import { EnWordFormsE } from '../../../types';
 import { scopedDataSource } from '../../core/utils/dataset-scope';
+import type { OriginT } from '../../../types';
+import { contributionsOf } from '../../../core/utils/word_contributions';
 
 type PlainT = Record<string, unknown>;
 type RelationsT = FindOptionsRelations<EnWord>;
@@ -26,10 +28,10 @@ type RelationsT = FindOptionsRelations<EnWord>;
  * `toPublicWord`) read: the scalar columns of every row and the relations asked
  * for, each collection ordered by its natural key.
  */
-/** Answers whether a row belongs to an article with edits that still show */
-export type ModifiedArticlesT = { has: (row: EnWord) => boolean };
+/** Answers whether a row belongs to a word with edits that still show */
+export type ModifiedWordsT = { has: (row: EnWord) => boolean };
 
-const articleKey = (headword: string, partOfSpeech: string | null): string =>
+const wordKey = (headword: string, partOfSpeech: string | null): string =>
   `${headword}\u0000${partOfSpeech ?? ''}`;
 
 @Injectable()
@@ -127,13 +129,13 @@ export class WordRowsService {
    * an unknown id is skipped
    */
   /**
-   * The articles among the given rows that were changed or added on this
+   * The words among the given rows that were changed or added on this
    * instance (issue #531): the ones with an edit that still shows in what is
    * served. One statement for the whole answer, by the index of the
-   * headword; an edit without a part of speech is about every article of
+   * headword; an edit without a part of speech is about every word of
    * its headword. A form row answers for its own spelling.
    */
-  async modifiedArticles(rows: readonly EnWord[]): Promise<ModifiedArticlesT> {
+  async modifiedWords(rows: readonly EnWord[]): Promise<ModifiedWordsT> {
     const headwords = [...new Set(rows.map((row) => row.word?.word).filter(Boolean))];
     const found = new Set<string>();
     if (headwords.length > 0) {
@@ -145,11 +147,11 @@ export class WordRowsService {
         .where('c.headword IN (:...headwords)', { headwords })
         .andWhere('c.superseded_at IS NULL')
         .getRawMany<{ headword: string; part_of_speech: string | null }>();
-      for (const edit of edits) found.add(articleKey(edit.headword, edit.part_of_speech));
+      for (const edit of edits) found.add(wordKey(edit.headword, edit.part_of_speech));
     }
     return {
       has: (row) =>
-        found.has(articleKey(row.word.word, row.part_of_speech)) || found.has(articleKey(row.word.word, null)),
+        found.has(wordKey(row.word.word, row.part_of_speech)) || found.has(wordKey(row.word.word, null)),
     };
   }
 
@@ -167,6 +169,8 @@ export class WordRowsService {
     // ---- the entries themselves, with the headword row and the phrasal base
     const qb = this.dataSource.createQueryBuilder(EnWord, 'w').select([]);
     this.selectScalars(qb, words, 'w');
+    qb.leftJoin('w.base_form', 'origin_base').addSelect('origin_base.origins', 'base_origins');
+    qb.addSelect('origin_base.word', 'origin_headword').addSelect('origin_base.part_of_speech', 'origin_pos');
     this.selectKey(qb, 'w', wordFk);
     if (relations.word) {
       qb.leftJoin('w.word', 'entry');
@@ -186,8 +190,14 @@ export class WordRowsService {
       .where(`${this.column('w', 'id')} IN (:...ids)`, { ids })
       .getRawMany()) as PlainT[];
     const byId = new Map<number, PlainT>();
+    const provenanceKeys = new Map<number, { headword: string; partOfSpeech: string }>();
     for (const raw of rawWords) {
       const row = this.hydrate(words, raw, 'w');
+      if (raw.base_origins != null)
+        row.origins = this.dataSource.driver.prepareHydratedValue(
+          raw.base_origins,
+          words.findColumnWithPropertyName('origins')!,
+        );
       row.word = relations.word ? this.hydrate(entries, raw, 'entry') : { word: raw[`w_${wordFk}`] };
       if (relations.base_phrasal) {
         const id = raw['bp_id'];
@@ -200,6 +210,10 @@ export class WordRowsService {
               };
       }
       byId.set(row.id as number, row);
+      provenanceKeys.set(row.id as number, {
+        headword: (raw.origin_headword ?? raw[`w_${wordFk}`]) as string,
+        partOfSpeech: (raw.origin_pos ?? row.part_of_speech) as string,
+      });
     }
     const found = ids.map((id) => byId.get(id)).filter((row): row is PlainT => row !== undefined);
     const foundIds = found.map((row) => row.id as number);
@@ -208,7 +222,7 @@ export class WordRowsService {
     // ---- the collections hang off the entries (wave 1) and off the meanings
     // (wave 2); each wave runs its statements concurrently — a full read
     // costs two round-trips after the entries, not seven in a row
-    const [formsOf, meaningRows, shortsOf, variantsOf] = await Promise.all([
+    const [formsOf, meaningRows, shortsOf, variantsOf, contributions] = await Promise.all([
       relations.forms
         ? this.loadForms(words, entries, foundIds, wordFk, baseFormFk, this.wantsEntry(relations.forms))
         : null,
@@ -224,7 +238,16 @@ export class WordRowsService {
             this.wantsEntry(relations.phrasal_variants),
           )
         : null,
+      this.loadContributions([...provenanceKeys.values()].map((key) => key.headword)),
     ]);
+    for (const row of found) {
+      const key = provenanceKeys.get(row.id as number)!;
+      const values = contributionsOf((row.origins as OriginT[] | null) ?? [], [
+        ...(contributions.get(wordKey(key.headword, key.partOfSpeech)) ?? []),
+        ...(contributions.get(wordKey(key.headword, null)) ?? []),
+      ]);
+      if (values.length) row.contributions = values;
+    }
     if (formsOf) for (const row of found) row.forms = formsOf.get(row.id) ?? [];
     if (shortsOf) for (const row of found) row.short_translations = shortsOf.get(row.id) ?? [];
     if (variantsOf) for (const row of found) row.phrasal_variants = variantsOf.get(row.id) ?? [];
@@ -253,6 +276,33 @@ export class WordRowsService {
     }
 
     return found as unknown as EnWord[];
+  }
+
+  /** One indexed query per batch, including edits inherited from earlier forks. */
+  private async loadContributions(headwords: string[]): Promise<Map<string, OriginT[]>> {
+    const edits = await this.dataSource
+      .getRepository(EnChange)
+      .createQueryBuilder('c')
+      .select([
+        'c.headword AS headword',
+        'c.part_of_speech AS part_of_speech',
+        'c.contribution AS contribution',
+      ])
+      .where('c.headword IN (:...headwords)', { headwords: [...new Set(headwords)] })
+      .andWhere('c.superseded_at IS NULL AND c.contribution IS NOT NULL')
+      .groupBy('c.headword')
+      .addGroupBy('c.part_of_speech')
+      .addGroupBy('c.contribution')
+      .orderBy('MIN(c.id)', 'ASC')
+      .getRawMany<{ headword: string; part_of_speech: string | null; contribution: string }>();
+    const grouped = new Map<string, OriginT[]>();
+    for (const edit of edits) {
+      const key = wordKey(edit.headword, edit.part_of_speech);
+      const values = grouped.get(key) ?? [];
+      values.push(JSON.parse(edit.contribution) as OriginT);
+      grouped.set(key, values);
+    }
+    return grouped;
   }
 
   private async loadForms(

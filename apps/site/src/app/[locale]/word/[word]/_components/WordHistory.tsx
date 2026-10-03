@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl';
 import React from 'react';
 import type { PublicChangeV1T } from 'server/types';
 
@@ -40,6 +41,7 @@ const NoticeIcon = () => (
  * word. Renders nothing for an entry served as its source has it.
  */
 export const WordHistory = ({ locale, changes, t }: WordHistoryP) => {
+  const p = useTranslations('provenance');
   if (changes.length === 0) return null;
   const dates = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
 
@@ -77,6 +79,14 @@ export const WordHistory = ({ locale, changes, t }: WordHistoryP) => {
                   </span>
                 )}
               </p>
+              {change.inherited_from && <p>{p('inherited_from', { name: change.inherited_from.name })}</p>}
+              {change.contribution && (
+                <p>
+                  {p('edited_in', { name: change.contribution.name })} ·{' '}
+                  {change.contribution.version ?? p('unknown_version')}
+                </p>
+              )}
+              {change.reason && <p>{change.reason}</p>}
               {change.origin === 'suggestion' && (
                 <p className={styles.historyAuthor} data-testid="word-history-author">
                   {change.author ? t('history_author', { name: change.author }) : t('history_reader')}

@@ -1,3 +1,4 @@
+import { acknowledgeSourceEditing } from '../helpers/acknowledge-source';
 import { APIRequestContext, expect, Page, test } from '@playwright/test';
 
 import { API_URL } from '../config';
@@ -374,4 +375,8 @@ test.describe('UI-driven word edit and delete', () => {
     const word = await getWord(request, id);
     expect(word.description).toBe('to endure fast');
   });
+});
+
+test.beforeEach(async ({ page }) => {
+  await acknowledgeSourceEditing(page);
 });

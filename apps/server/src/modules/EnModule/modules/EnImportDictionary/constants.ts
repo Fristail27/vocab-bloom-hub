@@ -66,7 +66,14 @@ export const translationFileName = (
 export const translationFileNames = (kind: TranslationFileKindT): string[] =>
   Object.values(AvailableTranslationLanguagesE).map((language) => translationFileName(kind, language));
 
+// Read earlier exports that renamed JSONL files; new exports keep their original names.
+export const legacyProvenanceFileName = (name: string): string =>
+  name.endsWith('.jsonl') ? `provenance-v1.${name}` : name;
+
 export const MANIFEST_FILE_NAME = 'manifest.json';
+// Released importers reject unknown files before writing data.
+export const DATASET_FORMAT_FILE_NAME = 'dataset-format.json';
+export const LEGACY_PROVENANCE_FILE_NAME = 'provenance.v1.json';
 
 // Every file a dataset may contain; anything else in a local directory or an
 // uploaded archive is rejected before the import starts (issue #269). The
@@ -75,8 +82,12 @@ export const MANIFEST_FILE_NAME = 'manifest.json';
 // a dataset are the catalog's
 export const DATASET_KNOWN_FILE_NAMES: readonly string[] = [
   ...Object.values(DATASET_FILE_NAMES),
+  ...Object.values(DATASET_FILE_NAMES).map(legacyProvenanceFileName),
+  ...TRANSLATION_FILE_KINDS.flatMap((kind) => translationFileNames(kind).map(legacyProvenanceFileName)),
   ...TRANSLATION_FILE_KINDS.flatMap((kind) => translationFileNames(kind)),
   MANIFEST_FILE_NAME,
+  DATASET_FORMAT_FILE_NAME,
+  LEGACY_PROVENANCE_FILE_NAME,
   LICENSE_FILE_NAME,
 ];
 
@@ -113,6 +124,7 @@ export const UPLOAD_FILE_FIELDS: Readonly<Record<string, string>> = {
   ),
   changes: DATASET_FILE_NAMES.changes,
   manifest: MANIFEST_FILE_NAME,
+  provenance: DATASET_FORMAT_FILE_NAME,
 };
 export type UploadFileFieldT = keyof typeof UPLOAD_FILE_FIELDS;
 /** The translation slot of a language, or null for any other upload field */

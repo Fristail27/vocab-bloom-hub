@@ -1,3 +1,4 @@
+import { licensesOf } from '../../../core/utils/provenance';
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { EnStatisticsService } from '../EnModule/modules/EnStatistics/enStatistics.service';
 import { SettingsService } from '../SettingsModule/settings.service';
@@ -80,6 +81,9 @@ export class PublicMetaService {
     const active = dataset.name === (this.datasets?.getActive()?.name ?? DEFAULT_DATASET_NAME);
     return {
       dataset: dataset.name,
+      description: dataset.description ?? null,
+      origins: dataset.origins ?? [],
+      licenses: licensesOf(dataset.origins ?? []),
       title: titleOf(dataset),
       active,
       source: dataset.source,
@@ -109,6 +113,9 @@ export class PublicMetaService {
       attribution: active?.attribution ?? DATA_LICENSE.attribution,
       notice: active ? (active.notice ?? '') : DATA_LICENSE.notice,
       dataset: active?.name ?? DEFAULT_DATASET_NAME,
+      description: active?.description ?? null,
+      origins: active?.origins ?? [],
+      licenses: licensesOf(active?.origins ?? []),
       title: active ? titleOf(active) : titleOf({ name: DEFAULT_DATASET_NAME, title: null }),
       source: active?.source ?? OWN_DATASET_SOURCE,
       attribution_url: active ? active.attribution_url : null,

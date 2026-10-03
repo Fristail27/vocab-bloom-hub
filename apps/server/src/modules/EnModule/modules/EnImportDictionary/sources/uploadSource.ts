@@ -4,7 +4,12 @@ import { randomUUID } from 'node:crypto';
 import * as path from 'node:path';
 import { ErrorCodes } from '../../../../../../core/constants/error_codes';
 import { DatasetManifestT } from '../../../../../../types';
-import { UPLOAD_ARCHIVE_FIELD, UPLOAD_FILE_FIELDS, UploadFileFieldT } from '../constants';
+import {
+  legacyProvenanceFileName,
+  UPLOAD_ARCHIVE_FIELD,
+  UPLOAD_FILE_FIELDS,
+  UploadFileFieldT,
+} from '../constants';
 import { DatasetSource } from './types';
 import { DirectoryDatasetSource } from './directorySource';
 import { getImportTmpDir } from './huggingFaceSource';
@@ -64,7 +69,12 @@ export const openUploadedDatasetSource = async (
     for (const [field, targetName] of Object.entries(UPLOAD_FILE_FIELDS) as [UploadFileFieldT, string][]) {
       const file = files[field]?.[0];
       if (!file) continue;
-      const target = path.join(dir, targetName);
+      const target = path.join(
+        dir,
+        path.basename(file.originalname) === legacyProvenanceFileName(targetName)
+          ? legacyProvenanceFileName(targetName)
+          : targetName,
+      );
       // multer's dest storage may sit on another device: rename first, copy as a fallback
       await rename(file.path, target).catch(async () => {
         await copyFile(file.path, target);

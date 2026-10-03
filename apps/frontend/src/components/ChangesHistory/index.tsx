@@ -40,7 +40,7 @@ const ORIGIN_COLORS: Record<ChangeOriginE, string> = {
 };
 
 type ChangesHistoryP = {
-  /** The history of one article: no search, no column of the headword */
+  /** The history of one word: no search, no column of the headword */
   headword?: string | undefined;
   partOfSpeech?: string | undefined;
   pageSize?: number | undefined;
@@ -66,6 +66,7 @@ export const ChangesHistory: React.FC<ChangesHistoryP> = ({
   // dates in the interface language, not the browser's (issue #479)
   const locale = useLocale();
   const t = useTranslations('changes');
+  const p = useTranslations('provenance');
   const tErr = useTranslations('errors');
   const { message } = App.useApp();
 
@@ -194,7 +195,10 @@ export const ChangesHistory: React.FC<ChangesHistoryP> = ({
         <>
           <span className={row.author ? styles.authorName : styles.author} data-testid={`author-${row.id}`}>
             {row.author ?? t(UNNAMED_AUTHOR[row.origin])}
+            {row.inherited_from && <Tag>{p('inherited_from', { name: row.inherited_from.name })}</Tag>}
+            {row.contribution && <Tag>{p('edited_in', { name: row.contribution.name })}</Tag>}
           </span>
+          {row.reason && <p>{row.reason}</p>}
           {/* an edit of the owner is the rule; what is not is said */}
           {row.origin !== ChangeOriginE.admin && (
             <Tag color={ORIGIN_COLORS[row.origin]}>{t(`origin_${row.origin}`)}</Tag>

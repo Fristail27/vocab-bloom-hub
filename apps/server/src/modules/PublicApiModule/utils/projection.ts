@@ -1,5 +1,6 @@
 // the dataset a request works on (issue #540): the active one for the public
 // API, the one an admin request names for the search of the admin UI
+import { licensesOf } from '../../../../core/utils/provenance';
 import { currentDatasetSource } from '../../../core/utils/dataset-scope';
 import { EnChange } from '../../EnModule/entities/en_change.entity';
 import { EnWord } from '../../EnModule/entities/en_word.entity';
@@ -85,7 +86,7 @@ export type PublicSearchWordOptionsT = {
   similarity?: number | undefined;
   // the source of the dataset the row was read from; the active one's when absent
   source?: string | undefined;
-  // the entry has edits that still show in what is served (WordRowsService.modifiedArticles)
+  // the entry has edits that still show in what is served (WordRowsService.modifiedWords)
   modified?: boolean | undefined;
 };
 
@@ -124,6 +125,9 @@ export const toPublicSearchWord = (
   ...(similarity !== undefined && { similarity }),
   source: source ?? currentDatasetSource(),
   modified: modified ?? false,
+  origins: row.origins ?? [],
+  contributions: row.contributions ?? [],
+  licenses: licensesOf([...(row.origins ?? []), ...(row.contributions ?? [])]),
 });
 
 export type PublicWordOptionsT = PublicTranslationFilterT &
@@ -159,6 +163,9 @@ const EDITORIAL_FIELDS = new Set(['generated', 'generated_by_model', 'version'])
  */
 export const toPublicChange = (row: EnChange, source?: string): PublicChangeV1T => ({
   created_at: new Date(row.created_at).toISOString(),
+  inherited_from: row.inherited_from ?? null,
+  contribution: row.contribution ?? null,
+  reason: row.reason ?? null,
   word: row.headword,
   part_of_speech: row.part_of_speech,
   entity: row.entity,

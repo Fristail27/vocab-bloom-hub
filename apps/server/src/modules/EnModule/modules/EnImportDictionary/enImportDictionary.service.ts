@@ -1,3 +1,8 @@
+import { portableManifest } from './utils/parseManifest';
+import { DATASET_FORMAT_FILE_NAME } from './constants';
+import { defaultOrigins } from '../../../../../core/utils/provenance';
+import { assertOrigins, assertCompatibleOrigins } from '../../../../core/utils/provenance';
+import type { OriginT } from '../../../../../types';
 import {
   BadRequestException,
   ConflictException,
@@ -185,10 +190,10 @@ const SQL_PARAMS_CHUNK = 500;
 // import page repeatedly does not hammer the dataset host
 const MANIFEST_CACHE_TTL_MS = 5 * 60 * 1000;
 
-// what names an article in the set of the ones an import has written
-const ARTICLE_KEY_SEPARATOR = '\u0000';
-const articleKeyOf = (headword: string, partOfSpeech: string): string =>
-  `${headword}${ARTICLE_KEY_SEPARATOR}${partOfSpeech}`;
+// what names a word in the set of the ones an import has written
+const WORD_KEY_SEPARATOR = '\u0000';
+const wordKeyOf = (headword: string, partOfSpeech: string): string =>
+  `${headword}${WORD_KEY_SEPARATOR}${partOfSpeech}`;
 
 @Injectable()
 export class EnImportDictionaryService implements OnModuleDestroy {
@@ -242,6 +247,8 @@ export class EnImportDictionaryService implements OnModuleDestroy {
   // through the application's connection, another one through a connection
   // on its schema. One import runs at a time, so one field is enough.
   private target: DatasetConnectionT | null = null;
+  private importingOrigins: OriginT[] = [];
+  private provenanceFormat = false;
 
   /** Where the import and the export read and write: the import's target, else the active dataset */
   private get db(): EntityManager {
@@ -430,6 +437,15 @@ export class EnImportDictionaryService implements OnModuleDestroy {
   ): Promise<void> {
     const { chunked, wordKey, entryTypeOf } = EnImportDictionaryService;
     this.assertNothingGenerated(lines);
+    for (const line of lines) {
+      if (line.origins != null) {
+        if (!this.provenanceFormat || line.origins.length === 0)
+          throw new BadRequestException(ErrorCodes.dataset_invalid);
+        assertOrigins(line.origins);
+        const dataset = this.target?.dataset ?? this.datasets?.getActive();
+        if (dataset) assertCompatibleOrigins(line.origins, dataset.license);
+      }
+    }
 
     await this.db.transaction(async (em) => {
       // 0. update mode (issue #328): entries the admin edited are kept, the
@@ -483,10 +499,10 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       }
       if (toInsert.length === 0) return;
 
-      // an article the source brings in takes the place of what was edited or
+      // a word the source brings in takes the place of what was edited or
       // deleted under its name: those edits no longer show (issue #531)
       await this.supersedeChangesOf(em, toInsert);
-      for (const line of toInsert) this.written?.add(articleKeyOf(line.word, line.part_of_speech));
+      for (const line of toInsert) this.written?.add(wordKeyOf(line.word, line.part_of_speech));
 
       // 4. base rows in bulk (nested structures stripped, entry linked by its string PK)
       const toBaseRow = (line: EnWordT) => {
@@ -501,7 +517,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
           phrasal_variants: _phrasalVariants,
           ...rest
         } = line;
-        return { ...rest, word: { word } as EnEntry };
+        return { ...rest, origins: line.origins ?? this.importingOrigins, word: { word } as EnEntry };
       };
       for (const batch of chunked(toInsert, SQL_PARAMS_CHUNK)) {
         await em.getRepository(EnWord).insert(batch.map(toBaseRow));
@@ -606,7 +622,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       (w) => existing.has(w) && !updateCtx.replaced.has(w) && !updateCtx.added.has(w),
     );
     await this.deleteEntryContent(em, toReplace);
-    // every article of a replaced entry is the content of the source again (issue #531)
+    // every word of a replaced entry is the content of the source again (issue #531)
     if (await this.editedDataset(em)) await supersedeChanges(em, toReplace);
     toReplace.forEach((w) => updateCtx.replaced.add(w));
     for (const line of kept) {
@@ -633,7 +649,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     throw new ConflictException(ErrorCodes.generated_not_allowed);
   }
 
-  // The articles this run has written, kept while the dataset being imported
+  // The words this run has written, kept while the dataset being imported
   // carries a history (issue #531): an edit of the copy shows in what is
   // served only where the content of the copy was taken
   private written: Set<string> | null = null;
@@ -1094,6 +1110,15 @@ export class EnImportDictionaryService implements OnModuleDestroy {
   }
 
   private async bulkSaveChanges(lines: DataSetChangeT[]): Promise<void> {
+    for (const line of lines) {
+      if (line.inherited_from) assertOrigins([line.inherited_from]);
+      if (line.contribution != null) {
+        assertOrigins([line.contribution]);
+      }
+      if (line.reason != null && (typeof line.reason !== 'string' || line.reason.length > 2000)) {
+        throw new BadRequestException(ErrorCodes.provenance_invalid);
+      }
+    }
     const { chunked, changeKey } = EnImportDictionaryService;
     const valid = lines.filter(
       (line) =>
@@ -1114,16 +1139,21 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     }
     if (valid.length === 0) return;
 
-    // an edit of the copy shows in what is served where the article was
-    // taken from the copy; an article this instance already had is its own
+    // an edit of the copy shows in what is served where the word was
+    // taken from the copy; a word this instance already had is its own
     const written = this.written ?? new Set<string>();
-    const writtenHeadwords = new Set(
-      [...written].map((key) => key.slice(0, key.indexOf(ARTICLE_KEY_SEPARATOR))),
-    );
+    const writtenHeadwords = new Set([...written].map((key) => key.slice(0, key.indexOf(WORD_KEY_SEPARATOR))));
     const taken = (line: DataSetChangeT): boolean =>
       line.part_of_speech
-        ? written.has(articleKeyOf(line.headword, line.part_of_speech))
+        ? written.has(wordKeyOf(line.headword, line.part_of_speech))
         : writtenHeadwords.has(line.headword);
+    const dataset = this.target?.dataset ?? this.datasets?.getActive();
+    for (const line of valid) {
+      // History that stays superseded contributes no terms to current words.
+      if (dataset && line.contribution && !line.superseded_at && taken(line)) {
+        assertCompatibleOrigins([line.contribution], dataset.license);
+      }
+    }
     const importedAt = new Date();
 
     await this.db.transaction(async (em) => {
@@ -1157,6 +1187,9 @@ export class EnImportDictionaryService implements OnModuleDestroy {
               record: (line.record ?? null) as EnChange['record'],
               diff: line.diff,
               origin: line.origin as ChangeOriginE,
+              inherited_from: line.inherited_from ?? null,
+              contribution: line.contribution ?? null,
+              reason: line.reason ?? null,
               suggestion_id: null,
               author: typeof line.author === 'string' ? line.author.slice(0, 128) : null,
               superseded_at: line.superseded_at
@@ -1562,6 +1595,20 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       // already validated it, HuggingFace may be unreachable
       manifest = await source.readManifest();
       this.assertSameSource(manifest, source);
+      this.provenanceFormat = manifest?.provenance_format === 1;
+      const target = this.target?.dataset ?? this.datasets?.getActive();
+      if (manifest?.provenance && target) {
+        assertOrigins(manifest.provenance.origins);
+        assertCompatibleOrigins(manifest.provenance.origins, target.license);
+      }
+      this.importingOrigins = target
+        ? defaultOrigins({
+            ...target,
+            ...(target.own && manifest?.provenance),
+            version: this.provenanceFormat ? manifest!.version || null : manifest?.version || target.version,
+            origins: manifest?.provenance?.origins ?? target.origins,
+          })
+        : [];
     } catch (error) {
       await source.dispose().catch(() => undefined);
       throw error;
@@ -1643,12 +1690,9 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     // on it finds it
     const filled = this.target?.dataset;
     if (filled && this.datasets) {
-      await this.datasets.recordImport(filled.name, { version: datasetVersion }).catch((error) => {
-        this.logger.warn(
-          `Failed to record the import on dataset "${filled.name}": ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        );
+      await this.datasets.recordImport(filled.name, {
+        version: this.provenanceFormat ? (datasetVersion ?? null) : datasetVersion,
+        provenance: manifest?.provenance,
       });
     }
 
@@ -1944,6 +1988,17 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       const changeLines = await this.exportChanges(changesPath);
       if (changeLines > 0) files[DATASET_FILE_NAMES.changes] = { lines: changeLines };
       const manifest: DatasetManifestT = {
+        provenance_format: 1,
+        provenance: {
+          attribution: exported?.attribution ?? DATA_LICENSE.attribution,
+          attribution_url: exported?.attribution_url ?? null,
+          license_url: exported?.license_url ?? DATA_LICENSE.url,
+          title: exported?.title ?? null,
+          notice: exported?.notice ?? null,
+          origins: exported?.origins ?? [],
+          description: exported?.description ?? null,
+          license_text: exported?.license_text ?? null,
+        },
         // a dataset of the owner's without a version has none: the version of
         // the code would be taken back by an import as the version of its data
         version: isProjects ? getVersion() : (exported.version ?? (isOwnDataset(exported) ? '' : getVersion())),
@@ -1962,7 +2017,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         ...(modifiedEntries > 0 && { modified_entries: modifiedEntries }),
         files,
       };
-      await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf-8');
+      await writeFile(manifestPath, JSON.stringify(portableManifest(manifest), null, 2) + '\n', 'utf-8');
       // the terms travel with the data in full: the notices of the source
       // have to be on every copy, a modified one included
       const entry = exported ? catalogEntryOf(exported) : findCatalogEntry(DEFAULT_DATASET_NAME);
@@ -1978,6 +2033,9 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         packed.push(licensePath);
       }
 
+      const provenancePath = path.join(runDir, DATASET_FORMAT_FILE_NAME);
+      await writeFile(provenancePath, JSON.stringify({ format: 1 }) + '\n', 'utf-8');
+      packed.push(provenancePath);
       emit(100, EnDictionaryImportPhasesE.packing_archive);
       await this.zipFiles(zipPath, packed);
 
@@ -2003,6 +2061,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       await Promise.allSettled([
         ...stages.flatMap((stage) => stage.files.map((file) => unlink(file.path))),
         unlink(manifestPath),
+        unlink(path.join(runDir, DATASET_FORMAT_FILE_NAME)),
         unlink(licensePath),
         unlink(path.join(runDir, DATASET_FILE_NAMES.changes)),
       ]);
@@ -2036,6 +2095,9 @@ export class EnImportDictionaryService implements OnModuleDestroy {
             record: row.record,
             diff: row.diff,
             origin: row.origin,
+            inherited_from: row.inherited_from ?? null,
+            contribution: row.contribution ?? null,
+            reason: row.reason ?? null,
             author: row.author,
             superseded_at: row.superseded_at ? new Date(row.superseded_at).toISOString() : null,
           };

@@ -1,3 +1,5 @@
+import { IsOrigins } from '../../../core/utils/provenance';
+import type { OriginT } from '../../../../types';
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -7,6 +9,9 @@ import {
   IsEnum,
   IsNotEmpty,
   IsNumber,
+  IsInt,
+  Min,
+  Matches,
   IsObject,
   IsOptional,
   IsString,
@@ -154,7 +159,35 @@ export class AddWordReqMeaningDTO {
   translations!: MeaningTranslationDto[];
 }
 
+export class CopyWordSourceDTO {
+  @ApiProperty()
+  @IsString()
+  @Matches(/^[a-z][a-z0-9_]{0,39}$/)
+  dataset!: string;
+
+  @ApiProperty()
+  @IsInt()
+  @Min(1)
+  id!: number;
+
+  @ApiProperty()
+  @IsString()
+  @Matches(/^[a-f0-9]{64}$/)
+  revision!: string;
+}
+
 export class AddWordReqDTO {
+  @ApiProperty({ type: CopyWordSourceDTO, required: false })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CopyWordSourceDTO)
+  copy_source?: CopyWordSourceDTO;
+
+  @ApiProperty({ type: 'array', items: { type: 'object' }, required: false })
+  @IsOptional()
+  @IsOrigins()
+  origins?: OriginT[] | null;
+
   // The admin UI sends its local id (e.g. 0); the server assigns real ids itself
   @IsOptional()
   @IsNumber()

@@ -1689,6 +1689,25 @@
       "PublicSearchWordV1T": {
         "type": "object",
         "properties": {
+          "origins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginT"
+            }
+          },
+          "contributions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginT"
+            },
+            "description": "Terms of the datasets whose edits still contribute to this word."
+          },
+          "licenses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WordLicenseT"
+            }
+          },
           "id": {
             "type": "integer"
           },
@@ -1837,6 +1856,191 @@
           "base_phrasal",
           "forms"
         ]
+      },
+      "OriginT": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string",
+            "nullable": true
+          },
+          "url": {
+            "type": "string"
+          },
+          "record_url": {
+            "type": "string"
+          },
+          "licenses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginLicenseT"
+            }
+          },
+          "license_relation": {
+            "type": "string",
+            "enum": [
+              "all",
+              "any"
+            ],
+            "description": "All obligations apply, or the source explicitly offers a choice."
+          },
+          "attribution": {
+            "type": "string"
+          },
+          "notices": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "word",
+              "dataset"
+            ],
+            "description": "Dataset means that distribution between individual words is unknown."
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "dataset",
+              "manual"
+            ]
+          },
+          "recorded_at": {
+            "type": "string",
+            "nullable": true
+          },
+          "acquisitions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginAcquisitionT"
+            },
+            "description": "Copy/fork events belonging to this source snapshot; absent before any acquisition."
+          },
+          "inherited": {
+            "type": "boolean",
+            "description": "Automatically inherited terms cannot be removed by ordinary editing."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "version",
+          "licenses",
+          "license_relation",
+          "attribution",
+          "notices",
+          "scope",
+          "method",
+          "recorded_at",
+          "inherited"
+        ]
+      },
+      "OriginLicenseT": {
+        "type": "object",
+        "properties": {
+          "spdx": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string",
+            "description": "Required for custom licenses; preserved verbatim when supplied."
+          }
+        },
+        "required": [
+          "name",
+          "url"
+        ],
+        "description": "A durable statement of terms, not a pointer to a mutable dataset registry."
+      },
+      "OriginAcquisitionT": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "copy",
+              "fork"
+            ]
+          },
+          "recorded_at": {
+            "type": "string",
+            "nullable": true
+          },
+          "revision": {
+            "type": "string"
+          },
+          "via": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string",
+                "nullable": true
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "version"
+            ],
+            "description": "The intermediate dataset the material passed through; this adds no license obligations."
+          }
+        },
+        "required": [
+          "id",
+          "method",
+          "recorded_at"
+        ],
+        "description": "An acquisition of a source snapshot, without repeating its license terms."
+      },
+      "WordLicenseT": {
+        "type": "object",
+        "properties": {
+          "origin_id": {
+            "type": "string"
+          },
+          "spdx": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string",
+            "description": "Required for custom licenses; preserved verbatim when supplied."
+          }
+        },
+        "required": [
+          "name",
+          "origin_id",
+          "url"
+        ],
+        "description": "One license can occur more than once; origin_id refers to origins or contributions."
       },
       "EnPartOfSpeechE": {
         "type": "string",
@@ -2032,6 +2236,25 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "origins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginT"
+            }
+          },
+          "contributions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginT"
+            },
+            "description": "Terms of the datasets whose edits still contribute to this word."
+          },
+          "licenses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WordLicenseT"
             }
           },
           "id": {
@@ -2390,6 +2613,24 @@
       "PublicMeaningV1T": {
         "type": "object",
         "properties": {
+          "origins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginT"
+            }
+          },
+          "contributions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginT"
+            }
+          },
+          "licenses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WordLicenseT"
+            }
+          },
           "word_id": {
             "type": "integer"
           },
@@ -2506,6 +2747,24 @@
       "PublicWordFormV1T": {
         "type": "object",
         "properties": {
+          "origins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginT"
+            }
+          },
+          "contributions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginT"
+            }
+          },
+          "licenses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WordLicenseT"
+            }
+          },
           "word_id": {
             "type": "integer"
           },
@@ -2566,6 +2825,24 @@
       "PublicShortTranslationV1T": {
         "type": "object",
         "properties": {
+          "origins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginT"
+            }
+          },
+          "contributions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginT"
+            }
+          },
+          "licenses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WordLicenseT"
+            }
+          },
           "word_id": {
             "type": "integer"
           },
@@ -2608,6 +2885,24 @@
         "properties": {
           "meaning_id": {
             "type": "integer"
+          },
+          "origins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginT"
+            }
+          },
+          "contributions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginT"
+            }
+          },
+          "licenses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WordLicenseT"
+            }
           },
           "word_id": {
             "type": "integer"
@@ -2660,6 +2955,24 @@
           "word": {
             "type": "string"
           },
+          "origins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginT"
+            }
+          },
+          "contributions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginT"
+            }
+          },
+          "licenses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WordLicenseT"
+            }
+          },
           "word_id": {
             "type": "integer"
           },
@@ -2701,6 +3014,27 @@
       "PublicChangeV1T": {
         "type": "object",
         "properties": {
+          "inherited_from": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OriginT"
+              }
+            ],
+            "nullable": true
+          },
+          "contribution": {
+            "description": "Terms captured when this edit was made, independent of later dataset changes.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OriginT"
+              }
+            ],
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
           "created_at": {
             "type": "string"
           },
@@ -2934,6 +3268,22 @@
             "items": {
               "$ref": "#/components/schemas/PublicWordV1T"
             }
+          },
+          "origins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginT"
+            }
+          },
+          "licenses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WordLicenseT"
+            }
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
           },
           "dataset": {
             "type": "string"
@@ -3199,6 +3549,22 @@
       "PublicMetaV1T": {
         "type": "object",
         "properties": {
+          "origins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginT"
+            }
+          },
+          "licenses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WordLicenseT"
+            }
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
           "api_version": {
             "type": "string"
           },

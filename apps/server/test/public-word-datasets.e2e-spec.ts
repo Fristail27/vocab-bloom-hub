@@ -88,7 +88,7 @@ describe('a headword from every dataset (e2e, issue #528)', () => {
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
     app.useGlobalFilters(new AllExceptionsFilter(app.get(HttpAdapterHost).httpAdapter));
-    await app.init();
+    await app.listen(0, '127.0.0.1');
 
     await add('amber', EnPartOfSpeechE.noun, 'a fossil resin');
     await add('amber', EnPartOfSpeechE.verb, 'to make the colour of amber');
@@ -107,6 +107,9 @@ describe('a headword from every dataset (e2e, issue #528)', () => {
     const served = ((await request(server()).get('/api/v1/meta').expect(200)).body as PublicMetaV1ResT).data;
     const { entries, word, variants, count, ...terms } = data[0];
     expect(terms).toEqual({
+      description: served.description,
+      origins: served.origins,
+      licenses: served.licenses,
       dataset: 'default',
       title: served.title,
       active: true,

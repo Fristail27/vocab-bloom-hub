@@ -1,3 +1,4 @@
+import { parseManifest } from '../src/modules/EnModule/modules/EnImportDictionary/utils/parseManifest';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
@@ -85,7 +86,7 @@ describe('datasets of the instance’s own (Postgres, issue #540)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
-    await app.init();
+    await app.listen(0, '127.0.0.1');
     dataSource = app.get(DataSource);
 
     const held = (await list()).datasets.filter((dataset) => [MINE, HOUSE].includes(dataset.name));
@@ -416,7 +417,7 @@ describe('datasets of the instance’s own (Postgres, issue #540)', () => {
       .expect(200);
     const zip = archive.body as Buffer;
 
-    const manifest = JSON.parse(await fileOfZip(zip, 'manifest.json')) as DatasetManifestT;
+    const manifest = parseManifest(JSON.parse(await fileOfZip(zip, 'manifest.json'))) as DatasetManifestT;
     expect(manifest).toEqual(
       expect.objectContaining({
         source: MINE,

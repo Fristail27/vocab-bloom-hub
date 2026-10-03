@@ -215,3 +215,61 @@ unreachable).
 > [!NOTE]
 > `pg_dump` / `pg_restore` remain the right tool for moving a **whole database** including ids;
 > the dataset route is for the dictionary content in its portable, diffable form.
+
+## Provenance export format
+
+Current exports preserve dataset and word origins, associated licenses, full notices, and
+inherited edit history. They use the **provenance-v1** metadata contract and keep the original
+filenames listed above, for example `vocab-bloom-hub-en-words.jsonl` and
+`vocab-bloom-hub-en-changes.jsonl`. The archive also contains `dataset-format.json` with
+`{"format":1}` and its original `manifest.json`. Earlier archives with `provenance-v1.`
+filename prefixes and the `provenance.v1.json` marker remain readable.
+
+The on-disk manifest contains:
+
+```json
+{
+  "version": { "format": "provenance-v1", "dataset": "2.0.0" },
+  "provenance_format": 1,
+  "provenance": {
+    "title": "My dictionary",
+    "notice": null,
+    "description": null,
+    "license_text": null,
+    "origins": []
+  },
+  "files": {
+    "vocab-bloom-hub-en-words.jsonl": { "lines": 1 }
+  }
+}
+```
+
+The ordinary manifest source and primary license/attribution fields are still present. The
+`provenance` snapshot additionally retains the title, description, notice, custom license text,
+origins, and attribution/link settings. Entry lines carry `origins`; `licenses[]` is derived
+from them. Source snapshots include their `acquisitions[]` (copy/fork events, dates, and
+revisions); repeated acquisitions do not repeat source terms. An acquisition's optional `via`
+names an intermediate dataset without assigning its license to unchanged material. History lines retain
+`inherited_from`, correction `reason`, and the `contribution` snapshot of the editing
+dataset's terms when known. Active history supplies the word API's `contributions[]`
+and their licenses; keep the history file with the words to preserve that attribution.
+For provenance-v1 uploads, the declared history file must be present with the full line count
+from the manifest, even when importing only a subset of the other files. A missing or truncated
+history is rejected before importing words. Superseded edits retain their original terms in
+history without imposing those terms on the current word or blocking a later license change.
+The API's dataset
+version remains a string or null; the envelope is only the portable file contract.
+
+Keep the complete archive when transferring a dataset. With separate files, retain the exported
+filenames and upload both the manifest and the **Sources and licenses** marker (`dataset-format.json`). A handwritten
+legacy manifest is insufficient for files with structured origins. Imports reject missing
+markers, mixed legacy/new names, and unsupported provenance formats. Legacy imports without
+origins remain supported and acquire their target dataset's known defaults.
+
+Upgrade the receiving server before importing these exports. Released local importers reject
+the format marker and the manifest envelope before writing words. With the original filenames,
+older remote importers can still download words after ignoring an unfamiliar manifest and may
+lose source metadata. Keep those servers pinned to a compatible older dataset revision until
+they are upgraded; matching filenames do not make the metadata backward-compatible.
+Publish the complete new-format files together, and do not remove the format marker or strip
+source metadata to force an old importer to accept an export.

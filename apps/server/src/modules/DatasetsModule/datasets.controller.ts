@@ -54,6 +54,19 @@ export class DatasetsController {
     return this.datasetsService.updateTerms(name, body);
   }
 
+  @Post(':name/fork')
+  @HttpCode(202)
+  @UseGuards(AdminGuard)
+  async fork(@Param('name') name: string, @Body() body: CreateDatasetReqDTO) {
+    return this.datasetsService.fork(name, body);
+  }
+
+  @Get(':name/fork-status')
+  @UseGuards(AdminGuard)
+  forkStatus(@Param('name') name: string) {
+    return this.datasetsService.forkProgress(name);
+  }
+
   @Post(':name/activate')
   @HttpCode(200)
   @UseGuards(AdminGuard)

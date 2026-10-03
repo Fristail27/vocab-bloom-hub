@@ -1,18 +1,31 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { App } from 'antd';
 import { DATASET_CATALOG } from 'server/core/constants/dataset_catalog';
 import { EnDictionaryImportPhasesE } from 'server/src/modules/EnModule/modules/EnImportDictionary/constants';
-import { DatasetT, DatasetsListT, ImportDictionaryChunkT } from 'server/types';
+import { DatasetT, DatasetsListT, ForkProgressT, ImportDictionaryChunkT } from 'server/types';
 
-jest.mock('next-intl', () => ({
-  useTranslations: () => (key: string, values?: Record<string, unknown>) =>
-    values ? `${key} ${JSON.stringify(values)}` : key,
-  useLocale: () => 'en',
+jest.mock('next-intl', () => {
+  const translate = (key: string, values?: Record<string, unknown>) =>
+    values ? `${key} ${JSON.stringify(values)}` : key;
+  return { useTranslations: () => translate, useLocale: () => 'en' };
+});
+
+// rc-util uses the same title id for all modals in tests; nested dialogs need unique ids.
+jest.mock('@rc-component/util/lib/hooks/useId', () => ({
+  ...jest.requireActual('@rc-component/util/lib/hooks/useId'),
+  __esModule: true,
+  default: (id?: string) => {
+    const generated = jest.requireActual('react').useId();
+    return id ?? generated;
+  },
 }));
 
 const push = jest.fn();
-jest.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh: jest.fn() }) }));
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push, replace: jest.fn(), refresh: jest.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 jest.mock('@/core/api/EnApi', () => ({
   EnApi: {
@@ -23,6 +36,8 @@ jest.mock('@/core/api/EnApi', () => ({
     deleteDataset: jest.fn(),
     createDataset: jest.fn(),
     updateDataset: jest.fn(),
+    forkDataset: jest.fn(),
+    forkStatus: jest.fn(),
     getImportSources: jest.fn(),
     getImportStatus: jest.fn(async () => ({ running: false })),
     getDatasetManifest: jest.fn(),
@@ -386,6 +401,59 @@ describe('DatasetsSection', () => {
     expect(EnApi.getDatasets).toHaveBeenCalled();
   });
 
+  it.each(['completed', 'failed'] as const)(
+    'waits for the server after every fork table is copied, then shows %s',
+    async (state) => {
+      const copying: ForkProgressT = {
+        name: 'copy_progress',
+        parent: 'default',
+        state: 'copying',
+        completed_tables: 0,
+        total_tables: 20,
+      };
+      const finalizing = { ...copying, completed_tables: copying.total_tables };
+      let finish!: (progress: ForkProgressT) => void;
+      const terminal = new Promise<ForkProgressT>((resolve) => {
+        finish = resolve;
+      });
+      (EnApi.forkDataset as jest.Mock).mockResolvedValue(copying);
+      (EnApi.forkStatus as jest.Mock).mockResolvedValueOnce(finalizing).mockReturnValue(terminal);
+      renderSection(listOf());
+      fireEvent.click(cardOf('default').getByRole('button', { name: 'fork_button' }));
+      fireEvent.change(screen.getByTestId('own-dataset-name'), { target: { value: copying.name } });
+      expect(screen.getByTestId('own-dataset-version')).toHaveValue('');
+      fireEvent.change(screen.getByTestId('own-dataset-version'), { target: { value: 'fork-1' } });
+      fireEvent.click(screen.getByRole('button', { name: 'own_create' }));
+      await screen.findByText('fork_progress');
+      expect(EnApi.forkDataset).toHaveBeenCalledWith('default', expect.objectContaining({ version: 'fork-1' }));
+      await screen.findByText('fork_finalizing', {}, { timeout: 2500 });
+      expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '99');
+      expect(screen.getByRole('progressbar')).toHaveClass('ant-progress-status-active');
+      expect(screen.queryByText('fork_done')).not.toBeInTheDocument();
+      expect(EnApi.getDatasets).not.toHaveBeenCalled();
+      await act(async () => {
+        finish({ ...finalizing, state, ...(state === 'failed' && { failure: 'internal_server_error' }) });
+      });
+      await waitFor(
+        () =>
+          expect(screen.getByRole('progressbar')).toHaveClass(
+            state === 'completed' ? 'ant-progress-status-success' : 'ant-progress-status-exception',
+          ),
+        { timeout: 2500 },
+      );
+      if (state === 'completed') {
+        expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100');
+        expect(screen.getAllByText('fork_done').length).toBeGreaterThan(0);
+        expect(EnApi.getDatasets).toHaveBeenCalled();
+      } else {
+        expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '99');
+        expect(screen.getByText('internal_server_error')).toBeInTheDocument();
+        expect(screen.queryByText('fork_done')).not.toBeInTheDocument();
+        expect(EnApi.getDatasets).not.toHaveBeenCalled();
+      }
+    },
+  );
+
   // issue #530: what the source of an installed dataset has now
   describe('a newer file of the source', () => {
     const checked_at = '2026-11-01T12:00:00.000Z';
@@ -559,7 +627,9 @@ describe('DatasetsSection', () => {
       license_url: 'https://creativecommons.org/licenses/by/4.0/',
       attribution: 'The words of the owner',
       attribution_url: null,
+      description: null,
       notice: null,
+      origins: [],
       license_text: null,
       active: false,
       is_default: false,
@@ -618,6 +688,7 @@ describe('DatasetsSection', () => {
       fireEvent.click(screen.getByTestId('own-dataset-create'));
       type('own-dataset-name', 'my_words');
       type('own-dataset-title', 'My words');
+      type('own-dataset-version', ' 1.0.0 ');
       type('own-dataset-attribution', 'The words of the owner');
       fireEvent.click(screen.getByRole('button', { name: 'own_create' }));
 
@@ -625,12 +696,73 @@ describe('DatasetsSection', () => {
         expect(EnApi.createDataset).toHaveBeenCalledWith({
           name: 'my_words',
           title: 'My words',
+          version: '1.0.0',
           license: { spdx: 'CC-BY-4.0' },
           attribution: 'The words of the owner',
           attribution_url: null,
+          description: null,
+          notice: null,
+          origins: [],
         }),
       );
       await waitFor(() => expect(EnApi.getDatasets).toHaveBeenCalled());
+    });
+
+    it.each([' 2.0.0 ', ''])(
+      'edits or clears an own version without a license warning (%p)',
+      async (version) => {
+        (EnApi.updateDataset as jest.Mock).mockResolvedValue(MINE);
+        renderSection(withOwn({ ...MINE, version: '1.0.0' }));
+        fireEvent.click(screen.getByTestId('dataset-edit-my_words'));
+        expect(screen.getByTestId('own-dataset-version')).toHaveValue('1.0.0');
+        type('own-dataset-version', version);
+        expect(screen.queryByTestId('own-dataset-license-warning')).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'own_save' }));
+        await waitFor(() =>
+          expect(EnApi.updateDataset).toHaveBeenCalledWith(
+            'my_words',
+            expect.objectContaining({ version: version.trim() || null }),
+          ),
+        );
+      },
+    );
+
+    it.each([false, true])('adds a source for the whole dataset (editing: %s)', async (editing) => {
+      (EnApi.createDataset as jest.Mock).mockResolvedValue(MINE);
+      (EnApi.updateDataset as jest.Mock).mockResolvedValue(MINE);
+      renderSection(editing ? withOwn(MINE) : withOwn());
+      fireEvent.click(screen.getByTestId(editing ? 'dataset-edit-my_words' : 'own-dataset-create'));
+      if (!editing) {
+        type('own-dataset-name', 'my_words');
+        type('own-dataset-title', 'My words');
+        type('own-dataset-attribution', 'The owner');
+      }
+      fireEvent.click(screen.getByRole('button', { name: 'add_source' }));
+      const source = within(screen.getByRole('dialog', { name: 'add_source' }));
+      expect(source.queryByRole('textbox', { name: 'record_link' })).not.toBeInTheDocument();
+      expect(source.queryByRole('combobox', { name: 'scope' })).not.toBeInTheDocument();
+      fireEvent.change(source.getByRole('textbox', { name: 'source_name' }), { target: { value: 'Glossary' } });
+      fireEvent.change(source.getByRole('textbox', { name: 'version' }), { target: { value: '2026' } });
+      fireEvent.change(source.getByRole('textbox', { name: 'source_link' }), {
+        target: { value: 'https://example.org/glossary' },
+      });
+      fireEvent.change(source.getByRole('textbox', { name: 'attribution' }), {
+        target: { value: 'Contributors' },
+      });
+      fireEvent.click(source.getByRole('button', { name: 'save' }));
+      await waitFor(() => expect(screen.queryByRole('dialog', { name: 'add_source' })).not.toBeInTheDocument());
+      fireEvent.click(screen.getByRole('button', { name: editing ? 'own_save' : 'own_create' }));
+      const api = (editing ? EnApi.updateDataset : EnApi.createDataset) as jest.Mock;
+      await waitFor(() => expect(api).toHaveBeenCalled());
+      const saved = api.mock.calls[0][editing ? 1 : 0].origins;
+      expect(saved).toHaveLength(1);
+      expect(saved[0]).toMatchObject({
+        name: 'Glossary',
+        version: '2026',
+        url: 'https://example.org/glossary',
+        scope: 'dataset',
+      });
+      expect(saved[0]).not.toHaveProperty('record_url');
     });
 
     it('creates a dataset under a license of the owner’s own, and refuses a name of the catalog', async () => {
@@ -684,8 +816,12 @@ describe('DatasetsSection', () => {
       await waitFor(() =>
         expect(EnApi.updateDataset).toHaveBeenCalledWith('my_words', {
           title: 'My own words',
+          version: null,
           attribution: 'The words of the owner',
           attribution_url: null,
+          description: null,
+          notice: null,
+          origins: [],
           license: { spdx: 'CC0-1.0' },
         }),
       );

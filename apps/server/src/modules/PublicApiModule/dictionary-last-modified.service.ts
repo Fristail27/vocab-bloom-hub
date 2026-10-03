@@ -77,8 +77,13 @@ export class DictionaryLastModifiedService {
       return this.cache.value;
     }
     const activatedAt = this.datasets?.getActive()?.activated_at;
+    const termsAt = this.datasets?.getActive()?.terms_updated_at;
     const value = toHttpInstant(
-      newestOf([await newestChange(this.repositories), activatedAt ? new Date(activatedAt) : null]),
+      newestOf([
+        await newestChange(this.repositories),
+        activatedAt ? new Date(activatedAt) : null,
+        termsAt ? new Date(termsAt) : null,
+      ]),
     );
     this.cache = { value, fetchedAt: Date.now() };
     return value;

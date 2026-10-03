@@ -148,7 +148,7 @@ export class HuggingFaceDatasetSource implements DatasetSource {
     for (let attempt = 1; ; attempt++) {
       this.logger.log(`Downloading dataset file "${fileName}"${attempt > 1 ? ` (attempt ${attempt})` : ''}`);
       try {
-        await this.download(fileName, filePath, progress);
+        await this.download(this.manifest?.file_names?.[fileName] ?? fileName, filePath, progress);
         return { path: filePath, temporary: true };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

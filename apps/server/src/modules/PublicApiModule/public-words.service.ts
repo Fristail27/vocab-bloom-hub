@@ -107,6 +107,9 @@ export class PublicWordsService {
   private entryRef(entry: PublicWordV1T): PublicEntryRefV1T {
     return {
       word_id: entry.id,
+      origins: entry.origins ?? [],
+      contributions: entry.contributions ?? [],
+      licenses: entry.licenses ?? [],
       part_of_speech: entry.part_of_speech,
       ...(entry.source !== undefined && { source: entry.source }),
       modified: entry.modified ?? false,
@@ -243,7 +246,7 @@ export class PublicWordsService {
     if (with_meanings) relations.meanings = { translations: true, synonyms: true, antonyms: true };
     if (with_translations) relations.short_translations = true;
     const rows = await this.wordRows.load(ids, relations);
-    const modified = await this.wordRows.modifiedArticles(rows);
+    const modified = await this.wordRows.modifiedWords(rows);
     return rows.map((row) =>
       toPublicWord(sortRelations(row), { with_meanings, with_translations, modified: modified.has(row) }),
     );

@@ -114,6 +114,7 @@ export type EnWordT = Omit<
   // The instance admin edited this entry (issue #328): a dictionary update
   // keeps it instead of replacing it with the published dataset
   user_modified?: boolean | undefined;
+  licenses?: import('../../provenance').WordLicenseT[];
 };
 
 export const CustomVersionDictionaryOfWord = 'custom_version';

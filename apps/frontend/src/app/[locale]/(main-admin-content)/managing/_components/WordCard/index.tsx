@@ -1,5 +1,6 @@
 'use client';
 
+import { WordOrigins } from '@/components/Origins/WordOrigins';
 import React, { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { App, Button, Collapse, Popconfirm, Tag, Typography } from 'antd';
@@ -82,7 +83,12 @@ export const WordCard: React.FC<WordCardP> = ({ word, mode = WordCardModeE.view,
   const syncUserModified = async () => {
     const res = await EnApi.getWordById(word.id);
     if ('error' in res) return;
-    setState((p) => ({ ...p, user_modified: res.user_modified }));
+    setState((p) => ({
+      ...p,
+      user_modified: res.user_modified,
+      contributions: res.contributions,
+      licenses: res.licenses,
+    }));
   };
 
   const editCommonInfo = async (data: Omit<CommonInfoDataT, 'id' | 'form_of_word' | 'base_phrasal'>) => {
@@ -172,7 +178,7 @@ export const WordCard: React.FC<WordCardP> = ({ word, mode = WordCardModeE.view,
 
   return (
     <EditedDatasetContext.Provider value={mode === WordCardModeE.edit ? dataset : undefined}>
-      {mode === WordCardModeE.edit && <EditLicenseNote />}
+      {mode === WordCardModeE.edit && <EditLicenseNote confirmSource />}
       <EditCommonDataModal
         data={state}
         isOpen={showEditDataModal}
@@ -285,6 +291,13 @@ export const WordCard: React.FC<WordCardP> = ({ word, mode = WordCardModeE.view,
           headword={word.word}
         />
       </section>
+      <WordOrigins
+        id={state.id}
+        origins={state.origins}
+        contributions={state.contributions}
+        editable={mode === WordCardModeE.edit}
+        onSaved={() => void reload()}
+      />
       {mode === WordCardModeE.edit && (
         // a wrapper of its own: the margin of a class does not outweigh the styles of the component
         <div className={styles.history}>

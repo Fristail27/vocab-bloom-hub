@@ -58,8 +58,9 @@ export const formSnapshot = (form: EnWord): SnapshotT => ({
   is_obsolete: Boolean(form.is_obsolete),
 });
 
-/** The fields of the article itself: what the card of a word edits as its common data */
+/** The fields of the word itself: what the card of a word edits as its common data */
 export const wordSnapshot = (word: EnWord): SnapshotT => ({
+  origins: word.origins ?? null,
   description: kept(word.description),
   transcription: kept(word.transcription),
   word_level: kept(word.word_level),
@@ -83,11 +84,11 @@ export const wordSnapshot = (word: EnWord): SnapshotT => ({
 });
 
 /**
- * The whole article — what a creation brought in and a deletion took out,
- * with the version it carried: an article that is brought back is the one
+ * The whole word — what a creation brought in and a deletion took out,
+ * with the version it carried: a word that is brought back is the one
  * its dataset had
  */
-export const articleSnapshot = (word: EnWord): SnapshotT => ({
+export const fullWordSnapshot = (word: EnWord): SnapshotT => ({
   ...wordSnapshot(word),
   version: kept(word.version),
   forms: [...(word.forms ?? [])]
@@ -107,7 +108,8 @@ export const articleSnapshot = (word: EnWord): SnapshotT => ({
 
 // the keys of an object in one order: a value read back from the database
 // (jsonb) does not keep the order it was written in
-const canonical = (value: unknown): unknown => {
+export const canonical = (value: unknown): unknown => {
+  if (value instanceof Date) return value.toISOString();
   if (Array.isArray(value)) return value.map(canonical);
   if (value && typeof value === 'object') {
     const fields = value as Record<string, unknown>;
@@ -161,7 +163,7 @@ export const createdFields = (after: SnapshotT): ChangeDiffT =>
 export const deletedFields = (before: SnapshotT): ChangeDiffT =>
   Object.fromEntries(Object.entries(before).map(([key, value]) => [key, { before: value, after: null }]));
 
-// What names a record inside its article
+// What names a record inside its word
 
 export const formRecord = (form: EnWord): ChangeRecordT => ({
   word: form.word.word,

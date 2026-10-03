@@ -50,6 +50,13 @@ const sameMeaning = (a: ConvertedMeaningT, b: ConvertedMeaningT): boolean =>
  */
 export const mergeEntries = (first: ConvertedEntryT, second: ConvertedEntryT): ConvertedEntryT => ({
   ...first,
+  ...((first.origins || second.origins) && {
+    origins: [
+      ...new Map(
+        [...(first.origins ?? []), ...(second.origins ?? [])].map((origin) => [JSON.stringify(origin), origin]),
+      ).values(),
+    ],
+  }),
   transcription: first.transcription || second.transcription,
   area_variant: first.area_variant || second.area_variant,
   language_register: first.language_register || second.language_register,

@@ -13,6 +13,15 @@ const timestamp = (): 'timestamptz' | 'datetime' => (checkIsPostgres() ? 'timest
  */
 @Entity('datasets')
 export class Dataset {
+  @Column({ type: timestamp(), nullable: true })
+  terms_updated_at!: Date | null;
+
+  @Column({ type: 'text', nullable: true })
+  description!: string | null;
+
+  @Column({ type: 'simple-json', nullable: true })
+  origins!: import('../../../../types/provenance').OriginT[] | null;
+
   @PrimaryGeneratedColumn()
   id!: number;
 

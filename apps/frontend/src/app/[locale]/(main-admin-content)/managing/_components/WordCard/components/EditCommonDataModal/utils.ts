@@ -5,6 +5,9 @@ export const getDefaultValue = (
   word: EnWordT,
 ): Omit<CommonInfoDataT, 'id' | 'form_of_word' | 'base_phrasal'> => {
   const {
+    origins: _origins,
+    licenses: _licenses,
+    contributions: _contributions,
     word: _word,
     part_of_speech: _part_of_speech,
     id: _id,

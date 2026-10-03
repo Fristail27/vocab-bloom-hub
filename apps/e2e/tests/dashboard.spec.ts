@@ -1,3 +1,4 @@
+import { acknowledgeSourceEditing } from '../helpers/acknowledge-source';
 import { expect, test } from '@playwright/test';
 
 // Every dashboard button must lead to a live page — shipped regressions
@@ -76,4 +77,8 @@ test('the header logo leads home and the switches have accessible names', async 
   await expect(page.getByRole('combobox', { name: 'Interface language' })).toBeVisible();
   await page.getByRole('link', { name: 'Home' }).click();
   await page.waitForURL(/\/en\/?$/);
+});
+
+test.beforeEach(async ({ page }) => {
+  await acknowledgeSourceEditing(page);
 });

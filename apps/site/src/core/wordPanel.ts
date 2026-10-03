@@ -23,6 +23,8 @@ export type WordPanelT = {
 
 export const termsOfGroup = (group: PublicWordDatasetV1T): DatasetTermsT => ({
   source: group.source,
+  origins: group.origins ?? [],
+  description: group.description ?? null,
   license: group.license,
   license_url: group.license_url,
   attribution: group.attribution,

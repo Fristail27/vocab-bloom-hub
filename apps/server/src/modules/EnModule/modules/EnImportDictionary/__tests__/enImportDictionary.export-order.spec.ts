@@ -215,6 +215,7 @@ describe('EnImportDictionaryService export ordering (issue #247)', () => {
     const written = readdirSync(ordered.runDir).filter(isData).sort();
     expect(readdirSync(shuffled.runDir).filter(isData).sort()).toEqual(written);
     expect(readdirSync(ordered.runDir)).toContain(DATASET_FILE_NAMES.changes);
+    expect(written.every((name) => name.startsWith('vocab-bloom-hub-en-'))).toBe(true);
     expect(written).toContain(translationFileName('meaningTranslations', AvailableTranslationLanguagesE.ru));
     for (const fileName of written) {
       expect(readFile(shuffled, fileName)).toBe(readFile(ordered, fileName));

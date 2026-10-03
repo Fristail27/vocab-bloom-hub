@@ -1,3 +1,4 @@
+import { DICTIONARY_ENTITIES } from '../../EnModule/entities/dictionary-entities';
 import { afterEach, beforeEach, describe, expect, it } from '@jest/globals';
 import { DataSource } from 'typeorm';
 import { DATASET_CATALOG } from '../../../../core/constants/dataset_catalog';
@@ -28,7 +29,7 @@ describe('DatasetsService on SQLite', () => {
     dataSource = new DataSource({
       type: 'better-sqlite3',
       database: ':memory:',
-      entities: [Dataset, Settings],
+      entities: [Dataset, Settings, ...DICTIONARY_ENTITIES],
       synchronize: true,
     });
     await dataSource.initialize();

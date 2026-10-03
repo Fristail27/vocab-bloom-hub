@@ -35,7 +35,7 @@ describe('Datasets (e2e, issue #527)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
-    await app.init();
+    await app.listen(0, '127.0.0.1');
   });
 
   afterAll(async () => {
@@ -104,16 +104,33 @@ describe('Datasets (e2e, issue #527)', () => {
     expect(res.body).toHaveProperty('datasets');
   });
 
+  it.each([42, {}, ['1.0.0'], 'v'.repeat(65)])(
+    'rejects an invalid own version %p in create, fork and update requests',
+    async (version) => {
+      const body = {
+        name: 'invalid_version',
+        title: 'Invalid',
+        license: { spdx: 'CC-BY-4.0' },
+        attribution: 'Editors',
+        version,
+      };
+      await request(server()).post('/api/en/datasets').set(auth).send(body).expect(400);
+      await request(server()).post('/api/en/datasets/default/fork').set(auth).send(body).expect(400);
+      await request(server()).patch('/api/en/datasets/default').set(auth).send({ version }).expect(400);
+    },
+  );
+
   it("edits nothing about a dataset of the catalog, and takes none of its names for a dataset of the owner's", async () => {
-    // no field of the terms but the ones an owner states: a notice is the catalog's
+    // A notice is editable on own datasets; catalog terms remain fixed.
     await request(server())
       .patch('/api/en/datasets/default')
       .set(auth)
       .send({ notice: 'Reviewed by hand.' })
-      .expect(400);
+      .expect(409);
     const edit = await request(server()).patch('/api/en/datasets/default').set(auth).send({ title: 'Mine' });
     expect(edit.status).toBe(409);
     expect(edit.body.message).toBe(supported ? 'dataset_terms_fixed' : 'datasets_not_supported');
+    await request(server()).patch('/api/en/datasets/default').set(auth).send({ version: '1.0.0' }).expect(409);
     const create = await request(server())
       .post('/api/en/datasets')
       .set(auth)

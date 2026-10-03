@@ -17,8 +17,8 @@ import { EnShortTranslationService } from '../modules/EnShortTranslation/enShort
 import { EnMeaningService } from '../modules/EnMeaning/enMeaning.service';
 import { EnMeaningTranslationService } from '../modules/EnMeaningTranslation/enMeaningTranslation.service';
 import { EnChangesService } from '../modules/EnChanges/enChanges.service';
-import { ARTICLE_RELATIONS, findArticle } from '../utils/changes/articles';
-import { articleSnapshot } from '../utils/changes/snapshots';
+import { WORD_CHANGE_RELATIONS, findWord } from '../utils/changes/words';
+import { fullWordSnapshot } from '../utils/changes/snapshots';
 import { withChangeSource } from '../utils/changes/context';
 import {
   AvailableTranslationLanguagesE,
@@ -72,8 +72,8 @@ describe('taking a change back', () => {
   const history = async (): Promise<EnChange[]> => ds.getRepository(EnChange).find({ order: { id: 'ASC' } });
   const last = async (): Promise<EnChange> => (await history()).at(-1) as EnChange;
   const entry = async (word: string): Promise<EnEntry | null> => ds.getRepository(EnEntry).findOneBy({ word });
-  const article = async (word: string, pos = 'noun'): Promise<EnWord | null> =>
-    findArticle(ds.manager, word, pos);
+  const readWord = async (word: string, pos = 'noun'): Promise<EnWord | null> =>
+    findWord(ds.manager, word, pos);
 
   // an entry as an import leaves it: no history, not kept through updates
   const imported = async (word: string, pos = EnPartOfSpeechE.noun): Promise<EnWord> => {
@@ -153,7 +153,7 @@ describe('taking a change back', () => {
 
     expect(await changes.revert(edit.id)).toEqual({ success: true });
 
-    const now = (await article('lamp')) as EnWord;
+    const now = (await readWord('lamp')) as EnWord;
     expect(now.description).toBe('the word lamp');
     // a value that was empty is empty again, which no edit form can do
     expect(now.transcription).toBeNull();
@@ -187,7 +187,7 @@ describe('taking a change back', () => {
   it('gives the entry its version back with the last change of it, not before', async () => {
     const word = await imported('lamp');
     await imported('light');
-    const version = async () => ((await article('lamp')) as EnWord).version;
+    const version = async () => ((await readWord('lamp')) as EnWord).version;
 
     await words.editWord(word.id, { description: 'a device that produces light' });
     const common = await last();
@@ -197,7 +197,7 @@ describe('taking a change back', () => {
 
     // a change of the entry still shows: the entry is the owner's version of it
     await changes.revert(common.id);
-    expect(((await article('lamp')) as EnWord).description).toBe('the word lamp');
+    expect(((await readWord('lamp')) as EnWord).description).toBe('the word lamp');
     expect(await version()).toBe('custom_version');
     expect((await last()).diff).toEqual({
       description: { before: 'a device that produces light', after: 'the word lamp' },
@@ -226,8 +226,8 @@ describe('taking a change back', () => {
     await changes.revert(edit.id);
 
     // what the version was is not known: nothing is guessed
-    expect(((await article('lamp')) as EnWord).version).toBe('custom_version');
-    expect(((await article('lamp')) as EnWord).description).toBe('the word lamp');
+    expect(((await readWord('lamp')) as EnWord).version).toBe('custom_version');
+    expect(((await readWord('lamp')) as EnWord).description).toBe('the word lamp');
   });
 
   it('brings a deleted word back under the version it had', async () => {
@@ -239,7 +239,7 @@ describe('taking a change back', () => {
 
     await changes.revert(deletion.id);
 
-    expect(((await article('lamp')) as EnWord).version).toBe('2026.09.27');
+    expect(((await readWord('lamp')) as EnWord).version).toBe('2026.09.27');
   });
 
   it('undoes a history from its end: a later edit of the same field goes first', async () => {
@@ -250,14 +250,14 @@ describe('taking a change back', () => {
     const second = await last();
 
     await expect(changes.revert(first.id)).rejects.toMatchObject({ message: 'change_outdated' });
-    expect(((await article('lamp')) as EnWord).description).toBe('second');
+    expect(((await readWord('lamp')) as EnWord).description).toBe('second');
     expect(await history()).toHaveLength(2);
 
     await changes.revert(second.id);
     // one edit still shows: the entry stays kept through the updates
     expect((await entry('lamp'))?.user_modified).toBe(true);
     await changes.revert(first.id);
-    expect(((await article('lamp')) as EnWord).description).toBe('the word lamp');
+    expect(((await readWord('lamp')) as EnWord).description).toBe('the word lamp');
     expect((await entry('lamp'))?.user_modified).toBe(false);
   });
 
@@ -269,7 +269,7 @@ describe('taking a change back', () => {
 
     await changes.revert(first.id);
 
-    const now = (await article('lamp')) as EnWord;
+    const now = (await readWord('lamp')) as EnWord;
     expect(now.description).toBe('the word lamp');
     expect(now.transcription).toBe('/læmp/');
   });
@@ -281,7 +281,7 @@ describe('taking a change back', () => {
 
     await changes.revert(creation.id);
 
-    expect(await article('lamp')).toBeNull();
+    expect(await readWord('lamp')).toBeNull();
     expect(await entry('lamp')).toBeNull();
     expect(await entry('lamps')).toBeNull();
     expect(await entry('light')).not.toBeNull();
@@ -299,21 +299,21 @@ describe('taking a change back', () => {
     await words.editWord(idOf(created), { description: 'a device that produces light' });
 
     await expect(changes.revert(creation.id)).rejects.toMatchObject({ message: 'change_outdated' });
-    expect(await article('lamp')).not.toBeNull();
+    expect(await readWord('lamp')).not.toBeNull();
   });
 
   it('brings a deleted word back with everything it said', async () => {
     await imported('light');
     const created = await words.addWord(lamp());
-    const said = articleSnapshot((await article('lamp')) as EnWord);
+    const said = fullWordSnapshot((await readWord('lamp')) as EnWord);
     await words.deleteWord(idOf(created));
     const deletion = await last();
-    expect(await article('lamp')).toBeNull();
+    expect(await readWord('lamp')).toBeNull();
 
     await changes.revert(deletion.id);
 
-    const back = (await article('lamp')) as EnWord;
-    expect(articleSnapshot(back)).toEqual(said);
+    const back = (await readWord('lamp')) as EnWord;
+    expect(fullWordSnapshot(back)).toEqual(said);
     expect(back.forms.map((form) => form.word.word)).toEqual(['lamps']);
     expect(back.meanings[0].synonyms.map((link) => link.word)).toEqual(['light']);
     expect(back.meanings[0].translations[0].title).toBe('лампа');
@@ -339,7 +339,7 @@ describe('taking a change back', () => {
     const edit = await last();
 
     await changes.revert(edit.id);
-    expect(((await article('mouse')) as EnWord).forms.map((form) => form.word.word)).toEqual(['mice']);
+    expect(((await readWord('mouse')) as EnWord).forms.map((form) => form.word.word)).toEqual(['mice']);
     expect(await entry('mouses')).toBeNull();
     expect(await last()).toEqual(
       expect.objectContaining({
@@ -353,12 +353,12 @@ describe('taking a change back', () => {
     await words.deleteWord(idOf(added));
     const deletion = await last();
     await changes.revert(deletion.id);
-    const forms = ((await article('mouse')) as EnWord).forms;
+    const forms = ((await readWord('mouse')) as EnWord).forms;
     expect(forms).toHaveLength(1);
     expect(forms[0]).toEqual(expect.objectContaining({ form_of_word: 'plural_form', transcription: '/maɪs/' }));
 
     await changes.revert(creation.id);
-    expect(((await article('mouse')) as EnWord).forms).toEqual([]);
+    expect(((await readWord('mouse')) as EnWord).forms).toEqual([]);
     expect(await entry('mice')).toBeNull();
     expect((await entry('mouse'))?.user_modified).toBe(false);
   });
@@ -380,7 +380,7 @@ describe('taking a change back', () => {
     const edit = await last();
 
     await changes.revert(edit.id);
-    let meaning = ((await article('lamp')) as EnWord).meanings[0];
+    let meaning = ((await readWord('lamp')) as EnWord).meanings[0];
     expect(meaning.title).toBe('a light');
     expect(meaning.definition).toBe('A device that gives light.');
     expect(meaning.synonyms.map((link) => link.word)).toEqual(['light']);
@@ -390,14 +390,14 @@ describe('taking a change back', () => {
     await meanings.deleteMeaning(meaningId);
     const deletion = await last();
     await changes.revert(deletion.id);
-    meaning = ((await article('lamp')) as EnWord).meanings[0];
+    meaning = ((await readWord('lamp')) as EnWord).meanings[0];
     expect(meaning.title).toBe('a light');
     expect(meaning.examples).toEqual(['Turn on the lamp.']);
     expect(meaning.translations.map((translation) => translation.title)).toEqual(['Lampe']);
     expect(meaning.synonyms.map((link) => link.word)).toEqual(['light']);
 
     await changes.revert(creation.id);
-    expect(((await article('lamp')) as EnWord).meanings).toEqual([]);
+    expect(((await readWord('lamp')) as EnWord).meanings).toEqual([]);
     expect(await ds.getRepository(EnMeaningTranslation).count()).toBe(0);
   });
 
@@ -412,7 +412,7 @@ describe('taking a change back', () => {
 
     await changes.revert(deletion.id);
 
-    expect(((await article('lamp')) as EnWord).meanings[0].synonyms).toEqual([]);
+    expect(((await readWord('lamp')) as EnWord).meanings[0].synonyms).toEqual([]);
     expect((await last()).diff!.synonyms).toEqual({ before: null, after: [] });
   });
 
@@ -431,7 +431,7 @@ describe('taking a change back', () => {
     await translations.editMeaningTranslation({ id: idOf(added), title: 'светильник' } as never);
     await changes.revert((await last()).id);
     const titles = async () =>
-      ((await article('lamp')) as EnWord).meanings[0].translations
+      ((await readWord('lamp')) as EnWord).meanings[0].translations
         .map((translation) => translation.title)
         .sort();
     expect(await titles()).toEqual(['Lampe', 'лампа']);
@@ -454,19 +454,19 @@ describe('taking a change back', () => {
     await shorts.editShortTranslation({ id: idOf(short), description: 'lámpara, farol' } as never);
     await changes.revert((await last()).id);
     const descriptions = async () =>
-      ((await article('lamp')) as EnWord).short_translations.map((translation) => translation.description);
+      ((await readWord('lamp')) as EnWord).short_translations.map((translation) => translation.description);
     expect(await descriptions()).toEqual(['lámpara']);
 
     await shorts.deleteShortTranslation(idOf(short));
     await changes.revert((await last()).id);
     expect(await descriptions()).toEqual(['lámpara']);
-    expect(((await article('lamp')) as EnWord).short_translations[0].variants_of_words).toEqual(['lámpara']);
+    expect(((await readWord('lamp')) as EnWord).short_translations[0].variants_of_words).toEqual(['lámpara']);
 
     await changes.revert(shortCreation.id);
     expect(await descriptions()).toEqual([]);
   });
 
-  it('takes back neither what no longer shows nor an edit that names no article', async () => {
+  it('takes back neither what no longer shows nor an edit that names no word', async () => {
     const word = await imported('lamp');
     await words.editWord(word.id, { description: 'a device that produces light' });
     const edit = await last();
@@ -488,7 +488,7 @@ describe('taking a change back', () => {
     await expect(changes.revert(edit.id)).rejects.toMatchObject({ message: 'change_not_revertible' });
     await expect(changes.revert(whole.id)).rejects.toMatchObject({ message: 'change_not_revertible' });
     await expect(changes.revert(9999)).rejects.toMatchObject({ message: 'change_doesnt_found' });
-    expect(((await article('lamp')) as EnWord).description).toBe('a device that produces light');
+    expect(((await readWord('lamp')) as EnWord).description).toBe('a device that produces light');
   });
 
   it('writes nothing but the listed columns of a record, whatever the row says', async () => {
@@ -523,7 +523,7 @@ describe('taking a change back', () => {
 
     const row = await ds.getRepository(EnWord).findOneOrFail({
       where: { id: word.id },
-      relations: ARTICLE_RELATIONS,
+      relations: WORD_CHANGE_RELATIONS,
     });
     expect(row.description).toBe('the word lamp');
     expect(row.id).toBe(word.id);

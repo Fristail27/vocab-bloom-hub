@@ -63,7 +63,7 @@ describe('Suggestions: the public intake and the moderation queue (e2e, issue #3
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
-    await app.init();
+    await app.listen(0, '127.0.0.1');
 
     suggestionsRep = app.get(getRepositoryToken(Suggestion));
     auditRep = app.get(getRepositoryToken(AuditLog));

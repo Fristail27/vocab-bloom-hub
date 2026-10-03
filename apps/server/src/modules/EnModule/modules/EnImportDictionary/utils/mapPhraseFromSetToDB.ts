@@ -5,6 +5,7 @@ import { mapMeaningFromSetToDB } from './mapMeaningFromSetToDB';
 
 export const mapPhraseFromSetToDB = (ph: DataSetPhraseT): EnWordT => {
   return {
+    origins: ph.origins,
     word: ph.phrase,
     part_of_speech: EnPartOfSpeechE.phrase,
     pattern: null,
