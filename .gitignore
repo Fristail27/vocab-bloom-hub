@@ -6,7 +6,8 @@
 *.launch
 .settings/
 *.sublime-workspace
-.yarn
+.yarn/*
+!.yarn/patches
 
 # IDE - VSCode
 .vscode/*

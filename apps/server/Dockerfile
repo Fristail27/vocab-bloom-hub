@@ -10,6 +10,7 @@ RUN apk add --no-cache python3 make g++
 WORKDIR /app
 RUN corepack enable
 COPY package.json yarn.lock .yarnrc.yml ./
+COPY .yarn/patches .yarn/patches
 COPY apps/server/package.json apps/server/
 COPY apps/frontend/package.json apps/frontend/
 COPY apps/e2e/package.json apps/e2e/

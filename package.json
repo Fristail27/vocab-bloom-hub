@@ -62,13 +62,13 @@
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "peers:check": "node scripts/check-peer-requirements.mjs",
-    "check": "yarn lint && yarn format:check && yarn peers:check",
+    "check": "node --test scripts/check-next-eslint.mjs && yarn lint && yarn format:check && yarn peers:check",
     "prepare": "husky",
     "jest": "NODE_OPTIONS=--experimental-vm-modules jest"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@next/eslint-plugin-next": "^16.3.8",
+    "@next/eslint-plugin-next": "patch:@next/eslint-plugin-next@npm%3A16.3.8#~/.yarn/patches/@next-eslint-plugin-next-npm-16.3.8-c19f8e3168.patch",
     "@types/jest": "^30.0.0",
     "@types/node": "^26",
     "concurrently": "^10.0.5",
@@ -95,6 +95,7 @@
     "yarn": ">=4.15.0"
   },
   "resolutions": {
+    "@next/eslint-plugin-next/fast-glob": "npm:tinyglobby@0.2.17",
     "multer@npm:2.2.0": "2.3.0",
     "js-yaml@npm:4.3.1": "4.3.2"
   },
