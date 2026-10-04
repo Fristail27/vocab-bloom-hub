@@ -384,6 +384,76 @@ test.describe('word pages', () => {
     await expect(page.getByRole('link', { name: 'sprint', exact: true }).first()).toBeVisible();
   });
 
+  // LanguageSwitch built its locale links from usePathname() alone, so switching
+  // the interface language dropped the ?q= the search put there — the query and
+  // the results went with it. The search writes the query with replaceState
+  // after load, so the link has to read the live search params, not the ones the
+  // first render saw (issue #546).
+  test('switching the interface language keeps the search query (issue #546)', async ({ page }) => {
+    await page.goto('/en/word');
+
+    const search = page.getByRole('search').first();
+    await search.getByRole('searchbox').fill('run');
+    await search.getByRole('button', { name: 'Search' }).click();
+    await expect(page).toHaveURL(/\?q=run$/);
+
+    await page.locator('header').getByRole('link', { name: 'ru', exact: true }).click();
+
+    await expect(page).toHaveURL(/\/ru\/word\?q=run$/);
+    await expect(page.getByRole('searchbox')).toHaveValue('run');
+    await expect(page.getByRole('link', { name: 'run', exact: true }).first()).toBeVisible();
+  });
+
+  // The query is written after the first render, so a link that captured
+  // searchParams at mount would carry nothing. This submits the search without a
+  // navigation, which is the case that catches it.
+  test('a query submitted after load survives the switch (issue #546)', async ({ page }) => {
+    await page.goto('/en/word');
+
+    const search = page.getByRole('search').first();
+    await search.getByRole('searchbox').fill('sprint');
+    await search.getByRole('button', { name: 'Search' }).click();
+    await expect(page).toHaveURL(/\?q=sprint$/);
+
+    // read the query the switch actually links to, before following it
+    const href = await page
+      .locator('header')
+      .getByRole('link', { name: 'ru', exact: true })
+      .getAttribute('href');
+
+    expect(href).toContain('q=sprint');
+  });
+
+  // A query with a space and a non-ASCII character must survive the switch.
+  // The router may encode a space as `+` or as `%20` — both are valid in a
+  // query and both decode back to the same term — so the assertion accepts
+  // either. What must not happen is a double encode: a hand-built query string
+  // turns "%20" into "%2520" and the search comes back empty.
+  test('a query with a space and non-ASCII text survives the switch (issue #546)', async ({ page }) => {
+    await page.goto('/en/word?q=caf%C3%A9%20au%20lait');
+
+    const href = await page
+      .locator('header')
+      .getByRole('link', { name: 'ru', exact: true })
+      .getAttribute('href');
+
+    // café stays café: the non-ASCII part keeps its encoding
+    expect(href).toContain('caf%C3%A9');
+    // each space became a separator, not a literal "+" or "%20" character
+    expect(href).toMatch(/au[+%20]lait/);
+    // no double encoding anywhere
+    expect(href).not.toContain('%25');
+  });
+
+  // The switch must keep working where there is no query to keep.
+  test('locale switching on a page without a query still works (issue #546)', async ({ page }) => {
+    await page.goto('/en/docs');
+
+    await page.locator('header').getByRole('link', { name: 'ru', exact: true }).click();
+
+    await expect(page).toHaveURL(/\/ru\/docs$/);
+  });
+
   test('a missing headword answers 404', async ({ page }) => {
     const response = await page.goto('/en/word/no-such-headword');
 
