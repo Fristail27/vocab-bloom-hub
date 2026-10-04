@@ -1,6 +1,7 @@
 # Moving a dictionary between instances offline
 
-The dictionary import normally downloads the published dataset from HuggingFace. Installations
+The project's dataset can be downloaded from HuggingFace; other catalog datasets can be
+downloaded on the server from their source links. Installations
 without internet access — corporate networks, air-gapped labs, CI — and admins who edited an
 exported dataset can load the same files from a local source instead:
 
@@ -13,12 +14,20 @@ exported dataset can load the same files from a local source instead:
 Both go through the same import pipeline as the HuggingFace source; only the download stage is
 skipped.
 
+Source files such as OpenGloss's six Parquet shards use **How to install → Upload files
+manually** on the source's card, not the archive import described below. The server converts
+them before importing. To convert on another machine, use the
+[converter CLI](../apps/server/src/converters/README.md#opengloss), then import its output into
+the matching `opengloss` dataset. Source installation and manual multipart fields are documented
+in [datasets](./datasets.md#installing-a-dataset).
+
 ## Dataset format
 
 A dataset is the set of files the export writes, flat or inside a single wrapper folder:
 
 ```
 manifest.json
+dataset-format.json                                    # required by current exports with sources and licenses
 LICENSE                                                # the license and the notices of the source, in full
 vocab-bloom-hub-en-words.jsonl
 vocab-bloom-hub-en-phrasal-verbs.jsonl
@@ -50,8 +59,10 @@ part of speech. The lines follow the order of the entry files, then the natural 
 so two exports of the same data are byte-identical. Datasets published before this layout nest
 `meanings` and `short_translations` inside the entry lines; the import still reads them.
 
-Only the `.jsonl` files you actually have are needed — at least one of them; every file but the
-words file is optional, and so is `manifest.json`. The collection files are imported after the
+For **legacy files without structured origins**, only the `.jsonl` files you actually have
+are needed — at least one of them — and `manifest.json` is optional. Current exports require
+their manifest and format marker, and the complete history when declared; see
+[sources and licenses](#provenance-export-format). The collection files are imported after the
 entry files and go to the entries and meanings that exist by then, whether they came from this
 dataset or were there before: a file of translations alone — one language, say — loads into a
 dictionary that already holds the entries, and rows the dictionary already has (a meaning with the
@@ -62,12 +73,13 @@ its `version` is stored as _Your version_ after the import (and its synonym / an
 refine the progress bar); without it the version stays unknown. The terms an export writes into
 the manifest — `source`, `license`, `license_url`, `attribution`, `attribution_url`, `notice`
 ([`DATA_LICENSE.md`](../DATA_LICENSE.md)) — say where the export was taken from. The terms of the dataset
-the import fills are the ones the code states for it — or its owner, for a
-[dataset of the instance's own](./datasets.md#datasets-of-the-instances-own) — and do not change
-with an import; a manifest that names another `source` than that dataset is refused
+the import fills must match the target: a manifest that names another `source` than that dataset is refused
 (`dataset_source_mismatch`), and so is one that names another `license` than a dataset of the
 owner's has: datasets are never mixed ([`datasets.md`](./datasets.md#datasets-are-never-mixed)). Line counts for the progress bar
 are always taken from the files themselves, so a hand-assembled dataset needs no bookkeeping.
+Catalog primary terms remain fixed. A current-format import restores dataset origins and,
+for an own dataset or fork, its exported title, description, notice, attribution and license
+details. This metadata restoration does not permit changing the target's primary license by import.
 
 **The history of edits** travels with the data
 ([`datasets.md`](./datasets.md#editing-a-dataset-the-history-of-edits)): `changes` holds one
@@ -80,12 +92,14 @@ dataset it fills: a line the history already has is skipped, and an edit shows o
 instance only where the entry itself was taken from the copy — for an entry the instance kept
 as it had it, the edit is recorded as past. The file is absent from an export of a dataset
 nobody edited, and data that comes without it is taken to be clean: an import marks no entry as
-changed on its own. `LICENSE` is written by the export for whoever receives the files; an import
-accepts and ignores it — the terms of a dataset are the ones the code states.
+changed on its own. `LICENSE` is written for whoever receives the files; the importer does not
+parse it. Machine-readable terms come from the manifest, word origins and contribution snapshots.
+Keep the notice file with the copy even though it is not the source of imported metadata.
 
 > [!NOTE]
-> A dataset of a public source takes nothing generated by a language model: an import whose
-> entries are marked `generated` is refused for such a dataset (`generated_not_allowed`).
+> Human-authored catalog datasets (Wiktionary and both WordNets) refuse entries marked
+> `generated` (`generated_not_allowed`). OpenGloss, the project's dataset and own datasets
+> accept generated entries.
 
 > [!NOTE]
 > The dataset is validated **before** the import starts and is rejected (`dataset_invalid`) when
@@ -120,9 +134,12 @@ accepts and ignores it — the terms of a dataset are the ones the code states.
 Equivalent API calls (the admin cookie or a Bearer token is required). The multipart fields are
 `archive` for the whole zip, or `words`, `phrasal_verbs`, `grammar_patterns`, `phrases`,
 `meanings`, `meaning_translations_<lang>`, `short_translations_<lang>` (one slot per language, e.g.
-`short_translations_es`) and `manifest` for the separate files;
+`short_translations_es`), `changes`, `manifest`, and `provenance` for `dataset-format.json`;
 the text fields `version`, `synonym_links` and `antonym_links` stand in for (and override) a
 manifest file:
+
+Handwritten version/count fields are for legacy imports. For an export with sources and
+licenses, upload its original manifest and marker rather than replacing them with text fields.
 
 The examples use `localhost:3010`, the port of a start without Docker; under docker compose the
 API is on `localhost:3240` by default.
@@ -144,6 +161,10 @@ curl -N -b cookies.txt -F short_translations_es=@es-short-translations.jsonl \
 # an export of a WordNet dataset into the WordNet dataset of this instance (installed when it
 # is not yet); the active one keeps serving
 curl -N -b cookies.txt -F archive=@wordnet-export.zip -F dataset=wordnet \
+  http://localhost:3010/api/en/dictionary/import/upload
+
+# a complete OpenGloss export, retaining word sources, licenses and any edit history
+curl -N -b cookies.txt -F archive=@opengloss-export.zip -F dataset=opengloss \
   http://localhost:3010/api/en/dictionary/import/upload
 ```
 
@@ -273,3 +294,9 @@ lose source metadata. Keep those servers pinned to a compatible older dataset re
 they are upgraded; matching filenames do not make the metadata backward-compatible.
 Publish the complete new-format files together, and do not remove the format marker or strip
 source metadata to force an old importer to accept an export.
+
+OpenGloss conversion writes this format from the start, even before anyone edits the data.
+Words with a WordNet source retain both OpenGloss and Princeton WordNet 3.0 snapshots; other
+words retain the OpenGloss snapshot. Export/import preserves the converted dictionary, its
+source versions, links and notices. It does not restore upstream Parquet fields that the
+[converter deliberately leaves out](./datasets.md#opengloss-24).

@@ -5,7 +5,7 @@
 <h1 align="center">Vocab Bloom Hub</h1>
 
 <p align="center">
-  A self-hosted English dictionary: the project's own 300 000 entries with meanings, examples, forms, translations and word links, the English Wiktionary and WordNet as further datasets, dictionaries of your own — behind a public API, an admin UI, two SDKs and a website.
+  A self-hosted English dictionary: the project's own 300 000 entries with meanings, examples, forms, translations and word links, the English Wiktionary, WordNet and OpenGloss as further datasets, dictionaries of your own — behind a public API, an admin UI, two SDKs and a website.
 </p>
 
 <p align="center">
@@ -63,14 +63,16 @@ and serves one of them; the others are read next to it.
 
 **More datasets** — installed next to it, each one complete and under the license of its source
 
-- the English Wiktionary (CC BY-SA 4.0), Open English WordNet (CC BY 4.0) and Princeton
-  WordNet 3.1 (the WordNet license), installed from the files the sources distribute — the
-  server converts them; IPA from the CMU Pronouncing Dictionary for the WordNets
-- datasets of your own: created empty under a license you choose — CC0, CC BY, CC BY-SA,
-  CC BY-NC, ODbL or one of your own — and filled in the admin panel or from an export
-- datasets are never mixed: one of them is served by the API and the website, every installed
-  one is read by `GET /api/v1/words/{word}/datasets` and shown as a tab of a word page, under
-  its own terms
+- English Wiktionary (CC BY-SA 4.0), Open English WordNet (CC BY 4.0), Princeton WordNet
+  3.1 (WordNet license) and OpenGloss 2.4 (CC BY 4.0, plus WordNet terms on marked words)
+- download source files directly on the server, or upload them manually; the server converts
+  and imports them. CMUdict pronunciations are optional for WordNet
+- create an empty dataset or fork an installed one, with your own version and contribution
+  license; prefill a new word from another dataset or declare manually transferred sources
+- preserve source names, versions, links, notices and multiple licenses per word. Unchanged
+  copies retain original terms; actual edits add the fork's contribution terms and history
+- read datasets separately: the main API serves one, while `GET /api/v1/words/{word}/datasets`
+  and word-page tabs show every installed dataset with its own terms
 
 **The API** — `/api/v1`, read-only, no keys
 
@@ -210,6 +212,11 @@ Everything else for contributors: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - Read the data: [`docs/api.md`](docs/api.md), the [Node.js](packages/npm-sdk/README.md) and
   [Python](packages/python-sdk/README.md) SDKs.
 
+On PostgreSQL, add another dictionary from **Managing → Datasets → How to install**:
+server download is the default, manual upload the fallback. OpenGloss needs all six Parquet
+files (about 1.32 GB). Sources, licenses, forks and conversion limits:
+[`docs/datasets.md`](docs/datasets.md).
+
 ---
 
 ## 🤝 Contributing
@@ -227,11 +234,12 @@ you.
 
 - **Code** — [MIT](LICENSE) © Aleksei Ryzhov (Fristail27)
 - **Dictionary data of the project** (exports, the public API, the HuggingFace dataset) — [CC BY 4.0](DATA_LICENSE.md): free to use and adapt, including commercially, with attribution.
-- **Other datasets an instance holds** keep the license of their source — Wiktionary CC BY-SA 4.0,
-  Open English WordNet CC BY 4.0, Princeton WordNet its own license — and a dataset of your own
-  the license you chose: [`DATA_LICENSE.md`](DATA_LICENSE.md#datasets-of-other-sources).
+- **Other datasets and borrowed material** retain their source terms: Wiktionary CC BY-SA 4.0,
+  Open English WordNet CC BY 4.0, Princeton WordNet its own license, OpenGloss CC BY 4.0
+  with additional WordNet 3.0 terms on marked words. Your own dataset's contribution license
+  does not replace inherited word licenses: [`DATA_LICENSE.md`](DATA_LICENSE.md#datasets-of-other-sources).
 
 > [!IMPORTANT]
-> The data of the project is largely LLM-generated and not human-verified — see
-> [`docs/data.md`](docs/data.md) before relying on it. The datasets of public sources are what
-> people wrote, under the terms of their source.
+> The project's dataset and OpenGloss contain LLM-generated content. Wiktionary and the
+> WordNets are human-authored sources. Each dataset carries its own notices and limitations;
+> read [`docs/data.md`](docs/data.md) before relying on it.

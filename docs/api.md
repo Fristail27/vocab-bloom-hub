@@ -216,11 +216,14 @@ state — `generated`, `generated_by_model`, `version`, `user_modified` — is n
 stays on the admin API (`GET /api/en/{id}`), where the admin UI reads it.
 
 Every word names its `source`: where the data of the entry comes from — `vocab-bloom-hub` for
-the project's own dataset, `wiktionary`, `wordnet`, `princeton-wordnet`. An instance serves one dataset at a time
+the project's own dataset, `wiktionary`, `wordnet`, `princeton-wordnet`, `opengloss`, or an own
+dataset's name. This identifies the serving dataset, not the complete ancestry of a word.
+An instance serves one dataset at a time
 ([`datasets.md`](./datasets.md)), so every word of an answer has the same source; the terms
 that go with it are in `GET /api/v1/meta`. The one read that answers from several datasets,
 [`/words/{word}/datasets`](#a-headword-in-every-dataset), groups the entries by dataset and
-states the terms of each group. The field was added after 1.0 and is optional
+states the terms of each group. Word-specific `origins`, `contributions` and `licenses`
+retain additional terms ([below](#word-origins-and-license-associations)). The field was added after 1.0 and is optional
 in the contract: a server of 1.0 does not send it.
 
 `source` is on **every answer that carries an entry, a part of one or an edit of one**: the
@@ -338,7 +341,7 @@ datasets were installed, and the groups are **never merged**:
 
 | Field                                                                                                             | What it says                                                                                                                                                                                                                      |
 | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `dataset`                                                                                                         | the name of the dataset on the instance: `default`, `wiktionary`, `wordnet`, `wordnet_princeton`                                                                                                                                  |
+| `dataset`                                                                                                         | the name of the dataset on the instance: `default`, `wiktionary`, `wordnet`, `wordnet_princeton`, `opengloss`, or an own dataset/fork name                                                                                        |
 | `active`                                                                                                          | whether it is the dataset the other routes of the API serve                                                                                                                                                                       |
 | `source`, `dataset_version`, `license`, `license_url`, `attribution`, `attribution_url`, `notice`, `license_text` | the terms of that dataset, the ones [`/meta`](#meta) states for the served one                                                                                                                                                    |
 | `word`, `variants`                                                                                                | the headword the entries belong to in that dataset and its other spellings there ([by the rule of a headword read](#spellings-that-differ-by-case)); the asked spelling in lower case and `[]` for a dataset without the headword |
@@ -379,15 +382,16 @@ An instance with one dataset — every instance on SQLite — answers one group.
 The mark and the history exist because the licenses of the data ask that a change is indicated,
 and the obligation passes to whoever shows the data further:
 
-| You read                                 | You do                                                                                                                  |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `attribution`, `license_url` of `/meta`  | show the attribution line and link to the license wherever you show the data                                            |
-| `modified: true` on a word or a part     | say next to the entry that it was changed: it is not, or not only, what its source published                            |
-| `/words/{word}/history`                  | optional: show or link what was changed, and credit the `author` of a correction when one is named                      |
-| a group of `/words/{word}/datasets`      | do all of the above per group, with the terms the group carries: entries of two groups are shown under two attributions |
-| `license` of `/meta` ending in `-SA-4.0` | keep what you build on the data, changed entries included, under the same license                                       |
-| a non-empty `license_text` of `/meta`    | keep the text with every copy of the data: show it, or link to a page that does                                         |
-| `modified_entries` of `/meta` above `0`  | know that the instance serves data that differs from its source                                                         |
+| You read                                    | You do                                                                                                                                    |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `attribution`, `license_url` of `/meta`     | show the attribution line and link to the license wherever you show the data                                                              |
+| `modified: true` on a word or a part        | say next to the entry that it was changed: it is not, or not only, what its source published                                              |
+| `/words/{word}/history`                     | optional: show or link what was changed, and credit the `author` of a correction when one is named                                        |
+| a group of `/words/{word}/datasets`         | do all of the above per group, with the terms the group carries: entries of two groups are shown under two attributions                   |
+| `license` of `/meta` ending in `-SA-4.0`    | keep what you build on the data, changed entries included, under the same license                                                         |
+| a non-empty `license_text` of `/meta`       | keep the text with every copy of the data: show it, or link to a page that does                                                           |
+| `modified_entries` of `/meta` above `0`     | know that the instance serves data that differs from its source                                                                           |
+| word `origins`, `contributions`, `licenses` | retain each source's and contribution's attribution, notices and associated licenses; the dataset's primary license does not replace them |
 
 Read them from the API rather than hard-coding them: the owner may activate another dataset, edit
 an entry or take a change back at any time. The terms in full:
@@ -434,10 +438,11 @@ in the ids come up slightly more often, which does not matter for a "word of the
 `GET /api/v1/meta` describes what the instance serves: `api_version` (`"1"`), `app_version`
 (the server's `package.json`), the dataset — `dataset` (its name on the instance, `default`
 for the one it was born with), `source` (where its data comes from: `vocab-bloom-hub`,
-`wiktionary`, `wordnet`, `princeton-wordnet`) and `dataset_version` (the version of the dataset the dictionary
-was last imported from, `null` for data authored in place or imported without a manifest; a
+`wiktionary`, `wordnet`, `princeton-wordnet`, `opengloss`, or an own dataset name) and
+`dataset_version` (the imported version, or the version set by the owner for an own dataset
+or fork; `null` when unknown; a
 string to show, without a promised format: `1.0.0` for the project's dataset, the day of the
-extract for Wiktionary, `2026.09.25`, the edition for a WordNet, `2025` —
+extract for Wiktionary, `2026.09.25`, the edition for a WordNet, `2025`, or OpenGloss `2.4` —
 [`datasets.md`](./datasets.md#versions-and-newer-files-of-a-source)) —,
 the terms of the data — `license` (the SPDX identifier, `"CC-BY-4.0"` for the project's
 dataset, `"CC-BY-SA-4.0"` for Wiktionary), `license_url`, `attribution` (the line a consumer
@@ -587,22 +592,33 @@ are not affected by CORS.
 
 ### Word origins and license associations
 
-Word, search, form, and partial word responses can include optional `origins[]` and
-`licenses[]`. Origins belong to a base headword **and part of speech**. Each origin carries a
+Word, search, form, and partial word responses can include optional `origins[]`,
+`contributions[]` and `licenses[]`. Origins belong to a base headword **and part of speech**. Each origin carries a
 name, nullable version, optional `url`/`record_url`, attribution, mandatory notices, and its
 licenses (identifier where known, name, URL, optional full text). A flattened license includes
-`origin_id`; preserve that association when displaying attribution.
+`origin_id`, referring to an origin or contribution; preserve that association when displaying attribution.
+
+`contributions` contains the distinct terms of content edits that still apply to the word.
+An unchanged fork/copy retains the original origins without acquiring the receiving dataset's
+license. An actual edit adds its captured contribution terms and license; reverting all such
+edits removes that contribution from the current response. Earlier snapshots keep their
+recorded names, versions and terms when dataset settings change.
 
 `scope: "dataset"` means the source did not identify the affected words, not that each
-contributor was verified for each word. `method: "manual"` identifies user-declared
-attribution; `copy` and `fork` identify internal acquisition. `recorded_at` may be null when the
-acquisition date is unknown. `inherited` protects captured source terms from ordinary editing.
+contributor was verified for each word. An origin's `method` is `"manual"` for user-declared
+attribution or `"dataset"` for captured dataset terms. `recorded_at` may be null when the
+acquisition date is unknown. Repeated copies/forks are recorded in `acquisitions[]`, with a
+method, date and revision; `via` can name an intermediate dataset without adding its license
+to unchanged material. `inherited` protects captured source terms from ordinary editing.
 `license_relation: "all"` means cumulative terms; `"any"` means the source offers alternatives.
 Neither a list nor a custom license is a compatibility guarantee.
 
 Dataset groups and `/meta` expose their upstream origins and description; their legacy primary
 `license` remains the dataset's own/default contribution license. `source` still identifies the
-dataset serving the response. History may include `inherited_from` and a metadata-correction
-`reason`. These fields are optional so clients continue to read older v1 servers. The generated
+dataset serving the response. History may include `inherited_from`, a metadata-correction
+`reason`, and a `contribution` snapshot. OpenGloss words demonstrate why these fields matter:
+all retain the OpenGloss source; those marked as derived from WordNet also retain its 3.0
+source and license. A consumer cannot infer that distinction from `source: "opengloss"`
+or `/meta.license` alone. These fields are optional so clients continue to read older v1 servers. The generated
 TypeScript and Python SDK models include them. See [datasets](./datasets.md#multiple-origins-and-word-licenses)
 for editing and [offline import](./offline-import.md#provenance-export-format) for compatibility.

@@ -166,5 +166,16 @@ chose for a dataset of the instance's own: read `license`, `attribution` and `li
 the instance changed carries `modified: true`, and `client.history(headword)` says what was changed: say next
 to such an entry that it was changed. `word_datasets(headword)` answers from every dataset of the
 instance: each group carries the terms of its own dataset, and entries taken from several groups
-are bound by each of them. What the licenses ask for:
+are bound by each of them.
+
+A word may have several `origins`, `contributions` and `licenses`. Each license's `origin_id`
+refers to its source or contribution snapshot: preserve the name, version, links, attribution
+and notices, and respect `license_relation` (`all` or `any`). For example, OpenGloss words
+marked as derived from WordNet retain both sets of terms. An unchanged fork keeps the original
+terms; actual edits add the fork's captured contribution terms. The primary license from
+`meta()` does not replace these word-specific licenses. These fields are optional when
+reading older v1 servers. See the
+[API source fields](https://github.com/Fristail27/vocab-bloom-hub/blob/main/docs/api.md#word-origins-and-license-associations).
+
+What the licenses ask for:
 [DATA_LICENSE.md](https://github.com/Fristail27/vocab-bloom-hub/blob/main/DATA_LICENSE.md#using-data-that-was-changed-on-an-instance).

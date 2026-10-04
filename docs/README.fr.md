@@ -5,7 +5,7 @@
 <h1 align="center">Vocab Bloom Hub</h1>
 
 <p align="center">
-  Un dictionnaire d’anglais auto-hébergé : les 300 000 entrées propres au projet avec sens, exemples, formes, traductions et liens entre mots, le Wiktionary anglais et WordNet comme jeux de données supplémentaires, vos propres dictionnaires — derrière une API publique, une interface d’administration, deux SDK et un site web.
+  Un dictionnaire d’anglais auto-hébergé : les 300 000 entrées propres au projet avec sens, exemples, formes, traductions et liens entre mots, le Wiktionary anglais, WordNet et OpenGloss comme jeux de données supplémentaires, vos propres dictionnaires — derrière une API publique, une interface d’administration, deux SDK et un site web.
 </p>
 
 <p align="center">
@@ -64,15 +64,16 @@ se lisent à côté.
 
 **D’autres jeux de données** — installés à côté, chacun complet et sous la licence de sa source
 
-- le Wiktionary anglais (CC BY-SA 4.0), Open English WordNet (CC BY 4.0) et Princeton WordNet 3.1
-  (la licence WordNet), installés depuis les fichiers que les sources distribuent — le serveur les
-  convertit ; la transcription API des WordNet vient du CMU Pronouncing Dictionary
-- vos propres jeux de données : créés vides sous une licence que vous choisissez — CC0, CC BY,
-  CC BY-SA, CC BY-NC, ODbL ou la vôtre — et remplis dans le panneau d’administration ou depuis un
-  export
-- les jeux de données ne sont jamais mélangés : l’API et le site web en servent un, chacun de
-  ceux installés se lit par `GET /api/v1/words/{word}/datasets` et s’affiche comme onglet d’une
-  page de mot, sous ses propres conditions
+- Wiktionary anglais (CC BY-SA 4.0), Open English WordNet (CC BY 4.0), Princeton WordNet
+  3.1 (licence WordNet) et OpenGloss 2.4 (CC BY 4.0, avec les conditions WordNet pour les mots signalés)
+- téléchargement des fichiers directement sur le serveur ou envoi manuel ; le serveur les
+  convertit et les importe. Les prononciations CMUdict sont facultatives pour WordNet
+- création d’un jeu vide ou d’un fork d’un jeu installé, avec sa version et sa licence de
+  contribution ; préremplissage d’un mot depuis un autre jeu et déclaration manuelle des sources
+- noms, versions, liens, mentions et plusieurs licences par mot. Une copie inchangée conserve
+  les conditions d’origine ; les modifications ajoutent les conditions du fork et leur historique
+- lectures séparées : l’API principale sert un jeu ; `GET /api/v1/words/{word}/datasets`
+  et les onglets des mots présentent tous les jeux installés avec leurs conditions
 
 **L’API** — `/api/v1`, lecture seule, sans clé
 
@@ -218,6 +219,11 @@ Tout le reste pour les contributeurs : [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 - Lire les données : [`docs/api.md`](api.md), les SDK [Node.js](../packages/npm-sdk/README.md)
   et [Python](../packages/python-sdk/README.md).
 
+Avec PostgreSQL, ajoutez un dictionnaire depuis **Managing → Datasets → How to install** :
+le téléchargement sur le serveur est proposé par défaut, l’envoi manuel reste disponible.
+OpenGloss nécessite les six fichiers Parquet (environ 1,32 Go). Sources, licences, forks et
+limites de conversion : [`datasets.md`](datasets.md).
+
 ---
 
 ## 🤝 Contribuer
@@ -235,12 +241,13 @@ modèles vous guident.
 
 - **Code** — [MIT](../LICENSE) © Aleksei Ryzhov (Fristail27)
 - **Données du dictionnaire du projet** (exports, API publique, jeu de données HuggingFace) — [CC BY 4.0](../DATA_LICENSE.md) : libres d’utilisation et d’adaptation, y compris commerciales, avec attribution.
-- **Les autres jeux de données d’une instance** gardent la licence de leur source — Wiktionary
-  CC BY-SA 4.0, Open English WordNet CC BY 4.0, Princeton WordNet sa propre licence — et un jeu de
-  données à vous la licence que vous avez choisie :
+- **Les autres jeux et les contenus repris** conservent leurs conditions : Wiktionary CC BY-SA 4.0,
+  Open English WordNet CC BY 4.0, Princeton WordNet sa propre licence, OpenGloss CC BY 4.0
+  avec les conditions WordNet 3.0 pour les mots signalés. La licence des contributions de votre
+  jeu ne remplace pas les licences héritées des mots :
   [`DATA_LICENSE.md`](../DATA_LICENSE.md#datasets-of-other-sources).
 
 > [!IMPORTANT]
-> Les données du projet sont en grande partie générées par des LLM et non vérifiées par des
-> humains — lisez [`data.md`](data.md) avant de vous y fier. Les jeux de données des sources
-> publiques sont ce que des personnes ont écrit, sous les conditions de leur source.
+> Le jeu du projet et OpenGloss contiennent du texte généré par des modèles de langage.
+> Wiktionary et les WordNet sont rédigés par des humains. Chaque jeu a ses mentions et limites ;
+> lisez [`data.md`](data.md) avant de vous fier aux données.

@@ -4,7 +4,8 @@ An instance is born with one dictionary, the project's own dataset. It can hold 
 English Wiktionary, Open English WordNet, Princeton WordNet, OpenGloss, and
 [dictionaries of the owner's own](#datasets-of-the-instances-own) — each one complete and
 separate, **one of them served at a time**. Datasets are never mixed: an answer of the API comes
-from one source and carries the terms of that source.
+from one dataset (or separate dataset groups) and carries its terms. Within a dataset,
+a word can retain [several sources and licenses](#multiple-origins-and-word-licenses).
 
 |                     |                                                                                                                                               |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -92,8 +93,9 @@ On the card of a dataset that is not installed, **How to install** opens its ins
    download. Download from the direct links or source pages, attach each file to its slot without
    unpacking it, then press _Start_. Both modes validate the same files and import the same data
    into a separate schema. **The active dataset keeps serving meanwhile.**
-3. **Activate it** on its card when the installation is done. Until then nothing a reader sees
-   has changed.
+3. **Activate it** on its card when the installation is done to serve it through the main API.
+   Installed datasets are already visible through the all-datasets read and word-page tabs;
+   activation changes which dataset the ordinary reads and search serve.
 
 The instruction also states the license with its link, the attribution line to show, and what
 to know before serving the data: that a share-alike license binds what is built on it, that
@@ -142,6 +144,16 @@ curl -N -b cookies.txt -F file=@kaikki.org-dictionary-English.jsonl.gz \
 curl -N -b cookies.txt -F file=@english-wordnet-2025.zip -F pronunciations=@cmudict.dict \
   http://localhost:3010/api/en/datasets/wordnet/install
 
+# OpenGloss manual upload: keep the identically named shards in separate table folders
+curl -N -b cookies.txt \
+  -F file=@senses/train-00000.parquet \
+  -F senses_1=@senses/train-00001.parquet \
+  -F senses_2=@senses/train-00002.parquet \
+  -F lexicon=@lexicon/train-00000.parquet \
+  -F lexicon_1=@lexicon/train-00001.parquet \
+  -F lexicon_2=@lexicon/train-00002.parquet \
+  http://localhost:3010/api/en/datasets/opengloss/install
+
 curl -b cookies.txt -X POST http://localhost:3010/api/en/datasets/wiktionary/activate
 curl -b cookies.txt -X DELETE http://localhost:3010/api/en/datasets/wordnet       # not the active one, not `default`
 ```
@@ -155,8 +167,13 @@ curl -b cookies.txt -X DELETE http://localhost:3010/api/en/datasets/wordnet     
 | `POST /api/en/datasets/{name}/activate`         | makes it the one the instance serves                                                                                                                           |
 | `DELETE /api/en/datasets/{name}`                | drops the dataset with its schema. `409 dataset_is_active` / `dataset_is_default`                                                                              |
 
-Downloads retry interrupted transfers up to three times and stop an attempt after 60 seconds
+Downloads make up to three attempts for interrupted transfers and stop an attempt after 60 seconds
 without data. Temporary downloads are deleted on success or failure.
+Validation and conversion finish before dictionary rows are imported. A structural conversion
+failure closes pending output files and publishes no completed manifest; installation reports
+the original error instead of success. The CLI can leave partial output files, which are not
+a completed dataset. A failure during the later database import may leave imported rows;
+installation is not one transaction over the entire dictionary.
 
 One import or installation runs at a time, including its download, and no dataset is activated or deleted while one
 runs (`409 import_in_progress`, `409 datasets_busy`). On SQLite the routes that change the set
@@ -177,7 +194,7 @@ export pages lead to the datasets page.
 
 ## Versions and newer files of a source
 
-**The version of a dataset is what its file says of itself.** It is read when the dataset is
+**The version of a catalog dataset is derived from its source files.** It is read when the dataset is
 installed, from the file as it was downloaded; the source is not asked, so an instance without
 internet access records the same version as one with it, and two instances that installed the
 same file report the same `dataset_version`.
@@ -187,6 +204,7 @@ same file report the same `dataset_version`.
 | English Wiktionary   | the header of the gzip: the day the extract was made, in UTC | `2026.09.25` |
 | Open English WordNet | the folder of the archive, `oewn2025/`                       | `2025`       |
 | Princeton WordNet    | the name of its build log, `dict/log.grind.3.1`              | `3.1`        |
+| OpenGloss            | all six files match the catalog's pinned SHA-256 hashes      | `2.4`        |
 | the project's own    | `version` of the manifest of the published dataset           | `1.0.0`      |
 
 - **Attach the file as it is.** An extract that was unpacked and packed again has lost its date,
@@ -201,7 +219,8 @@ same file report the same `dataset_version`.
   ([`offline-import.md`](./offline-import.md)). The registry keeps what was installed and
   `GET /api/v1/meta` reports it; the settings field `en_dataset_version` mirrors the version of
   the active dataset for the readers of the settings and is not edited by hand — a version is
-  what the file said, and only an import or a switch of the dataset writes it.
+  what the file said for a catalog dataset. Own datasets and forks have an
+  [editable version](#datasets-of-the-instances-own), which also updates that mirror when active.
 - **A dataset installed by an earlier version of the server** keeps the day of its installation
   until it is installed again: the server does not have the file any more.
 - The version is written into every entry of the dataset, into the registry and the manifest of
@@ -216,6 +235,7 @@ source has now, and a notice when the difference is worth an installation.
 | English Wiktionary   | `HEAD` of the extract on kaikki.org, for its `Last-Modified`            | when the extract of the source is **30 days or more** newer |
 | Open English WordNet | the latest release of `globalwordnet/english-wordnet` on the GitHub API | when its edition is newer than the installed one            |
 | Princeton WordNet    | nothing: frozen since 2011                                              | never                                                       |
+| OpenGloss            | nothing: the catalog pins the verified 2.4 release                      | no automatic newer-release notice                           |
 | the project's own    | nothing here: its import compares it with the published dataset         | in the import of its card                                   |
 
 - **A notice, not an update.** The admin starts installation, choosing a server download from
@@ -223,7 +243,8 @@ source has now, and a notice when the difference is worth an installation.
 - **Wiktionary is made again every few days**, so a notice for every new extract would never go
   away; the card shows the day of the extract of the source at any time.
 - **Only installed datasets are asked about**, and only by an instance that may: with
-  `UPDATE_CHECK=false` no request leaves the server ([`environment.md`](./environment.md)). What
+  `UPDATE_CHECK=false` no update-check request leaves the server ([`environment.md`](./environment.md)).
+  Explicit installation downloads and the first-start dictionary import still work. What
   is asked is stated in the catalog of datasets, next to the terms of the source. The answers are
   kept in memory for a day, a failure for half an hour; nothing is written to the database.
 - **What is sent**: an anonymous request with a `User-Agent` of `vocab-bloom-hub/<version>`,
@@ -238,7 +259,7 @@ source has now, and a notice when the difference is worth an installation.
 
 ## Datasets of the instance's own
 
-Next to the catalog an instance holds dictionaries of its owner: rows of the registry marked `own`. The mark is kept, not derived from the catalog: an entry a later version adds to the catalog under the name of a dataset of the owner's does not take it over — its terms stay the owner's, and the source is never installed into it (`409 dataset_already_exists`). The catalog stays closed — nothing about its four datasets becomes
+Next to the catalog an instance holds dictionaries of its owner: rows of the registry marked `own`. The mark is kept, not derived from the catalog: an entry a later version adds to the catalog under the name of a dataset of the owner's does not take it over — its terms stay the owner's, and the source is never installed into it (`409 dataset_already_exists`). The catalog stays closed — nothing about its five datasets becomes
 editable — and a dataset of one's own is where one's own words go, instead of into a dataset of
 a public source, where they would be served under the name and the license of somebody else.
 
@@ -375,8 +396,8 @@ keeps — and no statement names two schemas. The search of the admin UI is
 public search serves the active dataset only. A name that is no dataset answers
 `400 dataset_name_invalid`, a dataset the instance does not hold `404 dataset_not_found`.
 
-- An edit leaves its row in `en_changes` **of the dataset it was made in**, and an audit row
-  names that dataset.
+- An edit leaves its row in `en_changes` **of the dataset it was made in**. Content edits are
+  not duplicated in the audit journal; dataset operations such as changing terms are recorded there.
 - **An edit of a dataset that is not served is public at once** on the tab of that dataset of a
   word page (`GET /api/v1/words/{word}/datasets`), and counts into the `Last-Modified` of the
   reads of every dataset; nothing the active dataset serves changes.
@@ -432,12 +453,13 @@ merged: an entry stays in the group of its dataset, under the license of its sou
 Every dataset can be edited in the admin UI, a dataset of a public source like the project's
 own. The licenses allow it, and each asks for something in return:
 
-| Dataset                                 | License         | What an edit obliges to                                                        |
-| --------------------------------------- | --------------- | ------------------------------------------------------------------------------ |
-| The project's own, Open English WordNet | CC BY 4.0       | keep the attribution, **indicate that the data was modified**                  |
-| English Wiktionary                      | CC BY-SA 4.0    | the same, and the modified entry stays under CC BY-SA                          |
-| Princeton WordNet                       | WordNet license | the full notice with its disclaimer on every copy, modifications included      |
-| CMU Pronouncing Dictionary              | BSD 2-Clause    | keep the copyright notice (it travels with the WordNet datasets that carry it) |
+| Dataset                                 | License                                  | What an edit obliges to                                                        |
+| --------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------ |
+| The project's own, Open English WordNet | CC BY 4.0                                | keep the attribution, **indicate that the data was modified**                  |
+| English Wiktionary                      | CC BY-SA 4.0                             | the same, and the modified entry stays under CC BY-SA                          |
+| Princeton WordNet                       | WordNet license                          | the full notice with its disclaimer on every copy, modifications included      |
+| OpenGloss                               | CC BY 4.0; WordNet terms on marked words | retain each word's sources and notices and indicate changes                    |
+| CMU Pronouncing Dictionary              | BSD 2-Clause                             | keep the copyright notice (it travels with the WordNet datasets that carry it) |
 
 What the instance does about it:
 
@@ -531,12 +553,13 @@ under the license it has now, and nothing else.
 
 ## Public sources
 
-| Source                     | Where it comes from                                                                 | License         | Updated               |
-| -------------------------- | ----------------------------------------------------------------------------------- | --------------- | --------------------- |
-| English Wiktionary         | <https://kaikki.org/dictionary/English/>, the extract wiktextract makes of the wiki | CC BY-SA 4.0    | every few days        |
-| Open English WordNet       | <https://github.com/globalwordnet/english-wordnet/releases>                         | CC BY 4.0       | an edition a year     |
-| Princeton WordNet 3.1      | <https://wordnet.princeton.edu>                                                     | WordNet license | not since 2011        |
-| CMU Pronouncing Dictionary | <https://github.com/cmusphinx/cmudict>, the pronunciations of a WordNet dataset     | BSD 2-Clause    | a correction at times |
+| Source                     | Where it comes from                                                                                                                                  | License                                  | Updated                                   |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | ----------------------------------------- |
+| English Wiktionary         | <https://kaikki.org/dictionary/English/>, the extract wiktextract makes of the wiki                                                                  | CC BY-SA 4.0                             | every few days                            |
+| Open English WordNet       | <https://github.com/globalwordnet/english-wordnet/releases>                                                                                          | CC BY 4.0                                | an edition a year                         |
+| Princeton WordNet 3.1      | <https://wordnet.princeton.edu>                                                                                                                      | WordNet license                          | not since 2011                            |
+| OpenGloss 2.4              | [senses](https://huggingface.co/datasets/mjbommar/opengloss-v2.4-senses), [lexicon](https://huggingface.co/datasets/mjbommar/opengloss-v2.4-lexicon) | CC BY 4.0; WordNet terms on marked words | pinned release; no automatic update check |
+| CMU Pronouncing Dictionary | <https://github.com/cmusphinx/cmudict>, the pronunciations of a WordNet dataset                                                                      | BSD 2-Clause                             | a correction at times                     |
 
 What each source has and what a converted entry looks like — the titles derived from the
 definitions, the forms folded into their base word, the translations of Wiktionary — is in the
@@ -567,6 +590,7 @@ public                 settings, datasets, audit_log, migrations, dataset_migrat
 ds_wiktionary          en_entries, en_words, en_meanings, …, en_changes, suggestions,
                        dataset_migrations
 ds_wordnet             the same tables, other rows
+ds_opengloss           the same tables, converted OpenGloss words and their origins
 ds_my_words            a dataset of the instance's own: the same tables
 ```
 
@@ -583,8 +607,8 @@ backed up and what a connection pooler has to pass through:
   the dataset that is edited).
 - _Report a mistake_ on the tab of a dataset that is not served: a report is filed in the active
   dataset.
-- A license of its own for the edits of a dataset of a public source: an edit takes the license
-  of its dataset.
+- Automatic updates of forks from their parents, merging words and a separate comparison
+  with the original version. A fork already has its own contribution license and edit history.
 - Datasets of other headword languages: the registry records the language of a dataset, the
   tables are the English ones.
 

@@ -59,16 +59,17 @@ installation with the website adds its start page (`GET /en`, `200`) to the same
 
 The admin UI has _Export_ on the card of a dataset (`GET /api/en/dictionary/export`). It is not a backup:
 
-|                    | Database backup (`pg_dump`)                           | Dictionary export (dataset)                                       |
-| ------------------ | ----------------------------------------------------- | ----------------------------------------------------------------- |
-| Contains           | Everything: entries, edits, settings, ids, migrations | The dictionary content only, as NDJSON files + `manifest.json`    |
-| Restores           | The instance exactly as it was                        | Nothing — importing it _merges_ into the current dictionary       |
-| Ids and timestamps | Preserved                                             | Stripped; a new import assigns new ids                            |
-| Made for           | Disaster recovery, rollback of an upgrade             | Sharing, versioning, moving content between instances, publishing |
-| Format             | Postgres-specific, tied to the schema version         | Portable, diffable, independent of the database                   |
+|                    | Database backup (`pg_dump`)                           | Dictionary export (dataset)                                                                                   |
+| ------------------ | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Contains           | Everything: entries, edits, settings, ids, migrations | Dictionary content, origins, licenses, notices and edit history; JSONL, manifest, format marker and `LICENSE` |
+| Restores           | The instance exactly as it was                        | Nothing — importing it _merges_ into the current dictionary                                                   |
+| Ids and timestamps | Preserved                                             | Dictionary row ids are reassigned; source/acquisition dates and history remain in the portable data           |
+| Made for           | Disaster recovery, rollback of an upgrade             | Sharing, versioning, moving content between instances, publishing                                             |
+| Format             | Postgres-specific, tied to the schema version         | Portable, diffable, independent of the database                                                               |
 
-The export is taken from the **active dataset** and its manifest carries the terms of that
-dataset; the database backup holds all of them.
+The export is taken from the **dataset selected on its card** (the active one when the API
+request specifies none). Its manifest and word/history records retain that dataset's terms
+and the sources and contributions of its words; the database backup holds all datasets.
 
 Take the export when you want the _content_ — to publish it, diff it against the upstream
 dataset, or seed another instance ([`offline-import.md`](./offline-import.md)). Take the
@@ -124,13 +125,15 @@ schema; rolling those back is just starting the previous build again.
 The dictionary content and the code are versioned independently: the code has releases, the
 dataset has its own version (`manifest.json`, kept in the registry of datasets after the import,
 mirrored in the settings as `en_dataset_version`, exposed by `GET /api/v1/meta` as
-`dataset_version`; read-only in the settings — only an import writes it). Upgrading the code never changes the
+`dataset_version`; read-only in the settings). Own datasets and forks can set their version
+through _Edit the terms_. Upgrading the code never changes the
 dictionary; loading a newer dataset never changes the code.
 
-Both are about the project's own dataset, the `default` one. A dataset converted from a public
-source is updated by converting the newer dump and importing it — into the same dataset in
-update mode, or into a new one that is activated when it is ready and the old one deleted
-([`datasets.md`](./datasets.md)).
+For a catalog source, use _Update from a newer file_ on its card: download the catalog files
+on the server or upload source files manually. Installation converts them and uses update
+mode in that source's dataset. Catalog links may pin a release: OpenGloss currently installs
+2.4 and does not check for newer releases. For independent edits, create a fork; a fork does
+not automatically update or merge changes from its parent ([`datasets.md`](./datasets.md)).
 
 The import of the project's dataset shows both versions side by side — _Your version_ (the registry of
 datasets) against _Latest version_ (the published `manifest.json`) — and offers two ways to
@@ -185,6 +188,11 @@ The full English dictionary takes about **0.9 GB** in Postgres, tables and index
 compressed `pg_dump -Fc` of it is about 150 MB. Plan for the database, the working space Postgres
 needs for index builds during migrations, and the backups you keep. The breakdown by table and the
 row counts: [`database.md`](./database.md#size).
+
+Additional datasets and forks need their own database space. Source installation also needs
+temporary disk space for both the downloaded/uploaded files and the converted output; OpenGloss
+alone downloads about 1.32 GB before conversion. The source and converted working files are
+removed after installation, including on failure. See [installation](./datasets.md#installing-a-dataset).
 
 SQLite is development-only — nothing to back up or upgrade, and the server refuses it with
 `NODE_ENV=production` ([`database.md`](./database.md#sqlite-for-development)).

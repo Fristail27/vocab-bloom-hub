@@ -185,7 +185,10 @@ There is no contributor agreement to sign. By opening a pull request you agree t
 contribution is licensed under the terms of what it changes: code and documentation under the
 [MIT license](./LICENSE), dictionary data — an entry edited in the admin UI, a correction sent
 through _Report a mistake_ on a word page and applied by the owner, a dataset revision — under
-[CC BY 4.0](./DATA_LICENSE.md). Keep the model label (`generated_by_model`) truthful on data
+[CC BY 4.0](./DATA_LICENSE.md) for the project's own dictionary. Other datasets retain their
+source terms; edits in an own dataset or fork carry its contribution license without replacing
+inherited licenses. Include the original source, version, links and required notices when
+transferring data. Keep the model label (`generated_by_model`) truthful on data
 you generate: every record names the model behind it, see [`docs/data.md`](./docs/data.md).
 
 ### Documentation languages
@@ -341,6 +344,8 @@ Everything the repository documents, also rendered on the website,
 - [`docs/authentication.md`](./docs/authentication.md) — how the single-admin login, login proof and JWT cookie work
 - [`docs/migrations.md`](./docs/migrations.md) — TypeORM migrations workflow for Postgres, deployment and troubleshooting
 - [`docs/offline-import.md`](./docs/offline-import.md) — moving a dictionary between instances without internet access (export → copy → import from file)
+- [`docs/datasets.md`](./docs/datasets.md) — catalog installation (server download or manual upload), OpenGloss conversion limits, own datasets, forks, word sources and contribution licenses
+- [`apps/server/src/converters/README.md`](./apps/server/src/converters/README.md) — standalone source conversion and adding a catalog adapter
 - [`docs/observability.md`](./docs/observability.md) — how the monitoring works, Prometheus + Grafana in one command or your own, every metric, the JSON logs and the request id, shipping the logs to a collector
 - [`docs/performance.md`](./docs/performance.md) — latency of the hot reads on the full dictionary (Postgres vs SQLite), the indexes behind them, the benchmark and the query-plan guard
 - [`docs/api.md`](./docs/api.md) — the public `/api/v1` contract (envelope, errors, rate limit, caching, OpenAPI export) and the public-only / admin-only switches

@@ -8,7 +8,7 @@ its dataset card is the full, revision-specific version of this page (counts per
 statistics, content notes).
 
 This page is about **the project's own dataset**, the one an instance is born with. An instance
-can hold datasets of other sources next to it — the English Wiktionary, WordNet — each under the
+can hold datasets of other sources next to it — the English Wiktionary, WordNet, OpenGloss — each under the
 terms of its source: [Datasets from other sources](#datasets-from-other-sources).
 
 ## Where the data comes from
@@ -18,7 +18,8 @@ Every entry is produced by an **LLM-assisted pipeline** — a model is asked for
 inflected forms), the answer is stored in the Hub database, and the database is what gets
 exported and published. Nothing is scraped or copied from other dictionaries.
 
-Two columns on every base-form word record the provenance:
+Two columns on every base-form word record how it was generated (sources and licenses are
+recorded separately in `origins` and in the history's contribution snapshots):
 
 | Field                | Meaning                                                                                           |
 | -------------------- | ------------------------------------------------------------------------------------------------- |
@@ -98,36 +99,45 @@ received one is asked separately.
 An instance on PostgreSQL keeps several datasets, one of them active
 ([`datasets.md`](./datasets.md)), and datasets of its owner's own, under a license the owner
 chooses ([`datasets.md`](./datasets.md#datasets-of-the-instances-own)). The datasets page of the
-admin UI installs a dataset of a public source from the file the source distributes — the server
-converts it:
+admin UI downloads a public source's files directly from catalog links, converts them and
+imports them. Manual upload is available when the server cannot download them:
 
 > [!WARNING]
-> A dataset of a public source comes under the license of that source, not under CC BY 4.0, and
+> A dataset of a public source comes under that source's terms, and
 > the license binds whoever serves and takes the data: Wiktionary is share-alike, the WordNets
 > want their notice on every copy. Read the terms on the card of the dataset before installing
 > it ([`DATA_LICENSE.md`](../DATA_LICENSE.md#datasets-of-other-sources)).
 
-| Source                     | License of the data | What an entry has                                                                        | What it lacks                                     |
-| -------------------------- | ------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| English Wiktionary         | CC BY-SA 4.0        | definitions, examples, IPA, forms, synonyms and antonyms, translations as single words   | CEFR levels, definitions of the translated senses |
-| Open English WordNet       | CC BY 4.0           | definitions, examples, synonyms and antonyms, irregular plurals and degrees              | translations, levels, registers, verb forms       |
-| Princeton WordNet 3.x      | WordNet license     | the same                                                                                 | the same                                          |
-| CMU Pronouncing Dictionary | BSD 2-Clause        | pronunciations of American English for the WordNet entries, turned from ARPAbet into IPA | —                                                 |
+| Source                     | License of the data                           | What an entry has                                                                           | What it lacks                                     |
+| -------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| English Wiktionary         | CC BY-SA 4.0                                  | definitions, examples, IPA, forms, synonyms and antonyms, translations as single words      | CEFR levels, definitions of the translated senses |
+| Open English WordNet       | CC BY 4.0                                     | definitions, examples, synonyms and antonyms, irregular plurals and degrees                 | translations, levels, registers, verb forms       |
+| Princeton WordNet 3.x      | WordNet license                               | the same                                                                                    | the same                                          |
+| OpenGloss 2.4              | CC BY 4.0, plus WordNet terms on marked words | canonical definitions, neutral/plain examples, supported inflections, synonyms and antonyms | translations, IPA and CEFR levels                 |
+| CMU Pronouncing Dictionary | BSD 2-Clause                                  | pronunciations of American English for the WordNet entries, turned from ARPAbet into IPA    | —                                                 |
 
-Such data is written by people, not generated: `generated` is false on every entry and the
-notice about language models does not apply — a dataset carries the notice of its own source,
-or none. The instance keeps it that way: an entry marked as generated is refused in a dataset
-of a public source, by the forms, the API and the import alike. Three things follow from
-keeping the sources apart:
+Wiktionary and the WordNet datasets are human-authored: their forms, API and import refuse
+entries marked as generated. OpenGloss is a synthetic dictionary and permits generated content;
+the converter preserves its generation flags and model names. Each dataset carries its own notice.
+Three things follow from keeping the datasets separate:
 
-- **A dataset has one source and one license.** Nothing of the project's dataset is added to a
-  Wiktionary entry, no translation is borrowed from one dataset for another.
+- **Reads do not combine dictionaries.** A word can still have several origins and licenses:
+  OpenGloss words marked as derived from WordNet retain both sources. Deliberate copying and
+  forking preserve sources and record later contributions; they do not silently borrow fields.
 - **The license of the active dataset is the license of what the instance serves**: the API
   answers, the exports, the corrections the readers send. Wiktionary is share-alike — a product
   built on an instance that serves it keeps derived data under CC BY-SA 4.0.
 - **Fields the source does not have stay empty** (`""` for the enums, as everywhere): no level
   is guessed, no register is assumed, an irregular verb of WordNet is flagged without forms
   because the source does not say which form is which.
+
+OpenGloss installation uses all six pinned Parquet files (about 1.32 GB). It converts the
+supported dictionary fields, not the complete tables: encyclopedia text, graded rewrites,
+etymologies and training metadata have no matching fields in the Hub. Malformed text is
+counted and omitted while valid senses remain. See the
+[OpenGloss conversion details](./datasets.md#opengloss-24) for the exact boundaries and
+[offline import](./offline-import.md#provenance-export-format) for how the converted data,
+licenses and history travel together.
 
 ## Edits made on an instance
 
@@ -192,19 +202,21 @@ next export):
 
 ## Where the terms are exposed
 
-| Place                           | What it carries                                                                                                                                              |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `manifest.json` of every export | `source`, `license`, `license_url`, `attribution`, `attribution_url`, `notice`; `modified_entries` when the data was edited                                  |
-| `LICENSE` of every export       | The license and the notices of the source in full                                                                                                            |
-| `GET /api/v1/meta`              | `dataset`, `source`, `license`, `license_url`, `attribution`, `attribution_url`, `notice`, `license_text`, `modified_entries` ([`api.md`](api.md))           |
-| Every word of `/api/v1`         | `source`, and `modified` when the entry was changed or added on the instance — on the parts of an entry, in the searches and on the edits of the history too |
-| Word pages of the website       | The license and the attribution of the dataset under every entry and next to _Report a mistake_; what was changed on the site                                |
-| `/dataset-terms` of the website | The terms of the active dataset, with the notices of its source in full                                                                                      |
-| Admin → _Datasets_              | The terms of every dataset of the catalog, as the code states them                                                                                           |
-| Admin → _Datasets → Export_     | License, link and attribution line next to the download                                                                                                      |
-| HuggingFace dataset card        | `license: cc-by-4.0` front matter, `LICENSE`, `NOTICE`, this notice (the project's dataset)                                                                  |
+| Place                               | What it carries                                                                                                                                              |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `manifest.json` of every export     | `source`, `license`, `license_url`, `attribution`, `attribution_url`, `notice`; `modified_entries` when the data was edited                                  |
+| `LICENSE` of every export           | The license and the notices of the source in full                                                                                                            |
+| `GET /api/v1/meta`                  | `dataset`, `source`, `license`, `license_url`, `attribution`, `attribution_url`, `notice`, `license_text`, `modified_entries` ([`api.md`](api.md))           |
+| Every word of `/api/v1`             | `source`, and `modified` when the entry was changed or added on the instance — on the parts of an entry, in the searches and on the edits of the history too |
+| Sources and contributions of a word | `origins`, `contributions`, `licenses`; source names, versions, links, attributions and notices, with license associations                                   |
+| Word pages of the website           | The license and the attribution of the dataset under every entry and next to _Report a mistake_; what was changed on the site                                |
+| `/dataset-terms` of the website     | The terms of the active dataset, with the notices of its source in full                                                                                      |
+| Admin → _Datasets_                  | The terms of every dataset of the catalog, as the code states them                                                                                           |
+| Admin → _Datasets → Export_         | License, link and attribution line next to the download                                                                                                      |
+| HuggingFace dataset card            | `license: cc-by-4.0` front matter, `LICENSE`, `NOTICE`, this notice (the project's dataset)                                                                  |
 
-All of them but the dataset card carry the terms of the **active dataset**, and those are the
-ones the catalog of the code states for it (`apps/server/core/constants/dataset_catalog.ts`;
-`DATA_LICENSE` of `data_license.ts` for the project's own dataset). Nothing about the terms is
-typed by an admin or taken from an imported file.
+`/meta` and `/dataset-terms` describe the **active dataset**. Each group of the all-datasets
+read and each word-page tab describes its own dataset; an admin export describes the dataset
+selected on its card. Catalog terms come from `apps/server/core/constants/dataset_catalog.ts`;
+own datasets and forks have owner-supplied contribution terms. Word origins and contribution
+snapshots retain the terms captured from their sources, including through export/import.

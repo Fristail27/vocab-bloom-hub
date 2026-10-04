@@ -156,6 +156,13 @@ In the database a dataset is a **schema** — a namespace of tables inside the o
 - **The tables are the same in every schema**, so are the queries: the connection of the server
   carries `search_path = ds_<name>, public`, and `en_words` resolves to the table of the active
   dataset. External tools that read `public.en_words` keep reading the `default` dataset.
+- **Sources and licenses are part of the data.** The shared registry keeps dataset origins,
+  description, version and `terms_updated_at`; base words keep their origins in `en_words`,
+  and `en_changes.contribution` records the terms of actual edits. Public word licenses are
+  derived from those snapshots, not from a cross-schema join to the current parent.
+- **A fork is another full schema**, copied in a consistent transaction with sources and
+  history. It consumes its own space and becomes visible after commit. Later parent changes
+  do not propagate to it. OpenGloss uses `ds_opengloss` with the same tables and indexes.
 - **A switch re-opens the pool** with another `search_path`. It waits for the requests under
   way to finish (five seconds at most) and the requests that arrive meanwhile wait for it — a
   few tens of milliseconds, nobody is answered with an error.

@@ -5,7 +5,7 @@
 <h1 align="center">Vocab Bloom Hub</h1>
 
 <p align="center">
-  Un diccionario de inglés autoalojado: las 300 000 entradas propias del proyecto con acepciones, ejemplos, formas, traducciones y enlaces entre palabras, el Wiktionary inglés y WordNet como datasets adicionales, diccionarios tuyos, detrás de una API pública, una interfaz de administración, dos SDK y un sitio web.
+  Un diccionario de inglés autoalojado: las 300 000 entradas propias del proyecto con acepciones, ejemplos, formas, traducciones y enlaces entre palabras, el Wiktionary inglés, WordNet y OpenGloss como datasets adicionales, diccionarios tuyos, detrás de una API pública, una interfaz de administración, dos SDK y un sitio web.
 </p>
 
 <p align="center">
@@ -63,14 +63,16 @@ diccionarios —datasets— y sirve uno de ellos; los demás se leen a su lado.
 
 **Más datasets** — instalados junto a él, cada uno completo y bajo la licencia de su fuente
 
-- el Wiktionary inglés (CC BY-SA 4.0), Open English WordNet (CC BY 4.0) y Princeton WordNet 3.1
-  (la licencia de WordNet), instalados desde los archivos que distribuyen las fuentes: el servidor
-  los convierte; IPA del CMU Pronouncing Dictionary para los WordNet
-- datasets tuyos: creados vacíos bajo una licencia que eliges —CC0, CC BY, CC BY-SA, CC BY-NC,
-  ODbL o una propia— y rellenados en el panel de administración o desde una exportación
-- los datasets nunca se mezclan: la API y el sitio web sirven uno de ellos, cada uno de los
-  instalados se lee con `GET /api/v1/words/{word}/datasets` y se muestra como pestaña de una
-  página de palabra, bajo sus propios términos
+- Wiktionary inglés (CC BY-SA 4.0), Open English WordNet (CC BY 4.0), Princeton WordNet
+  3.1 (licencia WordNet) y OpenGloss 2.4 (CC BY 4.0, más los términos de WordNet en las palabras marcadas)
+- descarga de los archivos directamente en el servidor o carga manual; el servidor los convierte
+  e importa. Las pronunciaciones de CMUdict son opcionales para WordNet
+- creación de un dataset vacío o de un fork de uno instalado, con versión y licencia de las
+  contribuciones propias; palabras prellenadas desde otro dataset y fuentes declaradas manualmente
+- nombres, versiones, enlaces, avisos y múltiples licencias por palabra. Una copia intacta conserva
+  los términos originales; las ediciones añaden los términos de la contribución del fork y su historial
+- lectura separada: la API principal sirve un dataset; `GET /api/v1/words/{word}/datasets`
+  y las pestañas de las palabras muestran todos los instalados con sus propios términos
 
 **La API** — `/api/v1`, solo lectura, sin claves
 
@@ -213,6 +215,11 @@ Todo lo demás para contribuir: [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 - Leer los datos: [`docs/api.md`](api.md), los SDK de [Node.js](../packages/npm-sdk/README.md)
   y [Python](../packages/python-sdk/README.md).
 
+Con PostgreSQL, añade otro diccionario desde **Managing → Datasets → How to install**:
+la descarga en el servidor es la opción predeterminada; la carga manual es la alternativa.
+OpenGloss necesita los seis archivos Parquet (unos 1,32 GB). Fuentes, licencias, forks y
+límites de la conversión: [`datasets.md`](datasets.md).
+
 ---
 
 ## 🤝 Contribuir
@@ -230,11 +237,13 @@ la hoja de ruta; el [Código de conducta](../CODE_OF_CONDUCT.md) se aplica a tod
 
 - **Código**: [MIT](../LICENSE) © Aleksei Ryzhov (Fristail27)
 - **Datos del diccionario del proyecto** (exportaciones, la API pública, el dataset de HuggingFace): [CC BY 4.0](../DATA_LICENSE.md): libres de usar y adaptar, también comercialmente, con atribución.
-- **Los demás datasets que guarda una instancia** conservan la licencia de su fuente —Wiktionary
-  CC BY-SA 4.0, Open English WordNet CC BY 4.0, Princeton WordNet su propia licencia— y un dataset
-  tuyo la licencia que elegiste: [`DATA_LICENSE.md`](../DATA_LICENSE.md#datasets-of-other-sources).
+- **Otros datasets y material reutilizado** conservan sus términos: Wiktionary CC BY-SA 4.0,
+  Open English WordNet CC BY 4.0, Princeton WordNet su propia licencia y OpenGloss CC BY 4.0
+  con términos adicionales de WordNet 3.0 en las palabras marcadas. La licencia de las contribuciones
+  de tu dataset no sustituye las licencias heredadas de las palabras:
+  [`DATA_LICENSE.md`](../DATA_LICENSE.md#datasets-of-other-sources).
 
 > [!IMPORTANT]
-> Los datos del proyecto son en gran parte generados por LLM y no verificados por personas;
-> consulta [`data.md`](data.md) antes de confiar en ellos. Los datasets de fuentes públicas son lo
-> que escribieron personas, bajo los términos de su fuente.
+> El dataset del proyecto y OpenGloss contienen texto generado por modelos de lenguaje.
+> Wiktionary y los WordNet son fuentes escritas por personas. Cada dataset lleva sus propios
+> avisos y limitaciones; consulta [`data.md`](data.md) antes de confiar en los datos.
