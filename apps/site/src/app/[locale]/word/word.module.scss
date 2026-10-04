@@ -71,21 +71,17 @@
 // the datasets of the instance that hold the headword, one open (issue #538)
 .tabs {
   display: flex;
+  // Every dataset stays visible, including those added after the first row fills.
+  flex-wrap: wrap;
   gap: 4px;
   margin: 16px 0 20px;
   border-bottom: 1px solid var(--border);
-  // a phone: the row scrolls, the page does not
-  overflow-x: auto;
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
 }
 
 .tab,
 .tabActive {
   flex: none;
+  max-width: 100%;
   margin-bottom: -1px;
   padding: 8px 14px;
   border: 0;
@@ -96,7 +92,7 @@
   font: inherit;
   font-size: 0.95rem;
   font-weight: 500;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
   cursor: pointer;
 
   &:hover {
