@@ -6,7 +6,7 @@
 <!-- reviewed: zh · @assassinationss · 2026-09-24 · 32148f5 -->
 
 <p align="center">
-  一部自托管的英语词典：项目自有的 300 000 个词条，包含释义、例句、词形、翻译和词语关联，另有英语 Wiktionary 和 WordNet 作为更多数据集，以及您自己的词典 — 配有公共 API、管理界面、两个 SDK 和一个网站。
+  一部自托管的英语词典：项目自有的 300 000 个词条，包含释义、例句、词形、翻译和词语关联，另有英语 Wiktionary、WordNet 和 OpenGloss 作为更多数据集，以及您自己的词典 — 配有公共 API、管理界面、两个 SDK 和一个网站。
 </p>
 
 <p align="center">
@@ -64,13 +64,14 @@
 
 **更多数据集** — 安装在它旁边，每一部都完整，并遵循其来源的许可协议
 
-- 英语 Wiktionary（CC BY-SA 4.0）、Open English WordNet（CC BY 4.0）和 Princeton WordNet 3.1
-  （WordNet 许可协议），从各来源分发的文件安装 — 由服务器转换；WordNet 的 IPA 音标来自
-  CMU Pronouncing Dictionary
-- 您自己的数据集：以空数据集创建，许可协议由您选择 — CC0、CC BY、CC BY-SA、CC BY-NC、ODbL
-  或您自己的协议 — 然后在管理面板中填充或从导出文件导入
-- 数据集绝不混用：API 和网站提供其中一部，每一部已安装的数据集都可通过
-  `GET /api/v1/words/{word}/datasets` 读取，并以单词页面的一个标签页展示，各自遵循自己的条款
+- 英语 Wiktionary（CC BY-SA 4.0）、Open English WordNet（CC BY 4.0）、Princeton WordNet
+  3.1（WordNet 许可协议）和 OpenGloss 2.4（CC BY 4.0，标记的单词还适用 WordNet 条款）
+- 在服务器上直接下载源文件，或手动上传；服务器负责转换和导入。WordNet 可选用 CMUdict 发音
+- 创建空数据集或已安装数据集的分支，设置自己的版本和贡献许可协议；从其他数据集预填单词，或手动声明来源
+- 每个单词保留来源名称、版本、链接、声明和多项许可协议。未修改的副本保留原始条款；
+  实际修改会添加分支的贡献条款及修改历史
+- 各数据集分别读取：主 API 提供一个数据集，`GET /api/v1/words/{word}/datasets`
+  和单词页面的标签页展示所有已安装的数据集及各自条款
 
 **API** — `/api/v1`，只读，无需密钥
 
@@ -205,6 +206,10 @@ yarn dev                                       # API :3010，管理面板 :3000�
 - 读取数据：[`docs/api.md`](api.md)，以及 [Node.js](../packages/npm-sdk/README.md) 和
   [Python](../packages/python-sdk/README.md) SDK。
 
+在 PostgreSQL 上，通过 **Managing → Datasets → How to install** 添加其他词典：
+默认由服务器下载，也可手动上传。OpenGloss 需要全部六个 Parquet 文件（约 1.32 GB）。
+来源、许可协议、分支和转换范围详见 [`datasets.md`](datasets.md)。
+
 ---
 
 ## 🤝 参与贡献
@@ -220,10 +225,11 @@ PR 检查清单）、技术栈和仓库结构、每个脚本、文档索引和�
 
 - **代码** — [MIT](../LICENSE) © Aleksei Ryzhov (Fristail27)
 - **项目的词典数据**（导出文件、公共 API、HuggingFace 数据集）— [CC BY 4.0](../DATA_LICENSE.md)：可自由使用和改编，包括商业用途，需注明出处。
-- **实例容纳的其他数据集**保留其来源的许可协议 — Wiktionary 为 CC BY-SA 4.0，Open English WordNet
-  为 CC BY 4.0，Princeton WordNet 为其自有许可协议 — 您自己的数据集则采用您选择的许可协议：
+- **其他数据集和引用的材料**保留来源条款：Wiktionary 适用 CC BY-SA 4.0，Open English WordNet
+  适用 CC BY 4.0，Princeton WordNet 适用自己的许可协议；OpenGloss 适用 CC BY 4.0，
+  标记的单词还适用 WordNet 3.0 条款。自己数据集的贡献许可协议不会替代单词继承的许可协议：
   [`DATA_LICENSE.md`](../DATA_LICENSE.md#datasets-of-other-sources)。
 
 > [!IMPORTANT]
-> 项目的数据大部分由 LLM 生成，未经人工校验 — 在依赖这些数据之前请先阅读
-> [`data.md`](data.md)。来自公共来源的数据集是人们撰写的内容，遵循其来源的条款。
+> 项目数据集和 OpenGloss 包含语言模型生成的文本。Wiktionary 和 WordNet 由人工编写。
+> 每个数据集都有自己的声明和局限；使用前请阅读 [`data.md`](data.md)。

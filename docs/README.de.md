@@ -5,7 +5,7 @@
 <h1 align="center">Vocab Bloom Hub</h1>
 
 <p align="center">
-  Ein selbst gehostetes englisches Wörterbuch: die eigenen 300 000 Einträge des Projekts mit Bedeutungen, Beispielen, Formen, Übersetzungen und Wortlinks, das englische Wiktionary und WordNet als weitere Datensätze, eigene Wörterbücher — hinter einer öffentlichen API, einer Admin-Oberfläche, zwei SDKs und einer Website.
+  Ein selbst gehostetes englisches Wörterbuch: die eigenen 300 000 Einträge des Projekts mit Bedeutungen, Beispielen, Formen, Übersetzungen und Wortlinks, das englische Wiktionary, WordNet und OpenGloss als weitere Datensätze, eigene Wörterbücher — hinter einer öffentlichen API, einer Admin-Oberfläche, zwei SDKs und einer Website.
 </p>
 
 <p align="center">
@@ -63,14 +63,16 @@ Wörterbücher — Datensätze — und liefert einen davon aus; die anderen werd
 
 **Weitere Datensätze** — daneben installiert, jeder vollständig und unter der Lizenz seiner Quelle
 
-- das englische Wiktionary (CC BY-SA 4.0), Open English WordNet (CC BY 4.0) und Princeton
-  WordNet 3.1 (die WordNet-Lizenz), installiert aus den Dateien, die die Quellen verbreiten — der
-  Server konvertiert sie; IPA aus dem CMU Pronouncing Dictionary für die WordNets
-- eigene Datensätze: leer angelegt unter einer Lizenz Ihrer Wahl — CC0, CC BY, CC BY-SA,
-  CC BY-NC, ODbL oder eine eigene — und im Admin-Panel oder aus einem Export gefüllt
-- Datensätze werden nie vermischt: einer wird von der API und der Website ausgeliefert, jeder
-  installierte wird von `GET /api/v1/words/{word}/datasets` gelesen und als Tab einer Wortseite
-  gezeigt, unter seinen eigenen Bedingungen
+- englisches Wiktionary (CC BY-SA 4.0), Open English WordNet (CC BY 4.0), Princeton WordNet
+  3.1 (WordNet-Lizenz) und OpenGloss 2.4 (CC BY 4.0, zusätzlich WordNet-Bedingungen bei markierten Wörtern)
+- Quelldateien direkt auf dem Server herunterladen oder manuell hochladen; der Server konvertiert
+  und importiert sie. CMUdict-Ausspracheangaben sind für WordNet optional
+- einen leeren Datensatz oder einen Fork eines installierten Datensatzes mit eigener Version und
+  Beitragslizenz erstellen; Wörter aus einem anderen Datensatz übernehmen oder Quellen manuell angeben
+- Namen, Versionen, Links, Hinweise und mehrere Lizenzen je Wort erhalten. Unveränderte Kopien
+  behalten die ursprünglichen Bedingungen; Bearbeitungen ergänzen die Beitragsbedingungen des Forks und den Verlauf
+- getrennte Abfragen: Die Haupt-API liefert einen Datensatz, `GET /api/v1/words/{word}/datasets`
+  und die Tabs der Wortseiten zeigen alle installierten Datensätze mit ihren Bedingungen
 
 **Die API** — `/api/v1`, nur lesend, ohne Schlüssel
 
@@ -215,6 +217,11 @@ Alles Weitere für Mitwirkende: [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 - Die Daten lesen: [`docs/api.md`](api.md), die SDKs für [Node.js](../packages/npm-sdk/README.md)
   und [Python](../packages/python-sdk/README.md).
 
+Unter PostgreSQL fügen Sie über **Managing → Datasets → How to install** ein Wörterbuch hinzu:
+Standard ist der Download auf dem Server, alternativ ist ein manueller Upload möglich.
+OpenGloss benötigt alle sechs Parquet-Dateien (etwa 1,32 GB). Quellen, Lizenzen, Forks und
+Konvertierungsgrenzen: [`datasets.md`](datasets.md).
+
 ---
 
 ## 🤝 Mitwirken
@@ -232,11 +239,13 @@ eine Idee? Öffnen Sie ein [Issue](https://github.com/Fristail27/vocab-bloom-hub
 
 - **Code** — [MIT](../LICENSE) © Aleksei Ryzhov (Fristail27)
 - **Wörterbuchdaten des Projekts** (Exporte, die öffentliche API, der HuggingFace-Datensatz) — [CC BY 4.0](../DATA_LICENSE.md): frei nutzbar und anpassbar, auch kommerziell, mit Namensnennung.
-- **Weitere Datensätze einer Instanz** behalten die Lizenz ihrer Quelle — Wiktionary CC BY-SA 4.0,
-  Open English WordNet CC BY 4.0, Princeton WordNet seine eigene Lizenz — und ein eigener Datensatz
-  die Lizenz, die Sie gewählt haben: [`DATA_LICENSE.md`](../DATA_LICENSE.md#datasets-of-other-sources).
+- **Weitere Datensätze und übernommenes Material** behalten ihre Bedingungen: Wiktionary CC BY-SA 4.0,
+  Open English WordNet CC BY 4.0, Princeton WordNet seine eigene Lizenz, OpenGloss CC BY 4.0
+  mit zusätzlichen WordNet-3.0-Bedingungen bei markierten Wörtern. Die Beitragslizenz Ihres
+  Datensatzes ersetzt keine geerbten Wortlizenzen:
+  [`DATA_LICENSE.md`](../DATA_LICENSE.md#datasets-of-other-sources).
 
 > [!IMPORTANT]
-> Die Daten des Projekts sind größtenteils LLM-generiert und nicht von Menschen geprüft — lesen
-> Sie [`data.md`](data.md), bevor Sie sich darauf verlassen. Die Datensätze öffentlicher Quellen
-> sind, was Menschen geschrieben haben, unter den Bedingungen ihrer Quelle.
+> Der Projektdatensatz und OpenGloss enthalten von Sprachmodellen erzeugten Text.
+> Wiktionary und die WordNets sind von Menschen verfasste Quellen. Jeder Datensatz hat eigene
+> Hinweise und Grenzen; lesen Sie [`data.md`](data.md), bevor Sie sich auf die Daten verlassen.

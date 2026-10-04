@@ -71,6 +71,12 @@ removes the rows without them that the builds before it wrote. `part_of_speech` 
 type lives in `public` and is shared by every schema, a column of it would tie a dataset
 migration to a shared one.
 
+Sources and contribution licenses follow the same split. `AddDatasetOrigins` and
+`AddDatasetTermsUpdatedAt` change the shared registry; `AddWordOrigins`, `NormalizeWordOrigins`
+and `AddChangeContribution` run in every dictionary schema. They preserve known terms without
+inventing earlier sources or edits. A new converter such as OpenGloss needs no separate schema
+layout: installation creates the ordinary dictionary tables through the same migration list.
+
 Reverting `AddDatasets` (`migration:revert` while it is the newest shared migration) takes the
 registry away and leaves the journal of the dataset migrations of `public` with the rows of the
 migrations that ran since: what they built in `public` is still there, and running the

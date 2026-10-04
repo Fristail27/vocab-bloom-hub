@@ -57,7 +57,7 @@ export default {
     // the start page's own title: the words a person searches for, not the bare brand (issue #480)
     home_title: 'Vocab Bloom Hub — a self-hosted English dictionary with a public API',
     description:
-      'An open-source dictionary platform: a self-hosted English dictionary with a public read-only API, SDKs for Node.js and Python, an admin UI and several datasets — the project’s own, the English Wiktionary, WordNet and your own.',
+      'An open-source dictionary platform: a self-hosted English dictionary with a public read-only API, SDKs for Node.js and Python, an admin UI and several datasets — the project’s own, the English Wiktionary, WordNet, OpenGloss and your own.',
   },
   nav: {
     docs: 'Docs',
@@ -71,7 +71,7 @@ export default {
   home: {
     hero_title: 'A dictionary you can run next to your app',
     hero_text:
-      'Vocab Bloom Hub is a self-hosted English dictionary — 300 000 entries with meanings, examples, inflected forms and translations into Russian, Spanish, French, German, Portuguese, Chinese and Arabic — behind a public read-only API, with SDKs, an admin UI and a published dataset. Next to it, the English Wiktionary, WordNet and dictionaries of your own, each under its own license. One command to install, MIT for the code, CC BY 4.0 for the project’s data.',
+      'Vocab Bloom Hub is a self-hosted English dictionary — 300 000 entries with meanings, examples, inflected forms and translations into Russian, Spanish, French, German, Portuguese, Chinese and Arabic — behind a public read-only API, with SDKs, an admin UI and a published dataset. Next to it, the English Wiktionary, WordNet, OpenGloss and dictionaries of your own, each under its own license. One command to install, MIT for the code, CC BY 4.0 for the project’s data.',
     cta_getting_started: 'Getting started',
     cta_start: 'Install with Docker',
     cta_api: 'API reference',
@@ -93,7 +93,7 @@ export default {
         'Edit words, meanings, translations, synonyms and antonyms of any dataset in the browser — every change kept in a history readers see — moderate the corrections they send, watch the statistics, install, import and export datasets from their cards.',
       data_title: 'Datasets',
       data_text:
-        'The dictionary of the project is published on HuggingFace under CC BY 4.0 and loads itself into an empty instance. Install the English Wiktionary or WordNet next to it from the files their sources distribute, or create a dataset of your own under a license you choose — each one complete, never mixed, served one at a time and read together by one route.',
+        'The project’s dictionary is published on HuggingFace under CC BY 4.0. Add Wiktionary, WordNet or OpenGloss with server downloads or manual uploads. Create an empty dataset or fork an installed one, set its version and contribution license, and retain word sources and edit history. Each dataset is read separately.',
       ops_title: 'Built for operators',
       ops_text:
         'Health and readiness probes, graceful shutdown, migrations on start, Prometheus metrics, structured JSON logs with a request id — the things a service needs to be run by someone else.',
@@ -108,7 +108,7 @@ export default {
     sdk_python: 'Python',
     data_title: 'Data and license',
     data_text:
-      'The code is MIT. The dictionary data of the project — served by the API, exported as datasets, published on HuggingFace — is CC BY 4.0: free to use and adapt, commercially too, with attribution. It is largely LLM-generated and not verified by humans; read what that means before relying on it. A dataset of another source keeps the license of that source — Wiktionary is share-alike, the WordNets want their notice on every copy — and the instance shows the terms of the dataset it serves; read them before you build on it.',
+      'The code is MIT. The dictionary data of the project — served by the API, exported as datasets, published on HuggingFace — is CC BY 4.0: free to use and adapt, commercially too, with attribution. It is largely LLM-generated and not verified by humans; read what that means before relying on it. A dataset of another source keeps the license of that source — Wiktionary is share-alike, the WordNets want their notice on every copy — and the instance shows the terms of the dataset it serves; read them before you build on it. OpenGloss also contains generated text: CC BY 4.0 applies, with additional WordNet 3.0 terms on marked words. A word can retain multiple source and contribution licenses; copying or forking does not replace them.',
     data_link: 'About the data',
     license_link: 'Data license',
   },

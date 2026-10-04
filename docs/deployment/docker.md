@@ -63,6 +63,16 @@ Everything the containers need comes from `.env` ([`../environment.md`](../envir
 > Another file:
 > `ENV_FILE=/etc/vocab-bloom-hub/.env docker compose --env-file /etc/vocab-bloom-hub/.env up -d`.
 
+## Additional dictionaries
+
+On PostgreSQL, install Wiktionary, either WordNet or OpenGloss from its card on the datasets
+page. **Download on the server** needs outgoing access from the server container to the
+catalog URLs (and their download redirects). Manual upload works without that access.
+OpenGloss downloads six files totalling about 1.32 GB; allow temporary space for conversion
+as well as the final database. These source downloads use the container's temporary directory,
+not the read-only `./imports` mount. `DICTIONARY_AUTO_IMPORT` still fills only `default`.
+See [datasets](../datasets.md#installing-a-dataset).
+
 ## What is in `docker-compose.yml`
 
 | Service    | Image                                                        | Notes                                                                                                                                                               |

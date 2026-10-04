@@ -1,14 +1,15 @@
 # Converters: a dataset from a public source
 
 An instance can serve a dictionary that was not generated for this project: the English
-Wiktionary, WordNet. A converter reads what such a source distributes and writes a dataset in the
+Wiktionary, WordNet or OpenGloss. A converter reads what such a source distributes and writes a dataset in the
 project's own format — the JSONL files and `manifest.json` the import reads — so the import, the
 API and the website need to know nothing about the source.
 
-**An admin does not run a converter.** On the datasets page of the admin UI the instruction of a
-dataset says which file to download; the file is attached, and the server converts and imports
-it into the dataset's own schema ([`docs/datasets.md`](../../../../docs/datasets.md),
-`POST /api/en/datasets/{name}/install`). The command line below is the same code without an
+**An admin does not run a converter.** On the datasets page, **Download on the server** fetches
+the catalog's source files (`POST /api/en/datasets/{name}/install/download`, JSON `{}`).
+**Upload files manually** is the fallback (`POST /api/en/datasets/{name}/install`). Both convert
+and import into the dataset's own schema ([`docs/datasets.md`](../../../../docs/datasets.md)).
+The command line below is the same code without an
 instance — for working on a converter, or for making a dataset on another machine:
 
 ```bash
@@ -20,9 +21,11 @@ yarn workspace server convert --help
 
 `--version` names the version of the dataset; without it the version is the one the file says of
 itself — the day the extract of Wiktionary was made, the edition of a WordNet — and the day of
-the conversion for a file that does not say. `--limit n` stops after `n` records of the source
+the conversion for a file that does not say. OpenGloss 2.4 is recognized by the hashes of all
+six input files. `--limit n` stops after `n` records of the source
 for a trial run. The input is the file as it is
-downloaded: packed or not, its format is told by its first bytes.
+downloaded: packed or not, its format is told by its first bytes. OpenGloss takes a directory
+with both tables or six explicit paths, as described below.
 
 ## The sources
 
@@ -38,8 +41,9 @@ The terms of a source — `source`, `license`, `license_url`, `attribution`, `at
 (`apps/server/core/constants/dataset_catalog.ts`): the converter writes them into the manifest,
 the instance shows them in `GET /api/v1/meta` and on the word pages, and nobody types them in.
 **Wiktionary is share-alike**: an instance that serves the dataset serves it under CC BY-SA 4.0,
-its exports and the corrections its readers send included. Neither source is mixed with the
-project's own data: a dataset has one source.
+its exports and the corrections its readers send included. Catalog datasets are installed
+separately. A converted word may have multiple origins; its source terms are retained alongside
+the dataset's primary license.
 
 ### OpenGloss
 
@@ -49,6 +53,18 @@ three senses shards under `senses/` and the three lexicon shards under `lexicon/
 
 ```sh
 yarn workspace server convert opengloss --input /path/to/opengloss --out /path/to/converted
+```
+
+```text
+opengloss/
+  senses/
+    train-00000.parquet
+    train-00001.parquet
+    train-00002.parquet
+  lexicon/
+    train-00000.parquet
+    train-00001.parquet
+    train-00002.parquet
 ```
 
 Alternatively, supply the first senses shard as `--input`, the others as
@@ -62,6 +78,11 @@ The [OpenGloss section of the dataset documentation](../../../../docs/datasets.m
 states the licensing checks and what is retained or omitted. Each word has exact
 OpenGloss/WordNet origins, so the writer selects the portable format with sources
 and licenses while keeping the ordinary dataset filenames.
+
+Use a fresh output directory. A structural source error closes pending writes and is rethrown
+without writing a completed manifest. Partial JSONL files may remain in CLI
+output; do not import them as a finished dataset. The installer cleans its temporary directory
+on either outcome. Tests cover aborting while filesystem writes are still in flight.
 
 ## What a converted entry is
 

@@ -146,6 +146,13 @@ A fresh instance has an empty dictionary. Two ways to fill it:
   streams its progress for a few minutes; the proxy must not buffer that stream. One import at
   a time; a second one is refused with `409`.
 
+On PostgreSQL, add Wiktionary, WordNet or OpenGloss from **Managing → Datasets → How to install**.
+The server downloads the catalog files and converts them; manual upload is the fallback.
+OpenGloss needs about 1.32 GB for its six source files, plus temporary conversion and database
+space. The first-start import above fills only the project's dataset. See
+[dataset installation](../datasets.md#installing-a-dataset) and
+[proxy limits](./reverse-proxy.md#what-the-proxy-must-do).
+
 ## Upgrading
 
 Back up the database, pull the new version, `yarn install --immutable`, `yarn build`, restart both
