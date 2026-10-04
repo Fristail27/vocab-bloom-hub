@@ -1,7 +1,7 @@
 # Datasets: several dictionaries in one instance
 
 An instance is born with one dictionary, the project's own dataset. It can hold more — the
-English Wiktionary, Open English WordNet, Princeton WordNet, and
+English Wiktionary, Open English WordNet, Princeton WordNet, OpenGloss, and
 [dictionaries of the owner's own](#datasets-of-the-instances-own) — each one complete and
 separate, **one of them served at a time**. Datasets are never mixed: an answer of the API comes
 from one source and carries the terms of that source.
@@ -21,12 +21,13 @@ from one source and carries the terms of that source.
 
 The datasets page shows every dataset the instance can hold, installed or not:
 
-| Dataset               | Name                | Source in the API   | License                       | Installed from                                   |
-| --------------------- | ------------------- | ------------------- | ----------------------------- | ------------------------------------------------ |
-| The project's own     | `default`           | `vocab-bloom-hub`   | CC BY 4.0                     | its card: HuggingFace or an export               |
-| English Wiktionary    | `wiktionary`        | `wiktionary`        | CC BY-SA 4.0, **share-alike** | `kaikki.org-dictionary-English.jsonl.gz`, 0.5 GB |
-| Open English WordNet  | `wordnet`           | `wordnet`           | CC BY 4.0                     | `english-wordnet-2025.zip`, 10 MB                |
-| Princeton WordNet 3.1 | `wordnet_princeton` | `princeton-wordnet` | WordNet license               | `wn3.1.dict.tar.gz`, 16 MB                       |
+| Dataset               | Name                | Source in the API   | License                                     | Installed from                                   |
+| --------------------- | ------------------- | ------------------- | ------------------------------------------- | ------------------------------------------------ |
+| The project's own     | `default`           | `vocab-bloom-hub`   | CC BY 4.0                                   | its card: HuggingFace or an export               |
+| English Wiktionary    | `wiktionary`        | `wiktionary`        | CC BY-SA 4.0, **share-alike**               | `kaikki.org-dictionary-English.jsonl.gz`, 0.5 GB |
+| Open English WordNet  | `wordnet`           | `wordnet`           | CC BY 4.0                                   | `english-wordnet-2025.zip`, 10 MB                |
+| Princeton WordNet 3.1 | `wordnet_princeton` | `princeton-wordnet` | WordNet license                             | `wn3.1.dict.tar.gz`, 16 MB                       |
+| OpenGloss 2.4         | `opengloss`         | `opengloss`         | CC BY 4.0 + WordNet license on marked words | Six Parquet shards, 1.32 GB                      |
 
 The terms of a dataset — license, attribution line, the notice for readers — are **stated in
 the code** (`apps/server/core/constants/dataset_catalog.ts`) and nowhere typed in: what a license
@@ -37,17 +38,60 @@ source is a converter and an entry of the catalog
 one's own is [a dataset of the instance's own](#datasets-of-the-instances-own), next to the
 catalog.
 
+### OpenGloss 2.4
+
+OpenGloss is a synthetic dictionary by Michael J. Bommarito II. The
+[2.4 dataset card](https://huggingface.co/datasets/mjbommar/opengloss-v2.4-senses#sources-and-licences)
+declares CC BY 4.0, including commercial use with attribution. The 40,643 lexemes
+marked `source: wordnet-3.0` additionally retain the
+[Princeton WordNet 3.0 license](https://github.com/mjbommar/opengloss-generator/blob/main/LICENSES/WordNet.txt).
+Its copyright notice and disclaimer travel in full. The current release does not
+declare Wiktionary as a source.
+
+Choose **Download on the server** to fetch and install **all six files**: three
+`senses` shards and three `lexicon` shards, about 1.32 GB in total. The manual
+upload fallback groups them by table because the two tables use the same filenames;
+attach each to the slot in its table’s section. Download links are pinned to
+verified repository revisions. The converter recognizes version `2.4` by the
+SHA-256 of all six files; otherwise it records the conversion date, as with other
+undated inputs. It rejects mismatched tables, missing shards and unknown source
+markers. Automatic checks for later OpenGloss releases are not available yet.
+
+Every word retains an OpenGloss source snapshot; only marked WordNet-derived words
+get an additional Princeton WordNet 3.0 snapshot. Dataset terms explain the mixed
+origin and generated content. The converter includes canonical definitions,
+neutral/plain examples, supported inflections, synonyms and antonyms of the same
+part of speech. Inflections with unchanged spelling (such as `cut` → `cut`) are
+retained; a shared form belongs to every base word that lists it and inherits
+that base's sources and licenses. Word links preserve the target's capitalization.
+They point to headwords that exist in the imported dictionary, not to individual
+source senses; self-links and an antonym already listed as a synonym are omitted.
+Retired lexemes are omitted. Reading grades are not converted to
+CEFR; no pronunciation or translation is invented. Encyclopedia articles, graded
+rewrites, etymologies, training queries and other relations are outside this import.
+Source lexeme/sense IDs, domain tags, frequency/ranking metadata and example spans
+are not represented in the project's dictionary format either: this is a conversion
+of the supported dictionary content, not a lossless archive of the Parquet tables.
+Malformed definitions, examples and forms containing NUL or other damaged control
+characters are omitted without guessing their spelling; the conversion reports
+them as `malformed`. Other valid senses of the word remain. In the verified 2.4
+files, 77 of the 300,787 definitions contain damaged text, leaving 300,710 meanings.
+The writer also merges repeated definitions, though none occur in these files.
+Generated flags and the recorded model names are preserved. Forks, edits and
+export/import use the same source and license rules as every other dataset.
+
 ## Installing a dataset
 
 On the card of a dataset that is not installed, **How to install** opens its instruction:
 
-1. **Download the file** the instruction names, from the source itself — the direct link and
-   the page of the source are both there. For WordNet a second, optional file adds the
-   pronunciations: `cmudict.dict` of the CMU Pronouncing Dictionary (BSD 2-Clause).
-2. **Attach it as it is** — packed, under whatever name — and press _Start_. Nothing is run by
-   hand: the server checks that the file is what the source distributes, converts it into the
-   project's format and imports the result into a schema of its own. **The active dataset keeps
-   serving meanwhile.**
+1. **Download on the server** is selected by default. Press _Start_ to fetch the files directly
+   from the links in the catalog. For WordNet, select the optional CMU Pronouncing Dictionary
+   (`cmudict.dict`, BSD 2-Clause) to include pronunciations. Progress covers downloading,
+   conversion and import; the dialog reports success only after import completes.
+2. **Upload files manually** is the fallback for a server without internet access or a failed
+   download. Download from the direct links or source pages, attach each file to its slot without
+   unpacking it, then press _Start_. Both modes validate the same files and import the same data
+   into a separate schema. **The active dataset keeps serving meanwhile.**
 3. **Activate it** on its card when the installation is done. Until then nothing a reader sees
    has changed.
 
@@ -62,29 +106,36 @@ Measured on a laptop, Postgres in Docker, the upload included:
 | English Wiktionary, 2026-09-25 | 787 000 | 1 072 000 | 515 000      | 9 min       | 1.4 GB          |
 | Open English WordNet 2025      | 135 000 | 185 000   | —            | 70 s        | 170 MB          |
 | Princeton WordNet 3.1          | 155 000 | 207 000   | —            | 80 s        | 190 MB          |
+| OpenGloss 2.4                  | 194 373 | 300 710   | —            | 3–4 min     | ~700 MB         |
 
 The public reads of the full Wiktionary — a headword, the search with its typo tolerance, a
 page of the list — answer in under 10 ms, as they do on the project's dataset: every dataset
 has the same indexes.
 
-**Updating.** A source publishes newer files; the instance does not fetch them. On the card of
+**Updating.** A source publishes newer files; installation still requires the admin to start it. On the card of
 an installed dataset _Update from a newer file_ opens the same instruction: the entries are
 replaced with the ones of the newer file, the entries you edited are kept, entries that are
 gone from the source are not deleted. When the source has a file that is worth installing, the
-card says so ([below](#versions-and-newer-files-of-a-source)).
+card says so ([below](#versions-and-newer-files-of-a-source)). Server downloads use the catalog’s
+links, which may pin a release; use manual upload for a newer release not yet linked in the catalog.
 
 > [!NOTE]
-> The file goes to the server in one request, up to 2 GiB. A reverse proxy in front of the
-> server has to allow it ([`deployment/reverse-proxy.md`](./deployment/reverse-proxy.md)), and
-> the server needs free space for the upload and for the converted files while it installs —
-> about as much as the dataset takes in the database.
+> Manual uploads send all files in one request (up to 2 GiB per file); server downloads also limit
+> each file to 2 GiB. A reverse proxy must allow the combined request size for manual uploads ([`deployment/reverse-proxy.md`](./deployment/reverse-proxy.md)), and
+> both modes need free space for the source and converted files while installation runs —
+> allow space for both, in addition to the final database.
 
 The same over the API (an admin session in `cookies.txt`,
 [`authentication.md`](./authentication.md)); the progress streams back as NDJSON, the
-conversion first, then the stages of the import:
+download (when selected), conversion, then the stages of the import:
 
 ```bash
 curl -b cookies.txt http://localhost:3010/api/en/datasets                          # the catalog, what is installed
+
+curl -N -b cookies.txt -H 'Content-Type: application/json' -d '{}' \
+  http://localhost:3010/api/en/datasets/opengloss/install/download
+curl -N -b cookies.txt -H 'Content-Type: application/json' -d '{"pronunciations":true}' \
+  http://localhost:3010/api/en/datasets/wordnet/install/download
 
 curl -N -b cookies.txt -F file=@kaikki.org-dictionary-English.jsonl.gz \
   http://localhost:3010/api/en/datasets/wiktionary/install
@@ -95,15 +146,19 @@ curl -b cookies.txt -X POST http://localhost:3010/api/en/datasets/wiktionary/act
 curl -b cookies.txt -X DELETE http://localhost:3010/api/en/datasets/wordnet       # not the active one, not `default`
 ```
 
-| Route                                   | What it does                                                                                                                                               |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /api/en/datasets`                  | `{ supported, active, datasets: [...] }`: the catalog with `installed`, `active`, `version`                                                                |
-| `GET /api/en/datasets/updates`          | `{ enabled, datasets: [{ name, installed, latest, url, comparable, update_available, checked_at }] }`: what the sources of the installed datasets have now |
-| `POST /api/en/datasets/{name}/install`  | installs or updates from the file of the source. `400 dataset_source_invalid` for another file                                                             |
-| `POST /api/en/datasets/{name}/activate` | makes it the one the instance serves                                                                                                                       |
-| `DELETE /api/en/datasets/{name}`        | drops the dataset with its schema. `409 dataset_is_active` / `dataset_is_default`                                                                          |
+| Route                                           | What it does                                                                                                                                                   |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/en/datasets`                          | `{ supported, active, datasets: [...] }`: the catalog with `installed`, `active`, `version`                                                                    |
+| `GET /api/en/datasets/updates`                  | `{ enabled, datasets: [{ name, installed, latest, url, comparable, update_available, checked_at }] }`: what the sources of the installed datasets have now     |
+| `POST /api/en/datasets/{name}/install`          | installs or updates from the file of the source. `400 dataset_source_invalid` for another file                                                                 |
+| `POST /api/en/datasets/{name}/install/download` | downloads the required catalog files and installs or updates them; optional JSON `pronunciations: true` includes CMUdict for WordNet. No custom URLs accepted. |
+| `POST /api/en/datasets/{name}/activate`         | makes it the one the instance serves                                                                                                                           |
+| `DELETE /api/en/datasets/{name}`                | drops the dataset with its schema. `409 dataset_is_active` / `dataset_is_default`                                                                              |
 
-One import or installation runs at a time, and no dataset is activated or deleted while one
+Downloads retry interrupted transfers up to three times and stop an attempt after 60 seconds
+without data. Temporary downloads are deleted on success or failure.
+
+One import or installation runs at a time, including its download, and no dataset is activated or deleted while one
 runs (`409 import_in_progress`, `409 datasets_busy`). On SQLite the routes that change the set
 of datasets answer `409 datasets_not_supported`.
 
@@ -163,8 +218,8 @@ source has now, and a notice when the difference is worth an installation.
 | Princeton WordNet    | nothing: frozen since 2011                                              | never                                                       |
 | the project's own    | nothing here: its import compares it with the published dataset         | in the import of its card                                   |
 
-- **A notice, not an update.** The file is downloaded and attached by the admin, as at the
-  first installation; the link of the notice leads to the page of the source.
+- **A notice, not an update.** The admin starts installation, choosing a server download from
+  the catalog or a manual upload; the link of the notice leads to the page of the source.
 - **Wiktionary is made again every few days**, so a notice for every new extract would never go
   away; the card shows the day of the extract of the source at any time.
 - **Only installed datasets are asked about**, and only by an instance that may: with
@@ -252,8 +307,8 @@ What follows from a dataset of one's own:
 
 - **`title`** names it for readers: `/api/v1/meta` and every group of the read of every dataset
   carry it, and the website names the tab of a word page by it.
-- **Generated entries are allowed.** A dataset of a public source refuses what a language model
-  generated (`generated_not_allowed`); the project's dataset and a dataset of the owner's take it —
+- **Generated entries are allowed.** A human-authored public source refuses what a language model
+  generated (`generated_not_allowed`); OpenGloss, the project's dataset and a dataset of the owner's take it —
   the owner states whatever notice their readers need in the attribution.
 - **An export** names the dataset as its `source` in the manifest, with its license, and writes
   the terms into `LICENSE`; **an import** into the dataset takes data of that source under that
@@ -407,10 +462,10 @@ What the instance does about it:
   the history itself as a file of the dataset
   ([`offline-import.md`](./offline-import.md#dataset-format)). An instance that imports the
   copy shows the same entries as modified.
-- **Nothing generated by a language model goes into a dataset of a public source**: such a
-  dataset holds what people wrote and carries no notice about generated text. The forms offer
+- **Human-authored public sources refuse generated content**: Wiktionary and the WordNet
+  datasets hold what people wrote and carry no notice about generated text. The forms offer
   no _generated_ switch there, the API answers `400 generated_not_allowed`, and an import that
-  carries generated entries is refused.
+  carries generated entries is refused. OpenGloss explicitly declares generated content and accepts it.
 
 **What shows and what does not.** A row of the history _shows_ while the edit it records is a
 part of what the instance serves. It stops showing — `superseded_at` is set, the row stays —

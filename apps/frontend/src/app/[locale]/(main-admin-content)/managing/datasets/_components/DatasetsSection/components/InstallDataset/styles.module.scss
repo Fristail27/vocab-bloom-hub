@@ -20,9 +20,30 @@
 }
 
 .links {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
-  margin-inline-start: 8px;
+  margin-block-start: 4px;
+}
+
+.fileGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--ant-color-border-secondary, #f0f0f0);
+  border-radius: 8px;
+}
+
+.sourceFile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  & + & {
+    padding-block-start: 12px;
+    border-block-start: 1px solid var(--ant-color-border-secondary, #f0f0f0);
+  }
 }
 
 .attribution {

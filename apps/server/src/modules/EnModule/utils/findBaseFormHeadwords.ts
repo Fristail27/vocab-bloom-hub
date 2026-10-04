@@ -44,13 +44,20 @@ export const spellingVariants = (word: string): string[] => {
 /**
  * Maps each given spelling to the base-form headword it names: the spelling
  * itself when the dictionary has it, otherwise the first of its spelling
- * variants that it has. Spellings naming no headword are absent from the map.
+ * variants that it has. Lowercase is a fallback only when no exact-case candidate
+ * exists, so older authored links still resolve without mixing Polish / polish.
+ * Spellings naming no headword are absent from the map.
  */
 export const resolveBaseFormHeadwords = async (
   em: EntityManager,
   words: readonly string[],
 ): Promise<Map<string, string>> => {
-  const candidates = new Map<string, string[]>(words.map((w) => [w, [w, ...spellingVariants(w)]]));
+  const candidates = new Map<string, string[]>(
+    words.map((w) => [
+      w,
+      [...new Set([w, ...spellingVariants(w), w.toLowerCase(), ...spellingVariants(w.toLowerCase())])],
+    ]),
+  );
   const found = await findBaseFormHeadwords(em, [...new Set([...candidates.values()].flat())]);
   const resolved = new Map<string, string>();
   for (const [word, options] of candidates) {

@@ -43,6 +43,8 @@ export type ConvertedFormT = {
 };
 
 export type ConvertedEntryT = {
+  generated?: boolean;
+  generated_by_model?: string;
   /** Exact terms when the source identifies them per word. */
   origins?: import('../../types').OriginT[];
   word: string;
@@ -76,6 +78,8 @@ export type SkipReasonT =
   | 'malformed';
 
 export type ConverterContextT = {
+  /** The version determined from the input, also used in durable source snapshots. */
+  version?: string;
   /** Called for every entry the adapter produced, in the order of the source */
   emit: (entry: ConvertedEntryT) => Promise<void>;
   skip: (reason: SkipReasonT) => void;

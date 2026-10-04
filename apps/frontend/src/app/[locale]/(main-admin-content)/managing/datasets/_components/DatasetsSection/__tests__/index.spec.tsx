@@ -32,6 +32,7 @@ jest.mock('@/core/api/EnApi', () => ({
     getDatasets: jest.fn(),
     getDatasetUpdates: jest.fn(),
     installDataset: jest.fn(),
+    downloadDataset: jest.fn(),
     activateDataset: jest.fn(),
     deleteDataset: jest.fn(),
     createDataset: jest.fn(),
@@ -83,7 +84,10 @@ const renderSection = (list: DatasetsListT) =>
 
 const cardOf = (name: string) => within(screen.getByTestId(`dataset-${name}`));
 
+const manualUpload = () => fireEvent.click(screen.getByRole('radio', { name: 'source_upload' }));
+
 const attach = (field: string, name: string): File => {
+  manualUpload();
   const file = new File(['x'], name);
   const input = screen.getByTestId(`source-${field}`).querySelector('input[type="file"]') as HTMLInputElement;
   fireEvent.change(input, { target: { files: [file] } });
@@ -113,7 +117,9 @@ describe('DatasetsSection', () => {
   it('shows every dataset of the catalog with its terms, installed or not', () => {
     renderSection(listOf());
 
-    expect(DATASET_CATALOG.map((entry) => screen.getByTestId(`dataset-${entry.name}`))).toHaveLength(4);
+    expect(DATASET_CATALOG.map((entry) => screen.getByTestId(`dataset-${entry.name}`))).toHaveLength(
+      DATASET_CATALOG.length,
+    );
     const own = cardOf('default');
     expect(own.getByText('status_active')).toBeInTheDocument();
     expect(own.getByText('about_default')).toBeInTheDocument();
@@ -195,6 +201,7 @@ describe('DatasetsSection', () => {
     fireEvent.click(cardOf('wiktionary').getByRole('button', { name: 'how_to_install' }));
 
     const dialog = within(screen.getByRole('dialog'));
+    manualUpload();
     expect(dialog.getByText(/^install_title /)).toHaveTextContent('English Wiktionary');
     expect(dialog.getByText('kaikki.org-dictionary-English.jsonl.gz')).toBeInTheDocument();
     expect(dialog.getByRole('link', { name: 'link_direct' })).toHaveAttribute(
@@ -232,7 +239,7 @@ describe('DatasetsSection', () => {
     expect(dialog.getByText('cmudict.dict')).toBeInTheDocument();
     expect(dialog.getByRole('link', { name: 'BSD 2-Clause License' })).toBeInTheDocument();
     expect(dialog.queryByTestId('share-alike')).not.toBeInTheDocument();
-    expect(dialog.getByTestId('source-pronunciations')).toHaveTextContent('optional');
+    expect(dialog.getByRole('checkbox', { name: /download_optional/ })).not.toBeChecked();
     // the notices the sources want on every copy can be read before anything is installed
     fireEvent.click(dialog.getByText('terms_full_text'));
     const notices = dialog.getAllByTestId('license-notice');
@@ -274,6 +281,109 @@ describe('DatasetsSection', () => {
     // …and the dialog still reports the installation it was opened for
     expect(done).toHaveTextContent(/^done$/);
     expect(within(screen.getByRole('dialog')).getByText(/^install_title /)).toBeInTheDocument();
+  });
+
+  it('requires all six OpenGloss shards and sends identically named files in distinct table slots', async () => {
+    mockInstall([{ percent: 100, stage: EnDictionaryImportPhasesE.completed, datasetVersion: '2.4' }]);
+    renderSection(listOf());
+    fireEvent.click(cardOf('opengloss').getByRole('button', { name: 'how_to_install' }));
+    const dialog = within(screen.getByRole('dialog'));
+    manualUpload();
+    for (const group of ['senses', 'lexicon']) {
+      const section = within(dialog.getByTestId(`source-group-${group}`));
+      expect(section.getByRole('heading', { name: `group_${group}` })).toBeInTheDocument();
+      expect(section.getAllByRole('link', { name: 'link_direct' })).toHaveLength(3);
+      expect(section.getAllByRole('button', { name: /choose_file/ })).toHaveLength(3);
+    }
+    expect(dialog.getAllByRole('link', { name: 'link_direct' })).toHaveLength(6);
+    expect(dialog.getByText(/OpenGloss contains model-generated/)).toBeInTheDocument();
+    fireEvent.click(dialog.getByText('terms_full_text'));
+    expect(dialog.getByTestId('license-notice')).toHaveTextContent('WordNet 3.0 Copyright 2006');
+    const files: Record<string, File> = {};
+    for (const [index, field] of [
+      'file',
+      'senses_1',
+      'senses_2',
+      'lexicon',
+      'lexicon_1',
+      'lexicon_2',
+    ].entries()) {
+      expect(dialog.getByRole('button', { name: 'start' })).toBeDisabled();
+      files[field] = attach(field, `train-0000${index % 3}.parquet`);
+    }
+    expect(dialog.getByRole('button', { name: 'start' })).toBeEnabled();
+    fireEvent.click(dialog.getByRole('button', { name: 'start' }));
+    await screen.findByTestId('install-done');
+    expect(EnApi.installDataset).toHaveBeenCalledWith(
+      'opengloss',
+      files,
+      expect.any(Function),
+      expect.any(Function),
+    );
+  });
+
+  it('downloads by default, shows progress, and waits for import completion', async () => {
+    let emit: HandleChunkT = () => {};
+    let finish: (result: unknown) => void = () => {};
+    (EnApi.downloadDataset as jest.Mock).mockImplementation((_name, _body, handleChunk) => {
+      emit = handleChunk;
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    });
+    renderSection(listOf());
+    fireEvent.click(cardOf('opengloss').getByRole('button', { name: 'how_to_install' }));
+    const dialog = within(screen.getByRole('dialog'));
+    expect(dialog.getByRole('radio', { name: 'source_download' })).toBeChecked();
+    expect(dialog.queryByTestId('source-file')).not.toBeInTheDocument();
+    expect(dialog.queryByText('warn_proxy')).not.toBeInTheDocument();
+    fireEvent.click(dialog.getByRole('button', { name: 'start' }));
+    expect(EnApi.downloadDataset).toHaveBeenCalledWith(
+      'opengloss',
+      { pronunciations: false },
+      expect.any(Function),
+      expect.any(Function),
+    );
+    expect(dialog.getByTestId('install-progress')).toHaveTextContent('downloading');
+    expect(dialog.getByRole('radio', { name: 'source_upload' })).toBeDisabled();
+    act(() => emit({ percent: 100, stage: EnDictionaryImportPhasesE.downloading_database }));
+    expect(dialog.queryByTestId('install-done')).not.toBeInTheDocument();
+    act(() => emit({ percent: 0, stage: EnDictionaryImportPhasesE.converting_source }));
+    expect(dialog.getByTestId('install-progress')).toHaveTextContent('converting');
+    await act(async () => {
+      emit({ percent: 100, stage: EnDictionaryImportPhasesE.completed });
+      finish({ success: true });
+    });
+    expect(dialog.getByTestId('install-done')).toBeInTheDocument();
+  });
+
+  it('offers manual upload after a failed download and keeps optional downloads explicit', async () => {
+    (EnApi.downloadDataset as jest.Mock).mockResolvedValue({ success: true }); // interrupted stream
+    mockInstall([{ percent: 100, stage: EnDictionaryImportPhasesE.completed }]);
+    renderSection(listOf());
+    fireEvent.click(cardOf('wordnet').getByRole('button', { name: 'how_to_install' }));
+    const dialog = within(screen.getByRole('dialog'));
+    fireEvent.click(dialog.getByRole('checkbox', { name: /download_optional/ }));
+    fireEvent.click(dialog.getByRole('button', { name: 'start' }));
+    expect(await screen.findByTestId('install-error')).toHaveTextContent('download_fallback');
+    expect(EnApi.downloadDataset).toHaveBeenCalledWith(
+      'wordnet',
+      { pronunciations: true },
+      expect.any(Function),
+      expect.any(Function),
+    );
+    manualUpload();
+    expect(dialog.queryByTestId('install-error')).not.toBeInTheDocument();
+    expect(dialog.getByRole('button', { name: 'start' })).toBeDisabled();
+    const file = attach('file', 'release.zip');
+    fireEvent.click(dialog.getByRole('button', { name: 'start' }));
+    await screen.findByTestId('install-done');
+    expect(EnApi.installDataset).toHaveBeenCalledWith(
+      'wordnet',
+      { file },
+      expect.any(Function),
+      expect.any(Function),
+    );
   });
 
   // a click outside the dialog closes it, like its cross and Escape; an installation that runs is not left that way
@@ -589,7 +699,7 @@ describe('DatasetsSection', () => {
     renderSection(listOf({}, false));
 
     expect(screen.getByTestId('datasets-unsupported')).toHaveTextContent('not_supported');
-    expect(screen.getAllByTestId(/^dataset-[a-z_]+$/)).toHaveLength(4);
+    expect(screen.getAllByTestId(/^dataset-[a-z_]+$/)).toHaveLength(DATASET_CATALOG.length);
     expect(screen.queryByRole('button', { name: 'activate' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'delete' })).not.toBeInTheDocument();
 
@@ -597,6 +707,8 @@ describe('DatasetsSection', () => {
     fireEvent.click(cardOf('wiktionary').getByRole('button', { name: 'how_to_install' }));
     const dialog = within(screen.getByRole('dialog'));
     expect(dialog.getByTestId('install-unsupported')).toBeInTheDocument();
+    expect(dialog.getByRole('button', { name: 'start' })).toBeDisabled();
+    manualUpload();
     expect(dialog.getByRole('link', { name: 'link_direct' })).toBeInTheDocument();
     expect(dialog.getByRole('button', { name: /choose_file/ })).toBeDisabled();
     expect(dialog.getByRole('button', { name: 'start' })).toBeDisabled();

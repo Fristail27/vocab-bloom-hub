@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Alert, Button, Collapse, Modal, Progress, Typography, Upload } from 'antd';
+import { Alert, Button, Checkbox, Collapse, Modal, Progress, Radio, Typography, Upload } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { useLocale, useTranslations } from 'next-intl';
 import { DatasetCatalogEntryT, DatasetCatalogFileT } from 'server/core/constants/dataset_catalog';
@@ -17,6 +17,7 @@ const { Paragraph, Text, Title } = Typography;
 enum InstallStatusE {
   idle = 'idle',
   uploading = 'uploading',
+  downloading = 'downloading',
   converting = 'converting',
   importing = 'importing',
   done = 'done',
@@ -56,6 +57,8 @@ export const InstallDataset: React.FC<InstallDatasetP> = ({
   const tImport = useTranslations('import_dictionary');
   const tErr = useTranslations('errors');
 
+  const [mode, setMode] = React.useState<'download' | 'upload'>('download');
+  const [pronunciations, setPronunciations] = React.useState(false);
   const [files, setFiles] = React.useState<Partial<Record<string, File>>>({});
   const [status, setStatus] = React.useState<InstallStatusE>(InstallStatusE.idle);
   const [percent, setPercent] = React.useState(0);
@@ -71,6 +74,8 @@ export const InstallDataset: React.FC<InstallDatasetP> = ({
   React.useEffect(() => {
     setInstalled(installedNow);
     setFiles({});
+    setMode('download');
+    setPronunciations(false);
     setStatus(InstallStatusE.idle);
     setPercent(0);
     setStage('');
@@ -86,9 +91,10 @@ export const InstallDataset: React.FC<InstallDatasetP> = ({
 
   const busy =
     status === InstallStatusE.uploading ||
+    status === InstallStatusE.downloading ||
     status === InstallStatusE.converting ||
     status === InstallStatusE.importing;
-  const canStart = supported && !busy && required.every((file) => !!files[file.field]);
+  const canStart = supported && !busy && (mode === 'download' || required.every((file) => !!files[file.field]));
 
   const fail = (code: string | undefined, statusCode?: number) => {
     setError(
@@ -100,7 +106,7 @@ export const InstallDataset: React.FC<InstallDatasetP> = ({
   };
 
   const start = async () => {
-    setStatus(InstallStatusE.uploading);
+    setStatus(mode === 'download' ? InstallStatusE.downloading : InstallStatusE.uploading);
     setPercent(0);
     setStage('');
     setError('');
@@ -123,6 +129,10 @@ export const InstallDataset: React.FC<InstallDatasetP> = ({
         return;
       }
       setPercent(Number(value.toFixed(1)));
+      if (chunk.stage === EnDictionaryImportPhasesE.downloading_database) {
+        setStatus(InstallStatusE.downloading);
+        return;
+      }
       if (chunk.stage === EnDictionaryImportPhasesE.converting_source) {
         setStatus(InstallStatusE.converting);
         return;
@@ -131,10 +141,14 @@ export const InstallDataset: React.FC<InstallDatasetP> = ({
       if (chunk.stage !== undefined) setStage(tImport(`en_saving_${chunk.stage}`));
     };
 
-    const res = await EnApi.installDataset(entry.name, files, handleChunk, (code) => {
+    const onError = (code: string) => {
       failed = true;
       fail(code);
-    });
+    };
+    const res =
+      mode === 'download'
+        ? await EnApi.downloadDataset(entry.name, { pronunciations }, handleChunk, onError)
+        : await EnApi.installDataset(entry.name, files, handleChunk, onError);
     if ('error' in res) {
       fail(res.message, (res as { statusCode?: number }).statusCode);
     } else if (!failed) {
@@ -164,9 +178,6 @@ export const InstallDataset: React.FC<InstallDatasetP> = ({
     const chosen = files[file.field];
     return (
       <div key={file.field} className={styles.picker} data-testid={`source-${file.field}`}>
-        <Text strong>
-          {file.title} {!file.required && <Text type="secondary">— {t('optional')}</Text>}
-        </Text>
         <Upload
           maxCount={1}
           disabled={!supported || busy}
@@ -210,29 +221,74 @@ export const InstallDataset: React.FC<InstallDatasetP> = ({
           <Alert type="warning" showIcon title={t('not_supported')} data-testid="install-unsupported" />
         )}
 
+        <Radio.Group
+          value={mode}
+          disabled={busy}
+          onChange={(event) => {
+            setMode(event.target.value);
+            setStatus(InstallStatusE.idle);
+            setError('');
+            setSummary(null);
+          }}
+          options={[
+            { value: 'download', label: t('source_download') },
+            { value: 'upload', label: t('source_upload') },
+          ]}
+        />
         <section>
           <Title level={5}>{t('steps_title')}</Title>
           <ol className={styles.steps}>
-            {required.map((file) => (
-              <li key={file.field}>
-                {t('step_download')} {download(file)}
-              </li>
-            ))}
-            {optional.map((file) => (
-              <li key={file.field}>
-                {t(`step_optional_${file.field}`)} {download(file)}
-              </li>
-            ))}
             <li>
-              {t('step_attach')}{' '}
-              {/* what the version of the dataset will be, and why the file goes in as it is (issue #530) */}
-              <Text type="secondary" data-testid="step-version">
-                {t('step_version')}
-              </Text>
+              {mode === 'download'
+                ? t('step_auto_download', {
+                    size: formatMegabytes(
+                      sources
+                        .filter((file) => file.required || pronunciations)
+                        .reduce((sum, file) => sum + file.size_mb, 0),
+                      locale,
+                    ),
+                  })
+                : t('step_attach')}
             </li>
             <li>{t(installed ? 'step_wait_update' : 'step_wait', { minutes: entry.size.minutes })}</li>
             <li>{t('step_activate')}</li>
           </ol>
+          <Text type="secondary" data-testid="step-version">
+            {t('step_version')}
+          </Text>
+        </section>
+
+        <section>
+          <Title level={5}>{t('files_title')}</Title>
+          {[...new Set(sources.map((file) => file.group))].map((group) => (
+            <div
+              key={group ?? 'source'}
+              className={styles.fileGroup}
+              data-testid={`source-group-${group ?? 'source'}`}
+            >
+              {group && <Title level={5}>{t(`group_${group}`)}</Title>}
+              {sources
+                .filter((file) => file.group === group)
+                .map((file) => (
+                  <div key={file.field} className={styles.sourceFile}>
+                    {!group && <Text strong>{file.title}</Text>}
+                    {!file.required && <Text type="secondary">{t(`step_optional_${file.field}`)}</Text>}
+                    <div>{download(file)}</div>
+                    {mode === 'upload'
+                      ? picker(file)
+                      : !file.required && (
+                          <Checkbox
+                            checked={pronunciations}
+                            disabled={!supported || busy}
+                            onChange={(event) => setPronunciations(event.target.checked)}
+                          >
+                            {t('download_optional', { title: file.title })}
+                          </Checkbox>
+                        )}
+                  </div>
+                ))}
+            </div>
+          ))}
         </section>
 
         <section>
@@ -250,6 +306,7 @@ export const InstallDataset: React.FC<InstallDatasetP> = ({
               {entry.attribution}
             </Text>
           </Paragraph>
+          {entry.notice && <Alert type="info" showIcon title={entry.notice} />}
           {entry.share_alike && (
             <Alert type="warning" showIcon title={t('terms_share_alike')} data-testid="share-alike" />
           )}
@@ -292,37 +349,43 @@ export const InstallDataset: React.FC<InstallDatasetP> = ({
             <li>{t('warn_content')}</li>
             {installed && <li>{t('warn_update')}</li>}
             <li>{t('warn_disk', { size: formatMegabytes(entry.size.database_mb, locale) })}</li>
-            <li>{t('warn_proxy')}</li>
+            {mode === 'upload' && <li>{t('warn_proxy')}</li>}
           </ul>
         </section>
 
-        <section className={styles.upload}>
-          <Title level={5}>{t('files_title')}</Title>
-          {sources.map(picker)}
-
-          {busy && (
-            <div className={styles.progress} data-testid="install-progress">
-              <Progress percent={percent} status="active" />
-              <Text italic>
-                {status === InstallStatusE.uploading && t('uploading')}
-                {status === InstallStatusE.converting && t('converting')}
-                {status === InstallStatusE.importing && stage}
-              </Text>
-            </div>
-          )}
-          {status === InstallStatusE.done && (
-            <Alert
-              type="success"
-              showIcon
-              title={t(installed ? 'done_update' : 'done')}
-              description={summary ? t('done_summary', summary) : undefined}
-              data-testid="install-done"
-            />
-          )}
-          {status === InstallStatusE.error && (
-            <Alert type="error" showIcon title={error} data-testid="install-error" />
-          )}
-        </section>
+        {status !== InstallStatusE.idle && (
+          <section className={styles.upload}>
+            {busy && (
+              <div className={styles.progress} data-testid="install-progress">
+                <Progress percent={percent} status="active" />
+                <Text italic>
+                  {status === InstallStatusE.uploading && t('uploading')}
+                  {status === InstallStatusE.downloading && t('downloading')}
+                  {status === InstallStatusE.converting && t('converting')}
+                  {status === InstallStatusE.importing && stage}
+                </Text>
+              </div>
+            )}
+            {status === InstallStatusE.done && (
+              <Alert
+                type="success"
+                showIcon
+                title={t(installed ? 'done_update' : 'done')}
+                description={summary ? t('done_summary', summary) : undefined}
+                data-testid="install-done"
+              />
+            )}
+            {status === InstallStatusE.error && (
+              <Alert
+                type="error"
+                showIcon
+                title={error}
+                description={mode === 'download' ? t('download_fallback') : undefined}
+                data-testid="install-error"
+              />
+            )}
+          </section>
+        )}
       </div>
     </Modal>
   );

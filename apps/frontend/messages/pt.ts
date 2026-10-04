@@ -380,6 +380,8 @@ export default {
       'O conjunto de dados do projeto: entradas geradas por modelos de linguagem, com níveis CEFR e traduções para sete idiomas. Toda instância começa com ele; é carregado e atualizado na página de importação.',
     about_wiktionary:
       'O Wikcionário em inglês, escrito por sua comunidade: o maior dos conjuntos de dados, com pronúncia, formas flexionadas, sinônimos e traduções como palavras isoladas.',
+    about_opengloss:
+      'Dicionário sintético de inglês com definições, exemplos e formas das palavras. CC BY 4.0; palavras derivadas do Princeton WordNet também mantêm sua licença. São necessários os três arquivos senses e os três arquivos lexicon da versão 2.4.',
     about_wordnet:
       'Open English WordNet, a edição do WordNet mantida abertamente e publicada todo ano: acepções agrupadas em conjuntos de sinônimos, com definições e exemplos. Sem traduções.',
     about_wordnet_princeton:
@@ -394,6 +396,15 @@ export default {
     feature_registers: 'Registros',
     install_title: 'Instalar: {title}',
     update_title: 'Atualizar: {title}',
+    source_download: 'Baixar no servidor',
+    source_upload: 'Enviar arquivos manualmente',
+    step_auto_download:
+      'Clique em «Iniciar»: o servidor baixará os arquivos de origem (cerca de {size}) e os instalará. Não é necessário baixá-los no seu computador.',
+    group_senses: 'Significados (senses)',
+    group_lexicon: 'Léxico (lexicon)',
+    download_optional: 'Baixar também {title}',
+    downloading: 'Baixando arquivos de origem…',
+    download_fallback: 'Tente novamente ou mude para o envio manual e anexe os arquivos dos links acima.',
     steps_title: 'O que fazer',
     step_download: 'Baixe o arquivo da fonte:',
     about_size: 'cerca de {size}',

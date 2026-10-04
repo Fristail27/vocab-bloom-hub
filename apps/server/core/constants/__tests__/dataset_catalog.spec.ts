@@ -8,6 +8,7 @@ import {
   findCatalogEntry,
   findCatalogEntryOfAdapter,
   isPublicSourceDataset,
+  isHumanAuthoredDataset,
   isReservedDatasetName,
   licenseFileOf,
   licenseFileOfOwn,
@@ -81,8 +82,11 @@ describe('the catalog of datasets', () => {
       'wiktionary',
     ]);
     expect(findCatalogEntry('wiktionary')?.license.spdx).toBe('CC-BY-SA-4.0');
-    // only the data of the project is generated: no other dataset carries its notice
-    expect(DATASET_CATALOG.filter((entry) => entry.notice).map((entry) => entry.name)).toEqual(['default']);
+    // Generated sources must carry their notice.
+    expect(DATASET_CATALOG.filter((entry) => entry.notice).map((entry) => entry.name)).toEqual([
+      'default',
+      'opengloss',
+    ]);
   });
 
   // issue #531: what a license wants on every copy is kept in full
@@ -92,6 +96,7 @@ describe('the catalog of datasets', () => {
       ['wiktionary', 0],
       ['wordnet', 2],
       ['wordnet_princeton', 2],
+      ['opengloss', 1],
     ]);
     const princeton = noticesText(findCatalogEntry('wordnet_princeton')!);
     expect(princeton).toContain('WordNet 3.1 Copyright 2011 by Princeton University.  All rights reserved.');
@@ -124,7 +129,10 @@ describe('the catalog of datasets', () => {
     expect(isReservedDatasetName('my_words')).toBe(false);
   });
 
-  it('refuses generated data in the datasets of public sources only', () => {
+  it('distinguishes external sources from their generated-content policy', () => {
+    expect(isHumanAuthoredDataset({ name: 'opengloss' })).toBe(false);
+    expect(isHumanAuthoredDataset({ name: 'wiktionary' })).toBe(true);
+    expect(isHumanAuthoredDataset({ name: 'wiktionary', own: true })).toBe(false);
     expect(isPublicSourceDataset({ name: 'default' })).toBe(false);
     expect(isPublicSourceDataset({ name: 'my_words', own: true })).toBe(false);
     expect(converted.every((entry) => isPublicSourceDataset({ name: entry.name }))).toBe(true);
@@ -172,7 +180,12 @@ describe('the catalog of datasets', () => {
   });
 
   it('tells where to download every file of a source, the required one first', () => {
-    expect(converted.map((entry) => entry.name)).toEqual(['wiktionary', 'wordnet', 'wordnet_princeton']);
+    expect(converted.map((entry) => entry.name)).toEqual([
+      'wiktionary',
+      'wordnet',
+      'wordnet_princeton',
+      'opengloss',
+    ]);
     for (const entry of converted) {
       const [first, ...others] = entry.install.files;
       expect(first).toEqual(expect.objectContaining({ field: 'file', required: true }));
@@ -182,7 +195,7 @@ describe('the catalog of datasets', () => {
         expect(file.url.endsWith(file.file_name)).toBe(true);
         expect(file.size_mb).toBeGreaterThan(0);
       }
-      expect(others.every((file) => !file.required && file.license !== undefined)).toBe(true);
+      expect(others.every((file) => file.required || file.license !== undefined)).toBe(true);
       const fields = entry.install.files.map((file) => file.field);
       expect(new Set(fields).size).toBe(fields.length);
     }

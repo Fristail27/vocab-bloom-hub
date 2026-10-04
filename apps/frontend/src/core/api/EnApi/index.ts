@@ -54,6 +54,7 @@ import {
   GetWordByIdResT,
   GetDatasetManifestResT,
   CreateDatasetReqT,
+  DownloadDatasetReqT,
   DatasetResT,
   UpdateDatasetReqT,
   DeleteDatasetResT,
@@ -442,6 +443,22 @@ export class EnApi extends AbstractBaseApi {
       return reader;
     }
 
+    return this.readNdjsonStream(reader, handleChunk, onError);
+  }
+
+  /** Download the catalog files directly on the server and install them in the same run. */
+  static async downloadDataset(
+    name: string,
+    body: DownloadDatasetReqT,
+    handleChunk: (ch: ImportDictionaryChunkT) => void,
+    onError: (err: string) => void,
+  ): Promise<{ success: boolean } | ErrorResT> {
+    const reader = await AbstractBaseApi.stream(
+      `${this.baseURL}/en/datasets/${encodeURIComponent(name)}/install/download`,
+      // The stream wrapper serializes JSON, as it does for importDictionary.
+      { method: 'POST', body: body as BodyInit },
+    );
+    if ('error' in reader) return reader;
     return this.readNdjsonStream(reader, handleChunk, onError);
   }
 

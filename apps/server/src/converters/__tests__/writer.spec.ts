@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import fs from 'node:fs';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -226,7 +227,62 @@ describe('convert', () => {
   });
 
   afterEach(async () => {
+    jest.restoreAllMocks();
     await rm(outDir, { recursive: true, force: true });
+  });
+
+  it('aborts pending file writes without masking the source error or publishing a manifest', async () => {
+    const sourceError = new Error('A later source record is invalid');
+    const streams: fs.WriteStream[] = [];
+    const releaseWrites: Array<() => void> = [];
+    let writesStarted!: () => void;
+    const pendingWrites = new Promise<void>((resolve) => {
+      writesStarted = resolve;
+    });
+    const createWriteStream = fs.createWriteStream;
+    jest.spyOn(fs, 'createWriteStream').mockImplementation((file, options) => {
+      const stream = createWriteStream(file, {
+        ...(typeof options === 'object' ? options : {}),
+        fs: {
+          open: fs.open,
+          close: fs.close,
+          write(
+            fd: number,
+            buffer: Buffer,
+            offset: number,
+            length: number,
+            position: number | null,
+            callback: (error: NodeJS.ErrnoException | null, written: number, buffer: Buffer) => void,
+          ) {
+            releaseWrites.push(() => fs.write(fd, buffer, offset, length, position, callback));
+            if (releaseWrites.length === 2) writesStarted();
+          },
+        },
+      });
+      streams.push(stream);
+      return stream;
+    });
+    const source: SourceAdapterT = {
+      name: 'fixture',
+      description: 'a malformed fixture',
+      provenance: () => PROVENANCE,
+      versionOf: async () => null,
+      convert: async (_input, _options, context) => {
+        await context.emit(entry('lamp', EnPartOfSpeechE.noun));
+        await context.emit(entry('mouse', EnPartOfSpeechE.noun));
+        // Both the words and meanings files have writes in flight. Finish those
+        // only after abort destroys their streams, just as slow I/O can in CI.
+        await pendingWrites;
+        setImmediate(() => releaseWrites.forEach((release) => release()));
+        throw sourceError;
+      },
+    };
+
+    await expect(convert({ source, input: 'anywhere', outDir })).rejects.toBe(sourceError);
+
+    expect(streams).toHaveLength(2);
+    expect(streams.every((stream) => stream.closed)).toBe(true);
+    await expect(readFile(path.join(outDir, 'manifest.json'))).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it('runs an adapter into a dataset, counts what it left out and hands its options on', async () => {

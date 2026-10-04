@@ -7,21 +7,15 @@ export type WordLinkKindT = (typeof WORD_LINK_KINDS)[number];
 // lists are usually 3–10 long
 export const MAX_WORD_LINKS_PER_MEANING = 50;
 
-/**
- * Brings an authored or generated list of linked words (synonyms, antonyms)
- * to the canonical shape stored in the database: trimmed, lowercase, without
- * blanks and duplicates, without the meaning's own headword (generated lists
- * routinely contain it), sorted by UTF-16 code units so the result does not
- * depend on the input order.
- */
+/** Exact headwords from a source or the database; case can distinguish words (Polish / polish). */
 export const normalizeWordLinks = (
   words: readonly string[] | null | undefined,
   headword?: string,
 ): string[] => {
-  const self = headword?.trim().toLowerCase();
+  const self = headword?.trim();
   const unique = new Set<string>();
   for (const raw of words ?? []) {
-    const word = raw.trim().toLowerCase();
+    const word = raw.trim();
     if (!word || word === self) continue;
     unique.add(word);
   }

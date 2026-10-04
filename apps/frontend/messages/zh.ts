@@ -363,6 +363,8 @@ export default {
       '本项目的数据集：由语言模型生成的词条，带有 CEFR 等级和七种语言的翻译。每个实例都从它开始；在导入页面加载和更新。',
     about_wiktionary:
       '英语维基词典，由其社区编写：规模最大的数据集，含发音、词形变化、同义词和以单词形式给出的翻译。',
+    about_opengloss:
+      '包含释义、例句和词形的合成英语词典，采用 CC BY 4.0 许可；源自 Princeton WordNet 的词条还保留其许可。安装需要 2.4 版的全部三个 senses 文件和三个 lexicon 文件。',
     about_wordnet:
       'Open English WordNet，公开维护并每年发布的 WordNet 版本：义项按同义词集分组，附定义和例句。没有翻译。',
     about_wordnet_princeton:
@@ -377,6 +379,14 @@ export default {
     feature_registers: '语域',
     install_title: '安装：{title}',
     update_title: '更新：{title}',
+    source_download: '由服务器下载',
+    source_upload: '手动上传文件',
+    step_auto_download: '点击“开始”：服务器将下载源文件（约 {size}）并安装。无需将文件下载到您的电脑。',
+    group_senses: '词义（senses）',
+    group_lexicon: '词库（lexicon）',
+    download_optional: '同时下载 {title}',
+    downloading: '正在下载源文件…',
+    download_fallback: '请重试，或切换到手动上传并附加从上述链接下载的文件。',
     steps_title: '操作步骤',
     step_download: '下载来源提供的文件：',
     about_size: '约 {size}',

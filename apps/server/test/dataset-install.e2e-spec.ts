@@ -11,9 +11,10 @@ import { AppModule } from '../src/modules/AppModule/app.module';
 import { checkIsPostgres } from '../configuration';
 import { findCatalogEntry } from '../core/constants/dataset_catalog';
 import { filesOf, writeTarGz, writeZip } from '../src/converters/__tests__/pack';
+import { openGlossFixtureRows, writeOpenGlossFixture } from '../src/converters/__tests__/opengloss-fixture';
 import { createJwt } from '../core/utils/auth';
 import { hashLoginString } from '../core/utils/crypto';
-import { DatasetsListT, ImportDictionaryChunkT } from '../types';
+import { DatasetsListT, ImportDictionaryChunkT, EnWordT, EnWordFormsE, ForkProgressT } from '../types';
 
 const E2E_USERNAME = 'e2e-admin';
 const E2E_PASSWORD = 'e2e-password';
@@ -125,6 +126,7 @@ describe('installing a dataset from its source (e2e, issue #527)', () => {
   it('is an admin route', async () => {
     // The guard can answer before a file stream finishes writing (EPIPE).
     // Buffer this small fixture so the test checks the 401 response reliably.
+    await request(server()).post('/api/en/datasets/wordnet/install/download').send({}).expect(401);
     await request(server())
       .post('/api/en/datasets/wordnet/install')
       .attach('file', await readFile(sources.wordnet), 'wordnet.zip')
@@ -141,6 +143,7 @@ describe('installing a dataset from its source (e2e, issue #527)', () => {
 
   if (!supported) {
     it('has no schemas on SQLite: 409 datasets_not_supported, and the upload is not kept', async () => {
+      await request(server()).post('/api/en/datasets/wordnet/install/download').set(auth).send({}).expect(409);
       const res = await install('wordnet', sources.wordnet, sources.cmudict).expect(409);
       expect(res.body.message).toBe('datasets_not_supported');
       expect(await datasetOf('wordnet')).toEqual(expect.objectContaining({ installed: false }));
@@ -340,6 +343,7 @@ describe('installing a dataset from its source (e2e, issue #527)', () => {
       ['wiktionary', true, 'CC-BY-SA-4.0'],
       ['wordnet', true, 'CC-BY-4.0'],
       ['wordnet_princeton', true, 'WordNet'],
+      ['opengloss', false, 'CC-BY-4.0'],
     ]);
 
     await request(server()).post('/api/en/datasets/wordnet/activate').set(auth).expect(200);
@@ -510,5 +514,252 @@ describe('installing a dataset from its source (e2e, issue #527)', () => {
       if (flag === undefined) delete process.env.UPDATE_CHECK;
       else process.env.UPDATE_CHECK = flag;
     }
+  });
+
+  it('installs OpenGloss with exact word licenses, then preserves them through a fork, edits and export/import', async () => {
+    const rows = openGlossFixtureRows();
+    // The same form belongs to two differently licensed bases, one with zero inflection.
+    rows.lexicon[0].morphology[0].plural = 'glimmer';
+    rows.lexicon[2].morphology[0].plural = 'glimmer';
+    const files = await writeOpenGlossFixture(path.join(dir, 'opengloss'), rows);
+    const missing = await install('opengloss', files.file).expect(400);
+    expect(missing.body.message).toBe('dataset_upload_missing');
+    const wrong = request(server()).post('/api/en/datasets/opengloss/install').set(auth);
+    for (const [field, file] of Object.entries(files))
+      wrong.attach(field, field === 'lexicon' ? files.file : file);
+    expect((await wrong.expect(400)).body.message).toBe('dataset_source_invalid');
+    expect((await datasetOf('opengloss'))?.installed).toBe(false);
+
+    const req = request(server()).post('/api/en/datasets/opengloss/install').set(auth);
+    for (const [field, file] of Object.entries(files)) req.attach(field, file);
+    const installed = await req.expect(201);
+    expect(chunksOf(installed.text).at(-1)).toMatchObject({ stage: COMPLETED, percent: 100 });
+    await released();
+    const version = (await datasetOf('opengloss'))?.version;
+    expect(version).not.toBe('2.4'); // authored fixtures cannot impersonate the verified upstream release
+    const read = async (dataset: string, word: string): Promise<EnWordT> => {
+      const search = await request(server())
+        .get('/api/en/search')
+        .query({ dataset, search: word })
+        .set(auth)
+        .expect(200);
+      return (
+        await request(server()).get(`/api/en/${search.body[0].id}`).query({ dataset }).set(auth).expect(200)
+      ).body as EnWordT;
+    };
+    const original = await read('opengloss', 'glimmer');
+    const derived = await read('opengloss', 'Northstar');
+    expect(original.licenses?.map((license) => license.spdx)).toEqual(['CC-BY-4.0']);
+    expect(derived.licenses?.map((license) => license.spdx)).toEqual(['CC-BY-4.0', 'WordNet']);
+    expect(derived.origins?.map((origin) => origin.version)).toEqual([version, '3.0']);
+    expect(derived.generated).toBe(true);
+    expect(derived.generated_by_model).toBe('fixture-model');
+    expect(original.meanings[0].synonyms).toEqual(['Northstar']);
+    const publicOriginal = await request(server()).get('/api/v1/words/glimmer/datasets').expect(200);
+    expect(publicOriginal.text).toContain('"synonyms":["Northstar"]');
+    const readForm = async (dataset: string, base: EnWordT) => {
+      const form = base.forms.find((form) => form.form_of_word === EnWordFormsE.plural_form)!;
+      expect(form.word).toBe('glimmer');
+      const loaded = (
+        await request(server()).get(`/api/en/${form.id}`).query({ dataset }).set(auth).expect(200)
+      ).body as EnWordT;
+      expect(loaded.licenses).toEqual(base.licenses);
+      return loaded;
+    };
+    expect((await readForm('opengloss', original)).origins).toEqual(original.origins);
+    expect((await readForm('opengloss', derived)).origins).toEqual(derived.origins);
+    await request(server())
+      .patch(`/api/en/common-info/${derived.id}`)
+      .query({ dataset: 'opengloss' })
+      .set(auth)
+      .send({ generated: true })
+      .expect(200);
+
+    await request(server())
+      .post('/api/en/datasets/opengloss/fork')
+      .set(auth)
+      .send({
+        name: 'open_fork',
+        title: 'Edited glossary',
+        version: '1',
+        license: { spdx: 'ODbL-1.0' },
+        attribution: 'Test editors',
+      })
+      .expect(202);
+    let state: ForkProgressT | undefined;
+    for (let attempt = 0; attempt < 200; attempt++) {
+      state = (await request(server()).get('/api/en/datasets/open_fork/fork-status').set(auth).expect(200))
+        .body as ForkProgressT;
+      if (state.state !== 'copying') break;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    expect(state?.state).toBe('completed');
+    const forked = await read('open_fork', 'Northstar');
+    const forkedOriginal = await read('open_fork', 'glimmer');
+    expect(forked.licenses?.map((license) => license.spdx)).toEqual(['CC-BY-4.0', 'WordNet']);
+    expect(forked.contributions ?? []).toEqual([]);
+    await request(server())
+      .patch(`/api/en/common-info/${forked.id}`)
+      .query({ dataset: 'open_fork' })
+      .set(auth)
+      .send({ description: 'An edited description of this test vehicle.' })
+      .expect(200);
+    const changed = await read('open_fork', 'Northstar');
+    expect(changed.licenses?.map((license) => license.spdx)).toEqual(['CC-BY-4.0', 'WordNet', 'ODbL-1.0']);
+    const groups = await request(server()).get('/api/v1/words/Northstar/datasets').expect(200);
+    expect(groups.text).toContain('WordNet 3.0 Copyright 2006');
+
+    const exported = await request(server())
+      .get('/api/en/dictionary/export')
+      .query({ dataset: 'open_fork' })
+      .set(auth)
+      .expect(200);
+    const { exportId } = JSON.parse(exported.text.trim().split('\n').at(-1)!) as { exportId: string };
+    const archive = await request(server())
+      .get(`/api/en/dictionary/export/download/${exportId}`)
+      .set(auth)
+      .buffer(true)
+      .parse((res, done) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(chunk));
+        res.on('end', () => done(null, Buffer.concat(chunks)));
+      })
+      .expect(200);
+    await request(server()).delete('/api/en/datasets/open_fork').set(auth).expect(200);
+    await request(server())
+      .post('/api/en/datasets')
+      .set(auth)
+      .send({
+        name: 'open_fork',
+        title: 'Restored glossary',
+        license: { spdx: 'ODbL-1.0' },
+        attribution: 'Test editors',
+      })
+      .expect(201);
+    const restored = await request(server())
+      .post('/api/en/dictionary/import/upload')
+      .set(auth)
+      .field('dataset', 'open_fork')
+      .attach('archive', archive.body as Buffer, 'dataset.zip')
+      .expect(201);
+    expect(chunksOf(restored.text).at(-1)).toMatchObject({ stage: COMPLETED });
+    await released();
+    const word = await read('open_fork', 'Northstar');
+    expect(word.origins).toEqual(changed.origins);
+    expect(word.licenses).toEqual(changed.licenses);
+    const restoredOriginal = await read('open_fork', 'glimmer');
+    expect(restoredOriginal.meanings[0].synonyms).toEqual(['Northstar']);
+    expect(restoredOriginal.origins).toEqual(forkedOriginal.origins);
+    expect((await readForm('open_fork', word)).origins).toEqual(word.origins);
+    expect((await readForm('open_fork', restoredOriginal)).origins).toEqual(restoredOriginal.origins);
+  });
+  describe('downloading source files on the server', () => {
+    const endpoint = (name: string) =>
+      request(server()).post(`/api/en/datasets/${name}/install/download`).set(auth);
+    const noTemporarySources = async () => {
+      const files = await readdir(path.join(os.tmpdir(), 'vocab-bloom-import'));
+      expect(files.filter((file) => file.startsWith('source-download-'))).toEqual([]);
+    };
+
+    it('rejects arbitrary URLs, invalid options and non-convertible datasets before any download', async () => {
+      const fetchMock = jest.spyOn(global, 'fetch');
+      try {
+        await endpoint('opengloss').send({ url: 'http://localhost/private' }).expect(400);
+        await endpoint('opengloss').send({ pronunciations: 'yes' }).expect(400);
+        await endpoint('opengloss').send({ pronunciations: true }).expect(400);
+        await endpoint('default').send({}).expect(400);
+        await endpoint('unknown').send({}).expect(404);
+        expect(fetchMock).not.toHaveBeenCalled();
+      } finally {
+        fetchMock.mockRestore();
+      }
+    });
+
+    it('downloads all six catalog URLs, keeps the import slot until completion, and retains word licenses', async () => {
+      await request(server()).delete('/api/en/datasets/opengloss').set(auth).expect(200);
+      const fixture = await writeOpenGlossFixture(path.join(dir, 'download-opengloss'));
+      const entry = findCatalogEntry('opengloss')!;
+      if (entry.install.kind !== 'convert') throw new Error('Expected a converter');
+      const files = entry.install.files;
+      let releaseDownload: () => void = () => {};
+      let entered: () => void = () => {};
+      const started = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const hold = new Promise<void>((resolve) => {
+        releaseDownload = resolve;
+      });
+      const asked: string[] = [];
+      const fetchMock = jest.spyOn(global, 'fetch').mockImplementation(async (url) => {
+        const file = files.find((file) => file.url === String(url));
+        if (!file) throw new Error(`Unexpected URL: ${String(url)}`);
+        asked.push(String(url));
+        if (asked.length === 1) {
+          entered();
+          await hold;
+        }
+        const buffer = await readFile(fixture[file.field as keyof typeof fixture]);
+        return new Response(new Uint8Array(buffer), { headers: { 'content-length': String(buffer.length) } });
+      });
+      const installing = endpoint('opengloss')
+        .send({})
+        .expect(201)
+        .then((res) => res);
+      try {
+        await started;
+        const status = await request(server()).get('/api/en/dictionary/import/status').set(auth).expect(200);
+        expect(status.body).toMatchObject({ running: true, stage: 4, dataset: 'opengloss' });
+        expect((await endpoint('wordnet').send({}).expect(409)).body.message).toBe('import_in_progress');
+        expect(asked).toHaveLength(1);
+        releaseDownload();
+        const res = await installing;
+        const chunks = chunksOf(res.text);
+        expect(chunks.filter((chunk) => chunk.stage === 4).at(-1)?.percent).toBe(100);
+        expect(chunks.some((chunk) => chunk.stage === CONVERTING)).toBe(true);
+        expect(chunks.at(-1)).toMatchObject({ stage: COMPLETED });
+        expect(asked).toEqual(files.map((file) => file.url));
+        await released();
+        const groups = await request(server()).get('/api/v1/words/Northstar/datasets').expect(200);
+        const group = groups.body.data.find((group: { dataset: string }) => group.dataset === 'opengloss');
+        expect(JSON.stringify(group)).toContain('WordNet 3.0 Copyright 2006');
+        await noTemporarySources();
+      } finally {
+        releaseDownload();
+        await installing;
+        fetchMock.mockRestore();
+      }
+    });
+
+    it('cleans up failed downloads, releases the slot and allows a retry without optional files', async () => {
+      const entry = findCatalogEntry('wordnet')!;
+      if (entry.install.kind !== 'convert') throw new Error('Expected a converter');
+      const files = entry.install.files;
+      const archive = new Uint8Array(await readFile(sources.wordnet));
+      const fetchMock = jest
+        .spyOn(global, 'fetch')
+        .mockImplementation(async (url) =>
+          String(url) === files[0].url ? new Response(archive) : new Response('not found', { status: 404 }),
+        );
+      try {
+        const failed = await endpoint('wordnet').send({ pronunciations: true }).expect(201);
+        expect(chunksOf(failed.text).some((chunk) => chunk.stage === COMPLETED)).toBe(false);
+        await released();
+        await noTemporarySources();
+        const status = await request(server()).get('/api/en/dictionary/import/status').set(auth).expect(200);
+        expect(status.body.error).toContain('404');
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        fetchMock.mockClear();
+        const retried = await endpoint('wordnet').send({}).expect(201);
+        expect(chunksOf(retried.text).at(-1)).toMatchObject({
+          stage: COMPLETED,
+          updated_entries: expect.any(Number),
+        });
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        await released();
+        await noTemporarySources();
+      } finally {
+        fetchMock.mockRestore();
+      }
+    });
   });
 });

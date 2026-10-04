@@ -128,6 +128,12 @@ describe('mergeEntries: the forms', () => {
 });
 
 describe('isRegularForm', () => {
+  it('recognizes unchanged plurals and past forms as irregular', () => {
+    expect(isRegularForm('sheep', 'sheep', EnWordFormsE.plural_form)).toBe(false);
+    expect(isRegularForm('cut', 'cut', EnWordFormsE.past_simple)).toBe(false);
+    expect(isRegularForm('put up', 'put up', EnWordFormsE.past_participle)).toBe(false);
+  });
+
   it('knows the plural and the past that follow the rule', () => {
     expect(isRegularForm('lamp', 'lamps', EnWordFormsE.plural_form)).toBe(true);
     expect(isRegularForm('box', 'boxes', EnWordFormsE.plural_form)).toBe(true);

@@ -6,16 +6,24 @@ import { EnEntry } from '../../entities/en_entry.entity';
 import { EnAreaVariantsE } from '../../../../../types';
 
 describe('normalizeWordLinks (issues #259, #266)', () => {
-  it('trims, lowercases, drops blanks and duplicates and sorts the result', () => {
-    expect(normalizeWordLinks([' Quick ', 'fast', 'QUICK', '', '  ', 'rapid'])).toEqual([
+  it('preserves the case of imported and stored headwords', () => {
+    expect(normalizeWordLinks([' Polish ', 'polish', 'Polish', '', 'Northstar'])).toEqual([
+      'Northstar',
+      'Polish',
+      'polish',
+    ]);
+    expect(normalizeWordLinks(['Polish', 'polish'], 'Polish')).toEqual(['polish']);
+  });
+  it('trims, drops blanks and exact duplicates and sorts the result', () => {
+    expect(normalizeWordLinks([' Quick ', 'fast', 'Quick', '', '  ', 'rapid'])).toEqual([
+      'Quick',
       'fast',
-      'quick',
       'rapid',
     ]);
   });
 
-  it('drops the headword itself regardless of case and spacing', () => {
-    expect(normalizeWordLinks(['Bright', 'clever', 'bright '], ' BRIGHT')).toEqual(['clever']);
+  it('drops the exact headword regardless of spacing', () => {
+    expect(normalizeWordLinks(['Bright', 'clever', 'Bright '], ' Bright')).toEqual(['clever']);
   });
 
   it('returns an empty list for null and undefined', () => {
@@ -24,7 +32,7 @@ describe('normalizeWordLinks (issues #259, #266)', () => {
   });
 
   it('compares by UTF-16 code units, never by locale', () => {
-    expect(normalizeWordLinks(['b', 'B', 'a'])).toEqual(['a', 'b']);
+    expect(normalizeWordLinks(['b', 'B', 'a'])).toEqual(['B', 'a', 'b']);
     expect(normalizeWordLinks(['é', 'z'])).toEqual(['z', 'é']);
   });
 });
@@ -54,6 +62,14 @@ describe('prepareMeaningFromDB (issue #259)', () => {
     expect(res).not.toHaveProperty('updateAt');
     expect(res).not.toHaveProperty('word');
     expect(res.title).toBe('shining');
+  });
+
+  it('retains exact spellings in both kinds of stored links', () => {
+    const res = prepareMeaningFromDB(
+      row([{ word: 'Polish' }, { word: 'polish' }] as EnEntry[], [{ word: 'Northstar' }] as EnEntry[]),
+    );
+    expect(res.synonyms).toEqual(['Polish', 'polish']);
+    expect(res.antonyms).toEqual(['Northstar']);
   });
 
   it('yields an empty list when the relation was not loaded', () => {

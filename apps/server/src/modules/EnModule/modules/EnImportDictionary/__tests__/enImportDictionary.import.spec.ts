@@ -158,13 +158,73 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
     await ds.synchronize(true);
   });
 
+  it.each([false, true])(
+    'keeps shared inflections attached to each base (separate chunks: %s)',
+    async (split) => {
+      const form = { word: 'axes', form_of_word: EnWordFormsE.plural_form };
+      const lines = ['axe', 'axis', 'axes'].map((word) =>
+        mapWordFromSetToDB(
+          makeSetWord(word, {
+            part_of_speech: EnPartOfSpeechE.noun,
+            forms: [form, form],
+          }) as DataSetWordT,
+        ),
+      );
+      const importer = service as unknown as { bulkSaveWords(lines: unknown[]): Promise<void> };
+      const batches = split ? lines.map((line) => [line]) : [lines];
+      // Repeating an import must not duplicate a form of the same base.
+      for (let run = 0; run < 2; run++) for (const batch of batches) await importer.bulkSaveWords(batch);
+      const forms = await ds.getRepository(EnWord).find({
+        where: { form_of_word: EnWordFormsE.plural_form },
+        relations: { word: true, base_form: { word: true } },
+      });
+      expect(forms.map((row) => [row.word.word, row.base_form?.word.word]).sort()).toEqual([
+        ['axes', 'axe'],
+        ['axes', 'axes'],
+        ['axes', 'axis'],
+      ]);
+    },
+  );
+
+  it('resolves exact-case word links before lowercase fallbacks', async () => {
+    mockDatasetFiles({
+      'vocab-bloom-hub-en-words.jsonl': toNdjson([
+        makeSetWord('Polish'),
+        makeSetWord('polish'),
+        makeSetWord('Northstar'),
+        makeSetWord('signal', {
+          meanings: [
+            {
+              title: 'Case-sensitive links',
+              definition: 'An invented test meaning.',
+              sort_order: 1,
+              examples: [],
+              categories: [],
+              translations: [],
+              synonyms: ['Polish', 'polish'],
+              antonyms: ['Northstar'],
+            },
+          ],
+        }),
+      ]),
+    });
+    await service.importDictionary({}, new FakeProgressRes() as unknown as ExpressResponse);
+    const meaning = await ds.getRepository(EnMeaning).findOneOrFail({
+      where: { title: 'Case-sensitive links' },
+      relations: { synonyms: true, antonyms: true },
+    });
+    expect(meaning.synonyms.map((word) => word.word).sort()).toEqual(['Polish', 'polish']);
+    expect(meaning.antonyms.map((word) => word.word)).toEqual(['Northstar']);
+  });
+
   describe('full import flow', () => {
     const makeManifest = () =>
       JSON.stringify({
         version: '0.2.0',
         generatedAt: '2026-08-16T00:00:00Z',
-        // 3 for "to hand over" + 1 for "eventually" (issue #259)
-        synonym_links: 4,
+        // 4 for "to hand over" + 1 for "eventually"; "Give" is resolved
+        // before it can be excluded as a self-link (case may distinguish words).
+        synonym_links: 5,
         // 2 for "to hand over" (issue #266)
         antonym_links: 2,
         files: {
@@ -339,10 +399,10 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
       const linking = chunks.filter((c) => c.stage === EnDictionaryImportPhasesE.linking_synonyms);
       expect(linking.length).toBeGreaterThanOrEqual(2);
       const lines = 3 + 2 + 1 + 1;
-      expect(Math.max(...linking.map((c) => c.percent))).toBeCloseTo(((lines + 4) / (lines + 4 + 2)) * 100);
+      expect(Math.max(...linking.map((c) => c.percent))).toBeCloseTo(((lines + 5) / (lines + 5 + 2)) * 100);
       expect(linking.every((c) => c.percent <= 100)).toBe(true);
       expect(chunks.find((c) => c.stage === EnDictionaryImportPhasesE.linking_antonyms)?.percent).toBeCloseTo(
-        ((lines + 4) / (lines + 4 + 2)) * 100,
+        ((lines + 5) / (lines + 5 + 2)) * 100,
       );
     });
 

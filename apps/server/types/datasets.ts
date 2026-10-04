@@ -1,6 +1,12 @@
 import type { OriginT } from './provenance';
 import { ErrorResT } from './errors';
 
+/** Download the catalog's source files on the server; no caller-supplied URLs. */
+export type DownloadDatasetReqT = {
+  /** Include CMUdict when the catalog offers it as an optional file. */
+  pronunciations?: boolean;
+};
+
 /**
  * A dictionary dataset an instance can hold (issue #527): an entry of the
  * catalog the code ships (core/constants/dataset_catalog.ts) with what the

@@ -382,6 +382,8 @@ export default {
       'Le jeu de données du projet : des entrées générées par des modèles de langage, avec les niveaux CECRL et des traductions en sept langues. Toute instance commence avec lui ; il se charge et se met à jour sur la page d’import.',
     about_wiktionary:
       'Le Wiktionnaire anglais, écrit par sa communauté : le plus grand des jeux de données, avec la prononciation, les formes fléchies, les synonymes et des traductions en mots isolés.',
+    about_opengloss:
+      'Dictionnaire synthétique anglais avec définitions, exemples et formes des mots. CC BY 4.0 ; les mots issus de Princeton WordNet conservent aussi sa licence. Les trois fichiers senses et les trois fichiers lexicon de la version 2.4 sont nécessaires.',
     about_wordnet:
       'Open English WordNet, l’édition de WordNet maintenue ouvertement et publiée chaque année : des sens regroupés en ensembles de synonymes, avec définitions et exemples. Pas de traductions.',
     about_wordnet_princeton:
@@ -396,6 +398,16 @@ export default {
     feature_registers: 'Registres',
     install_title: 'Installer : {title}',
     update_title: 'Mettre à jour : {title}',
+    source_download: 'Télécharger sur le serveur',
+    source_upload: 'Importer les fichiers manuellement',
+    step_auto_download:
+      'Cliquez sur «Démarrer» : le serveur téléchargera les fichiers sources (environ {size}) et les installera. Aucun téléchargement sur votre ordinateur n’est nécessaire.',
+    group_senses: 'Sens (senses)',
+    group_lexicon: 'Lexique (lexicon)',
+    download_optional: 'Télécharger aussi {title}',
+    downloading: 'Téléchargement des fichiers sources…',
+    download_fallback:
+      'Réessayez ou passez à l’import manuel et joignez les fichiers disponibles via les liens ci-dessus.',
     steps_title: 'Ce qu’il faut faire',
     step_download: 'Téléchargez le fichier de la source :',
     about_size: 'environ {size}',

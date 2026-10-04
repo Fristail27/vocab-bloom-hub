@@ -2,6 +2,7 @@
 /// <reference types="multer" />
 import {
   BadRequestException,
+  Body,
   Controller,
   Param,
   Post,
@@ -15,13 +16,20 @@ import { ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import type { Response } from 'express';
-import { MAX_SOURCE_UPLOAD_BYTES } from '../../../../../core/constants/dataset_catalog';
+import { DATASET_CATALOG, MAX_SOURCE_UPLOAD_BYTES } from '../../../../../core/constants/dataset_catalog';
 import { ErrorCodes } from '../../../../../core/constants/error_codes';
 import { AdminGuard } from '../../../AuthModule/guards/admin.guard';
 import { EnDatasetInstallService, SourceUploadT } from './enDatasetInstall.service';
+import { DownloadDatasetDTO } from './downloadDataset.dto';
 
 const UPLOAD_TMP_DIR = path.join(os.tmpdir(), 'vocab-bloom-import', 'sources');
-const FIELDS = ['file', 'pronunciations'] as const;
+const FIELDS = [
+  ...new Set(
+    DATASET_CATALOG.flatMap((entry) =>
+      entry.install.kind === 'convert' ? entry.install.files.map((file) => file.field) : [],
+    ),
+  ),
+];
 
 // Where multer put an upload is a part of the request: it is read, unpacked
 // and deleted only when it lies in the folder the uploads go to
@@ -37,7 +45,7 @@ const uploadOf = (files: Express.Multer.File[] | undefined): SourceUploadT | und
 
 /**
  * A dataset of the catalog installed from the file of its source (issue
- * #527): `file` is what the catalog tells the admin to download,
+ * #527): download the catalog files directly, or upload them. `file` is the main source file,
  * `pronunciations` the CMUdict file a WordNet dataset may take. The progress
  * streams back as NDJSON like the one of an import: the conversion first,
  * then the stages of the import.
@@ -46,6 +54,16 @@ const uploadOf = (files: Express.Multer.File[] | undefined): SourceUploadT | und
 @Controller('/api/en/datasets')
 export class EnDatasetInstallController {
   constructor(private readonly installService: EnDatasetInstallService) {}
+
+  @UseGuards(AdminGuard)
+  @Post(':name/install/download')
+  async download(
+    @Param('name') name: string,
+    @Body() body: DownloadDatasetDTO,
+    @Res() res: Response,
+  ): Promise<void> {
+    return this.installService.download(name, body, res);
+  }
 
   @UseGuards(AdminGuard)
   @Post(':name/install')
@@ -70,7 +88,7 @@ export class EnDatasetInstallController {
   ): Promise<void> {
     return this.installService.install(
       name,
-      { file: uploadOf(files?.file), pronunciations: uploadOf(files?.pronunciations) },
+      Object.fromEntries(FIELDS.map((field) => [field, uploadOf(files?.[field])])),
       res,
     );
   }

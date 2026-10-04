@@ -26,11 +26,12 @@ downloaded: packed or not, its format is told by its first bytes.
 
 ## The sources
 
-| Adapter      | Dataset of the catalog         | What it reads                                                                                                                                            | License of the data        | What it has                                                                                     |
-| ------------ | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------- |
-| `wiktionary` | `wiktionary`                   | `kaikki.org-dictionary-English.jsonl.gz` from <https://kaikki.org/dictionary/English/> (0.5 GB; 3.3 GB unpacked)                                         | CC BY-SA 4.0               | definitions, examples, IPA, forms, synonyms and antonyms, translations into the seven languages |
-| `wordnet`    | `wordnet`, `wordnet_princeton` | `english-wordnet-<year>.zip` of <https://github.com/globalwordnet/english-wordnet/releases>; `wn3.1.dict.tar.gz` of Princeton with `--edition princeton` | CC BY 4.0; WordNet license | definitions, examples, synonyms and antonyms, irregular plurals and degrees; no translations    |
-| `--cmudict`  | an option of `wordnet`         | `cmudict.dict` from <https://github.com/cmusphinx/cmudict>                                                                                               | BSD 2-Clause               | pronunciations of American English, turned from ARPAbet into IPA                                |
+| Adapter      | Dataset of the catalog         | What it reads                                                                                                                                            | License of the data                                 | What it has                                                                                     |
+| ------------ | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `wiktionary` | `wiktionary`                   | `kaikki.org-dictionary-English.jsonl.gz` from <https://kaikki.org/dictionary/English/> (0.5 GB; 3.3 GB unpacked)                                         | CC BY-SA 4.0                                        | definitions, examples, IPA, forms, synonyms and antonyms, translations into the seven languages |
+| `wordnet`    | `wordnet`, `wordnet_princeton` | `english-wordnet-<year>.zip` of <https://github.com/globalwordnet/english-wordnet/releases>; `wn3.1.dict.tar.gz` of Princeton with `--edition princeton` | CC BY 4.0; WordNet license                          | definitions, examples, synonyms and antonyms, irregular plurals and degrees; no translations    |
+| `opengloss`  | `opengloss`                    | Six Parquet shards (senses + lexicon), linked in the catalog                                                                                             | CC BY 4.0; additional WordNet terms on marked words | definitions, neutral/plain examples, forms, synonyms and antonyms                               |
+| `--cmudict`  | an option of `wordnet`         | `cmudict.dict` from <https://github.com/cmusphinx/cmudict>                                                                                               | BSD 2-Clause                                        | pronunciations of American English, turned from ARPAbet into IPA                                |
 
 The terms of a source — `source`, `license`, `license_url`, `attribution`, `attribution_url`,
 `notice` — are stated once, in the catalog of datasets
@@ -39,6 +40,28 @@ the instance shows them in `GET /api/v1/meta` and on the word pages, and nobody 
 **Wiktionary is share-alike**: an instance that serves the dataset serves it under CC BY-SA 4.0,
 its exports and the corrections its readers send included. Neither source is mixed with the
 project's own data: a dataset has one source.
+
+### OpenGloss
+
+Download the six pinned Parquet shards linked in the dataset catalog. Keep the
+three senses shards under `senses/` and the three lexicon shards under `lexicon/`
+(the filenames are identical between tables), then run:
+
+```sh
+yarn workspace server convert opengloss --input /path/to/opengloss --out /path/to/converted
+```
+
+Alternatively, supply the first senses shard as `--input`, the others as
+`--senses_1`, `--senses_2`, `--lexicon`, `--lexicon_1`, `--lexicon_2`.
+The adapter reads projected columns one Parquet row group at a time and joins the
+tables by their ordered `lexeme_id`; it checks each lexeme's complete set of live
+sense IDs across shard boundaries. Version 2.4 is recognized by the pinned file
+hashes, never by a filename. Unknown files receive the conversion date.
+
+The [OpenGloss section of the dataset documentation](../../../../docs/datasets.md#opengloss-24)
+states the licensing checks and what is retained or omitted. Each word has exact
+OpenGloss/WordNet origins, so the writer selects the portable format with sources
+and licenses while keeping the ordinary dataset filenames.
 
 ## What a converted entry is
 
@@ -63,7 +86,7 @@ the sources have. The decisions, in one place:
   forms. Plurals and the degrees of adjectives are unambiguous and are kept.
 - **No register is no register.** A meaning the source does not mark is neither formal nor
   informal; the import keeps an empty `language_register` empty.
-- **No CEFR level.** Neither source has one: `word_level` and `meaning_level` stay empty.
+- **No CEFR level.** These sources have none (OpenGloss reading grades are not CEFR): `word_level` and `meaning_level` stay empty.
 - **A phrasal verb is a verb followed by particles** ("give up", "look forward to"); it names
   its base verb, and the base verb lists it — when the source has an entry for the base verb.
 - **Translations are single words here.** Wiktionary translates a sense with words, not with
@@ -72,7 +95,8 @@ the sources have. The decisions, in one place:
   (Dungan, Hokkien, …) are left out, and a translation must be written in the script of its
   language. The notes the editors write into a translation — "resistir (sin ceder)", "общага f"
   — are taken off; what still carries markup after that is left out. The short translation of an entry is the main words of its meanings.
-- **Nothing is generated.** `generated` is false and `generated_by_model` empty on every line.
+- **Generated content follows the source.** Wiktionary and WordNet produce `generated: false`.
+  OpenGloss declares generated content, preserves model names and carries a notice.
 
 ## Adding a source
 
