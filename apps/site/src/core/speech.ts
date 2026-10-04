@@ -26,3 +26,25 @@ export const pickEnglishVoice = <T extends SpeechVoiceT>(voices: readonly T[]): 
 
   return [...english].sort((a, b) => rank(a) - rank(b))[0];
 };
+
+// Speech synthesis is a single global resource (issue #548): a page can
+// render several pronunciation buttons, but only one utterance plays at a
+// time, and a button must only ever stop the utterance it itself started
+let activeUtterance: SpeechSynthesisUtterance | null = null;
+
+/** Claims the shared speech synthesis for this utterance */
+export const claimUtterance = (utterance: SpeechSynthesisUtterance): void => {
+  activeUtterance = utterance;
+};
+
+/** Drops ownership of the shared speech synthesis, e.g. once it finishes on its own */
+export const releaseUtterance = (utterance: SpeechSynthesisUtterance): void => {
+  if (activeUtterance === utterance) activeUtterance = null;
+};
+
+/** Stops speech and releases ownership, but only if this utterance still owns it */
+export const stopIfOwner = (utterance: SpeechSynthesisUtterance, synth: SpeechSynthesis): void => {
+  if (activeUtterance !== utterance) return;
+  synth.cancel();
+  activeUtterance = null;
+};

@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 
-import { pickEnglishVoice } from '@/core/speech';
+import { claimUtterance, pickEnglishVoice, releaseUtterance, stopIfOwner } from '@/core/speech';
 
 import styles from './styles.module.scss';
 
@@ -23,15 +23,25 @@ export const Pronounce = ({ word, small }: PronounceP) => {
   const t = useTranslations('word');
   const [voice, setVoice] = useState<SpeechSynthesisVoice | null>(null);
   const [speaking, setSpeaking] = useState(false);
+  // Tracks the utterance this instance last started, so its cleanup can stop
+  // only its own speech (issue #548) and late callbacks can skip setState
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    // Strict Mode re-runs this effect after invoking its cleanup once
+    mountedRef.current = true;
     const load = () => setVoice(pickEnglishVoice(window.speechSynthesis.getVoices()));
     load();
     // Chrome populates the voice list asynchronously
     window.speechSynthesis.addEventListener('voiceschanged', load);
 
-    return () => window.speechSynthesis.removeEventListener('voiceschanged', load);
+    return () => {
+      mountedRef.current = false;
+      window.speechSynthesis.removeEventListener('voiceschanged', load);
+      if (utteranceRef.current) stopIfOwner(utteranceRef.current, window.speechSynthesis);
+    };
   }, []);
 
   if (!voice) return null;
@@ -41,10 +51,20 @@ export const Pronounce = ({ word, small }: PronounceP) => {
     utterance.voice = voice;
     utterance.lang = voice.lang;
     utterance.rate = 0.9;
-    utterance.onstart = () => setSpeaking(true);
-    utterance.onend = () => setSpeaking(false);
-    utterance.onerror = () => setSpeaking(false);
+    utterance.onstart = () => {
+      if (mountedRef.current) setSpeaking(true);
+    };
+    utterance.onend = () => {
+      releaseUtterance(utterance);
+      if (mountedRef.current) setSpeaking(false);
+    };
+    utterance.onerror = () => {
+      releaseUtterance(utterance);
+      if (mountedRef.current) setSpeaking(false);
+    };
+    utteranceRef.current = utterance;
     window.speechSynthesis.cancel();
+    claimUtterance(utterance);
     window.speechSynthesis.speak(utterance);
   };
 
