@@ -3,8 +3,8 @@ import { EnEntryTypesE, EnPartOfSpeechE, EnWordFormsE } from '../../../../../typ
 import { EnEntry } from '../../entities/en_entry.entity';
 import { EnWord } from '../../entities/en_word.entity';
 
-/** Everything an article says: what the history of a creation and of a deletion holds (issue #531) */
-export const ARTICLE_RELATIONS: FindOptionsRelations<EnWord> = {
+/** Everything a word says: what the history of a creation and of a deletion holds (issue #531) */
+export const WORD_CHANGE_RELATIONS: FindOptionsRelations<EnWord> = {
   word: true,
   forms: { word: true },
   meanings: { translations: true, synonyms: true, antonyms: true },
@@ -12,8 +12,8 @@ export const ARTICLE_RELATIONS: FindOptionsRelations<EnWord> = {
   base_phrasal: { word: true },
 };
 
-/** The article of a headword and a part of speech: the row of the base word, with everything it says */
-export const findArticle = async (
+/** The word of a headword and a part of speech: the row of the base word, with everything it says */
+export const findWord = async (
   em: EntityManager,
   headword: string,
   partOfSpeech: string,
@@ -28,10 +28,10 @@ export const findArticle = async (
     .andWhere('w.form_of_word = :baseForm', { baseForm: EnWordFormsE.base_form })
     .orderBy('w.id', 'ASC')
     .getRawOne<{ id: number }>();
-  return found ? rows.findOne({ where: { id: found.id }, relations: ARTICLE_RELATIONS }) : null;
+  return found ? rows.findOne({ where: { id: found.id }, relations: WORD_CHANGE_RELATIONS }) : null;
 };
 
-/** The kind of entry an article of the part of speech is */
+/** The kind of entry a word of the part of speech is */
 export const entryTypeOf = (partOfSpeech: string): EnEntryTypesE => {
   if (partOfSpeech === EnPartOfSpeechE.phrase) return EnEntryTypesE.phrase;
   if (partOfSpeech === EnPartOfSpeechE.grammar_pattern) return EnEntryTypesE.grammar_pattern;

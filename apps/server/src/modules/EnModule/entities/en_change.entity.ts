@@ -19,6 +19,15 @@ const TIMESTAMP_COLUMN = checkIsPostgres() ? 'timestamptz' : 'datetime';
 @Entity('en_changes')
 @Index('IDX_EN_CHANGES_HEADWORD', ['headword'])
 export class EnChange {
+  @Column({ type: 'simple-json', nullable: true })
+  contribution!: import('../../../../types/provenance').OriginT | null;
+
+  @Column({ type: 'simple-json', nullable: true })
+  inherited_from!: import('../../../../types/provenance').OriginT | null;
+
+  @Column({ type: 'text', nullable: true })
+  reason!: string | null;
+
   @PrimaryGeneratedColumn({ primaryKeyConstraintName: 'PK_en_changes' })
   id!: number;
 

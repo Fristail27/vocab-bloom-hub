@@ -108,3 +108,22 @@ A source is a converter and an entry of the catalog:
 
 The writer (`writer.ts`) is the only place that knows the dataset files; an adapter never writes
 one.
+
+## Word-specific origins
+
+An adapter may emit `ConvertedEntryT.origins` when the source supplies word-level attribution.
+Each origin contains its own name/version, optional source and word links, attribution,
+mandatory notices, and licenses; see `types/provenance.ts`. Preserve separate contributors and
+versions even when they share a license. Use `scope: word` for known attribution and
+`scope: dataset` only for terms whose affected words are not identified. Do not infer a
+version or claim missing history. Custom/otherwise unlisted licenses require their full text.
+
+The writer preserves these records and combines origins when it merges entries. Once any entry
+has origins it emits the provenance-v1 manifest envelope and the required `dataset-format.json`
+marker, keeping the original JSONL filenames. The importer preserves explicit word origins instead of unioning every dataset
+source into every word. Entries without detail receive the dataset defaults. The catalog's
+primary terms remain the baseline for adapters that emit no origins.
+
+Do not remove the envelope or marker to make a rich export readable by old servers. Receiving
+servers must support the metadata contract, including when downloading from a remote source.
+See [portable compatibility](../../../../docs/offline-import.md#provenance-export-format).

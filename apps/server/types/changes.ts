@@ -56,12 +56,16 @@ export type ChangeRecordT =
   ChangeFormRecordT | ChangeMeaningRecordT | ChangeTranslationRecordT | ChangeShortTranslationRecordT;
 
 export type ChangeT = {
+  /** Immutable terms of the dataset where this edit was made. */
+  contribution?: import('./provenance').OriginT | null;
+  inherited_from?: import('./provenance').OriginT | null;
+  reason?: string | null;
   /** @asType integer */
   id: number;
   created_at: string;
   /** The spelling of the entry; an edit of a form names the entry of its base word */
   headword: string;
-  /** The article that was edited; null when the edit is about every article of the headword */
+  /** The word that was edited; null when the edit is about every word of the headword */
   part_of_speech: string | null;
   entity: ChangeEntityE;
   action: ChangeActionE;
@@ -97,7 +101,7 @@ export type ListChangesQueryT = {
   limit?: number | undefined;
   /** The headword, exactly */
   headword?: string | undefined;
-  /** The article of the headword; the edits about every article of it are listed too */
+  /** The word of the headword; the edits about every word of it are listed too */
   part_of_speech?: string | undefined;
   /** Headword prefix, case-insensitive */
   search?: string | undefined;

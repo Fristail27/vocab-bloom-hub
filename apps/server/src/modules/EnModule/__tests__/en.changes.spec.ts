@@ -217,7 +217,7 @@ describe('the history of edits', () => {
     expect(row.diff!.forms.before).toEqual([expect.objectContaining({ word: 'lamps' })]);
   });
 
-  it('files an edit of a form under the article of its base word, and names the form', async () => {
+  it('files an edit of a form under the word of its base word, and names the form', async () => {
     const word = await imported('mouse');
 
     const added = await words.addWordForm({

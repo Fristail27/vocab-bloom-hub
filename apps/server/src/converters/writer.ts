@@ -1,3 +1,4 @@
+import { portableManifest } from '../modules/EnModule/modules/EnImportDictionary/utils/parseManifest';
 import { createWriteStream, WriteStream } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { LICENSE_FILE_NAME } from '../../core/constants/dataset_catalog';
@@ -20,6 +21,7 @@ import {
 import {
   DATASET_FILE_NAMES,
   MANIFEST_FILE_NAME,
+  DATASET_FORMAT_FILE_NAME,
   translationFileName,
 } from '../modules/EnModule/modules/EnImportDictionary/constants';
 import { mergeEntries, titleOf } from './normalize';
@@ -67,6 +69,7 @@ export class DatasetWriter {
   >();
   private pending = new Map<string, ConvertedEntryT>();
   private pendingWord: string | null = null;
+  private hasOrigins = false;
   private entries = 0;
   private meanings = 0;
   private synonymLinks = 0;
@@ -118,7 +121,9 @@ export class DatasetWriter {
     this.entries += 1;
     const { version } = this.options;
     const description = entry.meanings[0].definition;
+    if (entry.origins) this.hasOrigins = true;
     const shared = {
+      ...(entry.origins && { origins: entry.origins }),
       categories: [...entry.categories].sort(),
       // converted from a source written by people: nothing here is generated
       generated: false,
@@ -249,6 +254,16 @@ export class DatasetWriter {
     );
 
     const manifest: DatasetManifestT = {
+      ...(this.hasOrigins && {
+        provenance_format: 1 as const,
+        provenance: {
+          title: null,
+          notice: this.options.provenance.notice,
+          origins: [],
+          description: null,
+          license_text: this.options.license ?? null,
+        },
+      }),
       version: this.options.version,
       generatedAt: new Date().toISOString(),
       ...this.options.provenance,
@@ -264,9 +279,14 @@ export class DatasetWriter {
     await mkdir(this.options.outDir, { recursive: true });
     await writeFile(
       path.join(this.options.outDir, MANIFEST_FILE_NAME),
-      `${JSON.stringify(manifest, null, 2)}\n`,
+      `${JSON.stringify(this.hasOrigins ? portableManifest(manifest) : manifest, null, 2)}\n`,
       'utf-8',
     );
+    if (this.hasOrigins)
+      await writeFile(
+        path.join(this.options.outDir, DATASET_FORMAT_FILE_NAME),
+        JSON.stringify({ format: 1 }) + '\n',
+      );
     if (this.options.license) {
       await writeFile(path.join(this.options.outDir, LICENSE_FILE_NAME), this.options.license, 'utf-8');
     }

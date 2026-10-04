@@ -1,3 +1,4 @@
+import { licensesOf } from '../../../../core/utils/provenance';
 import { EnWord } from '../entities/en_word.entity';
 import { EnWordT } from '../../../../types';
 import { prepareWordForm } from './prepareWordForm';
@@ -9,6 +10,7 @@ export const prepareWordFromDB = (row: EnWord): EnWordT => {
   return {
     ...other,
     word: row.word.word,
+    licenses: licensesOf([...(row.origins ?? []), ...(row.contributions ?? [])]),
     user_modified: row.word.user_modified ?? false,
     forms: (row.forms || [])?.map(prepareWordForm),
     meanings: (row.meanings || []).map(prepareMeaningFromDB),

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from '@jest/globals';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { AvailableTranslationLanguagesE, EnAreaVariantsE, EnPartOfSpeechE } from '../../../types';
+import { AvailableTranslationLanguagesE, EnAreaVariantsE, EnPartOfSpeechE, OriginT } from '../../../types';
 import { convert, versionOfConversion, versionOfToday } from '../convert';
 import { emptyEntry } from '../normalize';
 import { ConvertedEntryT, ConvertedMeaningT, SourceAdapterT } from '../types';
@@ -57,6 +57,35 @@ describe('DatasetWriter', () => {
 
   afterEach(async () => {
     await rm(outDir, { recursive: true, force: true });
+  });
+
+  it('keeps the original filenames when entries carry sources and licenses', async () => {
+    const origin: OriginT = {
+      id: 'fixture-source',
+      name: 'Fixture source',
+      version: '1',
+      licenses: [{ spdx: 'CC0-1.0', name: 'CC0-1.0', url: PROVENANCE.license_url }],
+      license_relation: 'all',
+      attribution: 'A fixture',
+      notices: [],
+      scope: 'word',
+      method: 'manual',
+      recorded_at: null,
+      inherited: false,
+    };
+    const writer = new DatasetWriter({ outDir, version: '1', provenance: PROVENANCE });
+    await writer.add(entry('lamp', EnPartOfSpeechE.noun, { origins: [origin] }));
+    await writer.close();
+    expect((await lines('vocab-bloom-hub-en-words.jsonl'))[0].origins).toEqual([origin]);
+    const names = await readdir(outDir);
+    expect(names).toContain('dataset-format.json');
+    expect(
+      names.filter((name) => name.endsWith('.jsonl')).every((name) => name.startsWith('vocab-bloom-hub-en-')),
+    ).toBe(true);
+    const manifest = JSON.parse(await readFile(path.join(outDir, 'manifest.json'), 'utf8')) as {
+      files: Record<string, unknown>;
+    };
+    expect(Object.keys(manifest.files)).toContain('vocab-bloom-hub-en-words.jsonl');
   });
 
   it('merges the records of a headword that follow each other and leaves a late one out', async () => {

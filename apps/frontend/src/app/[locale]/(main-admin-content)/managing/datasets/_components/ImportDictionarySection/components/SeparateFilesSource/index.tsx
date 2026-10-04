@@ -16,7 +16,7 @@ const { Text } = Typography;
 
 // the jsonl slots in the order the import processes them; the manifest has its own row
 export const JSONL_SLOTS = (Object.keys(UPLOAD_FILE_FIELDS) as UploadFileFieldT[]).filter(
-  (slot) => slot !== 'manifest',
+  (slot) => slot !== 'manifest' && slot !== 'provenance',
 );
 
 type SeparateFilesSourceP = {
@@ -105,6 +105,13 @@ export const SeparateFilesSource: React.FC<SeparateFilesSourceP> = ({
           disabled={disabled}
         />
       ))}
+      <Slot
+        slot="provenance"
+        file={files.provenance}
+        accept=".json,application/json"
+        onChange={(file) => setSlot('provenance', file)}
+        disabled={disabled}
+      />
       <div className={styles.manifest}>
         <Text strong>{t('file_manifest')}</Text>
         <Radio.Group

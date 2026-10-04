@@ -1,4 +1,5 @@
 import '../../../__tests__/helpers/clearDatabaseUrl';
+import { parseManifest } from '../utils/parseManifest';
 import { WordRowsService } from '../../../word-rows.service';
 
 import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
@@ -326,7 +327,7 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
     const phrasal = readJsonlLines('vocab-bloom-hub-en-phrasal-verbs.jsonl');
     expect(phrasal).toEqual([{ word: 'give', phrasal_variants: ['give up'] }]);
 
-    const manifest = JSON.parse(readFileSync(path.join(runDir, 'manifest.json'), 'utf-8')) as {
+    const manifest = parseManifest(JSON.parse(readFileSync(path.join(runDir, 'manifest.json'), 'utf-8'))) as {
       version: string;
       generatedAt: string;
       files: Record<string, { lines: number }>;
@@ -382,12 +383,15 @@ describe('EnImportDictionaryService NDJSON export (issue #187)', () => {
     expect(Object.keys(lines[0]).sort()).toEqual([
       'action',
       'author',
+      'contribution',
       'created_at',
       'diff',
       'entity',
       'headword',
+      'inherited_from',
       'origin',
       'part_of_speech',
+      'reason',
       'record',
       'superseded_at',
     ]);

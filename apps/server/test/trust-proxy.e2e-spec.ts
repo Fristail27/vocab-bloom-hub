@@ -36,7 +36,7 @@ describe('TRUST_PROXY and the client address (e2e, issue #283)', () => {
     app.getHttpAdapter().getInstance().set('trust proxy', getTrustProxy());
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
     app.useGlobalFilters(new AllExceptionsFilter(app.get(HttpAdapterHost).httpAdapter));
-    await app.init();
+    await app.listen(0, '127.0.0.1');
   };
 
   const remainingFor = async (forwardedFor: string): Promise<number> => {

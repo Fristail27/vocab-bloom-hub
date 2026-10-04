@@ -224,6 +224,10 @@ export type ImportStatusT = {
 // the export writes it into the archive, the import reads it for progress
 // totals and the dataset version
 export type DatasetManifestT = {
+  provenance_format?: 1;
+  /** Logical names mapped to versioned physical filenames by the manifest reader. */
+  file_names?: Record<string, string>;
+  provenance?: import('../../provenance').DatasetProvenanceSnapshotT;
   version: string;
   generatedAt?: string | undefined;
   files: Record<string, { lines: number }>;

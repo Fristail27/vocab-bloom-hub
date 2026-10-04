@@ -1,3 +1,4 @@
+import { acknowledgeSourceEditing } from '../helpers/acknowledge-source';
 import { APIRequestContext, expect, Page, test } from '@playwright/test';
 
 import { API_URL } from '../config';
@@ -179,4 +180,8 @@ test.describe('add-word wizard branches', () => {
     expect(word.part_of_speech).toBe('grammar_pattern');
     expect(word.pattern).toEqual(['no sooner', '__SLOT__', 'than']);
   });
+});
+
+test.beforeEach(async ({ page }) => {
+  await acknowledgeSourceEditing(page);
 });

@@ -4,7 +4,13 @@ import { readdir, readFile, rm, stat } from 'node:fs/promises';
 import * as path from 'node:path';
 import { DatasetManifestT, MANIFEST_PROVENANCE_FIELDS } from '../../../../../../types';
 import { ErrorCodes } from '../../../../../../core/constants/error_codes';
-import { DATASET_KNOWN_FILE_NAMES, MANIFEST_FILE_NAME } from '../constants';
+import {
+  DATASET_FILE_NAMES,
+  DATASET_KNOWN_FILE_NAMES,
+  MANIFEST_FILE_NAME,
+  DATASET_FORMAT_FILE_NAME,
+  LEGACY_PROVENANCE_FILE_NAME,
+} from '../constants';
 import { parseManifest } from '../utils/parseManifest';
 import { AcquiredFileT, DatasetSource } from './types';
 
@@ -71,12 +77,44 @@ export const validateDatasetDir = async (dir: string, logger: Logger): Promise<D
     // manifest names every file, yet only the words file may be copied over
   }
 
+  const markers = files.filter((name) =>
+    [DATASET_FORMAT_FILE_NAME, LEGACY_PROVENANCE_FILE_NAME].includes(name),
+  );
+  if (manifest?.provenance_format === 1) {
+    if (!manifest.provenance || markers.length !== 1) reject('one dataset format marker is required');
+    const marker = (await readFile(path.join(dir, markers[0]), 'utf-8')
+      .then(JSON.parse)
+      .catch(() => null)) as { format?: number } | null;
+    if (marker?.format !== 1) reject('unsupported provenance format');
+  } else if (markers.length) reject('provenance manifest is required');
+
+  const richFiles = jsonlFiles.filter((name) => name.startsWith('provenance-v1.'));
+  if (richFiles.length && !manifest?.file_names) reject('provenance manifest is required');
+  if (manifest?.file_names && jsonlFiles.some((name) => !Object.values(manifest.file_names!).includes(name)))
+    reject('unlisted provenance file');
   const counted: DatasetManifestT['files'] = {};
   for (const name of jsonlFiles) {
-    counted[name] = { lines: await countJsonlLines(path.join(dir, name)) };
+    const logical = name.startsWith('provenance-v1.') ? name.slice('provenance-v1.'.length) : name;
+    if (counted[logical]) reject('mixed legacy and provenance files');
+    counted[logical] = { lines: await countJsonlLines(path.join(dir, name)) };
+  }
+  // Contribution licenses live in the history, not in the word's original
+  // sources. Partial rich exports must retain the history they declare.
+  const historyLines = manifest?.files[DATASET_FILE_NAMES.changes]?.lines;
+  if (
+    manifest?.provenance_format === 1 &&
+    historyLines &&
+    counted[DATASET_FILE_NAMES.changes]?.lines !== historyLines
+  ) {
+    reject('the complete declared provenance history is required');
   }
   return {
     version: manifest?.version ?? '',
+    ...(manifest?.provenance_format && {
+      provenance_format: manifest.provenance_format,
+      provenance: manifest.provenance,
+      file_names: manifest.file_names,
+    }),
     ...(manifest?.generatedAt !== undefined && { generatedAt: manifest.generatedAt }),
     ...(manifest?.synonym_links !== undefined && { synonym_links: manifest.synonym_links }),
     ...(manifest?.antonym_links !== undefined && { antonym_links: manifest.antonym_links }),
@@ -121,7 +159,7 @@ export class DirectoryDatasetSource implements DatasetSource {
   }
 
   async acquireFile(fileName: string): Promise<AcquiredFileT> {
-    const filePath = path.join(this.dir, fileName);
+    const filePath = path.join(this.dir, this.manifest.file_names?.[fileName] ?? fileName);
     const info = await stat(filePath).catch(() => null);
     if (!info?.isFile()) {
       // a file the dataset does not carry (phrases, patterns and phrasal

@@ -9,6 +9,8 @@ export const OWN_DATASET_SOURCE = 'vocab-bloom-hub';
 // a dataset's name is also the tail of its schema name, so it is kept to
 // what an unquoted Postgres identifier takes: lower-case latin, digits, `_`
 export const DATASET_NAME_PATTERN = /^[a-z][a-z0-9_]{1,39}$/;
+/** Maximum length of the registry's version label, including versions chosen by an owner. */
+export const DATASET_VERSION_MAX_LENGTH = 64;
 /** What an import may name as its target: a dataset's name, `default` included */
 export const DATASET_TARGET_PATTERN = /^(default|[a-z][a-z0-9_]{1,39})$/;
 export const DATASET_SCHEMA_PREFIX = 'ds_';

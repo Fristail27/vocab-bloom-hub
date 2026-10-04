@@ -150,6 +150,8 @@ export const fetchDatasetTerms = async (): Promise<DatasetTermsT> => {
       attribution_url: data.attribution_url ?? null,
       notice: data.notice,
       license_text: data.license_text ?? '',
+      origins: data.origins ?? [],
+      description: data.description ?? null,
     };
   } catch {
     return OWN_DATASET_TERMS;

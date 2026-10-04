@@ -1,3 +1,4 @@
+import { getOrAddEntry, entryTypeOf } from '../../utils/changes/words';
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ChangeActionE, ChangeEntityE } from '../../../../../types';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -11,7 +12,7 @@ import { EnWord } from '../../entities/en_word.entity';
 import { EnEntry } from '../../entities/en_entry.entity';
 import { EnMeaningTranslationService } from '../EnMeaningTranslation/enMeaningTranslation.service';
 import { markEntryUserModified } from '../../utils/markEntryUserModified';
-import { articleOf, recordChange } from '../../utils/changes/recordChange';
+import { wordKeyOf, recordChange } from '../../utils/changes/recordChange';
 import {
   changedFields,
   createdFields,
@@ -118,9 +119,9 @@ export class EnMeaningService {
     return { synonyms, antonyms };
   }
 
-  async addMeaning(body: AddMeaningReqDTO, manager?: EntityManager): Promise<AddMeaningResT> {
+  async addMeaning(body: AddMeaningReqDTO, manager?: EntityManager, copied = false): Promise<AddMeaningResT> {
     const em = manager ?? this.enMeaningsRep.manager;
-    const { word_id, id: _id, synonyms, antonyms, ...newMeaning } = body;
+    const { word_id, id: _id, synonyms, antonyms, translations, ...newMeaning } = body;
     const word = await em
       .getRepository(EnWord)
       .findOne({ where: { id: word_id }, relations: { word: true, base_form: { word: true } } });
@@ -129,10 +130,19 @@ export class EnMeaningService {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);
     }
 
-    const links = await this.resolveWordLinks({ synonyms, antonyms }, word.word.word, em);
+    const copyLinks = async (names: string[] | undefined): Promise<EnEntry[]> => {
+      const entries: EnEntry[] = [];
+      for (const name of normalizeWordLinks(names, word.word.word)) {
+        entries.push(await getOrAddEntry(em, name, entryTypeOf(word.part_of_speech)));
+      }
+      return entries;
+    };
+    const links = copied
+      ? { synonyms: await copyLinks(synonyms), antonyms: await copyLinks(antonyms) }
+      : await this.resolveWordLinks({ synonyms, antonyms }, word.word.word, em);
     const add = async (tx: EntityManager): Promise<EnMeaning> => {
       const saved = await tx.getRepository(EnMeaning).save({ word: word, ...newMeaning, ...links });
-      for (const translation of body.translations) {
+      for (const translation of translations) {
         // a part of this meaning: its own row in the history would say it twice
         await this.enMeaningTranslationService.addMeaningTranslation(
           { meaning_id: saved.id, ...translation },
@@ -149,7 +159,7 @@ export class EnMeaningService {
         relations: { translations: true, synonyms: true, antonyms: true },
       });
       await recordChange(tx, {
-        ...articleOf(word),
+        ...wordKeyOf(word),
         entity: ChangeEntityE.meaning,
         action: ChangeActionE.create,
         record: meaningRecord(created),
@@ -211,7 +221,7 @@ export class EnMeaningService {
         relations: { synonyms: true, antonyms: true },
       });
       await recordChange(em, {
-        ...articleOf(meaning.word),
+        ...wordKeyOf(meaning.word),
         entity: ChangeEntityE.meaning,
         action: ChangeActionE.update,
         record: recordBefore,
@@ -238,7 +248,7 @@ export class EnMeaningService {
       await em.getRepository(EnMeaning).delete({ id });
       if (!meaning) return;
       await recordChange(em, {
-        ...articleOf(meaning.word),
+        ...wordKeyOf(meaning.word),
         entity: ChangeEntityE.meaning,
         action: ChangeActionE.delete,
         record: meaningRecord(meaning),

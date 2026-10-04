@@ -1,3 +1,4 @@
+import { Origins } from '@/components/Origins';
 import React from 'react';
 import type { PublicChangeV1T, PublicWordV1MeaningT, PublicWordV1T } from 'server/types';
 
@@ -234,6 +235,8 @@ export const Entry = ({ entry, headword, changes, locale, t }: EntryP) => {
         {entry.phrasal_variants && entry.phrasal_variants.length > 0 && (
           <Relations label={t('phrasal_variants')} words={entry.phrasal_variants} />
         )}
+        <Origins origins={entry.origins} />
+        <Origins origins={entry.contributions} contribution />
         <WordHistory locale={locale} changes={changes} t={t} />
       </div>
     </section>

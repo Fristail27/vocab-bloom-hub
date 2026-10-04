@@ -112,7 +112,7 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
-    await app.init();
+    await app.listen(0, '127.0.0.1');
     dataSource = app.get(DataSource);
 
     const held = (await list()).datasets.filter(
@@ -200,8 +200,9 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
   it('starts the history empty: an entry edited before is not guessed to differ from its source (issue #531)', async () => {
     // the schema as the version before the history left it: no table, two entries, one of them edited
     await dataSource.query(`DROP TABLE "${SCHEMA}"."en_changes"`);
+    await dataSource.query(`ALTER TABLE "${SCHEMA}"."en_words" DROP COLUMN "origins"`);
     await dataSource.query(
-      `DELETE FROM "${SCHEMA}"."dataset_migrations" WHERE "name" IN ('AddChanges1789700000000', 'ChangesCarryValues1789900000000')`,
+      `DELETE FROM "${SCHEMA}"."dataset_migrations" WHERE "name" IN ('AddChanges1789700000000', 'ChangesCarryValues1789900000000', 'AddWordOrigins1790200000000', 'NormalizeWordOrigins1790200001000', 'AddChangeContribution1790200003000')`,
     );
     await dataSource.query(
       `INSERT INTO "${SCHEMA}"."en_entries" ("word", "user_modified") VALUES ($1, true), ($2, false)`,
@@ -212,6 +213,9 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
       expect(await runDatasetMigrations(SCHEMA)).toEqual([
         'AddChanges1789700000000',
         'ChangesCarryValues1789900000000',
+        'AddWordOrigins1790200000000',
+        'NormalizeWordOrigins1790200001000',
+        'AddChangeContribution1790200003000',
       ]);
       expect(await dataSource.query(`SELECT count(*)::int AS n FROM "${SCHEMA}"."en_changes"`)).toEqual([
         { n: 0 },

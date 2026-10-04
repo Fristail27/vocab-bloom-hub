@@ -89,7 +89,7 @@ describe('En word add/edit routes (e2e, issue #87)', () => {
     app = moduleFixture.createNestApplication();
     // Same options as the global pipe in main.ts
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
-    await app.init();
+    await app.listen(0, '127.0.0.1');
   });
 
   afterAll(async () => {

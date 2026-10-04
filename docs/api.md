@@ -584,3 +584,25 @@ need behind a proxy, and the other exposure profiles are in
 
 Set `CORS_ORIGINS` to the origins that may call the API from a browser; `curl`-style clients
 are not affected by CORS.
+
+### Word origins and license associations
+
+Word, search, form, and partial word responses can include optional `origins[]` and
+`licenses[]`. Origins belong to a base headword **and part of speech**. Each origin carries a
+name, nullable version, optional `url`/`record_url`, attribution, mandatory notices, and its
+licenses (identifier where known, name, URL, optional full text). A flattened license includes
+`origin_id`; preserve that association when displaying attribution.
+
+`scope: "dataset"` means the source did not identify the affected words, not that each
+contributor was verified for each word. `method: "manual"` identifies user-declared
+attribution; `copy` and `fork` identify internal acquisition. `recorded_at` may be null when the
+acquisition date is unknown. `inherited` protects captured source terms from ordinary editing.
+`license_relation: "all"` means cumulative terms; `"any"` means the source offers alternatives.
+Neither a list nor a custom license is a compatibility guarantee.
+
+Dataset groups and `/meta` expose their upstream origins and description; their legacy primary
+`license` remains the dataset's own/default contribution license. `source` still identifies the
+dataset serving the response. History may include `inherited_from` and a metadata-correction
+`reason`. These fields are optional so clients continue to read older v1 servers. The generated
+TypeScript and Python SDK models include them. See [datasets](./datasets.md#multiple-origins-and-word-licenses)
+for editing and [offline import](./offline-import.md#provenance-export-format) for compatibility.

@@ -1,8 +1,10 @@
 'use client';
 
 import React from 'react';
-import { Alert } from 'antd';
-import { useTranslations } from 'next-intl';
+import { Alert, Button, Modal } from 'antd';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useLocale, useTranslations } from 'next-intl';
 import { DatasetT } from 'server/types';
 import { isPublicSourceDataset } from 'server/core/constants/dataset_catalog';
 import styles from './styles.module.scss';
@@ -38,14 +40,75 @@ export const EditedDataset: React.FC<{ dataset: DatasetT | undefined; children: 
  * source, and readers are told that the entry was changed. Renders nothing
  * where the dataset is not known.
  */
-export const EditLicenseNote: React.FC = () => {
+export const EditLicenseNote: React.FC<{ confirmSource?: boolean }> = ({ confirmSource = false }) => {
   const dataset = React.useContext(EditedDatasetContext);
   const t = useTranslations('en_managing_words');
+  const p = useTranslations('provenance');
+  const locale = useLocale();
+  const router = useRouter();
+  const [warning, setWarning] = React.useState(false);
+  React.useEffect(() => {
+    if (confirmSource && dataset && !dataset.own)
+      setWarning(sessionStorage.getItem(`edit-source:${dataset.name}`) !== 'yes');
+  }, [dataset, confirmSource]);
   if (!dataset) return null;
 
   return (
     // a wrapper of its own: the margin of a class does not outweigh the styles of the component
     <div className={styles.note}>
+      {!dataset.own && (
+        <>
+          <Alert
+            type="warning"
+            title={p('static_warning')}
+            action={
+              <Link href={`/${locale}/managing/datasets?fork=${encodeURIComponent(dataset.name)}`}>
+                {p('fork_button')}
+              </Link>
+            }
+          />
+          <Modal
+            open={warning}
+            title={p('static_title')}
+            onCancel={() => {
+              setWarning(false);
+              router.push(`/${locale}/managing/datasets`);
+            }}
+            footer={[
+              <Button
+                key="cancel"
+                onClick={() => {
+                  setWarning(false);
+                  router.push(`/${locale}/managing/datasets`);
+                }}
+              >
+                {p('cancel')}
+              </Button>,
+              <Button
+                key="continue"
+                onClick={() => {
+                  sessionStorage.setItem(`edit-source:${dataset.name}`, 'yes');
+                  setWarning(false);
+                }}
+              >
+                {p('continue_editing')}
+              </Button>,
+              <Button
+                key="fork"
+                type="primary"
+                onClick={() =>
+                  router.push(`/${locale}/managing/datasets?fork=${encodeURIComponent(dataset.name)}`)
+                }
+              >
+                {p('fork_button')}
+              </Button>,
+            ]}
+          >
+            {p('static_warning')}
+          </Modal>
+        </>
+      )}
+      {dataset.notice && <Alert type="info" title={dataset.notice} />}
       <Alert
         type="info"
         showIcon

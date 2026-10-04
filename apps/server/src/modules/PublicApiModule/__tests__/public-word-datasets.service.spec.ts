@@ -118,6 +118,9 @@ describe('a headword read from every dataset', () => {
     ).toEqual([
       {
         dataset: 'default',
+        description: null,
+        origins: [],
+        licenses: [],
         // the name for a reader (issue #540): the catalog's for a dataset of the catalog
         title: 'Vocab Bloom Hub English dataset',
         active: true,
@@ -133,6 +136,9 @@ describe('a headword read from every dataset', () => {
       },
       {
         dataset: 'wordnet_princeton',
+        description: null,
+        origins: [],
+        licenses: [],
         title: 'Princeton WordNet 3.1',
         active: false,
         source: 'princeton-wordnet',

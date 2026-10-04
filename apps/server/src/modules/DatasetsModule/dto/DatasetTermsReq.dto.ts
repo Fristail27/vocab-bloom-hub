@@ -1,3 +1,5 @@
+import { IsOrigins } from '../../../core/utils/provenance';
+import type { OriginT } from '../../../../types';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
@@ -17,7 +19,7 @@ import {
   DATASET_ATTRIBUTION_MAX_LENGTH,
   DATASET_TITLE_MAX_LENGTH,
 } from '../../../../core/constants/data_licenses';
-import { DATASET_NAME_PATTERN } from '../../../../core/constants/datasets';
+import { DATASET_NAME_PATTERN, DATASET_VERSION_MAX_LENGTH } from '../../../../core/constants/datasets';
 import { CreateDatasetReqT, DatasetLicenseReqT, UpdateDatasetReqT } from '../../../../types';
 
 // what a link of the terms may be: a page a reader opens
@@ -53,6 +55,34 @@ export class DatasetLicenseReqDTO implements DatasetLicenseReqT {
 }
 
 export class UpdateDatasetReqDTO implements UpdateDatasetReqT {
+  @ApiPropertyOptional({
+    nullable: true,
+    maxLength: DATASET_VERSION_MAX_LENGTH,
+    description:
+      'This dataset’s version; null or empty clears it. Existing provenance snapshots stay unchanged.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(DATASET_VERSION_MAX_LENGTH)
+  version?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10000)
+  description?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10000)
+  notice?: string | null;
+
+  @ApiPropertyOptional({ type: 'array', items: { type: 'object' } })
+  @ValidateIf((_, value) => value !== undefined)
+  @IsOrigins()
+  origins?: OriginT[];
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -86,6 +116,33 @@ export class UpdateDatasetReqDTO implements UpdateDatasetReqT {
 // rules of a class with the ones of its parent, and the optional fields of
 // an update would make the ones of a creation optional too
 export class CreateDatasetReqDTO implements CreateDatasetReqT {
+  @ApiPropertyOptional({
+    nullable: true,
+    maxLength: DATASET_VERSION_MAX_LENGTH,
+    description: 'This dataset’s own version, independent of the parent version when forking',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(DATASET_VERSION_MAX_LENGTH)
+  version?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10000)
+  description?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10000)
+  notice?: string | null;
+
+  @ApiPropertyOptional({ type: 'array', items: { type: 'object' } })
+  @ValidateIf((_, value) => value !== undefined)
+  @IsOrigins()
+  origins?: OriginT[];
+
   @ApiProperty({
     description: 'Lower-case latin, digits and `_`; the tail of the schema and the `source` of the data',
   })

@@ -1,3 +1,4 @@
+import { acknowledgeSourceEditing } from '../helpers/acknowledge-source';
 import { APIRequestContext, expect, test } from '@playwright/test';
 
 import { API_URL } from '../config';
@@ -80,4 +81,8 @@ test.describe('phrasal verbs', () => {
     const word = await getWord(request, id);
     expect(word.base_phrasal).toBe('take');
   });
+});
+
+test.beforeEach(async ({ page }) => {
+  await acknowledgeSourceEditing(page);
 });

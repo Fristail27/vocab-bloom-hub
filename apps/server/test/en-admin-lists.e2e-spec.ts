@@ -86,7 +86,7 @@ describe('admin listings GET /api/en/words, /meanings, /meaning-translations, /s
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
-    await app.init();
+    await app.listen(0, '127.0.0.1');
 
     await request(server())
       .post('/api/en/add/word')

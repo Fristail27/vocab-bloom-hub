@@ -1,4 +1,10 @@
 export enum ErrorCodes {
+  provenance_invalid = 'provenance_invalid',
+  provenance_inherited = 'provenance_inherited',
+  provenance_license_conflict = 'provenance_license_conflict',
+  copy_source_changed = 'copy_source_changed',
+  copy_requires_own_dataset = 'copy_requires_own_dataset',
+
   login_or_pass_wrong = 'login_or_pass_wrong',
   invalid_token = 'invalid_token',
   internal_server_error = 'Internal server error',

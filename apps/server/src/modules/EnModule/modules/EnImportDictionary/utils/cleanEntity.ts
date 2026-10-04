@@ -16,7 +16,8 @@ export function cleanEntity(input: any): unknown {
     for (const [key, value] of Object.entries(input)) {
       if (SYSTEM_FIELDS.includes(key)) continue;
 
-      result[key] = cleanEntity(value);
+      // Source ids identify portable snapshots, not database rows.
+      result[key] = key === 'origins' ? value : cleanEntity(value);
     }
 
     return result;

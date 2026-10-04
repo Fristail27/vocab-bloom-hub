@@ -264,6 +264,82 @@ test.describe('word pages', () => {
     await expect(page.getByText('/rʌn/').first()).toBeVisible();
   });
 
+  test('a fork labels its sources and shows contribution terms only under the edited word', async ({
+    page,
+  }) => {
+    // The second tab is an API fixture: PostgreSQL suites verify the stored
+    // snapshots; here the browser consumes those fields on a lazily loaded tab.
+    await page.route('**/api/v1/words/run/datasets', async (route) => {
+      const response = await route.fetch();
+      const body = await response.json();
+      const original = body.data[0].entries[0];
+      original.origins[0].acquisitions = [
+        {
+          id: 'intermediate-copy',
+          method: 'copy',
+          recorded_at: '2026-10-03T12:00:00.000Z',
+          via: { name: 'Intermediate fork', version: '1.2', url: 'https://example.org/intermediate' },
+        },
+      ];
+      const contribution = {
+        ...original.origins[0],
+        id: 'contribution:example',
+        name: 'Example fork',
+        version: null,
+        attribution: 'Example fork editors',
+        url: 'https://example.org/fork',
+        notices: [],
+        licenses: [
+          {
+            spdx: 'ODbL-1.0',
+            name: 'Open Database License',
+            url: 'https://opendatacommons.org/licenses/odbl/1-0/',
+          },
+        ],
+      };
+      body.data[1] = {
+        ...body.data[1],
+        title: 'Example fork',
+        description: 'A test fork description',
+        origins: original.origins,
+        license: 'ODbL-1.0',
+        license_url: contribution.licenses[0].url,
+        count: 2,
+        entries: [
+          { ...original, id: 900010, part_of_speech: 'noun', modified: false, contributions: [] },
+          { ...original, id: 900011, part_of_speech: 'verb', modified: true, contributions: [contribution] },
+        ],
+      };
+      await route.fulfill({ response, json: body });
+    });
+    await page.goto('/en/word/run');
+    await page.getByRole('tab', { name: 'Open English WordNet' }).click();
+    const panel = page.getByRole('tabpanel', { name: 'Open English WordNet' });
+    await expect(panel.getByRole('heading', { name: 'Dataset sources' })).toBeVisible();
+    await expect(panel.getByText('Dataset description: A test fork description')).toBeVisible();
+    const unchanged = panel.getByTestId('entry-900010');
+    const changed = panel.getByTestId('entry-900011');
+    await expect(unchanged.getByTestId('entry-modified')).toHaveCount(0);
+    await expect(unchanged.getByText('ODbL-1.0')).toHaveCount(0);
+    const unchangedSources = unchanged.getByRole('region', { name: 'Sources and licenses', exact: true });
+    await unchangedSources.locator('summary').first().click();
+    await expect(unchangedSources.getByText('Copied from Intermediate fork · 1.2')).toBeVisible();
+    await expect(unchangedSources.locator('a[href="https://example.org/intermediate"]')).toBeVisible();
+    await expect(changed.getByTestId('entry-modified')).toBeVisible();
+    const terms = changed.getByRole('region', { name: 'Changes and their licenses' });
+    await expect(terms.locator('summary')).toContainText('Edited in Example fork');
+    await expect(terms.locator('summary')).toContainText('ODbL-1.0');
+    await terms.locator('summary').click();
+    await expect(terms.getByRole('link', { name: 'ODbL-1.0' })).toHaveAttribute(
+      'href',
+      'https://opendatacommons.org/licenses/odbl/1-0/',
+    );
+    await expect(terms.getByText('Example fork editors')).toBeVisible();
+    const originals = changed.getByRole('region', { name: 'Sources and licenses', exact: true });
+    await originals.locator('summary').first().click();
+    await expect(originals.getByRole('link', { name: 'CC-BY-4.0' })).toBeVisible();
+  });
+
   test('the page that is sent is the first tab, rendered by the server and cacheable', async ({ request }) => {
     const response = await request.get('/en/word/run');
 

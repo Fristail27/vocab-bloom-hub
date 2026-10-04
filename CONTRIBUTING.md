@@ -131,6 +131,14 @@ The public API contract and the two SDKs have generators of their own (`openapi:
 `generate`, `generate_models.py`); the chain and when to run it are in
 [`docs/api-tools.md`](./docs/api-tools.md#the-openapi-document-the-public-contract-as-a-file).
 
+Server HTTP tests start the app with `await app.listen(0, '127.0.0.1')` and close it in
+teardown with `await app.close()`. Keep the server listening throughout the suite: when
+Supertest starts it itself, its wildcard bind and IPv4 requests can reach another local
+process on macOS ([Supertest #906](https://github.com/forwardemail/supertest/issues/906)).
+For upload tests that expect an early authorization rejection, attach a small in-memory
+buffer or send no file: a file stream may still be writing when the server answers and
+closes the connection, causing `EPIPE` instead of the expected response.
+
 ## Project Philosophy
 
 Vocab Bloom Hub aims to be:

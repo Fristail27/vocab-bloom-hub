@@ -1,0 +1,30 @@
+.sources {
+  margin-block: 1.25rem;
+  border-block-start: 1px solid var(--border);
+  font-size: 0.875rem;
+
+  summary {
+    padding-block: 0.65rem;
+    cursor: pointer;
+  }
+
+  p {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    margin-block: 0.6rem;
+  }
+}
+
+.content {
+  padding-inline: 1rem;
+  padding-block-end: 0.75rem;
+}
+
+.title {
+  font-size: 0.95rem;
+  margin-block: 0.85rem 0;
+}
+
+.licenses {
+  font-weight: 600;
+}

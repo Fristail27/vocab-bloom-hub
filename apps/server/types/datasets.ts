@@ -1,3 +1,4 @@
+import type { OriginT } from './provenance';
 import { ErrorResT } from './errors';
 
 /**
@@ -11,6 +12,8 @@ import { ErrorResT } from './errors';
  * default one only.
  */
 export type DatasetT = {
+  description?: string | null;
+  origins?: OriginT[];
   /** Lower-case identifier, `default` for the dataset the instance was born with */
   name: string;
   /** The name of the dataset for a reader */
@@ -23,7 +26,7 @@ export type DatasetT = {
   source: string;
   /** The language of the headwords */
   language: string;
-  /** The version of the dataset last imported into it; null when nothing was */
+  /** The imported version or the version chosen by an own dataset's owner; null when unknown */
   version: string | null;
   /** SPDX identifier of the data license */
   license: string;
@@ -72,6 +75,11 @@ export type DatasetLicenseReqT = {
 
 /** POST /api/en/datasets: an empty dataset of the instance's own */
 export type CreateDatasetReqT = {
+  /** This dataset's version, independent of its sources; empty or null means unknown */
+  version?: string | null;
+  description?: string | null;
+  notice?: string | null;
+  origins?: OriginT[];
   name: string;
   title: string;
   license: DatasetLicenseReqT;

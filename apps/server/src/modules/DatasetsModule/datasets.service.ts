@@ -1,3 +1,10 @@
+import { forkDataset } from './fork-dataset';
+import { normalizeStoredWordOrigins } from '../../db/normalize-word-origins';
+import type { ForkProgressT } from '../../../types';
+import { defaultOrigins } from '../../../core/utils/provenance';
+import { assertOriginsEdit, assertCompatibleOrigins } from '../../core/utils/provenance';
+import { EnWord } from '../EnModule/entities/en_word.entity';
+import { EnChange } from '../EnModule/entities/en_change.entity';
 import {
   BadRequestException,
   ConflictException,
@@ -10,7 +17,7 @@ import {
   Optional,
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository, IsNull } from 'typeorm';
 import { checkIsPostgres } from '../../../configuration';
 import {
   ACTIVE_DATASET_SETTINGS_FIELD,
@@ -160,6 +167,8 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
 
   private current!: Dataset;
   private busy = false;
+  private readonly forks = new Map<string, ForkProgressT>();
+  private forkWork?: Promise<void>;
 
   // the active dataset; every change of it reaches the process-wide reference
   // the journal and the projections read
@@ -185,6 +194,8 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   async onModuleInit(): Promise<void> {
+    // SQLite synchronizes columns, but it cannot migrate JSON values itself.
+    if (!this.supported) await this.dataSource.transaction(normalizeStoredWordOrigins);
     // SQLite builds the registry empty (synchronize); on Postgres the
     // migration that created it registered `public` already
     let fallback = await this.datasetsRep.findOne({ where: { name: DEFAULT_DATASET_NAME } });
@@ -212,6 +223,10 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
       await this.settingsRep.save({ field: ACTIVE_DATASET_SETTINGS_FIELD, value: this.active.name });
     }
     if (this.supported) await this.assertOnSchema(this.active.schema);
+    else
+      await this.dataSource
+        .getRepository(EnWord)
+        .update({ origins: IsNull(), base_form: IsNull() }, { origins: defaultOrigins(this.active) });
   }
 
   /**
@@ -296,6 +311,7 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
+    await this.forkWork;
     await Promise.all([...this.readers.keys()].map((name) => this.closeReader(name)));
   }
 
@@ -306,6 +322,8 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
   toT(dataset: Dataset): DatasetT {
     return {
       name: dataset.name,
+      description: dataset.description ?? null,
+      origins: dataset.origins ?? [],
       title: titleOf(dataset),
       own: isOwnDataset(dataset),
       installed: true,
@@ -376,7 +394,11 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
       this.installed(),
       this.settingsRep.findOne({ where: { field: DATASET_REMOVED_AT_SETTINGS_FIELD } }),
     ]);
-    const instants = installed.flatMap((dataset) => [dataset.createdAt, dataset.activated_at]);
+    const instants = installed.flatMap((dataset) => [
+      dataset.createdAt,
+      dataset.activated_at,
+      dataset.terms_updated_at,
+    ]);
     if (removed) instants.push(new Date(removed.value));
     return instants.reduce<Date | null>((newest, instant) => {
       const date = instant ? new Date(instant) : null;
@@ -396,16 +418,23 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** One structural change at a time, and never under a running import — unless the import itself asks */
-  private async exclusive<T>(work: () => Promise<T>, options: { forImport?: boolean } = {}): Promise<T> {
+  private acquireExclusive(options: { forImport?: boolean } = {}): () => void {
     if (this.busy) throw new ConflictException(ErrorCodes.datasets_busy);
     if (this.importStatus?.running && !options.forImport) {
       throw new ConflictException(ErrorCodes.import_in_progress);
     }
     this.busy = true;
+    return () => {
+      this.busy = false;
+    };
+  }
+
+  private async exclusive<T>(work: () => Promise<T>, options: { forImport?: boolean } = {}): Promise<T> {
+    const release = this.acquireExclusive(options);
     try {
       return await work();
     } finally {
-      this.busy = false;
+      release();
     }
   }
 
@@ -466,6 +495,8 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
     if (!DATASET_NAME_PATTERN.test(name)) throw new BadRequestException(ErrorCodes.dataset_name_invalid);
     if (isReservedDatasetName(name)) throw new ConflictException(ErrorCodes.dataset_name_reserved);
     const license = licenseTermsOf(request.license);
+    assertOriginsEdit([], request.origins ?? []);
+    assertCompatibleOrigins(request.origins ?? [], license.license);
     return this.exclusive(async () => {
       if (await this.datasetsRep.findOne({ where: { name } })) {
         throw new ConflictException(ErrorCodes.dataset_already_exists);
@@ -483,8 +514,10 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
           ...license,
           attribution: request.attribution.trim(),
           attribution_url: request.attribution_url?.trim() || null,
-          notice: null,
-          version: null,
+          description: request.description?.trim() || null,
+          notice: request.notice?.trim() || null,
+          origins: request.origins ?? [],
+          version: request.version?.trim() || null,
           imported_at: null,
           activated_at: null,
         }),
@@ -499,6 +532,7 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
         diff: {
           source: { before: null, after: dataset.source },
           title: { before: null, after: dataset.title },
+          version: { before: null, after: dataset.version },
           license: { before: null, after: dataset.license },
           license_url: { before: null, after: dataset.license_url },
         },
@@ -513,11 +547,92 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
    * admin UI confirms first, and the journal keeps the license before and
    * after. Nothing about a dataset of the catalog is edited.
    */
+  forkProgress(name: string): ForkProgressT {
+    const progress = this.forks.get(name);
+    if (!progress) throw new NotFoundException(ErrorCodes.dataset_not_found);
+    return { ...progress };
+  }
+
+  async fork(parentName: string, request: CreateDatasetReqT): Promise<ForkProgressT> {
+    this.requireSupported();
+    if (!DATASET_NAME_PATTERN.test(request.name))
+      throw new BadRequestException(ErrorCodes.dataset_name_invalid);
+    if (isReservedDatasetName(request.name)) throw new ConflictException(ErrorCodes.dataset_name_reserved);
+    // Reserve synchronously, before preflight reads can interleave with another fork.
+    const release = this.acquireExclusive();
+    try {
+      if (await this.datasetsRep.existsBy({ name: request.name }))
+        throw new ConflictException(ErrorCodes.dataset_already_exists);
+      const source = await this.find(parentName);
+      const license = licenseTermsOf(request.license);
+      assertOriginsEdit([], request.origins ?? []);
+      assertCompatibleOrigins(defaultOrigins(source), license.license);
+      const target = this.datasetsRep.create({
+        name: request.name,
+        schema: datasetSchemaOf(request.name),
+        own: true,
+        source: request.name,
+        language: source.language,
+        title: request.title.trim(),
+        ...license,
+        attribution: request.attribution.trim(),
+        attribution_url: request.attribution_url?.trim() || null,
+        notice: request.notice?.trim() || null,
+        description: request.description?.trim() || null,
+        origins: request.origins ?? [],
+        version: request.version?.trim() || null,
+        imported_at: null,
+        activated_at: null,
+      });
+      const progress: ForkProgressT = {
+        name: target.name,
+        parent: source.name,
+        state: 'copying',
+        completed_tables: 0,
+        total_tables: 0,
+      };
+      this.forks.set(target.name, progress);
+      this.forkWork = (async () => {
+        const saved = await forkDataset(this.dataSource, source, target, progress);
+        this.notifyRegistry();
+        await this.auditService?.record({
+          action: AuditActionE.create,
+          entityType: AuditEntityTypeE.dataset,
+          entityId: saved.id,
+          headword: saved.name,
+          diff: {
+            origins: { before: null, after: saved.origins },
+            version: { before: null, after: saved.version },
+          },
+        });
+      })()
+        .finally(release)
+        .then(() => {
+          progress.state = 'completed';
+        })
+        .catch((error: unknown) => {
+          progress.state = 'failed';
+          progress.failure =
+            error instanceof ConflictException ? String(error.message) : ErrorCodes.internal_server_error;
+          this.logger.error(`Fork "${target.name}" failed: ${String(error)}`);
+        });
+      return { ...progress };
+    } catch (error) {
+      release();
+      throw error;
+    }
+  }
+
   async updateTerms(name: string, request: UpdateDatasetReqT): Promise<DatasetT> {
     this.requireSupported();
     const dataset = await this.find(name);
     if (!isOwnDataset(dataset)) throw new ConflictException(ErrorCodes.dataset_terms_fixed);
+    if (request.origins !== undefined) assertOriginsEdit(dataset.origins ?? [], request.origins);
     const next: Partial<Dataset> = {
+      ...(request.version !== undefined && { version: request.version?.trim() || null }),
+      ...(request.description !== undefined && { description: request.description?.trim() || null }),
+      ...(request.notice !== undefined && { notice: request.notice?.trim() || null }),
+      ...(request.origins !== undefined && { origins: request.origins }),
       ...(request.title !== undefined && { title: request.title.trim() }),
       ...(request.attribution !== undefined && { attribution: request.attribution.trim() }),
       ...(request.attribution_url !== undefined && {
@@ -525,17 +640,49 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
       }),
       ...(request.license && licenseTermsOf(request.license)),
     };
+    assertCompatibleOrigins(next.origins ?? dataset.origins ?? [], next.license ?? dataset.license);
+    if (next.license && next.license !== dataset.license) {
+      const connection = await this.reader(dataset);
+      const words = await connection
+        .getRepository(EnWord)
+        .createQueryBuilder('word')
+        .select('word.origins', 'origins')
+        .where('word.origins IS NOT NULL')
+        .distinct(true)
+        .getRawMany<{ origins: string }>();
+      for (const word of words)
+        assertCompatibleOrigins(JSON.parse(word.origins) as import('../../../types').OriginT[], next.license);
+      const contributions = await connection
+        .getRepository(EnChange)
+        .createQueryBuilder('change')
+        .select('change.contribution', 'contribution')
+        .distinct(true)
+        .where('change.superseded_at IS NULL AND change.contribution IS NOT NULL')
+        .getRawMany<{ contribution: string }>();
+      for (const change of contributions)
+        assertCompatibleOrigins(
+          [JSON.parse(change.contribution) as import('../../../types').OriginT],
+          next.license,
+        );
+    }
     const diff: AuditDiffT = {};
     for (const [field, after] of Object.entries(next) as Array<[keyof Dataset, string | null]>) {
       const before = dataset[field] as string | null;
-      if (before === after) continue;
+      if (JSON.stringify(before) === JSON.stringify(after)) continue;
       diff[field] =
         field === 'license_text' ? { before: forAudit(before), after: forAudit(after) } : { before, after };
     }
     if (!Object.keys(diff).length) return this.toT(dataset);
 
-    const saved = await this.datasetsRep.save(Object.assign(dataset, next));
+    const saved = await this.datasetsRep.save(Object.assign(dataset, next, { terms_updated_at: new Date() }));
     if (saved.name === this.active.name) {
+      if (diff.version) {
+        if (saved.version) {
+          await this.settingsRep.save({ field: DATASET_VERSION_SETTINGS_FIELD, value: saved.version });
+        } else {
+          await this.settingsRep.delete({ field: DATASET_VERSION_SETTINGS_FIELD });
+        }
+      }
       this.active = saved;
       this.notify();
     }
@@ -552,12 +699,31 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** What an import leaves on the dataset it filled: the version and the day */
-  async recordImport(name: string, imported: { version?: string | undefined }): Promise<void> {
+  async recordImport(
+    name: string,
+    imported: {
+      version?: string | null | undefined;
+      provenance?: import('../../../types').DatasetProvenanceSnapshotT;
+    },
+  ): Promise<void> {
     const dataset = await this.find(name);
-    if (imported.version) dataset.version = imported.version;
+    if (imported.version !== undefined) dataset.version = imported.version || null;
+    if (imported.provenance)
+      Object.assign(
+        dataset,
+        isOwnDataset(dataset) ? imported.provenance : { origins: imported.provenance.origins },
+        { terms_updated_at: new Date() },
+      );
     dataset.imported_at = new Date();
     const saved = await this.datasetsRep.save(dataset);
     if (saved.name === this.active.name) {
+      if (imported.version !== undefined) {
+        if (saved.version) {
+          await this.settingsRep.save({ field: DATASET_VERSION_SETTINGS_FIELD, value: saved.version });
+        } else {
+          await this.settingsRep.delete({ field: DATASET_VERSION_SETTINGS_FIELD });
+        }
+      }
       this.active = saved;
       this.notify();
     }
@@ -569,6 +735,9 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
    * the catalog. Without a name, the active one.
    */
   async resolveTarget(name: string | undefined): Promise<Dataset> {
+    // The import has taken its own slot; a fork/activation may have acquired
+    // the structural lock first. Refuse before opening or writing its target.
+    if (this.busy) throw new ConflictException(ErrorCodes.datasets_busy);
     if (!name || name === this.active.name) return this.active;
     this.requireSupported();
     const existing = await this.datasetsRep.findOne({ where: { name } });

@@ -1,3 +1,8 @@
+import { Dataset } from '../../../DatasetsModule/entities/dataset.entity';
+import { defaultOrigins } from '../../../../../core/utils/provenance';
+import { currentDatasetName } from '../../../../core/utils/dataset-scope';
+import { assertOriginsEdit } from '../../../../core/utils/provenance';
+import type { OriginT } from '../../../../../types';
 import { ConflictException } from '@nestjs/common';
 import { EntityManager, IsNull } from 'typeorm';
 import { ErrorCodes } from '../../../../../core/constants/error_codes';
@@ -21,10 +26,10 @@ import { EnMeaningTranslation } from '../../entities/en_meaning_translation.enti
 import { EnShortTranslation } from '../../entities/en_short_translation.entity';
 import { EnWord } from '../../entities/en_word.entity';
 import { findBaseFormHeadwords, loadEntries } from '../findBaseFormHeadwords';
-import { deleteWordRows, dropEntryIfUnused, entryTypeOf, findArticle, getOrAddEntry } from './articles';
+import { deleteWordRows, dropEntryIfUnused, entryTypeOf, findWord, getOrAddEntry } from './words';
 import { recordChange } from './recordChange';
 import {
-  articleSnapshot,
+  fullWordSnapshot,
   changedFields,
   createdFields,
   deletedFields,
@@ -51,6 +56,7 @@ import {
  */
 
 const WORD_COLUMNS = [
+  'origins',
   'description',
   'transcription',
   'word_level',
@@ -121,11 +127,11 @@ const nameAfter = <T extends ChangeRecordT>(record: T, left: SnapshotT): T =>
 
 // ------------------------------------------------------------- lookups
 
-const formOf = (article: EnWord, name: ChangeFormRecordT): EnWord | undefined =>
-  (article.forms ?? []).find((form) => form.word.word === name.word && form.form_of_word === name.form_of_word);
+const formOf = (word: EnWord, name: ChangeFormRecordT): EnWord | undefined =>
+  (word.forms ?? []).find((form) => form.word.word === name.word && form.form_of_word === name.form_of_word);
 
-const meaningOf = (article: EnWord, name: ChangeMeaningRecordT): EnMeaning | undefined =>
-  (article.meanings ?? []).find(
+const meaningOf = (word: EnWord, name: ChangeMeaningRecordT): EnMeaning | undefined =>
+  (word.meanings ?? []).find(
     (meaning) => meaning.title === name.title && meaning.sort_order === name.sort_order,
   );
 
@@ -135,10 +141,10 @@ const translationOf = (meaning: EnMeaning, name: ChangeTranslationRecordT): EnMe
   );
 
 const shortTranslationOf = (
-  article: EnWord,
+  word: EnWord,
   name: ChangeShortTranslationRecordT,
 ): EnShortTranslation | undefined =>
-  (article.short_translations ?? []).find(
+  (word.short_translations ?? []).find(
     (translation) => translation.language === name.language && translation.description === name.description,
   );
 
@@ -154,18 +160,18 @@ const linkedEntries = async (em: EntityManager, headword: string, value: unknown
 
 const basePhrasalOf = async (em: EntityManager, value: unknown): Promise<EnWord | null> => {
   if (typeof value !== 'string' || value === '') return null;
-  return findArticle(em, value, EnPartOfSpeechE.verb);
+  return findWord(em, value, EnPartOfSpeechE.verb);
 };
 
 // ------------------------------------------------------------ creation
 
-const addForm = async (em: EntityManager, article: EnWord, values: SnapshotT): Promise<EnWord> => {
+const addForm = async (em: EntityManager, word: EnWord, values: SnapshotT): Promise<EnWord> => {
   const entry = await getOrAddEntry(em, String(values.word), entryTypeOf(EnPartOfSpeechE.noun));
   const saved = await em.getRepository(EnWord).save({
     ...columnsOf(values, FORM_COLUMNS),
     word: entry,
-    part_of_speech: article.part_of_speech,
-    base_form: article,
+    part_of_speech: word.part_of_speech,
+    base_form: word,
     generated: false,
   });
   return Object.assign(saved, { word: entry });
@@ -178,11 +184,11 @@ const addTranslation = async (
 ): Promise<EnMeaningTranslation> =>
   em.getRepository(EnMeaningTranslation).save({ ...columnsOf(values, TRANSLATION_COLUMNS), meaning });
 
-const addMeaning = async (em: EntityManager, article: EnWord, values: SnapshotT): Promise<EnMeaning> => {
-  const headword = article.word.word;
+const addMeaning = async (em: EntityManager, word: EnWord, values: SnapshotT): Promise<EnMeaning> => {
+  const headword = word.word.word;
   const saved = await em.getRepository(EnMeaning).save({
     ...columnsOf(values, MEANING_COLUMNS),
-    word: article,
+    word,
     synonyms: await linkedEntries(em, headword, values.synonyms),
     antonyms: await linkedEntries(em, headword, values.antonyms),
   });
@@ -195,30 +201,34 @@ const addMeaning = async (em: EntityManager, article: EnWord, values: SnapshotT)
 
 const addShortTranslation = async (
   em: EntityManager,
-  article: EnWord,
+  word: EnWord,
   values: SnapshotT,
 ): Promise<EnShortTranslation> =>
-  em.getRepository(EnShortTranslation).save({ ...columnsOf(values, SHORT_TRANSLATION_COLUMNS), word: article });
+  em.getRepository(EnShortTranslation).save({ ...columnsOf(values, SHORT_TRANSLATION_COLUMNS), word });
 
-const addArticle = async (em: EntityManager, change: EnChange, values: SnapshotT): Promise<EnWord> => {
+const addWord = async (em: EntityManager, change: EnChange, values: SnapshotT): Promise<EnWord> => {
   const partOfSpeech = change.part_of_speech as EnPartOfSpeechE;
   const entry = await getOrAddEntry(em, change.headword, entryTypeOf(partOfSpeech));
+  const registry = em.connection.hasMetadata(Dataset)
+    ? await em.findOneBy(Dataset, { name: currentDatasetName() })
+    : null;
   const saved = await em.getRepository(EnWord).save({
     ...columnsOf(values, WORD_COLUMNS),
-    // the article comes back as the one its dataset had
+    origins: (values.origins as OriginT[] | null | undefined) ?? (registry ? defaultOrigins(registry) : null),
+    // the word comes back as the one its dataset had
     ...(isVersion(values[VERSION]) && { version: values[VERSION] }),
     word: entry,
     part_of_speech: partOfSpeech,
     form_of_word: EnWordFormsE.base_form,
     base_phrasal: await basePhrasalOf(em, values.base_phrasal),
   });
-  const article = Object.assign(saved, { word: entry });
-  for (const form of listOf(values.forms)) await addForm(em, article, form);
-  for (const meaning of listOf(values.meanings)) await addMeaning(em, article, meaning);
+  const word = Object.assign(saved, { word: entry });
+  for (const form of listOf(values.forms)) await addForm(em, word, form);
+  for (const meaning of listOf(values.meanings)) await addMeaning(em, word, meaning);
   for (const translation of listOf(values.short_translations)) {
-    await addShortTranslation(em, article, translation);
+    await addShortTranslation(em, word, translation);
   }
-  return (await findArticle(em, change.headword, partOfSpeech)) as EnWord;
+  return (await findWord(em, change.headword, partOfSpeech)) as EnWord;
 };
 
 // ------------------------------------------------------------- the version
@@ -227,7 +237,7 @@ const isVersion = (value: unknown): value is string =>
   typeof value === 'string' && value !== '' && value.length <= 64;
 
 /**
- * Gives an article the version it had before it was edited, once no change
+ * Gives a word the version it had before it was edited, once no change
  * of it shows any more: the entry is what its source says again, and is
  * exported as such. The version is the one the history recorded when the
  * entry became the owner's; an entry edited before the history kept it
@@ -237,8 +247,8 @@ const restoreVersion = async (
   em: EntityManager,
   change: EnChange,
 ): Promise<{ before: string; after: string } | null> => {
-  const article = await findArticle(em, change.headword, change.part_of_speech as string);
-  if (!article || article.version !== CustomVersionDictionaryOfWord) return null;
+  const word = await findWord(em, change.headword, change.part_of_speech as string);
+  if (!word || word.version !== CustomVersionDictionaryOfWord) return null;
   const rows = await em.getRepository(EnChange).find({
     where: { headword: change.headword, part_of_speech: change.part_of_speech as string },
     order: { id: 'DESC' },
@@ -248,7 +258,7 @@ const restoreVersion = async (
     .find((version) => version?.after === CustomVersionDictionaryOfWord && isVersion(version.before));
   if (!recorded) return null;
   const original = recorded.before as string;
-  await em.getRepository(EnWord).save({ id: article.id, version: original });
+  await em.getRepository(EnWord).save({ id: word.id, version: original });
   return { before: CustomVersionDictionaryOfWord, after: original };
 };
 
@@ -275,30 +285,31 @@ const updated = (record: ChangeRecordT | null, before: SnapshotT, after: Snapsho
 });
 
 const revertWord = async (em: EntityManager, change: EnChange, diff: ChangeDiffT): Promise<RevertedT> => {
-  const article = await findArticle(em, change.headword, change.part_of_speech as string);
+  const word = await findWord(em, change.headword, change.part_of_speech as string);
 
   if (change.action === ChangeActionE.delete) {
-    if (article) outdated();
-    return created(null, articleSnapshot(await addArticle(em, change, sideOf(diff, 'before'))));
+    if (word) outdated();
+    return created(null, fullWordSnapshot(await addWord(em, change, sideOf(diff, 'before'))));
   }
-  if (!article) return outdated();
+  if (!word) return outdated();
 
   if (change.action === ChangeActionE.create) {
-    const before = articleSnapshot(article);
+    const before = fullWordSnapshot(word);
     assertStillSays(before, sideOf(diff, 'after'));
-    await deleteWordRows(em, article);
+    await deleteWordRows(em, word);
     return deleted(null, before);
   }
 
-  const before = wordSnapshot(article);
+  const before = wordSnapshot(word);
   assertStillSays(before, sideOf(diff, 'after'));
   const values = sideOf(diff, 'before');
+  if ('origins' in values) assertOriginsEdit(word.origins ?? [], values.origins as OriginT[]);
   await em.getRepository(EnWord).save({
-    id: article.id,
+    id: word.id,
     ...columnsOf(values, WORD_COLUMNS),
     ...('base_phrasal' in values && { base_phrasal: await basePhrasalOf(em, values.base_phrasal) }),
   });
-  const after = (await findArticle(em, change.headword, change.part_of_speech as string)) as EnWord;
+  const after = (await findWord(em, change.headword, change.part_of_speech as string)) as EnWord;
   return updated(null, before, wordSnapshot(after));
 };
 
@@ -306,17 +317,17 @@ const revertForm = async (
   em: EntityManager,
   change: EnChange,
   diff: ChangeDiffT,
-  article: EnWord,
+  word: EnWord,
 ): Promise<RevertedT> => {
   const name = change.record as ChangeFormRecordT;
 
   if (change.action === ChangeActionE.delete) {
-    if (formOf(article, name)) outdated();
-    const form = await addForm(em, article, sideOf(diff, 'before'));
+    if (formOf(word, name)) outdated();
+    const form = await addForm(em, word, sideOf(diff, 'before'));
     return created(formRecord(form), formSnapshot(form));
   }
   const left = sideOf(diff, 'after');
-  const form = formOf(article, nameAfter(name, left));
+  const form = formOf(word, nameAfter(name, left));
   if (!form) return outdated();
   const before = formSnapshot(form);
   const record = formRecord(form);
@@ -345,17 +356,17 @@ const revertMeaning = async (
   em: EntityManager,
   change: EnChange,
   diff: ChangeDiffT,
-  article: EnWord,
+  word: EnWord,
 ): Promise<RevertedT> => {
   const name = change.record as ChangeMeaningRecordT;
 
   if (change.action === ChangeActionE.delete) {
-    if (meaningOf(article, name)) outdated();
-    const meaning = await addMeaning(em, article, sideOf(diff, 'before'));
+    if (meaningOf(word, name)) outdated();
+    const meaning = await addMeaning(em, word, sideOf(diff, 'before'));
     return created(meaningRecord(meaning), meaningSnapshot(meaning, true));
   }
   const left = sideOf(diff, 'after');
-  const meaning = meaningOf(article, nameAfter(name, left));
+  const meaning = meaningOf(word, nameAfter(name, left));
   if (!meaning) return outdated();
   const record = meaningRecord(meaning);
 
@@ -369,7 +380,7 @@ const revertMeaning = async (
   const before = meaningSnapshot(meaning);
   assertStillSays(before, left);
   const values = sideOf(diff, 'before');
-  const headword = article.word.word;
+  const headword = word.word.word;
   await em.getRepository(EnMeaning).save({
     id: meaning.id,
     ...columnsOf(values, MEANING_COLUMNS),
@@ -386,10 +397,10 @@ const revertTranslation = async (
   em: EntityManager,
   change: EnChange,
   diff: ChangeDiffT,
-  article: EnWord,
+  word: EnWord,
 ): Promise<RevertedT> => {
   const name = change.record as ChangeTranslationRecordT;
-  const meaning = meaningOf(article, name.meaning);
+  const meaning = meaningOf(word, name.meaning);
   if (!meaning) return outdated();
 
   if (change.action === ChangeActionE.delete) {
@@ -421,17 +432,17 @@ const revertShortTranslation = async (
   em: EntityManager,
   change: EnChange,
   diff: ChangeDiffT,
-  article: EnWord,
+  word: EnWord,
 ): Promise<RevertedT> => {
   const name = change.record as ChangeShortTranslationRecordT;
 
   if (change.action === ChangeActionE.delete) {
-    if (shortTranslationOf(article, name)) outdated();
-    const translation = await addShortTranslation(em, article, sideOf(diff, 'before'));
+    if (shortTranslationOf(word, name)) outdated();
+    const translation = await addShortTranslation(em, word, sideOf(diff, 'before'));
     return created(shortTranslationRecord(translation), shortTranslationSnapshot(translation));
   }
   const left = sideOf(diff, 'after');
-  const translation = shortTranslationOf(article, nameAfter(name, left));
+  const translation = shortTranslationOf(word, nameAfter(name, left));
   if (!translation) return outdated();
   const before = shortTranslationSnapshot(translation);
   const record = shortTranslationRecord(translation);
@@ -456,25 +467,25 @@ const revertShortTranslation = async (
 const revertRecord = async (em: EntityManager, change: EnChange, diff: ChangeDiffT): Promise<RevertedT> => {
   if (change.entity === ChangeEntityE.word) return revertWord(em, change, diff);
   if (!change.record) return outdated();
-  const article = await findArticle(em, change.headword, change.part_of_speech as string);
-  if (!article) return outdated();
+  const word = await findWord(em, change.headword, change.part_of_speech as string);
+  if (!word) return outdated();
   switch (change.entity) {
     case ChangeEntityE.word_form:
-      return revertForm(em, change, diff, article);
+      return revertForm(em, change, diff, word);
     case ChangeEntityE.meaning:
-      return revertMeaning(em, change, diff, article);
+      return revertMeaning(em, change, diff, word);
     case ChangeEntityE.meaning_translation:
-      return revertTranslation(em, change, diff, article);
+      return revertTranslation(em, change, diff, word);
     case ChangeEntityE.short_translation:
-      return revertShortTranslation(em, change, diff, article);
+      return revertShortTranslation(em, change, diff, word);
     default:
       throw new ConflictException(ErrorCodes.change_not_revertible);
   }
 };
 
-/** Whether a change can be taken back at all: it still shows in what is served, and names its article */
+/** Whether a change can be taken back at all: it still shows in what is served, and names its word */
 export const isRevertible = (change: EnChange): boolean =>
-  !change.superseded_at && Boolean(change.part_of_speech);
+  !change.inherited_from && !change.superseded_at && Boolean(change.part_of_speech);
 
 /**
  * Takes a change back, with the manager of one transaction and inside
@@ -486,18 +497,18 @@ export const isRevertible = (change: EnChange): boolean =>
 export const revertChange = async (em: EntityManager, change: EnChange): Promise<void> => {
   if (!isRevertible(change)) throw new ConflictException(ErrorCodes.change_not_revertible);
   const changes = em.getRepository(EnChange);
-  const article = { headword: change.headword, part_of_speech: change.part_of_speech as string };
+  const word = { headword: change.headword, part_of_speech: change.part_of_speech as string };
   const reverted = await revertRecord(em, change, change.diff);
 
   // the last change of the entry that shows: the entry gets its version back
-  const shown = await changes.count({ where: { ...article, superseded_at: IsNull() } });
+  const shown = await changes.count({ where: { ...word, superseded_at: IsNull() } });
   const version = shown <= 1 ? await restoreVersion(em, change) : null;
   const diff =
     version && change.entity === ChangeEntityE.word && reverted.action === ChangeActionE.update
       ? { ...reverted.diff, [VERSION]: version }
       : reverted.diff;
 
-  await recordChange(em, { ...article, entity: change.entity, ...reverted, diff });
+  await recordChange(em, { ...word, entity: change.entity, ...reverted, diff });
   await changes.update({ id: change.id }, { superseded_at: new Date() });
   const left = await changes.count({ where: { headword: change.headword, superseded_at: IsNull() } });
   if (left === 0) await em.getRepository(EnEntry).update({ word: change.headword }, { user_modified: false });

@@ -43,6 +43,8 @@ export type ConvertedFormT = {
 };
 
 export type ConvertedEntryT = {
+  /** Exact terms when the source identifies them per word. */
+  origins?: import('../../types').OriginT[];
   word: string;
   part_of_speech: EnPartOfSpeechE;
   transcription: string;

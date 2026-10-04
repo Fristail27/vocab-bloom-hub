@@ -13,7 +13,7 @@ export class ListChangesQueryDTO extends PaginationQueryDTO {
   headword?: string;
 
   @ApiPropertyOptional({
-    description: 'The article of the headword; the edits about every article of it are listed too',
+    description: 'The word of the headword; the edits about every word of it are listed too',
   })
   @IsOptional()
   @IsString()

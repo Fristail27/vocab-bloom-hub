@@ -194,6 +194,7 @@ a public source, where they would be served under the name and the license of so
 {
   "name": "my_words",
   "title": "My words",
+  "version": "1.0.0",
   "license": { "spdx": "CC-BY-4.0" },
   "attribution": "Words collected by the owner of this site",
   "attribution_url": "https://example.org/words"
@@ -208,6 +209,17 @@ a public source, where they would be served under the name and the license of so
   migrations, a row in the registry. It is filled by choosing it as
   [the dataset that is edited](#the-dataset-that-is-edited), or by an import of an export of it.
 - Any number of them. Activating and deleting work as for a dataset of the catalog.
+
+**The version** is an optional label of up to 64 characters, set when creating or forking a
+dataset and editable through _Edit the terms_ or `PATCH /api/en/datasets/{name}` with
+`{ "version": "1.1.0" }`. A fork has its own version; its parent's version remains in the
+source snapshot. Omit the field in a PATCH to keep it, or send `null` or an empty string to
+clear it. Surrounding whitespace is trimmed. The registry, public dataset terms and export
+manifest use this version. Changing it is journaled and applies to future word contributions;
+existing word origins and history retain the versions captured at the time of their creation,
+including an unknown version. An import with a manifest can subsequently set the version
+from that manifest. A provenance-v1 snapshot that explicitly has no version clears the target's
+previous version. Versions of catalog datasets continue to come from their source files.
 
 **The license** is one of a closed list — `CC0-1.0`, `CC-BY-4.0`, `CC-BY-SA-4.0`,
 `CC-BY-NC-4.0`, `ODbL-1.0` (`apps/server/core/constants/data_licenses.ts`, shared with the admin
@@ -520,3 +532,116 @@ backed up and what a connection pooler has to pass through:
   of its dataset.
 - Datasets of other headword languages: the registry records the language of a dataset, the
   tables are the English ones.
+
+## Multiple origins and word licenses
+
+Each base word (headword and part of speech) keeps `origins[]`: immutable snapshots of
+inherited sources and editable declarations of manually transferred material. Every source has
+its own name, nullable version, optional source/word links, attribution, required notices,
+and one or more licenses. `license_relation` distinguishes cumulative terms (`all`) from
+alternatives offered by the source (`any`). The word's `licenses[]` retains an `origin_id`
+for each license; two contributors using the same license remain separate.
+
+An unchanged word in a fork retains only its original terms, including when another fork
+is made or the word is copied again. A content edit in an own dataset records a
+`contribution` snapshot in its history: the dataset's name, version (or null), links,
+attribution, notices, and license terms at that moment. Repeated edits under the same
+terms share a snapshot ID. Renaming the dataset or changing its version or license does not rewrite
+earlier contributions; a later edit records the new terms.
+
+Word reads expose the distinct snapshots of edits that still show as `contributions[]`.
+Their `licenses[]` includes both original and contribution licenses; `origin_id` refers
+to either collection. Forms and partial reads carry the same contributions as the base
+word. Terms already present in its original sources are not repeated. The word page
+labels the contributing dataset and its license separately from the original sources.
+Reverting all applicable edits removes their contribution from the current word while
+keeping the snapshots in its history. Inherited edits preserve their contribution terms
+through copying, forking, and export/import.
+
+Transfers through an unchanged own dataset still retain an acquisition event. Its optional
+`via` field names that intermediate dataset, its version and link without adding its license
+to the word. One existing source carries this event; the word's original terms stay intact.
+
+This starts with newly recorded content edits. Earlier history has no contribution
+snapshot: the migration leaves it unknown instead of assuming today's dataset terms
+were in force then. Saving without changes, correcting provenance declarations, and
+changing editorial flags do not create a content contribution.
+
+Copying and forking record events in source snapshots' `acquisitions[]`, with an
+ID, method (`copy` or `fork`), date, and revision. If the source snapshot already matches,
+its ID and terms are retained and only the event is added. Different versions or terms
+remain separate sources; manual declarations are preserved. Acquisition events travel
+with word and dataset origins in the API and exports and cannot be removed by ordinary editing.
+The dataset registry retains the full fork lineage. A word copied through an own dataset
+does not acquire that dataset's current terms merely by passing through it; its actual
+contributions are carried by the history instead.
+
+A word created from scratch receives the dataset's current default terms. Sources marked
+`scope: dataset` also apply by default, with an explanation that their distribution between
+words is unknown. An import that supplies word-specific origins keeps those exact
+origins; unrelated dataset sources are not added. Forms and partial API reads inherit the base
+word's terms. Legacy rows receive only the known dataset terms; unknown dates and versions
+stay unknown and the migration creates no historical edits.
+
+The dataset's primary license remains its default/contribution license. It does not replace
+borrowed terms, and changing it does not rewrite existing word snapshots. The supported
+ShareAlike licenses require the same contribution license; a source explicitly offering
+alternatives can satisfy that check with a compatible alternative. Custom terms are stored in
+full and are not automatically verified for compatibility.
+
+In **Edit sources and licenses**, add a source with its licenses or correct a manual declaration.
+A correction needs a reason and records the previous and new values in the word's history.
+Automatically inherited sources cannot be removed or changed here. Manual information is
+identified as user-provided. A custom license needs its name, URL, and full text.
+
+Own dataset settings also have a description, a notice displayed for every word, and multiple
+origins. Required inherited notices are inside protected source records, separate from the
+editable description and general notice. Dataset setting changes appear in the audit journal.
+
+## Copying words and creating forks
+
+Select an own dataset in the admin header and open **Add word → Prefill from another dataset**.
+Choose an installed dataset, search for a headword, select a part of speech, and inspect the
+preview. Save the populated form, optionally after editing. Repeat for other parts of speech.
+The server captures both the published version and a revision of the actual installed word.
+If the source changed since the preview, reopen it before saving. A word already present in
+the destination is a conflict; there is no implicit overwrite or merge. For a phrasal verb, copy
+its base verb first if the destination does not contain it. Lexical links use records local to
+the destination.
+
+A pure copy records its source without inventing changes to every field. Edits made in the
+prefilled form are recorded relative to that source, field by field, and support the usual
+reverts. Available source history is retained and labeled as inherited; inherited history cannot
+be reverted in the receiving dataset. Unknown earlier history is not reconstructed.
+
+On an installed dataset's card, **Create fork** makes a complete independent own dataset on
+PostgreSQL. Set a unique name, title, description, and terms for contributions. Content,
+relationships, origins, notices, and history are copied in one consistent database snapshot.
+Progress reports copied tables. The new dataset appears only after the transaction commits;
+a failed operation rolls back its schema and can be retried. It is not activated automatically.
+Progress is held in memory; after a server restart, consult the dataset list for a completed
+fork. An interrupted, uncommitted fork leaves no registered dataset or partial schema.
+
+A fork states its immediate parent and retains earlier origins. Parent updates, renames, and
+deletion do not alter the saved chain. A fork is not synchronized with its parent: updating,
+rebasing, merging words, and a separate original/current comparison screen are future work.
+SQLite still supports word attribution, but cannot hold a second dataset or create a fork.
+
+The editor of a catalog dataset, including the project's published dataset, recommends a fork.
+**Continue editing** keeps direct edits available and acknowledges the warning for that dataset
+in the current browser session. The reminder remains visible in the editor.
+
+### Provenance endpoints
+
+All mutation routes require admin authentication:
+
+| Endpoint                                    | Result                                                                     |
+| ------------------------------------------- | -------------------------------------------------------------------------- |
+| `GET /api/en/copy-preview/{source}/{id}`    | Word content, origins, and `copy_source` revision for the add-word request |
+| `POST /api/en/add/word?dataset={own}`       | Create normally, or copy using the preview's `copy_source` and origins     |
+| `PATCH /api/en/{id}/origins?dataset={name}` | Save `{origins, reason}`; inherited terms are protected                    |
+| `POST /api/en/datasets/{parent}/fork`       | Accept a create-dataset payload; return `202` and initial progress         |
+| `GET /api/en/datasets/{name}/fork-status`   | `copying`, `completed`, or `failed`, with table counts and a failure code  |
+
+See [the portable format](./offline-import.md#provenance-export-format) before moving these
+records to another instance or publishing them on Hugging Face.

@@ -120,7 +120,7 @@ export class HeadwordReader {
   // Every relation of the contract, projected by name (issue #392)
   async loadFull(ids: number[]): Promise<PublicWordV1T[]> {
     const rows = await this.wordRows.load(ids, FULL_WORD_RELATIONS);
-    const modified = await this.wordRows.modifiedArticles(rows);
+    const modified = await this.wordRows.modifiedWords(rows);
     return rows.map((row) =>
       toPublicWord(sortRelations(row), {
         with_meanings: true,
@@ -143,12 +143,12 @@ export class HeadwordReader {
       select: { id: true, part_of_speech: true, word: { word: true } },
       relations: { word: true },
     });
-    const articles = new Set(rows.map((row) => `${row.word.word}\u0000${row.part_of_speech}`));
+    const words = new Set(rows.map((row) => `${row.word.word}\u0000${row.part_of_speech}`));
     const edits = await this.changes.activeOf([...new Set(rows.map((row) => row.word.word))]);
     return (
       edits
-        // an edit without a part of speech is about every article of its headword
-        .filter((edit) => !edit.part_of_speech || articles.has(`${edit.headword}\u0000${edit.part_of_speech}`))
+        // an edit without a part of speech is about every word of its headword
+        .filter((edit) => !edit.part_of_speech || words.has(`${edit.headword}\u0000${edit.part_of_speech}`))
         .map((edit) => toPublicChange(edit, this.source))
     );
   }

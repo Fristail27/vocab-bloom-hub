@@ -1,3 +1,5 @@
+import { AddDatasetOrigins1790200000000 } from './1790200000000-AddDatasetOrigins';
+import { AddDatasetTermsUpdatedAt1790200002000 } from './1790200002000-AddDatasetTermsUpdatedAt';
 import { Baseline1786903614082 } from './1786903614082-Baseline';
 import { AddMeaningSynonyms1787504717645 } from './1787504717645-AddMeaningSynonyms';
 import { AddMeaningAntonyms1787850000000 } from './1787850000000-AddMeaningAntonyms';
@@ -46,4 +48,6 @@ export const migrations = [
   AddDatasets1789600000000,
   AddOwnDatasets1790000000000,
   AddOwnDatasetMark1790100000000,
+  AddDatasetOrigins1790200000000,
+  AddDatasetTermsUpdatedAt1790200002000,
 ];

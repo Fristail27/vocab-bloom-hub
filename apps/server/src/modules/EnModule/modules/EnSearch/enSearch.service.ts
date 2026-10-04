@@ -390,7 +390,7 @@ export class EnSearchService {
     // the phrasal base too: the item type promises `base_phrasal` (issue #392)
     const words = await this.findWordsByIdsOrdered(ids, SEARCH_ITEM_RELATIONS);
     // a search answer shows what an entry says, so it says whether that was changed (issue #531)
-    const modified = await this.wordRows.modifiedArticles(words);
+    const modified = await this.wordRows.modifiedWords(words);
     return {
       items: words.map((w) =>
         toPublicSearchWord(w, { similarity: similarity?.get(w.id), modified: modified.has(w) }),
@@ -428,7 +428,7 @@ export class EnSearchService {
     }
 
     const words = await this.findWordsByIdsOrdered(pageIds, relations);
-    const modified = await this.wordRows.modifiedArticles(words);
+    const modified = await this.wordRows.modifiedWords(words);
     return {
       items: words.map((w) =>
         toPublicWord(w, {

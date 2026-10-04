@@ -26,7 +26,7 @@ export default async function AddWordPage({ params }: CommonPageP) {
       <Title level={2}>{manageT('add_word')}</Title>
       <Breadcrumb items={breadCrumbs} />
       <EditedDataset dataset={dataset}>
-        <EditLicenseNote />
+        <EditLicenseNote confirmSource />
         <EnWordForm />
       </EditedDataset>
     </div>

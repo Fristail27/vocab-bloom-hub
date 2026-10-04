@@ -8,7 +8,7 @@ const BATCH = 500;
  * Says of the edits of the given entries that they no longer show in what
  * is served (issue #531): the content of the source took their place. The
  * rows stay — the history is never erased. With a part of speech only the
- * edits of that article are meant, without one every edit of the headword.
+ * edits of that word are meant, without one every edit of the headword.
  * Answers how many rows it touched.
  */
 export const supersedeChanges = async (

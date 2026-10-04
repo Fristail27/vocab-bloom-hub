@@ -1,4 +1,5 @@
 import React from 'react';
+import { Origins } from '@/components/Origins';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 
@@ -89,6 +90,8 @@ export default async function DatasetTermsPage({ params }: LocaleParamsP) {
           </>
         )}
       </dl>
+      {terms.description && <p>{terms.description}</p>}
+      <Origins origins={terms.origins} />
       <p>{t('modified')}</p>
       {isOwnData && (
         <p>

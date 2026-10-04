@@ -99,7 +99,7 @@ describe('the history of edits (e2e, issue #531)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
-    await app.init();
+    await app.listen(0, '127.0.0.1');
 
     await importWords([wordLine('lamp'), wordLine('lamp', 'verb'), wordLine('mouse')]);
   });
@@ -127,7 +127,7 @@ describe('the history of edits (e2e, issue #531)', () => {
     ]);
   });
 
-  it('marks the article that was edited, and not the other article of the headword', async () => {
+  it('marks the word that was edited, and not the other word of the headword', async () => {
     const [noun] = await publicWord('lamp');
 
     await request(server())
@@ -240,7 +240,7 @@ describe('the history of edits (e2e, issue #531)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
-    await app.init();
+    await app.listen(0, '127.0.0.1');
     await request(server()).get('/api/v1/words/lantern').expect(404);
 
     const imported = await request(server())
@@ -269,6 +269,9 @@ describe('the history of edits (e2e, issue #531)', () => {
     expect(history.body).toEqual({
       data: [
         {
+          inherited_from: null,
+          contribution: null,
+          reason: null,
           created_at: expect.any(String),
           word: 'mouse',
           part_of_speech: 'noun',

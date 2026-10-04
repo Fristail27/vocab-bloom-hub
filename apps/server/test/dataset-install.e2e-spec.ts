@@ -114,7 +114,7 @@ describe('installing a dataset from its source (e2e, issue #527)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
-    await app.init();
+    await app.listen(0, '127.0.0.1');
   });
 
   afterAll(async () => {
@@ -123,9 +123,11 @@ describe('installing a dataset from its source (e2e, issue #527)', () => {
   });
 
   it('is an admin route', async () => {
+    // The guard can answer before a file stream finishes writing (EPIPE).
+    // Buffer this small fixture so the test checks the 401 response reliably.
     await request(server())
       .post('/api/en/datasets/wordnet/install')
-      .attach('file', sources.wordnet)
+      .attach('file', await readFile(sources.wordnet), 'wordnet.zip')
       .expect(401);
   });
 

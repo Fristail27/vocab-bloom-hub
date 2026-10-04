@@ -13,7 +13,7 @@ import { DataSource } from 'typeorm';
 const adminUrl = process.env.E2E_DATABASE_URL;
 
 if (adminUrl?.startsWith('postgres')) {
-  // app.init() now runs the whole migration set per file — far past the 5s default
+  // Starting the app runs the whole migration set per file — far past the 5s default
   jest.setTimeout(120_000);
 
   // every table but the migration journals, emptied right after the data

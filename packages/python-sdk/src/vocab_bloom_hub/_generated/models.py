@@ -69,6 +69,86 @@ class PublicSearchV1MetaT(BaseModel):
     short_term: bool
 
 
+class LicenseRelation(Enum):
+    """
+    All obligations apply, or the source explicitly offers a choice.
+    """
+
+    all = "all"
+    any = "any"
+
+
+class Scope(Enum):
+    """
+    Dataset means that distribution between individual words is unknown.
+    """
+
+    word = "word"
+    dataset = "dataset"
+
+
+class Method(Enum):
+    dataset = "dataset"
+    manual = "manual"
+
+
+class OriginLicenseT(BaseModel):
+    """
+    A durable statement of terms, not a pointer to a mutable dataset registry.
+    """
+
+    spdx: str | None = None
+    name: str
+    url: str
+    text: str | None = Field(
+        None, description="Required for custom licenses; preserved verbatim when supplied."
+    )
+
+
+class Method1(Enum):
+    copy = "copy"
+    fork = "fork"
+
+
+class Via(BaseModel):
+    """
+    The intermediate dataset the material passed through; this adds no license obligations.
+    """
+
+    name: str
+    version: str | None = Field(...)
+    url: str | None = None
+
+
+class OriginAcquisitionT(BaseModel):
+    """
+    An acquisition of a source snapshot, without repeating its license terms.
+    """
+
+    id: str
+    method: Method1
+    recorded_at: str | None = Field(...)
+    revision: str | None = None
+    via: Via | None = Field(
+        None,
+        description="The intermediate dataset the material passed through; this adds no license obligations.",
+    )
+
+
+class WordLicenseT(BaseModel):
+    """
+    One license can occur more than once; origin_id refers to origins or contributions.
+    """
+
+    origin_id: str
+    spdx: str | None = None
+    name: str
+    url: str
+    text: str | None = Field(
+        None, description="Required for custom licenses; preserved verbatim when supplied."
+    )
+
+
 class EnPartOfSpeechE(Enum):
     noun = "noun"
     verb = "verb"
@@ -194,61 +274,6 @@ class PublicHeadwordV1MetaT(BaseModel):
     variants: list[str] | None = None
 
 
-class PublicWordFormV1T(BaseModel):
-    word_id: int
-    part_of_speech: EnPartOfSpeechE
-    source: str | None = None
-    modified: bool | None = None
-    id: int
-    word: str
-    form_of_word: EnWordFormsE
-    area_variant: EnAreaVariantsE
-    transcription: str | None = Field(...)
-
-
-class PublicHeadwordFormsV1ResT(BaseModel):
-    data: list[PublicWordFormV1T]
-    meta: PublicHeadwordV1MetaT
-
-
-class PublicShortTranslationV1T(BaseModel):
-    word_id: int
-    part_of_speech: EnPartOfSpeechE
-    source: str | None = None
-    modified: bool | None = None
-    id: int
-    language: AvailableTranslationLanguagesE
-    description: str
-    variants_of_words: list[str]
-
-
-class PublicMeaningTranslationV1T(BaseModel):
-    meaning_id: int
-    word_id: int
-    part_of_speech: EnPartOfSpeechE
-    source: str | None = None
-    modified: bool | None = None
-    id: int
-    language: AvailableTranslationLanguagesE
-    title: str
-    definition: str
-    variants_of_words: list[str]
-
-
-class PublicWordLinkV1T(BaseModel):
-    meaning_id: int
-    word: str
-    word_id: int
-    part_of_speech: EnPartOfSpeechE
-    source: str | None = None
-    modified: bool | None = None
-
-
-class PublicHeadwordLinksV1ResT(BaseModel):
-    data: list[PublicWordLinkV1T]
-    meta: PublicHeadwordV1MetaT
-
-
 class ChangeEntityE(Enum):
     """
     What was edited
@@ -315,16 +340,6 @@ class PublicWordDatasetsV1MetaT(BaseModel):
     found: int
 
 
-class PublicHeadwordTranslationsV1T(BaseModel):
-    short_translations: list[PublicShortTranslationV1T]
-    meaning_translations: list[PublicMeaningTranslationV1T]
-
-
-class PublicHeadwordTranslationsV1ResT(BaseModel):
-    meta: PublicHeadwordV1MetaT
-    data: PublicHeadwordTranslationsV1T
-
-
 class PublicWordsBatchV1MetaT(BaseModel):
     count: int
     not_found: list[str]
@@ -367,7 +382,175 @@ class PublicApiErrorT(BaseModel):
     error: bool
 
 
+class OriginT(BaseModel):
+    id: str
+    name: str
+    version: str | None = Field(...)
+    url: str | None = None
+    record_url: str | None = None
+    licenses: list[OriginLicenseT]
+    license_relation: LicenseRelation = Field(
+        ..., description="All obligations apply, or the source explicitly offers a choice."
+    )
+    attribution: str
+    notices: list[str]
+    scope: Scope = Field(
+        ..., description="Dataset means that distribution between individual words is unknown."
+    )
+    method: Method
+    recorded_at: str | None = Field(...)
+    acquisitions: list[OriginAcquisitionT] | None = Field(
+        None, description="Copy/fork events belonging to this source snapshot; absent before any acquisition."
+    )
+    inherited: bool = Field(
+        ..., description="Automatically inherited terms cannot be removed by ordinary editing."
+    )
+
+
+class PublicWordV1MeaningTranslationT(BaseModel):
+    id: int
+    language: AvailableTranslationLanguagesE
+    title: str
+    definition: str
+    variants_of_words: list[str]
+
+
+class PublicMeaningV1T(BaseModel):
+    origins: list[OriginT] | None = None
+    contributions: list[OriginT] | None = None
+    licenses: list[WordLicenseT] | None = None
+    word_id: int
+    part_of_speech: EnPartOfSpeechE
+    source: str | None = None
+    modified: bool | None = None
+    id: int
+    sort_order: int
+    title: str
+    definition: str
+    is_obsolete: bool
+    examples: list[str]
+    categories: list[CategoryE]
+    meaning_level: WordLevelE | None = Field(...)
+    area_variant: EnAreaVariantsE
+    language_register: LanguageRegisterE | None = Field(...)
+    translations: list[PublicWordV1MeaningTranslationT]
+    synonyms: list[str]
+    antonyms: list[str]
+
+
+class PublicHeadwordMeaningsV1ResT(BaseModel):
+    data: list[PublicMeaningV1T]
+    meta: PublicHeadwordV1MetaT
+
+
+class PublicWordFormV1T(BaseModel):
+    origins: list[OriginT] | None = None
+    contributions: list[OriginT] | None = None
+    licenses: list[WordLicenseT] | None = None
+    word_id: int
+    part_of_speech: EnPartOfSpeechE
+    source: str | None = None
+    modified: bool | None = None
+    id: int
+    word: str
+    form_of_word: EnWordFormsE
+    area_variant: EnAreaVariantsE
+    transcription: str | None = Field(...)
+
+
+class PublicHeadwordFormsV1ResT(BaseModel):
+    data: list[PublicWordFormV1T]
+    meta: PublicHeadwordV1MetaT
+
+
+class PublicShortTranslationV1T(BaseModel):
+    origins: list[OriginT] | None = None
+    contributions: list[OriginT] | None = None
+    licenses: list[WordLicenseT] | None = None
+    word_id: int
+    part_of_speech: EnPartOfSpeechE
+    source: str | None = None
+    modified: bool | None = None
+    id: int
+    language: AvailableTranslationLanguagesE
+    description: str
+    variants_of_words: list[str]
+
+
+class PublicMeaningTranslationV1T(BaseModel):
+    meaning_id: int
+    origins: list[OriginT] | None = None
+    contributions: list[OriginT] | None = None
+    licenses: list[WordLicenseT] | None = None
+    word_id: int
+    part_of_speech: EnPartOfSpeechE
+    source: str | None = None
+    modified: bool | None = None
+    id: int
+    language: AvailableTranslationLanguagesE
+    title: str
+    definition: str
+    variants_of_words: list[str]
+
+
+class PublicWordLinkV1T(BaseModel):
+    meaning_id: int
+    word: str
+    origins: list[OriginT] | None = None
+    contributions: list[OriginT] | None = None
+    licenses: list[WordLicenseT] | None = None
+    word_id: int
+    part_of_speech: EnPartOfSpeechE
+    source: str | None = None
+    modified: bool | None = None
+
+
+class PublicHeadwordLinksV1ResT(BaseModel):
+    data: list[PublicWordLinkV1T]
+    meta: PublicHeadwordV1MetaT
+
+
+class PublicHeadwordTranslationsV1T(BaseModel):
+    short_translations: list[PublicShortTranslationV1T]
+    meaning_translations: list[PublicMeaningTranslationV1T]
+
+
+class PublicHeadwordTranslationsV1ResT(BaseModel):
+    meta: PublicHeadwordV1MetaT
+    data: PublicHeadwordTranslationsV1T
+
+
+class PublicMetaV1T(BaseModel):
+    origins: list[OriginT] | None = None
+    licenses: list[WordLicenseT] | None = None
+    description: str | None = None
+    api_version: str
+    app_version: str
+    dataset_version: str | None = Field(...)
+    license: str
+    license_url: str
+    attribution: str
+    notice: str
+    dataset: str | None = None
+    title: str | None = None
+    source: str | None = None
+    attribution_url: str | None = None
+    license_text: str | None = None
+    modified_entries: int | None = None
+    counts: PublicDatasetCountsV1T
+    available_languages: PublicAvailableLanguagesV1T
+
+
+class PublicMetaV1ResT(BaseModel):
+    data: PublicMetaV1T
+
+
 class PublicSearchWordV1T(BaseModel):
+    origins: list[OriginT] | None = None
+    contributions: list[OriginT] | None = Field(
+        None, description="Terms of the datasets whose edits still contribute to this word."
+    )
+    licenses: list[WordLicenseT] | None = None
     id: int
     word: str
     part_of_speech: EnPartOfSpeechE
@@ -396,66 +579,6 @@ class PublicSearchWordV1T(BaseModel):
     modified: bool | None = None
 
 
-class PublicWordV1MeaningTranslationT(BaseModel):
-    id: int
-    language: AvailableTranslationLanguagesE
-    title: str
-    definition: str
-    variants_of_words: list[str]
-
-
-class PublicMeaningV1T(BaseModel):
-    word_id: int
-    part_of_speech: EnPartOfSpeechE
-    source: str | None = None
-    modified: bool | None = None
-    id: int
-    sort_order: int
-    title: str
-    definition: str
-    is_obsolete: bool
-    examples: list[str]
-    categories: list[CategoryE]
-    meaning_level: WordLevelE | None = Field(...)
-    area_variant: EnAreaVariantsE
-    language_register: LanguageRegisterE | None = Field(...)
-    translations: list[PublicWordV1MeaningTranslationT]
-    synonyms: list[str]
-    antonyms: list[str]
-
-
-class PublicHeadwordMeaningsV1ResT(BaseModel):
-    data: list[PublicMeaningV1T]
-    meta: PublicHeadwordV1MetaT
-
-
-class PublicMetaV1T(BaseModel):
-    api_version: str
-    app_version: str
-    dataset_version: str | None = Field(...)
-    license: str
-    license_url: str
-    attribution: str
-    notice: str
-    dataset: str | None = None
-    title: str | None = None
-    source: str | None = None
-    attribution_url: str | None = None
-    license_text: str | None = None
-    modified_entries: int | None = None
-    counts: PublicDatasetCountsV1T
-    available_languages: PublicAvailableLanguagesV1T
-
-
-class PublicMetaV1ResT(BaseModel):
-    data: PublicMetaV1T
-
-
-class PublicSearchV1ResT(BaseModel):
-    data: list[PublicSearchWordV1T]
-    meta: PublicSearchV1MetaT
-
-
 class PublicWordV1MeaningT(BaseModel):
     id: int
     sort_order: int
@@ -473,6 +596,11 @@ class PublicWordV1MeaningT(BaseModel):
 
 
 class PublicChangeV1T(BaseModel):
+    inherited_from: OriginT | None = None
+    contribution: OriginT | None = Field(
+        None, description="Terms captured when this edit was made, independent of later dataset changes."
+    )
+    reason: str | None = None
     created_at: str
     word: str
     part_of_speech: str | None = Field(...)
@@ -499,10 +627,20 @@ class PublicHeadwordHistoryV1ResT(BaseModel):
     meta: PublicHeadwordHistoryV1MetaT
 
 
+class PublicSearchV1ResT(BaseModel):
+    data: list[PublicSearchWordV1T]
+    meta: PublicSearchV1MetaT
+
+
 class PublicWordV1T(BaseModel):
     meanings: list[PublicWordV1MeaningT]
     short_translations: list[PublicWordV1ShortTranslationT]
     phrasal_variants: list[str] | None = None
+    origins: list[OriginT] | None = None
+    contributions: list[OriginT] | None = Field(
+        None, description="Terms of the datasets whose edits still contribute to this word."
+    )
+    licenses: list[WordLicenseT] | None = None
     id: int
     word: str
     part_of_speech: EnPartOfSpeechE
@@ -545,6 +683,9 @@ class PublicWordDatasetV1T(BaseModel):
     variants: list[str]
     count: int
     entries: list[PublicWordV1T]
+    origins: list[OriginT] | None = None
+    licenses: list[WordLicenseT] | None = None
+    description: str | None = None
     dataset: str
     title: str | None = None
     active: bool

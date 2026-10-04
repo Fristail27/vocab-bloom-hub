@@ -123,6 +123,11 @@ and what ran there), and that is also the way to apply them by hand — start th
 4. Review the generated SQL, run `yarn format`, and commit the migration file together with
    the entity change in the same PR.
 
+Once a migration has run, add later schema changes in a new migration with a new name and
+timestamp. TypeORM records the migration's name, not a checksum of its SQL: editing an
+applied file will not update existing databases. Test both a fresh schema and an upgrade
+from the earlier schema; a passing fresh-database test alone does not cover that upgrade.
+
 No local Postgres? Spin up a throwaway one, apply the already-committed migrations to bring
 it to the current schema, then generate:
 

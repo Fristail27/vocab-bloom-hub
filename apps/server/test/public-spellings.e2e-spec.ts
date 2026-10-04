@@ -73,7 +73,7 @@ describe('headwords that differ by case (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
-    await app.init();
+    await app.listen(0, '127.0.0.1');
 
     await add('polish', EnPartOfSpeechE.verb, 'to make smooth and shiny', [
       { word: 'polished', form_of_word: EnWordFormsE.past_simple, area_variant: EnAreaVariantsE.common },

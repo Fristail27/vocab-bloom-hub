@@ -4,11 +4,13 @@ import { EnChange } from '../../entities/en_change.entity';
 import { EnWord } from '../../entities/en_word.entity';
 import { markEntryUserModified } from '../markEntryUserModified';
 import { currentChangeSource } from './context';
+import { captureContribution } from './contribution';
 
-/** The article an edit belongs to: the headword and the part of speech of the base word */
-export type ArticleT = { headword: string; part_of_speech: string };
+/** The word an edit belongs to: the headword and the part of speech of the base word */
+export type WordKeyT = { headword: string; part_of_speech: string };
 
-export type NewChangeT = ArticleT & {
+export type NewChangeT = WordKeyT & {
+  reason?: string;
   entity: ChangeEntityE;
   action: ChangeActionE;
   record?: ChangeRecordT | null;
@@ -16,19 +18,19 @@ export type NewChangeT = ArticleT & {
   diff: ChangeDiffT | null;
 };
 
-/** The article of a word row; a form row belongs to the article of its base word */
-export const articleOf = (row: EnWord): ArticleT => {
+/** The history key for a word row; forms use the key of their base word */
+export const wordKeyOf = (row: EnWord): WordKeyT => {
   const base = row.base_form ?? row;
   return { headword: base.word.word, part_of_speech: base.part_of_speech };
 };
 
-/** The article of a word row by its id; null when the row is gone */
-export const articleOfRow = async (em: EntityManager, wordRowId: number): Promise<ArticleT | null> => {
+/** The history key for a word row by its id; null when the row is gone */
+export const wordKeyOfRow = async (em: EntityManager, wordRowId: number): Promise<WordKeyT | null> => {
   const row = await em.getRepository(EnWord).findOne({
     where: { id: wordRowId },
     relations: { word: true, base_form: { word: true } },
   });
-  return row ? articleOf(row) : null;
+  return row ? wordKeyOf(row) : null;
 };
 
 /**
@@ -52,6 +54,8 @@ export const recordChange = async (em: EntityManager, change: NewChangeT): Promi
       action: change.action,
       record: change.record ?? null,
       diff: change.diff,
+      contribution: source.superseded ? null : await captureContribution(em, change.diff),
+      reason: change.reason ?? null,
       origin: source.origin,
       suggestion_id: source.suggestion_id ?? null,
       author: source.author ?? null,

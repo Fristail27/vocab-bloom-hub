@@ -1,3 +1,4 @@
+import { WordCopyService } from './word-copy.service';
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../AuditModule/audit.module';
 import { AuditController } from '../AuditModule/audit.controller';
@@ -72,6 +73,7 @@ import { EnChangesService } from './modules/EnChanges/enChanges.service';
     EnImportDictionaryController,
   ],
   providers: [
+    WordCopyService,
     WordRowsService,
     EnService,
     EnShortTranslationService,

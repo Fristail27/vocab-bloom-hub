@@ -1,3 +1,4 @@
+import { UpdateOriginsReqDTO } from './dto/UpdateOriginsReq.dto';
 import {
   Body,
   Controller,
@@ -55,9 +56,21 @@ export class EnController {
   }
 
   @UseGuards(AdminGuard)
+  @Get('copy-preview/:source/:id')
+  async previewCopy(@Param('source') source: string, @Param('id', ParseIntPipe) id: number) {
+    return this.enService.previewCopy(source, id);
+  }
+
+  @UseGuards(AdminGuard)
   @Post('add/:entryType')
   async add(@Param('entryType') entryType: EnEntryTypesE, @Body() body: AddWordReqDTO): Promise<AddResT> {
     return this.enService.addWord(body);
+  }
+
+  @UseGuards(AdminGuard)
+  @Patch(':id/origins')
+  async updateOrigins(@Param('id', ParseIntPipe) id: number, @Body() body: UpdateOriginsReqDTO) {
+    return this.enService.updateOrigins(id, body);
   }
 
   @UseGuards(AdminGuard)

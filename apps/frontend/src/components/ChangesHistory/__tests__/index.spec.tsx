@@ -140,7 +140,7 @@ describe('ChangesHistory', () => {
     expect(screen.getByRole('button', { name: 'hide_values' })).toBeTruthy();
   });
 
-  it('asks for the history of one article when it is shown on the card of a word', async () => {
+  it('asks for the history of one word when it is shown on the card of a word', async () => {
     (EnApi.getChanges as jest.Mock).mockResolvedValue(listOf([change()]));
 
     renderHistory({ headword: 'lamp', partOfSpeech: 'noun', pageSize: 10 });

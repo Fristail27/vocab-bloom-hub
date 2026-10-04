@@ -47,6 +47,12 @@ import { MANUALLY_MANAGED_INDEX } from './manually-managed-index';
 // AddCaseFoldedWordIndexes migration (issue #440)
 @Index('IDX_EN_WORD_LOWER_C', ['word'], MANUALLY_MANAGED_INDEX)
 export class EnWord {
+  /** Derived from active history; never stored or edited as word origins. */
+  contributions?: import('../../../../types/provenance').OriginT[];
+
+  @Column({ type: 'simple-json', nullable: true })
+  origins?: import('../../../../types/provenance').OriginT[] | null;
+
   /** @asType integer */
   @PrimaryGeneratedColumn()
   @IsNumber()

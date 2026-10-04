@@ -29,6 +29,9 @@ export const PUBLIC_HISTORY_LIMIT = 200;
 export const toChange = (row: EnChange): ChangeT => ({
   id: row.id,
   created_at: new Date(row.created_at).toISOString(),
+  inherited_from: row.inherited_from ?? null,
+  contribution: row.contribution ?? null,
+  reason: row.reason ?? null,
   headword: row.headword,
   part_of_speech: row.part_of_speech,
   entity: row.entity,
