@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { DatasetT } from 'server/types';
-import { isPublicSourceDataset } from 'server/core/constants/dataset_catalog';
+import { isHumanAuthoredDataset } from 'server/core/constants/dataset_catalog';
 import styles from './styles.module.scss';
 
 /**
@@ -19,13 +19,13 @@ export const EditedDatasetContext = React.createContext<DatasetT | undefined>(un
 
 /**
  * Whether the dataset being edited holds what people wrote: a dataset of a
- * public source carries no notice about generated text, so nothing generated
+ * human-authored public source carries no notice about generated text, so nothing generated
  * by a model is added to it — the forms offer no way to. The project's
- * dataset and the datasets of the instance's own take it (issue #540).
+ * dataset, OpenGloss and the datasets of the instance's own take it.
  */
 export const useWrittenByPeopleOnly = (): boolean => {
   const dataset = React.useContext(EditedDatasetContext);
-  return !!dataset && isPublicSourceDataset(dataset);
+  return !!dataset && isHumanAuthoredDataset(dataset);
 };
 
 /** The provider a server page wraps its form in */
@@ -124,7 +124,7 @@ export const EditLicenseNote: React.FC<{ confirmSource?: boolean }> = ({ confirm
               dataset.license
             )}
             . {t('editing_license_effect')}
-            {isPublicSourceDataset(dataset) && <> {t('editing_no_generated')}</>}
+            {isHumanAuthoredDataset(dataset) && <> {t('editing_no_generated')}</>}
           </>
         }
       />

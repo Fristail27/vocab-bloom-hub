@@ -84,6 +84,7 @@ describe('Datasets (e2e, issue #527)', () => {
       ['wiktionary', false, 'CC-BY-SA-4.0'],
       ['wordnet', false, 'CC-BY-4.0'],
       ['wordnet_princeton', false, 'WordNet'],
+      ['opengloss', false, 'CC-BY-4.0'],
     ]);
     expect(list.datasets[0]).toEqual(
       expect.objectContaining({

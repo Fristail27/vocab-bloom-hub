@@ -20,8 +20,9 @@ export type ProvenanceDatasetT = {
 /** A legacy row gets only facts we know; its acquisition date is unknown. */
 export const datasetOrigin = (dataset: ProvenanceDatasetT): OriginT => {
   const catalog = dataset.own ? undefined : findCatalogEntry(dataset.name);
+  const wordNotices = catalog?.notices.filter((notice) => notice.scope !== 'dataset') ?? [];
   const standard = findStandardLicense(dataset.license);
-  const text = dataset.license_text || (catalog ? noticesText(catalog) : '');
+  const text = dataset.license_text || (catalog ? noticesText({ ...catalog, notices: wordNotices }) : '');
   return {
     id: `dataset:${dataset.source}:${dataset.version ?? 'unknown'}`,
     name: dataset.title || catalog?.title || dataset.name,
@@ -37,8 +38,8 @@ export const datasetOrigin = (dataset: ProvenanceDatasetT): OriginT => {
     ],
     license_relation: 'all',
     attribution: dataset.attribution,
-    notices: [dataset.notice, ...(catalog?.notices.map((notice) => notice.text) ?? [])].filter(
-      (notice): notice is string => Boolean(notice),
+    notices: [dataset.notice, ...wordNotices.map((notice) => notice.text)].filter((notice): notice is string =>
+      Boolean(notice),
     ),
     scope: 'word',
     method: 'dataset',

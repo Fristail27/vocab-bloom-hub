@@ -4,6 +4,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { LICENSE_FILE_NAME } from '../../core/constants/dataset_catalog';
 import * as path from 'node:path';
 import { once } from 'node:events';
+import { finished } from 'node:stream/promises';
 import {
   AvailableTranslationLanguagesE,
   DatasetManifestT,
@@ -78,6 +79,20 @@ export class DatasetWriter {
 
   constructor(private readonly options: WriterOptionsT) {}
 
+  /** A malformed later shard must not leave the partially written output streams open. */
+  async abort(): Promise<void> {
+    await Promise.all(
+      [...this.streams.values()].map(async (stream) => {
+        if (stream.closed) return;
+        // Destroying an in-flight file write can emit an error before close.
+        // Handle it before destroying the stream and preserve the source error.
+        const closed = finished(stream, { cleanup: true }).catch(() => undefined);
+        stream.destroy();
+        await closed;
+      }),
+    );
+  }
+
   private async write(file: string, line: object): Promise<void> {
     let stream = this.streams.get(file);
     if (!stream) {
@@ -125,9 +140,8 @@ export class DatasetWriter {
     const shared = {
       ...(entry.origins && { origins: entry.origins }),
       categories: [...entry.categories].sort(),
-      // converted from a source written by people: nothing here is generated
-      generated: false,
-      generated_by_model: '',
+      generated: entry.generated ?? false,
+      generated_by_model: entry.generated_by_model ?? '',
       transcription: entry.transcription,
       area_variant: entry.area_variant,
       description,

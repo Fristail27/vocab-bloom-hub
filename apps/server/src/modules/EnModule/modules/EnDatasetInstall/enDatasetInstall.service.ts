@@ -1,13 +1,19 @@
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { rm, unlink } from 'node:fs/promises';
+import { mkdtemp, rm, unlink } from 'node:fs/promises';
 import * as path from 'node:path';
 import type { Response } from 'express';
-import { DatasetCatalogEntryT, findCatalogEntry } from '../../../../../core/constants/dataset_catalog';
+import {
+  DatasetCatalogEntryT,
+  DatasetCatalogFileT,
+  findCatalogEntry,
+  MAX_SOURCE_UPLOAD_BYTES,
+} from '../../../../../core/constants/dataset_catalog';
 import { ErrorCodes } from '../../../../../core/constants/error_codes';
-import { ImportTriggerE } from '../../../../../types';
+import { DownloadDatasetReqT, ImportTriggerE } from '../../../../../types';
 import { convert, versionOfConversion } from '../../../../converters/convert';
 import { findSource } from '../../../../converters/sources';
+import { validateOpenGlossFiles } from '../../../../converters/sources/opengloss/files';
 import { firstLineOf, packingOf, unpackFiles, WORDNET_FILES } from '../../../../converters/unpack';
 import { DatasetsService } from '../../../DatasetsModule/datasets.service';
 import { EnDictionaryImportPhasesE } from '../EnImportDictionary/constants';
@@ -15,16 +21,20 @@ import { EnImportDictionaryService } from '../EnImportDictionary/enImportDiction
 import { ImportStatusService } from '../EnImportDictionary/importStatus.service';
 import { HttpImportProgressSink, ImportProgressSink } from '../EnImportDictionary/progress';
 import { DatasetSource, DirectoryDatasetSource, getImportTmpDir } from '../EnImportDictionary/sources';
+import { downloadFile } from '../EnImportDictionary/sources/downloadFile';
 
 export type SourceUploadT = { path: string; originalname: string };
-export type SourceUploadsT = { file?: SourceUploadT | undefined; pronunciations?: SourceUploadT | undefined };
+export type SourceUploadsT = Partial<Record<DatasetCatalogFileT['field'], SourceUploadT | undefined>>;
 
-// the conversion of the largest source reads half a gigabyte: a chunk per percent is plenty
+// Source files exceed a gigabyte: a progress chunk per percent is plenty.
 const PROGRESS_STEP_PERCENT = 1;
+type ConvertibleDatasetT = DatasetCatalogEntryT & {
+  install: Extract<DatasetCatalogEntryT['install'], { kind: 'convert' }>;
+};
 
 /**
  * Installs a dataset of the catalog from the file its source distributes
- * (issue #527): the admin downloads the file and attaches it, the server
+ * (issue #527): the files are downloaded on the server or attached by the admin. The server
  * converts it into the project's format and imports the result into the
  * dataset's own schema — while the active dataset keeps serving. A dataset
  * that is installed already is updated: its entries are replaced with the
@@ -43,25 +53,24 @@ export class EnDatasetInstallService {
   async install(name: string, uploads: SourceUploadsT, res: Response): Promise<void> {
     const work: string[] = [];
     try {
-      const entry = findCatalogEntry(name);
-      if (!entry) throw new NotFoundException(ErrorCodes.dataset_not_found);
-      if (entry.install.kind !== 'convert') throw new BadRequestException(ErrorCodes.dataset_not_installable);
-      if (!this.datasets.supported) throw new ConflictException(ErrorCodes.datasets_not_supported);
+      const entry = await this.entryOf(name);
+      const requiredFiles = entry.install.files;
       if (!uploads.file) throw new BadRequestException(ErrorCodes.dataset_upload_missing);
-      // refused before the file is looked at; the import claims the slot itself
-      if (this.importStatus.running) throw new ConflictException(ErrorCodes.import_in_progress);
-      // a dataset of the owner's took the name of this entry before the catalog had it (issue #540)
-      if ((await this.datasets.installed()).some((dataset) => dataset.name === name && dataset.own)) {
-        throw new ConflictException(ErrorCodes.dataset_already_exists);
+      if (requiredFiles.some((file) => file.required && !uploads[file.field])) {
+        throw new BadRequestException(ErrorCodes.dataset_upload_missing);
       }
-
-      const input = await this.inputOf(entry, uploads.file, work);
-      if (uploads.pronunciations) await this.assertPronunciations(uploads.pronunciations);
-      const version = await this.versionOf(entry, uploads.file);
+      if (
+        Object.entries(uploads).some(
+          ([field, upload]) => upload && !requiredFiles.some((file) => file.field === field),
+        )
+      ) {
+        throw new BadRequestException(ErrorCodes.dataset_source_invalid);
+      }
+      const { input, version, sourceOptions } = await this.prepare(entry, uploads, work);
 
       const installed = (await this.datasets.list()).datasets.find((dataset) => dataset.name === name);
       await this.importService.importFrom(
-        (progress) => this.convert(entry, input, version, uploads.pronunciations?.path, progress),
+        (progress) => this.convert(entry, input, version, sourceOptions, progress),
         `${entry.title}, "${uploads.file.originalname}"`,
         new HttpImportProgressSink(res),
         ImportTriggerE.manual,
@@ -69,10 +78,93 @@ export class EnDatasetInstallService {
       );
     } finally {
       await Promise.allSettled([
-        ...[uploads.file, uploads.pronunciations].map((upload) => (upload ? unlink(upload.path) : undefined)),
+        ...Object.values(uploads).map((upload) => (upload ? unlink(upload.path) : undefined)),
         ...work.map((dir) => rm(dir, { recursive: true, force: true })),
       ]);
     }
+  }
+
+  /** The import slot includes downloading, validation and conversion, not just database writes. */
+  async download(name: string, body: DownloadDatasetReqT, res: Response): Promise<void> {
+    const entry = await this.entryOf(name);
+    if (body.pronunciations && !entry.install.files.some((file) => file.field === 'pronunciations')) {
+      throw new BadRequestException(ErrorCodes.dataset_source_invalid);
+    }
+    const selected = entry.install.files.filter(
+      (file) => file.required || (body.pronunciations && file.field === 'pronunciations'),
+    );
+    const installed = (await this.datasets.list()).datasets.find((dataset) => dataset.name === name);
+    await this.importService.importFrom(
+      async (progress) => {
+        const dir = await mkdtemp(path.join(getImportTmpDir(), 'source-download-'));
+        const work = [dir];
+        const uploads: SourceUploadsT = {};
+        try {
+          for (const [index, file] of selected.entries()) {
+            // Different tables may distribute files with exactly the same name.
+            const destination = path.join(dir, file.field);
+            progress.write({
+              percent: (index / selected.length) * 100,
+              stage: EnDictionaryImportPhasesE.downloading_database,
+            });
+            await downloadFile(
+              file.url,
+              destination,
+              this.logger,
+              {
+                start: () => {},
+                end: () => {},
+                write: (chunk) =>
+                  progress.write({
+                    percent: ((index + chunk.percent / 100) / selected.length) * 100,
+                    stage: EnDictionaryImportPhasesE.downloading_database,
+                  }),
+              },
+              { maxBytes: MAX_SOURCE_UPLOAD_BYTES },
+            );
+            uploads[file.field] = { path: destination, originalname: file.file_name };
+          }
+          const { input, version, sourceOptions } = await this.prepare(entry, uploads, work);
+          return await this.convert(entry, input, version, sourceOptions, progress);
+        } finally {
+          await Promise.allSettled(work.map((folder) => rm(folder, { recursive: true, force: true })));
+        }
+      },
+      `${entry.title}, download from source`,
+      new HttpImportProgressSink(res),
+      ImportTriggerE.manual,
+      { dataset: name, update: Boolean(installed?.imported_at) },
+    );
+  }
+
+  private async entryOf(name: string): Promise<ConvertibleDatasetT> {
+    const entry = findCatalogEntry(name);
+    if (!entry) throw new NotFoundException(ErrorCodes.dataset_not_found);
+    if (entry.install.kind !== 'convert') throw new BadRequestException(ErrorCodes.dataset_not_installable);
+    if (!this.datasets.supported) throw new ConflictException(ErrorCodes.datasets_not_supported);
+    if (this.importStatus.running) throw new ConflictException(ErrorCodes.import_in_progress);
+    if ((await this.datasets.installed()).some((dataset) => dataset.name === name && dataset.own)) {
+      throw new ConflictException(ErrorCodes.dataset_already_exists);
+    }
+    return entry as ConvertibleDatasetT;
+  }
+
+  /** Both installation modes validate and version the same source files. */
+  private async prepare(entry: ConvertibleDatasetT, uploads: SourceUploadsT, work: string[]) {
+    if (!uploads.file) throw new BadRequestException(ErrorCodes.dataset_upload_missing);
+    const sourceOptions = {
+      ...entry.install.options,
+      ...Object.fromEntries(
+        Object.entries(uploads)
+          .filter(([, upload]) => upload)
+          .map(([field, upload]) => [field === 'pronunciations' ? 'cmudict' : field, upload!.path]),
+      ),
+    };
+    const input = await this.inputOf(entry, uploads.file, work, sourceOptions);
+    if (uploads.pronunciations) await this.assertPronunciations(uploads.pronunciations);
+    const version = await this.versionOf(entry, uploads.file, sourceOptions);
+
+    return { input, version, sourceOptions };
   }
 
   private reject(entry: DatasetCatalogEntryT, upload: SourceUploadT, reason: string): never {
@@ -85,8 +177,19 @@ export class EnDatasetInstallService {
    * anything is converted: a wrong file is refused as a plain HTTP error.
    * A packed release is unpacked here, into a folder `work` remembers.
    */
-  private async inputOf(entry: DatasetCatalogEntryT, upload: SourceUploadT, work: string[]): Promise<string> {
+  private async inputOf(
+    entry: DatasetCatalogEntryT,
+    upload: SourceUploadT,
+    work: string[],
+    options: Record<string, string>,
+  ): Promise<string> {
     if (entry.install.kind !== 'convert') throw new BadRequestException(ErrorCodes.dataset_not_installable);
+    if (entry.install.adapter === 'opengloss') {
+      await validateOpenGlossFiles(upload.path, options).catch((error: unknown) =>
+        this.reject(entry, upload, String(error)),
+      );
+      return upload.path;
+    }
     if (entry.install.adapter === 'wordnet') {
       const dir = path.join(getImportTmpDir(), `source-${randomUUID()}`);
       work.push(dir);
@@ -129,14 +232,18 @@ export class EnDatasetInstallService {
    * of the release — read before the file is unpacked or converted. A file
    * that does not say is recorded by the day of the installation.
    */
-  private async versionOf(entry: DatasetCatalogEntryT, upload: SourceUploadT): Promise<string> {
+  private async versionOf(
+    entry: DatasetCatalogEntryT,
+    upload: SourceUploadT,
+    sourceOptions: Record<string, string>,
+  ): Promise<string> {
     if (entry.install.kind !== 'convert') throw new BadRequestException(ErrorCodes.dataset_not_installable);
     const adapter = findSource(entry.install.adapter);
     if (!adapter) throw new Error(`No converter "${entry.install.adapter}" for the dataset "${entry.name}"`);
     const version = await versionOfConversion({
       source: adapter,
       input: upload.path,
-      sourceOptions: entry.install.options,
+      sourceOptions,
     });
     this.logger.log(`${entry.title}, "${upload.originalname}": version ${version}`);
     return version;
@@ -147,7 +254,7 @@ export class EnDatasetInstallService {
     entry: DatasetCatalogEntryT,
     input: string,
     version: string,
-    pronunciations: string | undefined,
+    sourceOptions: Record<string, string>,
     progress: ImportProgressSink,
   ): Promise<DatasetSource> {
     if (entry.install.kind !== 'convert') throw new BadRequestException(ErrorCodes.dataset_not_installable);
@@ -165,7 +272,7 @@ export class EnDatasetInstallService {
         outDir,
         // of the uploaded file: what is converted may be a folder it was unpacked into
         version,
-        sourceOptions: { ...entry.install.options, ...(pronunciations ? { cmudict: pronunciations } : {}) },
+        sourceOptions,
         log: (message) => this.logger.log(`${entry.title}: ${message}`),
         onProgress: (read, total) => {
           const percent = total > 0 ? Math.min(100, (read / total) * 100) : 0;
@@ -182,7 +289,7 @@ export class EnDatasetInstallService {
       if (summary.entries === 0) throw new BadRequestException(ErrorCodes.dataset_source_invalid);
       this.logger.log(
         `${entry.title} converted in ${Date.now() - startedAt}ms: ${summary.entries} entries, ` +
-          `${summary.meanings} meanings`,
+          `${summary.meanings} meanings; skipped ${JSON.stringify(summary.skipped)}`,
       );
       progress.write({ percent: 100, stage: EnDictionaryImportPhasesE.converting_source });
       return await DirectoryDatasetSource.open(outDir, this.logger, true);

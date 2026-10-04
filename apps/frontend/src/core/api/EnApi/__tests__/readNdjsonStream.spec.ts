@@ -28,6 +28,39 @@ describe('EnApi NDJSON stream parsing', () => {
     jest.restoreAllMocks();
   });
 
+  it.each([
+    ['opengloss', false],
+    ['wordnet', true],
+  ] as const)(
+    'sends a JSON object to the %s download endpoint and reads its progress',
+    async (dataset, pronunciations) => {
+      // Exercise the real stream wrapper: mocking it hid a double JSON.stringify.
+      const originalFetch = globalThis.fetch;
+      const fetchMock = jest.fn().mockResolvedValue({
+        ok: true,
+        body: { getReader: () => makeReader(['{"stage":4,"percent":50}\n{"stage":5,"percent":100}\n']) },
+      });
+      globalThis.fetch = fetchMock;
+      try {
+        const handleChunk = jest.fn();
+        const result = await EnApi.downloadDataset(dataset, { pronunciations }, handleChunk, jest.fn());
+        expect(fetchMock).toHaveBeenCalledWith(
+          expect.stringContaining(`/en/datasets/${dataset}/install/download`),
+          expect.objectContaining({
+            method: 'POST',
+            credentials: 'include',
+            headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ pronunciations }),
+          }),
+        );
+        expect(result).toEqual({ success: true });
+        expect(handleChunk).toHaveBeenLastCalledWith({ stage: 5, percent: 100 });
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    },
+  );
+
   it('парсит несколько строк из одного чанка', async () => {
     const { res, received, onError } = await collectChunks([
       '{"stage":"parsing","percent":10}\n{"stage":"parsing","percent":20}\n',

@@ -50,6 +50,12 @@ const sameMeaning = (a: ConvertedMeaningT, b: ConvertedMeaningT): boolean =>
  */
 export const mergeEntries = (first: ConvertedEntryT, second: ConvertedEntryT): ConvertedEntryT => ({
   ...first,
+  ...((first.generated || second.generated) && {
+    generated: true,
+    generated_by_model: unique([first.generated_by_model, second.generated_by_model].filter(Boolean)).join(
+      ', ',
+    ),
+  }),
   ...((first.origins || second.origins) && {
     origins: [
       ...new Map(
@@ -130,6 +136,8 @@ export const isRegularForm = (base: string, form: string, kind: EnWordFormsE): b
   }
   const words = base.toLowerCase().split(' ');
   const inflected = form.toLowerCase().split(' ');
+  // Zero inflection (sheep → sheep, cut → cut) is not a regular plural or past.
+  if (base.toLowerCase() === form.toLowerCase()) return false;
   if (words.length !== inflected.length) return false;
   return words.every((word, index) => word === inflected[index] || isRegularWord(word, inflected[index], kind));
 };

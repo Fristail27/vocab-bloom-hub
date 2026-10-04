@@ -8,6 +8,28 @@ import { API_URL } from '../config';
 // switch or delete one. What an installation does is the subject of the
 // server suites on Postgres.
 test.describe('datasets', () => {
+  for (const [locale, manual, instruction] of [
+    ['en', 'Upload files manually', 'How to install'],
+    ['ru', 'Загрузить файлы вручную', 'Как установить'],
+    ['ar', 'رفع الملفات يدويًا', 'طريقة التثبيت'],
+  ]) {
+    test(`OpenGloss groups its files and offers manual upload (${locale})`, async ({ page }) => {
+      await page.goto(`/${locale}/managing/datasets`);
+      await page.getByTestId('dataset-opengloss').getByRole('button', { name: instruction }).click();
+      const dialog = page.getByRole('dialog');
+      await expect(dialog.locator('input[type="file"]')).toHaveCount(0);
+      for (const table of ['senses', 'lexicon']) {
+        const group = dialog.getByTestId(`source-group-${table}`);
+        await expect(group.getByRole('heading')).toContainText(table);
+        await expect(group.getByRole('link')).toHaveCount(6);
+      }
+      await dialog.getByRole('radio', { name: manual }).check();
+      for (const table of ['senses', 'lexicon']) {
+        await expect(dialog.getByTestId(`source-group-${table}`).locator('input[type="file"]')).toHaveCount(3);
+      }
+    });
+  }
+
   test('the managing page links the datasets page', async ({ page }) => {
     await page.goto('/en/managing');
 

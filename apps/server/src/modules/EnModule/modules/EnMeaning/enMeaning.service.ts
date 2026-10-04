@@ -72,7 +72,7 @@ export class EnMeaningService {
 
   /**
    * Turns a list of linked words (synonyms or antonyms) into links to existing
-   * dictionary entries. The list is normalized first (trimmed, lowercase,
+   * dictionary entries. The list is normalized first (trimmed, case preserved,
    * unique, without the headword); every remaining word must name the headword
    * of a base-form entry (inflected forms like "ran" do not qualify) —
    * directly or through a spelling variant such as "absent-minded" for

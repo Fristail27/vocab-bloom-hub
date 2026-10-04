@@ -77,6 +77,7 @@ describe('the catalog says where a newer file is looked for', () => {
       ['wiktionary', 'last_modified'],
       ['wordnet', 'latest_release'],
       ['wordnet_princeton', 'none'],
+      ['opengloss', 'none'],
     ]);
     for (const { update_check: check } of DATASET_CATALOG) {
       if (check.kind === 'last_modified') expect(check.url).toMatch(/^https:\/\//);

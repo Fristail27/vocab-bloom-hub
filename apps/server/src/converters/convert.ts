@@ -35,21 +35,28 @@ export const versionOfConversion = async (
 /** Runs a source adapter into a dataset of the project's format (issue #527) */
 export const convert = async (options: ConvertOptionsT): Promise<ConvertSummaryT> => {
   const sourceOptions = options.sourceOptions ?? {};
+  const version = await versionOfConversion(options);
   const writer = new DatasetWriter({
     outDir: options.outDir,
-    version: await versionOfConversion(options),
+    version,
     provenance: options.source.provenance(sourceOptions),
     license: licenseOfAdapter(options.source.name, sourceOptions),
   });
   const skipped: Partial<Record<SkipReasonT, number>> = {};
-  await options.source.convert(options.input, sourceOptions, {
-    emit: (entry) => writer.add(entry),
-    skip: (reason) => {
-      skipped[reason] = (skipped[reason] ?? 0) + 1;
-    },
-    limit: options.limit,
-    log: options.log ?? (() => undefined),
-    progress: options.onProgress,
-  });
-  return { ...(await writer.close()), skipped };
+  try {
+    await options.source.convert(options.input, sourceOptions, {
+      version,
+      emit: (entry) => writer.add(entry),
+      skip: (reason) => {
+        skipped[reason] = (skipped[reason] ?? 0) + 1;
+      },
+      limit: options.limit,
+      log: options.log ?? (() => undefined),
+      progress: options.onProgress,
+    });
+    return { ...(await writer.close()), skipped };
+  } catch (error) {
+    await writer.abort();
+    throw error;
+  }
 };

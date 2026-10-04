@@ -206,6 +206,21 @@ describe('EnMeaningService (issue #87)', () => {
         .find({ relations: { synonyms: true } })
         .then((rows) => rows.flatMap((m) => m.synonyms.map((e) => e.word).sort()));
 
+    it('keeps distinct capitalized links through creation, editing and copying', async () => {
+      const word = await addWordRow('signal');
+      await addWordRow('Polish');
+      await addWordRow('polish');
+      const id = addedId(await service.addMeaning(makeAddBody(word.id, { synonyms: ['Polish', 'polish'] })));
+      expect(await junctionRows()).toEqual(['Polish', 'polish']);
+      await service.editMeaning({ id, synonyms: ['Polish'] });
+      expect(await junctionRows()).toEqual(['Polish']);
+      await service.editMeaning({ id, synonyms: ['polish'] });
+      expect(await junctionRows()).toEqual(['polish']);
+      await service.addMeaning(makeAddBody(word.id, { synonyms: ['Northstar'] }), undefined, true);
+      expect(await ds.getRepository(EnEntry).findOneBy({ word: 'Northstar' })).not.toBeNull();
+      expect(await ds.getRepository(EnEntry).findOneBy({ word: 'northstar' })).toBeNull();
+    });
+
     it('links the meaning to the existing entries and stores them normalized', async () => {
       const word = await addWordRow('run');
       await addWordRow('sprint');

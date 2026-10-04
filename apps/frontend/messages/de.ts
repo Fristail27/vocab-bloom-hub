@@ -382,6 +382,8 @@ export default {
       'Der Datensatz des Projekts: von Sprachmodellen erzeugte Einträge mit CEFR-Niveaus und Übersetzungen in sieben Sprachen. Jede Instanz beginnt mit ihm; geladen und aktualisiert wird er auf der Importseite.',
     about_wiktionary:
       'Das englische Wiktionary, geschrieben von seiner Community: der größte der Datensätze, mit Aussprache, Wortformen, Synonymen und Übersetzungen als einzelne Wörter.',
+    about_opengloss:
+      'Ein synthetisches englisches Wörterbuch mit Definitionen, Beispielen und Wortformen. CC BY 4.0; aus Princeton WordNet abgeleitete Wörter behalten zusätzlich dessen Lizenz. Alle drei senses-Dateien und alle drei lexicon-Dateien der Version 2.4 sind erforderlich.',
     about_wordnet:
       'Open English WordNet, die offen gepflegte und jährlich veröffentlichte Ausgabe von WordNet: Bedeutungen in Synonymgruppen, mit Definitionen und Beispielen. Keine Übersetzungen.',
     about_wordnet_princeton:
@@ -396,6 +398,16 @@ export default {
     feature_registers: 'Register',
     install_title: 'Installieren: {title}',
     update_title: 'Aktualisieren: {title}',
+    source_download: 'Auf dem Server herunterladen',
+    source_upload: 'Dateien manuell hochladen',
+    step_auto_download:
+      'Klicken Sie auf „Start“: Der Server lädt die Quelldateien herunter (etwa {size}) und installiert sie. Sie müssen sie nicht auf Ihren Computer herunterladen.',
+    group_senses: 'Bedeutungen (senses)',
+    group_lexicon: 'Wortschatz (lexicon)',
+    download_optional: '{title} ebenfalls herunterladen',
+    downloading: 'Quelldateien werden heruntergeladen…',
+    download_fallback:
+      'Versuchen Sie es erneut oder wechseln Sie zum manuellen Hochladen und wählen Sie die Dateien von den obigen Links aus.',
     steps_title: 'Was zu tun ist',
     step_download: 'Laden Sie die Datei der Quelle herunter:',
     about_size: 'etwa {size}',

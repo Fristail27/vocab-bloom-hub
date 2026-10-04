@@ -65,21 +65,24 @@ describe('EditLicenseNote', () => {
     expect(screen.queryByText('source_model')).not.toBeInTheDocument();
   });
 
-  it('keeps the switch for the dataset of the project, which says that it is generated', () => {
-    render(
-      <EditedDataset dataset={{ ...WIKTIONARY, name: 'default', source: 'vocab-bloom-hub' }}>
-        <EditLicenseNote />
-        <CommonInfoFields
-          pos={'noun' as never}
-          value={{ generated: true } as never}
-          onChange={() => undefined}
-        />
-      </EditedDataset>,
-    );
+  it.each(['default', 'opengloss'])(
+    'keeps the generated switch for %s, whose terms declare generated content',
+    (name) => {
+      render(
+        <EditedDataset dataset={{ ...WIKTIONARY, name }}>
+          <EditLicenseNote />
+          <CommonInfoFields
+            pos={'noun' as never}
+            value={{ generated: true } as never}
+            onChange={() => undefined}
+          />
+        </EditedDataset>,
+      );
 
-    expect(screen.getByTestId('edit-license-note')).not.toHaveTextContent('editing_no_generated');
-    expect(screen.getByText('is_ai_generated')).toBeInTheDocument();
-  });
+      expect(screen.getByTestId('edit-license-note')).not.toHaveTextContent('editing_no_generated');
+      expect(screen.getByText('is_ai_generated')).toBeInTheDocument();
+    },
+  );
 
   it('names a license without a link as text', () => {
     render(
