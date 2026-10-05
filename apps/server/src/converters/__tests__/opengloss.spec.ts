@@ -7,7 +7,11 @@ import { convert } from '../convert';
 import { opengloss } from '../sources/opengloss';
 import { validateOpenGlossFiles } from '../sources/opengloss/files';
 import { ConvertedEntryT } from '../types';
-import { openGlossFixtureRows, writeOpenGlossFixture } from './opengloss-fixture';
+import {
+  openGlossFixtureRows,
+  openGlossInflectionFixtureRows,
+  writeOpenGlossFixture,
+} from './opengloss-fixture';
 
 describe('OpenGloss Parquet conversion', () => {
   let dir: string;
@@ -112,6 +116,125 @@ describe('OpenGloss Parquet conversion', () => {
         { word: 'glimmer', form_of_word: 'past_participle' },
       ]),
     });
+  });
+
+  it('stores inflected verbs under their lemma across shards, retaining meanings and other parts of speech', async () => {
+    const rows = openGlossInflectionFixtureRows();
+    await writeOpenGlossFixture(dir, rows);
+    const words = await entries();
+    const verbs = words.filter((word) => word.part_of_speech === 'verb');
+    expect(verbs).toHaveLength(1);
+    expect(verbs[0]).toMatchObject({
+      word: 'run',
+      verb___is_irregular: true,
+      forms: [
+        { word: 'ran', form_of_word: 'past_simple' },
+        { word: 'run', form_of_word: 'past_participle' },
+        { word: 'running', form_of_word: 'present_participle' },
+        { word: 'runs', form_of_word: 'third_person_singular' },
+      ],
+    });
+    expect(verbs[0].meanings.map((meaning) => meaning.definition)).toEqual([
+      'An invented verb definition filed under run.',
+      'An invented verb definition filed under ran.',
+      'An invented verb definition filed under running.',
+      'An invented verb definition filed under runs.',
+    ]);
+    expect(verbs[0].meanings.flatMap((meaning) => meaning.examples)).toContain('A test example for ran.');
+    expect(verbs[0].origins).toHaveLength(1);
+    expect(
+      words.filter((word) => word.part_of_speech !== 'verb').map((word) => [word.word, word.part_of_speech]),
+    ).toEqual([
+      ['run', 'noun'],
+      ['running', 'adjective'],
+      ['running', 'noun'],
+      ['runs', 'noun'],
+    ]);
+    const outDir = path.join(dir, 'folded');
+    const summary = await convert({ source: opengloss, input: dir, outDir, version: 'test-release' });
+    expect(summary).toMatchObject({ entries: 5, meanings: 8, late_duplicates: 0 });
+  });
+
+  it('keeps verb articles when the source cannot identify a usable base', async () => {
+    const rows = openGlossInflectionFixtureRows();
+    // The base has no usable verb definition: do not lose the other entries.
+    rows.senses.find((sense) => sense.sense_id === 'run:verb:0')!.gloss = '';
+    await writeOpenGlossFixture(dir, rows);
+    expect((await entries()).filter((word) => word.part_of_speech === 'verb').map((word) => word.word)).toEqual(
+      ['ran', 'running', 'runs'],
+    );
+  });
+
+  it('keeps ambiguous irregular homographs even when the source repeats the wrong paradigm', async () => {
+    const rows = openGlossFixtureRows();
+    rows.lexicon = [];
+    rows.senses = [];
+    const template = openGlossInflectionFixtureRows();
+    for (const word of ['saw', 'see']) {
+      const base = template.lexicon.find((entry) => entry.headword === 'run')!;
+      rows.lexicon.push({
+        ...base,
+        lexeme_id: word,
+        headword: word,
+        sense_ids: [`${word}:noun:0`, `${word}:verb:0`],
+        morphology: [
+          {
+            pos: 'verb',
+            past_tense: 'saw',
+            past_participle: 'seen',
+            present_participle: 'seeing',
+            third_person_singular: 'sees',
+          },
+        ],
+      });
+      for (const pos of ['noun', 'verb'])
+        rows.senses.push({
+          ...template.senses[0],
+          lexeme_id: word,
+          headword: word,
+          sense_id: `${word}:${pos}:0`,
+          pos,
+        });
+    }
+    await writeOpenGlossFixture(dir, rows);
+    expect((await entries()).map((entry) => [entry.word, entry.part_of_speech])).toEqual([
+      ['saw', 'noun'],
+      ['saw', 'verb'],
+      ['see', 'noun'],
+      ['see', 'verb'],
+    ]);
+  });
+
+  it('keeps a distinct verb paradigm and does not turn a regular base irregular when merging', async () => {
+    const rows = openGlossInflectionFixtureRows();
+    // The spelling alone is insufficient: this entry declares another paradigm.
+    rows.lexicon[0].morphology[0].past_tense = 'ranned';
+    await writeOpenGlossFixture(dir, rows);
+    expect(
+      (await entries()).filter((entry) => entry.part_of_speech === 'verb').map((entry) => entry.word),
+    ).toEqual(['ran', 'run']);
+
+    const regular = openGlossFixtureRows();
+    const base = regular.lexicon[0];
+    regular.lexicon.splice(1, 0, {
+      ...base,
+      lexeme_id: 'glimmered',
+      headword: 'glimmered',
+      sense_ids: ['glimmered:verb:0'],
+      morphology: [base.morphology[1]],
+    });
+    regular.senses.splice(3, 0, {
+      ...regular.senses[2],
+      lexeme_id: 'glimmered',
+      headword: 'glimmered',
+      sense_id: 'glimmered:verb:0',
+      gloss: 'Another invented action.',
+    });
+    await writeOpenGlossFixture(dir, regular);
+    const verbs = (await entries()).filter((entry) => entry.part_of_speech === 'verb');
+    expect(verbs).toHaveLength(1);
+    expect(verbs[0]).toMatchObject({ word: 'glimmer', verb___is_irregular: false });
+    expect(verbs[0].meanings).toHaveLength(2);
   });
 
   it('keeps degrees of adverbs as well as adjectives', async () => {

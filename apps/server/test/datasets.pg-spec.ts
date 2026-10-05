@@ -410,6 +410,65 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
     }
   });
 
+  it('keeps phrasal variants inside their dataset in admin reads and public dataset groups', async () => {
+    const base = `${HEADWORD}phrasal`;
+    const names = [base, `${base} up`, `${base} out`];
+    const write = async (schema: string, word: string, baseId: number | null = null): Promise<number> => {
+      await dataSource.query(`INSERT INTO "${schema}"."en_entries" ("word") VALUES ($1)`, [word]);
+      const [row] = (await dataSource.query(
+        `INSERT INTO "${schema}"."en_words"
+          ("word", "part_of_speech", "form_of_word", "generated", "basePhrasalId", "verb___is_phrasal")
+         VALUES ($1, 'verb', 'base_form', false, $2, $3) RETURNING id`,
+        [word, baseId, baseId !== null],
+      )) as Array<{ id: number }>;
+      return row.id;
+    };
+    const groups = async () => {
+      const res = await request(server()).get(`/api/v1/words/${base}/datasets`).expect(200);
+      return (res.body as PublicWordDatasetsV1ResT).data.map((group) => [
+        group.dataset,
+        group.entries[0]?.phrasal_variants,
+      ]);
+    };
+    try {
+      const defaultId = await write('public', base);
+      await write('public', names[1], defaultId);
+      const otherId = await write(SCHEMA, base);
+      // Even a matching spelling in the other dataset is not a phrasal variant without its own link.
+      await write(SCHEMA, names[1]);
+      expect(await groups()).toEqual([
+        ['default', [names[1]]],
+        [NAME, []],
+      ]);
+      const empty = await request(server()).get(`/api/en/${otherId}?dataset=${NAME}`).set(auth).expect(200);
+      expect(empty.body.phrasal_variants).toEqual([]);
+
+      await write(SCHEMA, names[2], otherId);
+      const expected = [
+        ['default', [names[1]]],
+        [NAME, [names[2]]],
+      ];
+      expect(await groups()).toEqual(expected);
+      const own = await request(server()).get(`/api/en/${otherId}?dataset=${NAME}`).set(auth).expect(200);
+      expect(own.body.phrasal_variants).toEqual([names[2]]);
+
+      await request(server()).post(`/api/en/datasets/${NAME}/activate`).set(auth).expect(200);
+      expect(await groups()).toEqual(expected);
+      const active = await request(server()).get(`/api/v1/words/${base}`).expect(200);
+      expect(active.body.data[0].phrasal_variants).toEqual([names[2]]);
+      const original = await request(server())
+        .get(`/api/en/${defaultId}?dataset=default`)
+        .set(auth)
+        .expect(200);
+      expect(original.body.phrasal_variants).toEqual([names[1]]);
+    } finally {
+      await request(server()).post('/api/en/datasets/default/activate').set(auth).expect(200);
+      for (const schema of ['public', SCHEMA]) {
+        await dataSource.query(`DELETE FROM "${schema}"."en_entries" WHERE "word" = ANY($1)`, [names]);
+      }
+    }
+  });
+
   it('reads a headword from every dataset at once: a group per dataset, under its own terms (issue #528)', async () => {
     const BOTH = `${HEADWORD}both`;
     const PROPER = `${BOTH[0].toUpperCase()}${BOTH.slice(1)}`;

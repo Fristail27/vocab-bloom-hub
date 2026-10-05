@@ -11,7 +11,13 @@ import { AppModule } from '../src/modules/AppModule/app.module';
 import { checkIsPostgres } from '../configuration';
 import { findCatalogEntry } from '../core/constants/dataset_catalog';
 import { filesOf, writeTarGz, writeZip } from '../src/converters/__tests__/pack';
-import { openGlossFixtureRows, writeOpenGlossFixture } from '../src/converters/__tests__/opengloss-fixture';
+import {
+  openGlossFixtureRows,
+  openGlossInflectionFixtureRows,
+  writeOpenGlossFixture,
+} from '../src/converters/__tests__/opengloss-fixture';
+import { DatasetsService } from '../src/modules/DatasetsModule/datasets.service';
+import { EnWord } from '../src/modules/EnModule/entities/en_word.entity';
 import { createJwt } from '../core/utils/auth';
 import { hashLoginString } from '../core/utils/crypto';
 import { DatasetsListT, ImportDictionaryChunkT, EnWordT, EnWordFormsE, ForkProgressT } from '../types';
@@ -518,6 +524,9 @@ describe('installing a dataset from its source (e2e, issue #527)', () => {
 
   it('installs OpenGloss with exact word licenses, then preserves them through a fork, edits and export/import', async () => {
     const rows = openGlossFixtureRows();
+    const inflections = openGlossInflectionFixtureRows();
+    rows.lexicon.push(...inflections.lexicon);
+    rows.senses.push(...inflections.senses);
     // The same form belongs to two differently licensed bases, one with zero inflection.
     rows.lexicon[0].morphology[0].plural = 'glimmer';
     rows.lexicon[2].morphology[0].plural = 'glimmer';
@@ -557,6 +566,39 @@ describe('installing a dataset from its source (e2e, issue #527)', () => {
     expect(original.meanings[0].synonyms).toEqual(['Northstar']);
     const publicOriginal = await request(server()).get('/api/v1/words/glimmer/datasets').expect(200);
     expect(publicOriginal.text).toContain('"synonyms":["Northstar"]');
+    // The fix is stored in the dataset, not hidden by the public projection.
+    const datasets = app.get(DatasetsService);
+    const dataset = (await datasets.installed()).find((item) => item.name === 'opengloss')!;
+    const connection = await datasets.reader(dataset);
+    const ran = await connection
+      .getRepository(EnWord)
+      .createQueryBuilder('w')
+      .innerJoin('w.word', 'entry')
+      .leftJoinAndSelect('w.base_form', 'base')
+      .leftJoinAndSelect('base.word', 'baseEntry')
+      .where('entry.word = :word', { word: 'ran' })
+      .getMany();
+    expect(ran).toHaveLength(1);
+    expect(ran[0]).toMatchObject({
+      form_of_word: EnWordFormsE.past_simple,
+      base_form: { word: { word: 'run' } },
+    });
+    const run = await request(server()).get('/api/v1/words/run/datasets').expect(200);
+    const runGroup = run.body.data.find((group: { dataset: string }) => group.dataset === 'opengloss');
+    expect(
+      runGroup.entries.map((entry: { word: string; part_of_speech: string }) => [
+        entry.word,
+        entry.part_of_speech,
+      ]),
+    ).toEqual([
+      ['run', 'noun'],
+      ['run', 'verb'],
+    ]);
+    expect(runGroup.entries[1].meanings).toHaveLength(4);
+    const past = await request(server()).get('/api/v1/words/ran/datasets').expect(200);
+    expect(past.body.data.find((group: { dataset: string }) => group.dataset === 'opengloss').entries).toEqual([
+      runGroup.entries[1],
+    ]);
     const readForm = async (dataset: string, base: EnWordT) => {
       const form = base.forms.find((form) => form.form_of_word === EnWordFormsE.plural_form)!;
       expect(form.word).toBe('glimmer');

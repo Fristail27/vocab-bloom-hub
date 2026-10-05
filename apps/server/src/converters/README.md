@@ -74,6 +74,15 @@ tables by their ordered `lexeme_id`; it checks each lexeme's complete set of liv
 sense IDs across shard boundaries. Version 2.4 is recognized by the pinned file
 hashes, never by a filename. Unknown files receive the conversion date.
 
+A preliminary lexicon pass groups complete verb paradigms. Generated inflection
+articles with one identifiable live lemma (such as `ran`, `running`, `runs` → `run`)
+are merged into that lemma, retaining their definitions, examples and source snapshots.
+Only the affected verb entries are buffered until the sense stream ends; other parts
+of speech continue streaming. Incomplete paradigms, missing usable lemmas, ambiguous
+irregular homographs and WordNet-derived entries are preserved. Updating an existing
+installation does not remove the old articles; the dataset documentation describes
+the fresh-install requirement.
+
 The [OpenGloss section of the dataset documentation](../../../../docs/datasets.md#opengloss-24)
 states the licensing checks and what is retained or omitted. Each word has exact
 OpenGloss/WordNet origins, so the writer selects the portable format with sources

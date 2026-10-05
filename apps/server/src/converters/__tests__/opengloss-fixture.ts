@@ -68,6 +68,46 @@ export const openGlossFixtureRows = () => {
   return { senses, lexicon };
 };
 
+/** Shared paradigms as published by OpenGloss; all definitions are authored here. */
+export const openGlossInflectionFixtureRows = () => {
+  const template = openGlossFixtureRows();
+  const rows: typeof template = { senses: [], lexicon: [] };
+  for (const [word, parts] of [
+    ['ran', ['verb']],
+    ['run', ['noun', 'verb']],
+    ['running', ['adjective', 'noun', 'verb']],
+    ['runs', ['noun', 'verb']],
+  ] as const) {
+    const senses = parts.map((pos) => ({
+      ...template.senses[0],
+      lexeme_id: word,
+      headword: word,
+      sense_id: `${word}:${pos}:0`,
+      pos,
+      gloss: `An invented ${pos} definition filed under ${word}.`,
+      examples: [{ text: `A test example for ${word}.`, reading_level: 'neutral', register: 'plain' }],
+      relations: [],
+    }));
+    rows.senses.push(...senses);
+    rows.lexicon.push({
+      ...template.lexicon[0],
+      lexeme_id: word,
+      headword: word,
+      sense_ids: senses.map((sense) => sense.sense_id),
+      morphology: [
+        {
+          pos: 'verb',
+          past_tense: 'ran',
+          past_participle: 'run',
+          present_participle: 'running',
+          third_person_singular: 'runs',
+        },
+      ],
+    });
+  }
+  return rows;
+};
+
 const string = (name: string): SchemaElement => ({
   name,
   type: 'BYTE_ARRAY',
