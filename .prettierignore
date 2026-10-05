@@ -13,3 +13,13 @@ apps/server/openapi/
 # python: formatted by ruff
 packages/python-sdk/.venv
 packages/python-sdk/src/vocab_bloom_hub/_generated
+
+# Generated agent settings and local overrides; format the shared source instead.
+.amp/
+.codex/
+.cursor/
+.gemini/
+.kiro/
+.vscode/mcp.json*
+.mcp.json*
+opencode.json*

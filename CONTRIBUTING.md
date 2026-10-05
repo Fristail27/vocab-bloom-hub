@@ -59,35 +59,16 @@ of the same checkout (`yarn build && yarn start`, Postgres) is step 3 of the
 
 ## Coding agents
 
-Start the agent in the repository root. [`AGENTS.md`](./AGENTS.md) contains the shared project
-instructions; `.agents/skills/` holds the issue and release workflows. Claude Code reads the
-same instructions through `CLAUDE.md`; Codex discovers `AGENTS.md` and the skills directly.
-Read the nested instructions before working in `apps/frontend` or `apps/site`.
-
-For Codex, trust this checkout when prompted so it can load [`.codex/config.toml`](./.codex/config.toml).
-The project config increases the instruction size limit to 64 KiB and configures Context7
-with a 60-second startup timeout. These settings apply to a new session. They do not select a
-model or change your approval policy.
-
-Before the first coding task, check the local tools:
+Configure only the clients you use, then start the agent in the repository root:
 
 ```bash
-node --version      # 24.9+ for Jest; 22.13+ for running the apps
-yarn --version      # the version pinned in package.json
-gh --version        # needed by the issue and release skills
-uv --version        # needed for Python SDK work
-yarn check
+yarn agents:setup codex          # or cursor, claude, gemini, copilot, kiro, amp, opencode
+yarn agents:setup codex cursor   # several clients
 ```
 
-In Codex CLI, `codex mcp list` shows configured servers and `/mcp` shows their session status.
-Context7 supplies current library documentation; its first launch through `npx` needs network
-access. `CONTEXT7_API_KEY` is optional and is forwarded from your environment. Keep credentials
-out of tracked configuration. If Context7 cannot connect, report that and use the installed
-library documentation or official documentation instead.
-
-GitHub work also needs `gh auth status` to succeed. Python SDK work needs `uv sync` inside
-`packages/python-sdk`. Browser verification uses the existing Playwright suites (`yarn e2e`
-or `yarn e2e:site`), which start their own API and app with isolated test databases.
+[`docs/agents.md`](./docs/agents.md) covers setup, MCP, trust, existing local settings, skills and
+first-run checks. [`AGENTS.md`](./AGENTS.md) contains the shared project instructions;
+`.agents/` holds the common configuration and skills. Generated client files are ignored by Git.
 
 ## Tech Stack
 
@@ -354,6 +335,7 @@ Everything the repository documents, also rendered on the website,
 - [`packages/npm-sdk/README.md`](./packages/npm-sdk/README.md) and [`packages/python-sdk/README.md`](./packages/python-sdk/README.md) — the SDKs
 - [`docs/README.ru.md`](./docs/README.ru.md), [`README.es.md`](./docs/README.es.md), [`README.fr.md`](./docs/README.fr.md), [`README.pt.md`](./docs/README.pt.md), [`README.de.md`](./docs/README.de.md), [`README.zh.md`](./docs/README.zh.md), [`README.ar.md`](./docs/README.ar.md) — the README in the other interface languages; `docs/api.ru.md`, `docs/environment.ru.md` and `docs/deployment/README.ru.md` are the other translated pages
 - [`AGENTS.md`](./AGENTS.md) — the map of the codebase for coding agents (commands, architecture, conventions), kept in sync with the tree
+- [`docs/agents.md`](./docs/agents.md) — local setup for coding agents, shared configuration, MCP and skills
 
 ## Roadmap
 
@@ -383,7 +365,7 @@ Planned directions, in no particular order (the [issues](https://github.com/Fris
 │   └── python-sdk/ → vocab-bloom-hub, the Python SDK (uv, httpx, pydantic)
 ├── docs/           → the documentation (deployment, database, operations, observability, performance, environment, API, authentication, migrations, offline import, data) and the README in the other seven languages
 ├── eslint/         → shared ESLint config pieces (base / next / nest)
-├── .agents/        → skills for coding agents; the per-agent MCP configs sit next to them (AGENTS.md)
+├── .agents/        → shared agent configuration and skills (docs/agents.md)
 ├── .github/        → CI workflows, issue / PR templates, Dependabot, CODEOWNERS
 ├── .env            → the single environment file of every app (not committed; .env.example is the template)
 └── package.json    → root workspace scripts

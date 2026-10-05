@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "env_vars": ["CONTEXT7_API_KEY"],
+      "startup_timeout_sec": 60
+    }
+  },
+  "codex": {
+    "project_doc_max_bytes": 65536
+  },
+  "gemini": {
+    "context": {
+      "fileName": ["AGENTS.md", "GEMINI.md"]
+    }
+  }
+}
