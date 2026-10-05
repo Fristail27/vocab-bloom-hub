@@ -1538,6 +1538,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     const updateCtx: UpdateModeContextT | undefined = options?.update
       ? { replaced: new Set(), added: new Set(), kept: new Set() }
       : undefined;
+    let outcome: Parameters<ImportStatusService['end']>[0] = {};
     try {
       // the dataset the import names is created on first use — a schema of
       // its own — and filled through a connection of its own (issue #527)
@@ -1545,7 +1546,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       this.target = dataset && this.datasets ? await this.datasets.connect(dataset) : null;
       this.hasEdits = null;
       const datasetVersion = await this.runImport(source, label, tracked, updateCtx);
-      this.importStatus?.end({ dataset_version: datasetVersion });
+      outcome = { dataset_version: datasetVersion };
       await this.auditService?.record({
         trigger: AuditTriggerE.import,
         action: AuditActionE.import,
@@ -1570,12 +1571,15 @@ export class EnImportDictionaryService implements OnModuleDestroy {
           : error instanceof Error
             ? error.message
             : String(error);
-      this.importStatus?.end({ error: message });
+      outcome = { error: message };
       throw error;
     } finally {
       const target = this.target;
       this.target = null;
       await target?.close().catch(() => undefined);
+      // Keep the slot through the audit and cleanup: otherwise a new import
+      // can set this.target while the previous run still has to clear it.
+      this.importStatus?.end(outcome);
     }
   }
 
