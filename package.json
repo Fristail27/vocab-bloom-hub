@@ -62,7 +62,9 @@
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "peers:check": "node scripts/check-peer-requirements.mjs",
-    "check": "node --test scripts/check-next-eslint.mjs && yarn lint && yarn format:check && yarn peers:check",
+    "agents:setup": "node scripts/setup-agents.mjs",
+    "agents:test": "node --test scripts/setup-agents.spec.mjs",
+    "check": "node --test scripts/check-next-eslint.mjs && yarn agents:test && yarn lint && yarn format:check && yarn peers:check",
     "prepare": "husky",
     "jest": "NODE_OPTIONS=--experimental-vm-modules jest"
   },

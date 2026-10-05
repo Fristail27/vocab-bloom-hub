@@ -43,6 +43,9 @@ jobs:
       - name: Peer dependencies are met
         run: yarn peers:check
 
+      - name: Agent setup preserves local configuration
+        run: yarn agents:test
+
       # The committed public OpenAPI spec must match the code (issue #273)
       - name: OpenAPI spec is up to date
         run: yarn workspace server openapi:check

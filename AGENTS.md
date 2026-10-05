@@ -175,27 +175,16 @@ Everything an agent needs is vendor-neutral and lives once; there are no per-age
 
 ### Configuration
 
-- **Instructions**: this file (and the nested `AGENTS.md` in `apps/frontend` and `apps/site`, which
-  `next dev` regenerates). The `CLAUDE.md` files hold only `@AGENTS.md`, the documented shim for
-  Claude Code; Gemini CLI reads `AGENTS.md` through `context.fileName` in `.gemini/settings.json`.
-- **Skills** (the [Agent Skills](https://agentskills.io) standard, `.agents/skills/<name>/SKILL.md`):
-  `create-issue` (a GitHub issue from the templates) and `release-changelog` (the CHANGELOG entry of
-  a release). Codex, Cursor, Gemini CLI, Copilot, Windsurf, Amp and OpenCode load that directory and
-  expose them as `/<name>`. An agent that does not (Claude Code, Kiro) is asked directly — "run the
-  create-issue skill" — and follows the SKILL.md as written.
-- **MCP**: [Context7](https://github.com/upstash/context7) (up-to-date library docs — ask for it
-  when writing code against Next.js, NestJS, TypeORM, Ant Design, httpx, …) is configured as the
-  same stdio server (`npx -y @upstash/context7-mcp`) in every client's project file: `.mcp.json`
-  (Claude Code), `.codex/config.toml`, `.cursor/mcp.json`, `.gemini/settings.json`, `.vscode/mcp.json`
-  (VS Code / Copilot), `.kiro/settings/mcp.json`, `.amp/settings.json` and `opencode.json`. Windsurf,
-  Jules, the Copilot CLI and the Copilot coding agent have no project file: add the same command in
-  their global settings or UI. A key is optional — export `CONTEXT7_API_KEY` in the shell for higher
-  rate limits, never put it in these files. A new MCP server goes into all of them.
+Setup, supported clients, local overrides and troubleshooting are documented in
+[`docs/agents.md`](./docs/agents.md). Run `yarn agents:setup <agent>` (for example `codex` or
+`codex cursor`) to generate only the clients you use. Shared settings live in
+[`.agents/config.json`](./.agents/config.json); generated client files are local and ignored by Git.
+Change the shared source when changing MCP settings, then rerun setup.
 
-Codex's project configuration in `.codex/config.toml` reserves 64 KiB for project instructions
-(the root file is already close to the default 32 KiB) and allows 60 seconds for Context7's
-cold start. First-run checks and the trust requirement are in
-[`CONTRIBUTING.md`](./CONTRIBUTING.md#coding-agents).
+Instructions stay in `AGENTS.md` and its nested files; `CLAUDE.md` only imports them. Skills live
+in `.agents/skills/<name>/SKILL.md`: `create-issue` for GitHub issues and `release-changelog` for
+release notes. Use Context7 for current library documentation when writing code against
+Next.js, NestJS, TypeORM, Ant Design, httpx, etc. Keep credentials in the environment.
 
 ## Conventions
 
