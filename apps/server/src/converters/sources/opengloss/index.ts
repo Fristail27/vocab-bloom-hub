@@ -8,39 +8,8 @@ import { termsOfAdapter } from '../../terms';
 import { ConvertedEntryT, ConverterContextT, HEADWORD_MAX_LENGTH, SourceAdapterT } from '../../types';
 import { COLUMNS, openGlossFiles, openGlossRows, openGlossVersion } from './files';
 
-type MorphologyT = { pos: string } & Partial<
-  Record<
-    | 'plural'
-    | 'past_tense'
-    | 'past_participle'
-    | 'present_participle'
-    | 'third_person_singular'
-    | 'comparative'
-    | 'superlative',
-    string | null
-  >
->;
-type LexemeT = {
-  lexeme_id: string;
-  headword: string;
-  language: string;
-  kind: string;
-  source: string;
-  retired: boolean;
-  sense_ids: string[];
-  morphology: MorphologyT[];
-  provenance_summary: { models: string[] };
-};
-type SenseT = {
-  lexeme_id: string;
-  sense_id: string;
-  headword: string;
-  pos: string;
-  source: string;
-  gloss: string;
-  examples: { text: string; reading_level: string; register: string }[];
-  relations: { type: string; target_term: string; target_sense_id: string | null }[];
-};
+import { LexemeT, MorphologyT, SenseT } from './types';
+import { OpenGlossInflections } from './inflections';
 
 const FORMS: [keyof Omit<MorphologyT, 'pos'>, EnWordFormsE, EnPartOfSpeechE][] = [
   ['plural', EnWordFormsE.plural_form, EnPartOfSpeechE.noun],
@@ -202,7 +171,9 @@ export const opengloss: SourceAdapterT = {
   async convert(input, options, context) {
     const files = await openGlossFiles(input, options);
     const total = (
-      await Promise.all([...files.senses, ...files.lexicon].map(async (file) => (await stat(file)).size))
+      await Promise.all(
+        [...files.senses, ...files.lexicon, ...files.lexicon].map(async (file) => (await stat(file)).size),
+      )
     ).reduce((a, b) => a + b, 0);
     const read = new Map<string, number>();
     const progress = (file: string, bytes: number) => {
@@ -211,6 +182,21 @@ export const opengloss: SourceAdapterT = {
         [...read.values()].reduce((a, b) => a + b, 0),
         total,
       );
+    };
+    // A form may precede or follow its lemma, including across shard boundaries.
+    // Index compact morphology first, then join senses without buffering the release.
+    const inflections = new OpenGlossInflections();
+    for await (const lexeme of openGlossRows<LexemeT>(
+      files.lexicon,
+      COLUMNS.lexicon.filter((column) => column !== 'provenance_summary'),
+      (file, bytes) => progress(`inflections:${file}`, bytes),
+    )) {
+      inflections.add(lexeme);
+    }
+    inflections.prepare();
+    const flush = async () => {
+      const folded = await inflections.flush(context.emit);
+      context.log(`Folded ${folded} OpenGloss verb articles into their base entries`);
     };
     const senses = openGlossRows<SenseT>(files.senses, COLUMNS.senses, progress);
     let sense = await senses.next();
@@ -245,9 +231,12 @@ export const opengloss: SourceAdapterT = {
             throw new Error('OpenGloss senses and lexicon do not match');
           }
           const entry = entryOf(lexeme, row, context);
-          if (entry) await context.emit(entry);
+          if (entry && !inflections.take(entry)) await context.emit(entry);
           count += 1;
-          if (context.limit !== undefined && count >= context.limit) return;
+          if (context.limit !== undefined && count >= context.limit) {
+            await flush();
+            return;
+          }
           sense = await senses.next();
         }
         if (expected.size || (!sense.done && sense.value.lexeme_id < lexeme.lexeme_id)) {
@@ -255,6 +244,7 @@ export const opengloss: SourceAdapterT = {
         }
       }
       if (!sense.done) throw new Error('OpenGloss senses have no matching lexicon record');
+      await flush();
       context.log(`Read ${count} OpenGloss senses`);
     } finally {
       await senses.return(undefined);

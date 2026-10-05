@@ -64,7 +64,25 @@ origin and generated content. The converter includes canonical definitions,
 neutral/plain examples, supported inflections, synonyms and antonyms of the same
 part of speech. Inflections with unchanged spelling (such as `cut` → `cut`) are
 retained; a shared form belongs to every base word that lists it and inherits
-that base's sources and licenses. Word links preserve the target's capitalization.
+that base's sources and licenses.
+
+OpenGloss also publishes some inflected verbs as separate articles with the same
+complete verb paradigm as their lemma. The converter groups those paradigms before
+writing entries: `ran`, `running` and `runs` become forms of `run`, and their verb
+definitions and examples are merged into `run`. Their other parts of speech remain
+independent entries. A group is folded only when the source contains one live base
+matching the third-person singular, and the form is explicitly in that same paradigm.
+Missing/incomplete or ambiguous paradigms are kept. Irregular homographs with other
+live parts of speech are also kept: OpenGloss mixes the two verbs in `saw` under
+the morphology of `see`. WordNet-derived entries are not folded by this rule.
+
+**Previously installed OpenGloss:** an ordinary update preserves entries absent from
+the new conversion, so it will retain old standalone `ran`-style articles. Apply this
+correction with a fresh installation of the dataset after updating the server. Export
+first if the dataset has edits you need to retain; do not restore the old complete
+export over the fresh installation, as it contains the same erroneous base entries.
+
+Word links preserve the target's capitalization.
 They point to headwords that exist in the imported dictionary, not to individual
 source senses; self-links and an antonym already listed as a synonym are omitted.
 Retired lexemes are omitted. Reading grades are not converted to
@@ -76,8 +94,8 @@ of the supported dictionary content, not a lossless archive of the Parquet table
 Malformed definitions, examples and forms containing NUL or other damaged control
 characters are omitted without guessing their spelling; the conversion reports
 them as `malformed`. Other valid senses of the word remain. In the verified 2.4
-files, 77 of the 300,787 definitions contain damaged text, leaving 300,710 meanings.
-The writer also merges repeated definitions, though none occur in these files.
+files, 77 of the 300,787 definitions contain damaged text, leaving 300,710 usable definitions
+before inflection normalization. Repeated definitions merged into one lemma are kept once.
 Generated flags and the recorded model names are preserved. Forks, edits and
 export/import use the same source and license rules as every other dataset.
 
@@ -109,6 +127,9 @@ Measured on a laptop, Postgres in Docker, the upload included:
 | Open English WordNet 2025      | 135 000 | 185 000   | —            | 70 s        | 170 MB          |
 | Princeton WordNet 3.1          | 155 000 | 207 000   | —            | 80 s        | 190 MB          |
 | OpenGloss 2.4                  | 194 373 | 300 710   | —            | 3–4 min     | ~700 MB         |
+
+The OpenGloss measurements above predate verb-inflection normalization; normalized
+imports contain fewer base entries and may merge repeated definitions.
 
 The public reads of the full Wiktionary — a headword, the search with its typo tolerance, a
 page of the list — answer in under 10 ms, as they do on the project's dataset: every dataset
