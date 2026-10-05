@@ -18,8 +18,11 @@ import { EnMeaning } from '../../../entities/en_meaning.entity';
 import { EnMeaningTranslation } from '../../../entities/en_meaning_translation.entity';
 import { EnShortTranslation } from '../../../entities/en_short_translation.entity';
 import { EnImportDictionaryService } from '../enImportDictionary.service';
+import { ImportStatusService } from '../importStatus.service';
 import { WordRowsService } from '../../../word-rows.service';
 import { SettingsService } from '../../../../SettingsModule/settings.service';
+import { DatasetsService, OWN_DATASET_PROVENANCE } from '../../../../DatasetsModule/datasets.service';
+import { Dataset } from '../../../../DatasetsModule/entities/dataset.entity';
 import { DATASET_VERSION_SETTINGS_FIELD, EnDictionaryImportPhasesE } from '../constants';
 import { ErrorCodes } from '../../../../../../core/constants/error_codes';
 import {
@@ -32,6 +35,7 @@ import {
   EnPartOfSpeechE,
   EnWordFormsE,
   ImportSourceKindE,
+  ImportTriggerE,
 } from '../../../../../../types';
 import { mapWordFromSetToDB } from '../utils';
 import { DataSetWordT } from '../../../../../../types/dictionaries/en/EnDataSetTypes';
@@ -235,7 +239,7 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
         },
       });
 
-    const runImport = async (withManifest = true): Promise<FakeProgressRes> => {
+    const runImport = async (withManifest = true, importer = service): Promise<FakeProgressRes> => {
       mockDatasetFiles({
         ...(withManifest && { 'manifest.json': makeManifest() }),
         'vocab-bloom-hub-en-words.jsonl':
@@ -333,9 +337,116 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
       });
 
       const res = new FakeProgressRes();
-      await service.importDictionary({}, res as unknown as ExpressResponse);
+      await importer.importDictionary({}, res as unknown as ExpressResponse);
       return res;
     };
+
+    const deferred = () => {
+      let resolve!: () => void;
+      const promise = new Promise<void>((done) => {
+        resolve = done;
+      });
+      return { promise, resolve };
+    };
+
+    const trackedImporter = (close: () => Promise<void>) => {
+      const status = new ImportStatusService();
+      const dataset = Object.assign(new Dataset(), OWN_DATASET_PROVENANCE, { name: 'default' });
+      const recordImport = jest.fn<DatasetsService['recordImport']>().mockResolvedValue(undefined);
+      const datasets = {
+        getActive: () => dataset,
+        resolveTarget: async () => dataset,
+        connect: async () => ({ dataset, manager: ds.manager, close }),
+        recordImport,
+      } as unknown as DatasetsService;
+      const importer = new EnImportDictionaryService(
+        ds.getRepository(EnWord),
+        new WordRowsService(ds),
+        mockSettingsService,
+        undefined,
+        status,
+        datasets,
+      );
+      return { importer, status, recordImport };
+    };
+
+    it('holds the import slot until the audit and target cleanup have finished', async () => {
+      const auditing = deferred();
+      const audited = deferred();
+      const closing = deferred();
+      const closed = deferred();
+      const { importer, status, recordImport } = trackedImporter(async () => {
+        closing.resolve();
+        await closed.promise;
+      });
+      Object.assign(importer, {
+        auditService: {
+          record: async () => {
+            auditing.resolve();
+            await audited.promise;
+          },
+        },
+      });
+
+      const first = runImport(true, importer);
+      try {
+        await auditing.promise;
+        expect(status.running).toBe(true);
+        await expect(
+          importer.importDictionary({}, new FakeProgressRes() as unknown as ExpressResponse),
+        ).rejects.toThrow(ErrorCodes.import_in_progress);
+        audited.resolve();
+        await closing.promise;
+        expect(status.running).toBe(true);
+        await expect(
+          importer.importDictionary({}, new FakeProgressRes() as unknown as ExpressResponse),
+        ).rejects.toThrow(ErrorCodes.import_in_progress);
+      } finally {
+        audited.resolve();
+        closed.resolve();
+        await first;
+      }
+      expect(status.snapshot()).toEqual(expect.objectContaining({ running: false, dataset_version: '0.2.0' }));
+
+      // After cleanup the next run can claim its target and record its version.
+      await runImport(true, importer);
+      expect(recordImport).toHaveBeenCalledTimes(2);
+      expect(recordImport).toHaveBeenLastCalledWith('default', expect.objectContaining({ version: '0.2.0' }));
+    });
+
+    it('holds the import slot during cleanup after a failure and then allows retrying', async () => {
+      const closing = deferred();
+      const closed = deferred();
+      const { importer, status } = trackedImporter(async () => {
+        closing.resolve();
+        await closed.promise;
+      });
+      const failure = new Error('source conversion failed');
+      const first = importer
+        .importFrom(
+          async () => {
+            throw failure;
+          },
+          'failed source',
+          { start() {}, write() {}, end() {} },
+          ImportTriggerE.manual,
+        )
+        .catch((error: unknown) => error);
+      try {
+        await closing.promise;
+        expect(status.running).toBe(true);
+        await expect(
+          importer.importDictionary({}, new FakeProgressRes() as unknown as ExpressResponse),
+        ).rejects.toThrow(ErrorCodes.import_in_progress);
+      } finally {
+        closed.resolve();
+        expect(await first).toBe(failure);
+      }
+      expect(status.snapshot()).toEqual(expect.objectContaining({ running: false, error: failure.message }));
+      await runImport(true, importer);
+      expect(status.snapshot()).toEqual(expect.objectContaining({ running: false, dataset_version: '0.2.0' }));
+      expect(status.snapshot()).not.toHaveProperty('error');
+    });
 
     it('saves words, phrases and grammar patterns from the dataset files', async () => {
       await runImport();
