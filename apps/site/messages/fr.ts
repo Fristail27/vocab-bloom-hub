@@ -57,7 +57,7 @@ export default {
     // the start page's own title: the words a person searches for, not the bare brand (issue #480)
     home_title: 'Vocab Bloom Hub — dictionnaire anglais-français avec API publique, auto-hébergé',
     description:
-      "Une plateforme de dictionnaire open source : un dictionnaire d'anglais auto-hébergé avec une API publique en lecture seule, des SDK pour Node.js et Python, une interface d'administration et plusieurs jeux de données — celui du projet, le Wiktionary anglais, WordNet, OpenGloss et les vôtres.",
+      'Hébergez, créez et adaptez des dictionnaires anglais avec API publique et SDK, en conservant sources, licences et historique des modifications. Le jeu de données propre au projet contient 300 000 entrées.',
   },
   nav: {
     docs: 'Docs',
@@ -69,9 +69,9 @@ export default {
     language: 'Langue',
   },
   home: {
-    hero_title: 'Un dictionnaire à faire tourner à côté de votre application',
+    hero_title: 'Des dictionnaires à héberger et à adapter',
     hero_text:
-      "Vocab Bloom Hub est un dictionnaire d'anglais auto-hébergé — 300 000 entrées avec sens, exemples, formes fléchies et traductions en russe, espagnol, français, allemand, portugais, chinois et arabe — derrière une API publique en lecture seule, avec des SDK, une interface d'administration et un jeu de données publié. À côté, le Wiktionary anglais, WordNet, OpenGloss et vos propres dictionnaires, chacun sous sa propre licence. Une commande pour l'installer, MIT pour le code, CC BY 4.0 pour les données du projet.",
+      'Hébergez des dictionnaires anglais aux côtés de votre application : partez des 300 000 entrées du jeu de données propre au projet, ajoutez Wiktionary, WordNet ou OpenGloss, ou créez le vôtre. Créez des forks et modifiez les données en conservant sources, licences et historique. Accédez aux mots par l’API publique, les SDK Node.js et Python ou les pages du site.',
     cta_getting_started: 'Démarrage',
     cta_start: 'Installer avec Docker',
     cta_api: "Référence de l'API",
@@ -115,7 +115,7 @@ export default {
   docs: {
     title: 'Documentation',
     intro:
-      "Tout ce que le dépôt documente, rendu à partir des mêmes fichiers Markdown : installation et déploiement, configuration, exploitation, l'API et les données.",
+      'Installez et exploitez votre instance, ajoutez des dictionnaires ou créez des forks, gérez sources et licences et utilisez l’API et les SDK.',
     on_this_page: 'Sur cette page',
     english_only: "Cette page n'est disponible qu'en anglais.",
     edit_on_github: 'Modifier cette page sur GitHub',

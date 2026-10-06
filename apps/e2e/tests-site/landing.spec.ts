@@ -7,7 +7,9 @@ import { expect, test } from '@playwright/test';
 // native speaker's review of a translation does not have to touch this test
 import ar from '../../site/messages/ar';
 import de from '../../site/messages/de';
+import en from '../../site/messages/en';
 import es from '../../site/messages/es';
+import ru from '../../site/messages/ru';
 import zh from '../../site/messages/zh';
 
 // the monorepo version the site was built with (scripts/bump-version.mjs keeps every package.json equal)
@@ -22,9 +24,7 @@ test.describe('landing', () => {
     // the middleware always prefixes the locale
     await page.waitForURL('**/en');
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'A dictionary you can run next to your app',
-    );
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(en.home.hero_title);
     const gettingStarted = page.getByRole('link', { name: 'Getting started' });
     await expect(gettingStarted).toBeVisible();
     await expect(gettingStarted).toHaveAttribute('href', '/en/docs/getting-started');
@@ -44,9 +44,7 @@ test.describe('landing', () => {
     await page.goto('/ru');
 
     await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'Словарь, который можно поднять рядом со своим приложением',
-    );
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(ru.home.hero_title);
   });
 
   // the locales of issue #450: the hero in Spanish and German, the html lang attribute

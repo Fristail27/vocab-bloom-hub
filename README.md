@@ -5,7 +5,7 @@
 <h1 align="center">Vocab Bloom Hub</h1>
 
 <p align="center">
-  A self-hosted English dictionary: the project's own 300 000 entries with meanings, examples, forms, translations and word links, the English Wiktionary, WordNet and OpenGloss as further datasets, dictionaries of your own — behind a public API, an admin UI, two SDKs and a website.
+  A self-hosted platform for English dictionaries, with a public API, an admin UI and SDKs. The project’s own dataset includes 300 000 entries. Install ready-made datasets or create and fork your own, preserving word sources, licenses and edit history.
 </p>
 
 <p align="center">
@@ -152,7 +152,7 @@ curl -s 'localhost:3240/api/v1/search/detailed?search=run&with_meanings=true'
 ```
 
 > [!TIP]
-> To pin a release instead of the `main` development build, set `VBH_TAG=1.1.0` in `.env`.
+> To pin a release instead of the `main` development build, set `VBH_TAG=1.2.0` in `.env`.
 > To add the website (docs, API reference, playground, word pages) on <http://localhost:3242>, set
 > `COMPOSE_PROFILES=db,site`.
 

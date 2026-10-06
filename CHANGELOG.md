@@ -5,6 +5,55 @@ the admin UI, the website and both SDKs; the published dataset keeps its own ver
 (`manifest.version`), bumped at the next export after a release. Entries are curated from the
 generated release notes; the full commit history lives in git.
 
+## v1.2.0 — 2026-10-06
+
+Dictionaries can now be forked and extended while keeping the sources and terms of their words,
+with OpenGloss joining the catalog and source files downloaded directly by the server.
+
+- **Sources and licenses per word**: datasets and words retain source names, versions, links,
+  attribution, notices and license relations. The admin UI, public word pages, API and both
+  SDKs expose the provenance and the terms of applicable contributions. Changing dataset
+  settings does not rewrite historical snapshots.
+
+- **Independent forks and word copies**: fork an installed dataset or prefill a new word from
+  another dictionary, preserving its sources and history. An unchanged copy keeps its original
+  licenses; the receiving dataset's contribution terms apply when its content is edited.
+  Own datasets and forks have editable versions. Parent synchronization and merging are not
+  included.
+
+- **Portable provenance and history**: exports preserve source snapshots, acquisition events
+  and the full declared edit history, using the existing JSONL filenames with a new format
+  marker and manifest metadata. Upgrade receiving instances before importing these exports,
+  including instances that download them automatically. PostgreSQL migrations run on startup.
+
+- **OpenGloss 2.4**: install its six Parquet files as another dataset, with supported meanings,
+  examples, forms, relations and generation metadata. Words retain OpenGloss attribution and,
+  where explicitly declared by the source, Princeton WordNet 3.0 attribution and notices.
+  The catalog pins release 2.4; automatic newer-release checks are not included.
+
+- **Server downloads**: install catalog datasets directly from their source links, with download,
+  conversion and import progress; manual upload remains available. Sequential imports now keep
+  the import slot through final cleanup, preventing a completed import from interfering with
+  the next run and leaving its recorded dataset version stale.
+
+- **Dataset cards**: clearer titles, status badges, grouped version and license information,
+  and expanded details that separate descriptions, source information and notices. Actions
+  and content wrap on narrow screens and support right-to-left interfaces.
+
+- **Word pages**: switching the interface language preserves the search query; dataset tabs
+  wrap so every dictionary remains visible; pronunciation stops when its owning component
+  is removed. The website waits for API readiness in Compose and retries brief upstream
+  failures, reducing errors during startup and restarts.
+
+- **Python SDK example**: a runnable dictionary lookup command prints definitions, dataset
+  license and attribution, marks edited entries and handles missing words and API errors.
+
+- **Development tooling**: shared agent configuration and setup instructions; the vulnerable
+  `braces` dependency is removed from the Next.js lint tooling.
+
+- **Dependency security**: update `proxy-addr`, `sharp`, `shell-quote` and `source-map-js` to
+  fix reported IP spoofing, image-processing, command-injection and denial-of-service issues.
+
 ## v1.1.0 — 2026-09-30
 
 Several dictionaries in one instance: the project's dataset, the English Wiktionary and the two

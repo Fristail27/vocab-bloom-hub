@@ -6,7 +6,7 @@
 <!-- reviewed: zh · @assassinationss · 2026-09-24 · 32148f5 -->
 
 <p align="center">
-  一部自托管的英语词典：项目自有的 300 000 个词条，包含释义、例句、词形、翻译和词语关联，另有英语 Wiktionary、WordNet 和 OpenGloss 作为更多数据集，以及您自己的词典 — 配有公共 API、管理界面、两个 SDK 和一个网站。
+  可自行部署的英语词典平台，提供公共 API、管理界面和 SDK。 项目自有数据集包含 300 000 个词条。安装现成数据集，创建自己的词典或分叉副本，同时保留词语来源、许可协议和编辑历史。
 </p>
 
 <p align="center">
@@ -147,7 +147,7 @@ curl -s 'localhost:3240/api/v1/search/detailed?search=run&with_meanings=true'
 ```
 
 > [!TIP]
-> 要固定使用某个发布版本而不是 `main` 开发构建，请在 `.env` 中设置 `VBH_TAG=1.1.0`。
+> 要固定使用某个发布版本而不是 `main` 开发构建，请在 `.env` 中设置 `VBH_TAG=1.2.0`。
 > 要在 <http://localhost:3242> 上添加网站（文档、API 参考、演练场、单词页面），请设置
 > `COMPOSE_PROFILES=db,site`。
 

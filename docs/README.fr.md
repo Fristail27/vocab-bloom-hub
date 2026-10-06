@@ -5,7 +5,7 @@
 <h1 align="center">Vocab Bloom Hub</h1>
 
 <p align="center">
-  Un dictionnaire d’anglais auto-hébergé : les 300 000 entrées propres au projet avec sens, exemples, formes, traductions et liens entre mots, le Wiktionary anglais, WordNet et OpenGloss comme jeux de données supplémentaires, vos propres dictionnaires — derrière une API publique, une interface d’administration, deux SDK et un site web.
+  Une plateforme auto-hébergée de dictionnaires anglais, avec API publique, administration et SDK. Le jeu de données propre au projet contient 300 000 entrées. Installez des jeux de données existants, créez les vôtres ou des forks, en conservant les sources, licences et modifications de chaque mot.
 </p>
 
 <p align="center">
@@ -158,7 +158,7 @@ curl -s 'localhost:3240/api/v1/search/detailed?search=run&with_meanings=true'
 ```
 
 > [!TIP]
-> Pour épingler une version au lieu de la construction `main`, mettez `VBH_TAG=1.1.0` dans
+> Pour épingler une version au lieu de la construction `main`, mettez `VBH_TAG=1.2.0` dans
 > `.env`. Pour ajouter le site web (documentation, référence de l’API, bac à sable, pages de mots)
 > sur <http://localhost:3242>, mettez `COMPOSE_PROFILES=db,site`.
 

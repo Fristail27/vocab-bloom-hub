@@ -56,7 +56,7 @@ export default {
     // the start page's own title: the words a person searches for, not the bare brand (issue #480)
     home_title: 'Vocab Bloom Hub — 英汉词典，公共 API，可自行部署',
     description:
-      '一个开源词典平台：自托管的英语词典，提供公共只读 API、Node.js 和 Python 的 SDK、管理界面和多个数据集——项目自己的数据集、英语 Wiktionary、WordNet、OpenGloss 以及您自己的数据集。',
+      '部署、创建英语词典及其分叉副本，使用公共 API 和 SDK，同时保留词语来源、许可协议和编辑历史。 项目自有数据集包含 300 000 个词条。',
   },
   nav: {
     docs: '文档',
@@ -68,9 +68,9 @@ export default {
     language: '语言',
   },
   home: {
-    hero_title: '一部可以跑在你应用旁边的词典',
+    hero_title: '自行部署、自由扩展的词典',
     hero_text:
-      'Vocab Bloom Hub 是一部自托管的英语词典——30 万个条目，包含释义、例句、词形变化，以及俄语、西班牙语、法语、德语、葡萄牙语、中文和阿拉伯语的翻译——通过公共只读 API 提供，并配有 SDK、管理界面和已发布的数据集。在它旁边，还可以放置英语 Wiktionary、WordNet、OpenGloss 和您自己的词典，各自采用自己的许可证。一条命令即可安装，代码采用 MIT 许可证，项目数据采用 CC BY 4.0 许可证。',
+      '在应用旁部署英语词典：从项目自有数据集的 300 000 个词条开始，添加 Wiktionary、WordNet 或 OpenGloss，也可创建自己的词典。创建分叉副本并编辑数据，同时保留词语来源、许可协议和历史。通过公共 API、Node.js 和 Python SDK 或单词页面访问数据。',
     cta_getting_started: '快速开始',
     cta_start: '使用 Docker 安装',
     cta_api: 'API 参考',
@@ -112,7 +112,7 @@ export default {
   },
   docs: {
     title: '文档',
-    intro: '仓库中记录的一切，由同样的 Markdown 文件渲染而成：安装与部署、配置、运维、API 和数据。',
+    intro: '安装与运维、添加词典与创建分叉副本、管理来源和许可协议，以及使用 API 和 SDK。',
     on_this_page: '本页内容',
     english_only: '此页面仅提供英文版本。',
     edit_on_github: '在 GitHub 上编辑此页面',
