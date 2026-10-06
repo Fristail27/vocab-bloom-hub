@@ -63,7 +63,7 @@ The installation of the [quick start](./deployment/docker.md#quick-start): image
 GHCR, the version picked by `VBH_TAG` in `.env`.
 
 ```bash
-# .env: VBH_TAG=1.1.0
+# .env: VBH_TAG=1.2.0
 docker compose pull
 docker compose up -d
 ```
@@ -73,7 +73,7 @@ touched. What `VBH_TAG` may hold:
 
 | `VBH_TAG`    | What an upgrade is                                                            |
 | ------------ | ----------------------------------------------------------------------------- |
-| `1.1.0`      | Edit the line, then `pull` and `up -d` — nothing moves until you say so       |
+| `1.2.0`      | Edit the line, then `pull` and `up -d` — nothing moves until you say so       |
 | `1.1` or `1` | `pull` and `up -d` fetch the newest patch (or minor) release of that line     |
 | `latest`     | The newest stable release, whatever its number — for trying things out        |
 | `main`       | The development build of every merge; may carry migrations of unreleased code |
@@ -90,7 +90,7 @@ An instance built on the server with `docker-compose.build.yml` — the way to r
 under a hostname of your own ([`deployment/docker.md`](./deployment/docker.md#the-website)).
 
 ```bash
-git pull --ff-only                 # or: git fetch --tags && git checkout v1.1.0
+git pull --ff-only                 # or: git fetch --tags && git checkout v1.2.0
 docker compose -f docker-compose.yml -f docker-compose.build.yml build
 docker compose -f docker-compose.yml -f docker-compose.build.yml up -d
 docker image prune -f              # the images of the previous build
@@ -223,7 +223,7 @@ by itself, like any other:
 - the import and the export are actions of the card of a dataset on the datasets page; the
   addresses `managing/import-dictionary` and `managing/export-dictionary` redirect there.
 
-## Sources, licenses, forks and OpenGloss (after 1.1.0)
+## Sources, licenses, forks and OpenGloss (1.2.0)
 
 Back up the database and upgrade the server, admin UI and website together. The source-tracking
 feature adds shared migrations `AddDatasetOrigins` and `AddDatasetTermsUpdatedAt`, and

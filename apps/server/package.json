@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "API of Vocab Bloom Hub (NestJS + TypeORM): the public read-only dictionary API under /api/v1, the admin API, the dictionary import and the Postgres schema of a self-hosted instance.",
   "keywords": [
     "backend",

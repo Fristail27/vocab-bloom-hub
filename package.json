@@ -1,12 +1,12 @@
 {
   "name": "vocab-bloom-hub",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
-  "description": "A self-hosted English dictionary: the project's own 300 000 entries with meanings, examples, forms, translations and word links, the English Wiktionary and WordNet as further datasets, dictionaries of your own — behind a public API, an admin UI, two SDKs and a website.",
+  "description": "A self-hosted platform for English dictionaries, with a public API, an admin UI and SDKs. The project’s own dataset includes 300 000 entries. Install ready-made datasets or create and fork your own, preserving word sources, licenses and edit history.",
   "homepage": "https://vocab-bloom-hub.com",
   "author": {
     "name": "Aleksei Ryzhov (Fristail27)",
@@ -99,7 +99,8 @@
   "resolutions": {
     "@next/eslint-plugin-next/fast-glob": "npm:tinyglobby@0.2.17",
     "multer@npm:2.2.0": "2.3.0",
-    "js-yaml@npm:4.3.1": "4.3.2"
+    "js-yaml@npm:4.3.1": "4.3.2",
+    "concurrently/shell-quote": "1.11.0"
   },
   "packageManager": "yarn@4.17.1",
   "dependencies": {

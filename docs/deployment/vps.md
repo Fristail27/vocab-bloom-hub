@@ -91,7 +91,7 @@ curl -s localhost:3240/api/health
 curl -s -o /dev/null -w '%{http_code}\n' localhost:3242/en
 ```
 
-`./update.sh v1.1.0` deploys a release, `./update.sh` the newest tag. Migrations run when the
+`./update.sh v1.2.0` deploys a release, `./update.sh` the newest tag. Migrations run when the
 new server starts; the admin UI tells you when a newer release exists
 ([`../upgrading.md`](../upgrading.md#update-notice)). A change to the documentation only needs
 the website: `$compose build site && $compose up -d site`.

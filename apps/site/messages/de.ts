@@ -57,7 +57,7 @@ export default {
     // the start page's own title: the words a person searches for, not the bare brand (issue #480)
     home_title: 'Vocab Bloom Hub — Englisch-Deutsch-Wörterbuch mit öffentlicher API, selbst gehostet',
     description:
-      'Eine Open-Source-Wörterbuchplattform: ein selbst gehostetes Englisch-Wörterbuch mit einer öffentlichen, nur lesenden API, SDKs für Node.js und Python, einer Admin-Oberfläche und mehreren Datensätzen — dem eigenen des Projekts, dem englischen Wiktionary, WordNet, OpenGloss und deinen eigenen.',
+      'Englische Wörterbücher selbst hosten, erstellen und forken — mit öffentlicher API, SDKs und Erhalt von Quellen, Lizenzen und Änderungsverlauf. Der projekteigene Datensatz umfasst 300 000 Einträge.',
   },
   nav: {
     docs: 'Docs',
@@ -69,9 +69,9 @@ export default {
     language: 'Sprache',
   },
   home: {
-    hero_title: 'Ein Wörterbuch, das neben deiner App läuft',
+    hero_title: 'Wörterbücher selbst hosten und erweitern',
     hero_text:
-      'Vocab Bloom Hub ist ein selbst gehostetes Englisch-Wörterbuch — 300 000 Einträge mit Bedeutungen, Beispielen, flektierten Formen und Übersetzungen ins Russische, Spanische, Französische, Deutsche, Portugiesische, Chinesische und Arabische — hinter einer öffentlichen, nur lesenden API, mit SDKs, einer Admin-Oberfläche und einem veröffentlichten Datensatz. Daneben das englische Wiktionary, WordNet, OpenGloss und eigene Wörterbücher, jedes unter seiner eigenen Lizenz. Ein Befehl zur Installation, MIT für den Code, CC BY 4.0 für die Daten des Projekts.',
+      'Betreibe englische Wörterbücher neben deiner App: starte mit den 300 000 Einträgen des projekteigenen Datensatzes, ergänze Wiktionary, WordNet oder OpenGloss oder erstelle dein eigenes Wörterbuch. Erstelle Forks und bearbeite Daten, während Quellen, Lizenzen und Verlauf erhalten bleiben. Greife über die öffentliche API, die SDKs für Node.js und Python oder die Wortseiten darauf zu.',
     cta_getting_started: 'Erste Schritte',
     cta_start: 'Mit Docker installieren',
     cta_api: 'API-Referenz',
@@ -115,7 +115,7 @@ export default {
   docs: {
     title: 'Dokumentation',
     intro:
-      'Alles, was das Repository dokumentiert, aus denselben Markdown-Dateien gerendert: Installation und Deployment, Konfiguration, Betrieb, die API und die Daten.',
+      'Installiere und betreibe deine Instanz, füge Wörterbücher hinzu oder erstelle Forks, verwalte Quellen und Lizenzen und nutze API und SDKs.',
     on_this_page: 'Auf dieser Seite',
     english_only: 'Diese Seite ist nur auf Englisch verfügbar.',
     edit_on_github: 'Diese Seite auf GitHub bearbeiten',

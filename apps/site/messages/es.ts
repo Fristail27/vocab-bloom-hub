@@ -57,7 +57,7 @@ export default {
     // the start page's own title: the words a person searches for, not the bare brand (issue #480)
     home_title: 'Vocab Bloom Hub — diccionario inglés-español con API pública, autoalojado',
     description:
-      'Una plataforma de diccionario de código abierto: un diccionario de inglés autoalojado con una API pública de solo lectura, SDK para Node.js y Python, una interfaz de administración y varios datasets — el propio del proyecto, el Wiktionary en inglés, WordNet, OpenGloss y los tuyos.',
+      'Aloja, crea y haz forks de diccionarios de inglés con API pública y SDK, conservando fuentes, licencias e historial de cambios. El dataset propio del proyecto incluye 300 000 entradas.',
   },
   nav: {
     docs: 'Docs',
@@ -69,9 +69,9 @@ export default {
     language: 'Idioma',
   },
   home: {
-    hero_title: 'Un diccionario que puedes ejecutar junto a tu aplicación',
+    hero_title: 'Diccionarios que puedes alojar y adaptar',
     hero_text:
-      'Vocab Bloom Hub es un diccionario de inglés autoalojado — 300 000 entradas con significados, ejemplos, formas flexionadas y traducciones al ruso, español, francés, alemán, portugués, chino y árabe — detrás de una API pública de solo lectura, con SDK, una interfaz de administración y un dataset publicado. Junto a él, el Wiktionary en inglés, WordNet, OpenGloss y diccionarios propios, cada uno bajo su propia licencia. Un comando para instalar, MIT para el código, CC BY 4.0 para los datos del proyecto.',
+      'Aloja diccionarios de inglés junto a tu aplicación: empieza con las 300 000 entradas del dataset propio del proyecto, añade Wiktionary, WordNet u OpenGloss, o crea el tuyo. Haz forks y edita los datos conservando fuentes, licencias e historial. Accede mediante una API pública, SDK para Node.js y Python o páginas de palabras.',
     cta_getting_started: 'Primeros pasos',
     cta_start: 'Instalar con Docker',
     cta_api: 'Referencia de la API',
@@ -115,7 +115,7 @@ export default {
   docs: {
     title: 'Documentación',
     intro:
-      'Todo lo que documenta el repositorio, renderizado desde los mismos archivos Markdown: instalación y despliegue, configuración, operación, la API y los datos.',
+      'Instala y opera tu instancia, añade diccionarios o haz forks, gestiona fuentes y licencias e integra la API y los SDK.',
     on_this_page: 'En esta página',
     english_only: 'Esta página solo está disponible en inglés.',
     edit_on_github: 'Editar esta página en GitHub',

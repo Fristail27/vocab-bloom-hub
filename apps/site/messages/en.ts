@@ -57,7 +57,7 @@ export default {
     // the start page's own title: the words a person searches for, not the bare brand (issue #480)
     home_title: 'Vocab Bloom Hub — a self-hosted English dictionary with a public API',
     description:
-      'An open-source dictionary platform: a self-hosted English dictionary with a public read-only API, SDKs for Node.js and Python, an admin UI and several datasets — the project’s own, the English Wiktionary, WordNet, OpenGloss and your own.',
+      'Host, create and fork English dictionaries with a public API and SDKs, preserving word sources, licenses and edit history. The project’s own dataset includes 300 000 entries.',
   },
   nav: {
     docs: 'Docs',
@@ -69,9 +69,9 @@ export default {
     language: 'Language',
   },
   home: {
-    hero_title: 'A dictionary you can run next to your app',
+    hero_title: 'Dictionaries you can host and make your own',
     hero_text:
-      'Vocab Bloom Hub is a self-hosted English dictionary — 300 000 entries with meanings, examples, inflected forms and translations into Russian, Spanish, French, German, Portuguese, Chinese and Arabic — behind a public read-only API, with SDKs, an admin UI and a published dataset. Next to it, the English Wiktionary, WordNet, OpenGloss and dictionaries of your own, each under its own license. One command to install, MIT for the code, CC BY 4.0 for the project’s data.',
+      'Run English dictionaries alongside your app: start with 300 000 entries in the project’s own dataset, add Wiktionary, WordNet or OpenGloss, or create your own. Fork and edit datasets while preserving word sources, licenses and history. Read them through a public API, Node.js and Python SDKs, or word pages.',
     cta_getting_started: 'Getting started',
     cta_start: 'Install with Docker',
     cta_api: 'API reference',
@@ -115,7 +115,7 @@ export default {
   docs: {
     title: 'Documentation',
     intro:
-      'Everything the repository documents, rendered from the same Markdown files: installation and deployment, configuration, operations, the API and the data.',
+      'Install and run your instance, add or fork dictionaries, manage sources and licenses, and build with the API and SDKs.',
     on_this_page: 'On this page',
     english_only: 'This page is available in English only.',
     edit_on_github: 'Edit this page on GitHub',
