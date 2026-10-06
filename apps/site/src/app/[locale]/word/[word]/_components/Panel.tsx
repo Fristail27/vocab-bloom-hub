@@ -4,7 +4,9 @@ import React from 'react';
 import type { PublicChangeV1T } from 'server/types';
 
 import { ReportMistake } from '@/components/ReportMistake';
+import { WordGraph } from '@/components/WordGraph';
 import { licenseLabel } from '@/core/datasetTerms';
+import { graphEntries } from '@/core/wordGraph';
 import { changesOfEntry } from '@/core/wordHistory';
 import { localeTranslations, translationLanguages } from '@/core/wordPage';
 import type { WordPanelT } from '@/core/wordPanel';
@@ -107,6 +109,12 @@ export const Panel = ({ panel, history, locale, t, termsNames, languageLabel }: 
           />
         )}
       </div>
+      <WordGraph
+        key={`${panel.dataset}:${panel.word}`}
+        word={panel.word}
+        dataset={panel.dataset}
+        entries={graphEntries(entries)}
+      />
       {entries.map((entry) => (
         <Entry
           key={entry.id}

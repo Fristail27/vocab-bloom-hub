@@ -455,6 +455,19 @@ merged: an entry stays in the group of its dataset, under the license of its sou
   headwords of the active dataset, and a headword the active dataset does not hold is a page
   that is kept out of the search index. "Report a mistake" is offered on the tab of the active
   dataset only.
+- **Each tab has its own word graph.** Open **Word connections** and choose a part-of-speech
+  tab. Switch to **Translations by meaning** to see meaning-specific
+  translations in the language selected by the page’s translation picker: individual translation variants in the same language share a node when their spelling matches
+  (the title is used when no variants are recorded), with their definitions
+  available on selection. Translations do not trigger English neighbor lookups. Each tab shows only that part of speech in a vertical canvas: the word at the top, then
+  its meanings, synonyms and antonyms below. Selecting a direct neighbor loads its meanings
+  and links from the same dataset and part of speech, one extra level only; missing entries
+  never fall back to another dataset. Shared words join branches, while antonyms use dashed
+  lines. Drag to pan, use the
+  zoom controls, or select nodes through the keyboard-accessible selector and connection list.
+  The view is bounded to 12 meanings per word, 24 direct neighbors and 150 nodes and says when
+  it omits data; the full entries remain below. Neighbor reads start only on selection, use
+  the public API rate limit, and can be retried after a failure.
 - **An installed dataset is public.** Before this read existed a dataset was seen by nobody
   until it was activated; now its entries, the history of its edits and the names credited in
   it are read from the moment it is installed — half imported, if the import is still running.

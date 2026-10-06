@@ -216,6 +216,43 @@ export default {
     own_license: 'Pourquoi cette licence, et ce qu’elle permet',
     full_text: 'Les avis de la source, en entier',
   },
+  graph: {
+    view: 'Vue du graphe',
+    relations: 'Synonymes et antonymes',
+    translations: 'Traductions par sens',
+    translation: 'Traduction',
+    translations_hint:
+      'Choisissez une langue pour voir les traductions de chaque sens. Les traductions communes relient les sens. Sélectionnez un nœud pour sa définition ; faites glisser pour déplacer et utilisez + et − pour zoomer.',
+    translations_canvas:
+      'Graphe des sens et traductions ; utilisez le sélecteur ou la liste des liens pour naviguer au clavier.',
+    no_translations:
+      'Aucune traduction pour la langue et la catégorie grammaticale sélectionnées dans ce jeu de données.',
+    parts: 'Catégorie grammaticale',
+    title: 'Liens du mot',
+    hint: 'Sélectionnez un mot lié pour charger un niveau supplémentaire de ce jeu de données. Déplacez le graphe et utilisez + et − pour zoomer. Les mots communs relient les branches ; leur sélection met les liens en évidence.',
+    meaning: 'Sens',
+    synonym: 'Synonyme',
+    antonym: 'Antonyme',
+    shared: 'Mot commun',
+    canvas:
+      'Graphe des sens, synonymes et antonymes ; utilisez le sélecteur ou la liste ci-dessous au clavier.',
+    zoom_in: 'Agrandir',
+    zoom_out: 'Réduire',
+    reset: 'Ajuster le graphe',
+    select: 'Choisir un nœud',
+    all: 'Tous les liens',
+    open_word: 'Ouvrir la page du mot',
+    retry: 'Réessayer',
+    loading: 'Chargement…',
+    expand: 'Charger les liens',
+    loaded: 'Liens chargés',
+    empty: 'Aucune entrée de cette catégorie grammaticale dans ce jeu de données',
+    failed: 'Impossible de charger les liens. Réessayez.',
+    limited: 'Le graphe affiche une sélection limitée. Les entrées complètes sont ci-dessous.',
+    unnamed: 'Le serveur ne précise pas le jeu de données ; les voisins ne peuvent pas être chargés.',
+    no_relations: 'Aucun synonyme ni antonyme enregistré pour ce mot.',
+    list: 'Liste des liens',
+  },
   word: {
     index_title: 'Mots',
     index_intro:
