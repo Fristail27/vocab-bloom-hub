@@ -3,6 +3,21 @@ import { expect, test } from '@playwright/test';
 // The API reference generated from apps/server/openapi/public-v1.json:
 // operation and schema anchors must keep resolving (issue #330)
 test.describe('API reference', () => {
+  test('search offers both SDK examples and links the same playground endpoint', async ({ page }) => {
+    await page.goto('/en/api#get-search');
+    const operation = page.locator('section#get-search');
+    await operation.getByRole('tab', { name: 'Node.js SDK' }).click();
+    await expect(operation.locator('pre[data-language="sdk-node"]')).toContainText(
+      "client.search({ search: 'run' })",
+    );
+    await operation.getByRole('tab', { name: 'Python SDK' }).click();
+    await expect(operation.locator('pre[data-language="sdk-python"]')).toContainText('client.search("run")');
+    await expect(operation.getByRole('link', { name: /playground/i })).toHaveAttribute(
+      'href',
+      /\/en\/playground\?endpoint=get-search$/,
+    );
+  });
+
   test('an operation anchor resolves and links the playground', async ({ page }) => {
     await page.goto('/en/api#get-words-word');
 

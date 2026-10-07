@@ -90,6 +90,30 @@ describe('every language', () => {
 });
 
 describe('the exact text', () => {
+  it('offers both search SDK tabs with the sample term, fuzzy flag and first word', () => {
+    expect(snippetsOf(bySlug('get-search')).map((snippet) => snippet.id)).toEqual(
+      expect.arrayContaining(['sdk-node', 'sdk-python']),
+    );
+    expect(render('sdk-node', 'get-search')).toBe(
+      [
+        "import { VocabBloomClient } from '@vocab-bloom-hub/client';",
+        '',
+        "const client = new VocabBloomClient({ baseUrl: 'https://x.example' });",
+        "const { data, meta } = await client.search({ search: 'run' });",
+        'console.log(meta.fuzzy, data[0]?.word);',
+      ].join('\n'),
+    );
+    expect(render('sdk-python', 'get-search')).toBe(
+      [
+        'from vocab_bloom_hub import VocabBloomClient',
+        '',
+        'client = VocabBloomClient("https://x.example")',
+        'answer = client.search("run")',
+        'print(answer.meta.fuzzy, answer.data[0].word if answer.data else None)',
+      ].join('\n'),
+    );
+  });
+
   it('curl: a bare GET, a POST with the JSON body', () => {
     expect(render('curl', 'get-words-word-meanings')).toBe(
       "curl 'https://x.example/api/v1/words/run/meanings'",
