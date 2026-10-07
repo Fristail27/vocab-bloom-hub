@@ -36,6 +36,10 @@ adding an entry. The sample values of the path come from `pathArguments(request,
 `request.ts`, so the snippet passes what the generated ones put into the URL. The method names are in `packages/npm-sdk/README.md` and
 `packages/python-sdk/README.md`.
 
+The `get-search` examples call `client.search({ search: 'run' })` in Node.js and
+`client.search("run")` in Python, then print the fuzzy-match flag and the first result's word
+(or an empty-result value when the instance has no match).
+
 ## Where the rest lives
 
 - `request.ts` — the request digest from the OpenAPI document (sample values, the body of the
