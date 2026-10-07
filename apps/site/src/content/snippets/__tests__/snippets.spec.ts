@@ -90,6 +90,38 @@ describe('every language', () => {
 });
 
 describe('the exact text', () => {
+  it('offers both meanings SDK tabs and prints the first definition', () => {
+    expect(snippetsOf(bySlug('get-words-word-meanings')).map((snippet) => snippet.id)).toEqual(
+      expect.arrayContaining(['sdk-node', 'sdk-python']),
+    );
+    expect(render('sdk-node', 'get-words-word-meanings')).toBe(
+      [
+        "import { VocabBloomClient } from '@vocab-bloom-hub/client';",
+        '',
+        "const client = new VocabBloomClient({ baseUrl: 'https://x.example' });",
+        "const { data } = await client.meanings('run');",
+        'console.log(data[0]?.definition);',
+      ].join('\n'),
+    );
+    expect(render('sdk-python', 'get-words-word-meanings')).toBe(
+      [
+        'from vocab_bloom_hub import VocabBloomClient',
+        '',
+        'client = VocabBloomClient("https://x.example")',
+        'answer = client.meanings("run")',
+        'print(answer.data[0].definition if answer.data else None)',
+      ].join('\n'),
+    );
+  });
+
+  it('uses the actual meanings path argument and escapes it for each SDK', () => {
+    const request = { ...bySlug('get-words-word-meanings'), path: '/api/v1/words/say%20%22hi%22/meanings' };
+    const node = SNIPPET_LANGUAGES.find((item) => item.id === 'sdk-node')!;
+    const python = SNIPPET_LANGUAGES.find((item) => item.id === 'sdk-python')!;
+    expect(node.render(request)).toContain(`client.meanings(${jsLiteral('say "hi"')})`);
+    expect(python.render(request)).toContain(`client.meanings(${pythonLiteral('say "hi"')})`);
+  });
+
   it('offers detailed search SDK tabs with meanings enabled and safe first-result access', () => {
     expect(snippetsOf(bySlug('get-search-detailed')).map((snippet) => snippet.id)).toEqual(
       expect.arrayContaining(['sdk-node', 'sdk-python']),

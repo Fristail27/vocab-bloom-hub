@@ -41,6 +41,8 @@ The `get-search` examples call `client.search({ search: 'run' })` in Node.js and
 (or an empty-result value when the instance has no match).
 The `get-search-detailed` examples enable `with_meanings` and print the first entry’s part of
 speech and first meaning title, handling missing entries or meanings.
+The `get-words-word-meanings` examples take the headword from the sample path and print the
+first definition, handling an empty meanings list.
 
 ## Where the rest lives
 

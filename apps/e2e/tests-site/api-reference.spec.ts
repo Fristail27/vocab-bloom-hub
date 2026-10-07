@@ -18,6 +18,19 @@ test.describe('API reference', () => {
     );
   });
 
+  test('meanings offers both SDK examples and links the same playground endpoint', async ({ page }) => {
+    await page.goto('/en/api#get-words-word-meanings');
+    const operation = page.locator('section#get-words-word-meanings');
+    await operation.getByRole('tab', { name: 'Node.js SDK' }).click();
+    await expect(operation.locator('pre[data-language="sdk-node"]')).toContainText("client.meanings('run')");
+    await operation.getByRole('tab', { name: 'Python SDK' }).click();
+    await expect(operation.locator('pre[data-language="sdk-python"]')).toContainText('client.meanings("run")');
+    await expect(operation.getByRole('link', { name: /playground/i })).toHaveAttribute(
+      'href',
+      /\/en\/playground\?endpoint=get-words-word-meanings$/,
+    );
+  });
+
   test('detailed search offers both SDK examples and links the same playground endpoint', async ({ page }) => {
     await page.goto('/en/api#get-search-detailed');
     const operation = page.locator('section#get-search-detailed');
