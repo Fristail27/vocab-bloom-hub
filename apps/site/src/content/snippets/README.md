@@ -39,6 +39,8 @@ adding an entry. The sample values of the path come from `pathArguments(request,
 The `get-search` examples call `client.search({ search: 'run' })` in Node.js and
 `client.search("run")` in Python, then print the fuzzy-match flag and the first result's word
 (or an empty-result value when the instance has no match).
+The `get-search-detailed` examples enable `with_meanings` and print the first entry’s part of
+speech and first meaning title, handling missing entries or meanings.
 
 ## Where the rest lives
 
