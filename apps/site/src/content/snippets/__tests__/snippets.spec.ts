@@ -90,6 +90,35 @@ describe('every language', () => {
 });
 
 describe('the exact text', () => {
+  it('offers detailed search SDK tabs with meanings enabled and safe first-result access', () => {
+    expect(snippetsOf(bySlug('get-search-detailed')).map((snippet) => snippet.id)).toEqual(
+      expect.arrayContaining(['sdk-node', 'sdk-python']),
+    );
+    expect(render('sdk-node', 'get-search-detailed')).toBe(
+      [
+        "import { VocabBloomClient } from '@vocab-bloom-hub/client';",
+        '',
+        "const client = new VocabBloomClient({ baseUrl: 'https://x.example' });",
+        "const { data } = await client.searchDetailed({ search: 'run', with_meanings: true });",
+        'const first = data[0];',
+        'console.log(first?.part_of_speech, first?.meanings?.[0]?.title);',
+      ].join('\n'),
+    );
+    expect(render('sdk-python', 'get-search-detailed')).toBe(
+      [
+        'from vocab_bloom_hub import VocabBloomClient',
+        '',
+        'client = VocabBloomClient("https://x.example")',
+        'answer = client.search_detailed("run", with_meanings=True)',
+        'first = answer.data[0] if answer.data else None',
+        'print(',
+        '    first.part_of_speech.value if first else None,',
+        '    first.meanings[0].title if first and first.meanings else None,',
+        ')',
+      ].join('\n'),
+    );
+  });
+
   it('offers both search SDK tabs with the sample term, fuzzy flag and first word', () => {
     expect(snippetsOf(bySlug('get-search')).map((snippet) => snippet.id)).toEqual(
       expect.arrayContaining(['sdk-node', 'sdk-python']),

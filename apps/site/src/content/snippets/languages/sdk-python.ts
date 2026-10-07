@@ -16,6 +16,16 @@ const client = (origin: string): string[] => [
 ];
 
 const BY_SLUG: Record<string, (request: SnippetRequestT) => string> = {
+  'get-search-detailed': ({ origin }) =>
+    [
+      ...client(origin),
+      'answer = client.search_detailed("run", with_meanings=True)',
+      'first = answer.data[0] if answer.data else None',
+      'print(',
+      '    first.part_of_speech.value if first else None,',
+      '    first.meanings[0].title if first and first.meanings else None,',
+      ')',
+    ].join('\n'),
   'get-search': ({ origin }) =>
     [
       ...client(origin),
