@@ -16,6 +16,8 @@ type ContextT = { selected: string | null; available: string[]; select: (languag
 
 const Context = createContext<ContextT>({ selected: null, available: [], select: () => {} });
 
+export const useTranslationLanguage = (): string | null => useContext(Context).selected;
+
 const STORAGE_KEY = 'vbh.site.translation-language';
 
 // The choice is one for the page, and a page has a picker per dataset (issue
