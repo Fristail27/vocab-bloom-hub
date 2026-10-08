@@ -184,6 +184,10 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
           definition: 'The same invented definition.',
           sort_order: index + 1,
           etymology_number: number,
+          quotes: [
+            { text, reference: 'Full reference', source_url: 'https://example.org/source' },
+            { text: 'Second quotation', reference: null },
+          ],
           examples: [],
           categories: [],
           synonyms: [],
@@ -204,6 +208,10 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
     await service.importDictionary({}, new FakeProgressRes() as unknown as ExpressResponse);
     const original = await read();
     expect(original.meanings.map((m) => m.etymology?.number ?? null)).toEqual([7, 2, null]);
+    expect(original.meanings[0].quotes).toEqual([
+      { text: 'First root', reference: 'Full reference', source_url: 'https://example.org/source' },
+      { text: 'Second quotation', reference: null },
+    ]);
     expect(original.etymologies!.map((e) => e.id)).not.toContain(7);
     jest.restoreAllMocks();
     mockDatasetFiles(files('Updated root'));
@@ -217,6 +225,7 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
     await service.importDictionary({ update: true }, new FakeProgressRes() as unknown as ExpressResponse);
     expect((await read()).etymologies!.find((e) => e.number === 7)!.text).toBe('Updated root');
     expect((await read()).meanings.map((m) => m.etymology?.number ?? null)).toEqual([7, 2, null]);
+    expect((await read()).meanings[0].quotes?.[0].text).toBe('Updated root');
     const legacy = await ds.getRepository(EnWord).findOneOrFail({
       where: {
         id: (

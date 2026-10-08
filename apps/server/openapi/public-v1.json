@@ -2475,6 +2475,12 @@
               "type": "string"
             }
           },
+          "quotes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeaningQuoteT"
+            }
+          },
           "categories": {
             "type": "array",
             "items": {
@@ -2534,6 +2540,27 @@
           "synonyms",
           "antonyms"
         ]
+      },
+      "MeaningQuoteT": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string",
+            "nullable": true
+          },
+          "source_url": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "text",
+          "reference"
+        ],
+        "description": "A sourced quotation, in authored array order. Missing attribution is explicit."
       },
       "PublicWordV1MeaningTranslationT": {
         "type": "object",
@@ -2710,6 +2737,12 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "quotes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeaningQuoteT"
             }
           },
           "categories": {

@@ -44,7 +44,7 @@ type KaikkiSenseT = {
   glosses?: string[];
   tags?: string[];
   topics?: string[];
-  examples?: Array<{ text?: string; type?: string }>;
+  examples?: Array<{ text?: string; type?: string; ref?: string }>;
   synonyms?: KaikkiLinkT[];
   antonyms?: KaikkiLinkT[];
   translations?: KaikkiTranslationT[];
@@ -358,7 +358,12 @@ export const convertRecord = (
     const tags = sense.tags ?? [];
     meanings.push({
       definition,
+      quotes: (sense.examples ?? [])
+        .filter((example) => example.type === 'quotation' || Boolean(example.ref?.trim()))
+        .filter((example) => Boolean(example.text?.trim()))
+        .map((example) => ({ text: example.text!, reference: example.ref ?? null })),
       examples: (sense.examples ?? [])
+        .filter((example) => example.type !== 'quotation' && !example.ref?.trim())
         .map((example) => (example.text ?? '').replace(/\s+/g, ' ').trim())
         .filter((text) => text && text.length <= EXAMPLE_MAX_LENGTH)
         .slice(0, EXAMPLES),

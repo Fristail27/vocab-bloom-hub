@@ -257,6 +257,16 @@ class Etymology(BaseModel):
     text: str
 
 
+class MeaningQuoteT(BaseModel):
+    """
+    A sourced quotation, in authored array order. Missing attribution is explicit.
+    """
+
+    text: str
+    reference: str | None = Field(...)
+    source_url: str | None = None
+
+
 class AvailableTranslationLanguagesE(Enum):
     ru = "ru"
     es = "es"
@@ -438,6 +448,7 @@ class PublicMeaningV1T(BaseModel):
     definition: str
     is_obsolete: bool
     examples: list[str]
+    quotes: list[MeaningQuoteT] | None = None
     categories: list[CategoryE]
     meaning_level: WordLevelE | None = Field(...)
     area_variant: EnAreaVariantsE
@@ -602,6 +613,7 @@ class PublicWordV1MeaningT(BaseModel):
     definition: str
     is_obsolete: bool
     examples: list[str]
+    quotes: list[MeaningQuoteT] | None = None
     categories: list[CategoryE]
     meaning_level: WordLevelE | None = Field(...)
     area_variant: EnAreaVariantsE

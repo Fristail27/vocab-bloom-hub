@@ -1,3 +1,5 @@
+import type { MeaningQuoteT } from './quotes';
+export type { MeaningQuoteT } from './quotes';
 import { EnWord } from '../../../src/modules/EnModule/entities/en_word.entity';
 import { EnMeaning } from '../../../src/modules/EnModule/entities/en_meaning.entity';
 import { EnShortTranslation } from '../../../src/modules/EnModule/entities/en_short_translation.entity';
@@ -72,9 +74,10 @@ export type EnMeaningTranslationT = Omit<EnMeaningTranslation, 'updateAt' | 'cre
 // through the API as the plain headwords (sorted, lowercase)
 export type EnMeaningT = Omit<
   EnMeaning,
-  'updateAt' | 'createdAt' | 'translations' | 'word' | 'synonyms' | 'antonyms' | 'etymology'
+  'updateAt' | 'createdAt' | 'translations' | 'word' | 'synonyms' | 'antonyms' | 'etymology' | 'quotes'
 > & {
   etymology_number?: number | null;
+  quotes?: MeaningQuoteT[];
   translations: EnMeaningTranslationT[];
   synonyms: string[];
   antonyms: string[];

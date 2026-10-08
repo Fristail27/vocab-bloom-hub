@@ -21,6 +21,7 @@ export const prepareMeaningFromDB = (m: EnMeaning): EnMeaningT => {
   } = m;
   return {
     ...rest,
+    quotes: m.quotes ?? [],
     etymology_number: etymology?.number ?? null,
     translations: (translations ?? []).map(prepareMeaningTranslationFromDB),
     synonyms: normalizeWordLinks(synonyms?.map((entry) => entry.word)),

@@ -1,3 +1,4 @@
+import { normalizeQuotes } from '../../utils/quotes';
 import { saveEtymologies, resolveEtymology, validateEtymologies } from '../../utils/etymologies';
 import { normalizeAlternatives, replaceAlternatives } from '../../utils/entryAlternatives';
 import { portableManifest } from './utils/parseManifest';
@@ -589,9 +590,12 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         for (const m of line.meanings ?? []) {
           const { id: _mid, etymology_number, translations, synonyms, antonyms, ...mRest } = m;
           const etymology = await resolveEtymology(em, wordId!, etymology_number);
-          const res = await em
-            .getRepository(EnMeaning)
-            .insert({ ...mRest, etymology, word: { id: wordId } as EnWord });
+          const res = await em.getRepository(EnMeaning).insert({
+            ...mRest,
+            quotes: normalizeQuotes(mRest.quotes),
+            etymology,
+            word: { id: wordId } as EnWord,
+          });
           const meaningId = res.identifiers[0]?.id as number;
           // synonyms / antonyms link to entries that may only appear later in the
           // dataset (or in another file), so they are resolved once every file is in
@@ -1344,7 +1348,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         const etymology = await resolveEtymology(em, wordId, etymology_number);
         const res = await em
           .getRepository(EnMeaning)
-          .insert({ ...rest, etymology, word: { id: wordId } as EnWord });
+          .insert({ ...rest, quotes: normalizeQuotes(rest.quotes), etymology, word: { id: wordId } as EnWord });
         const meaningId = res.identifiers[0]?.id as number;
         for (const kind of WORD_LINK_KINDS) {
           const words = normalizeWordLinks(kind === 'synonyms' ? synonyms : antonyms, line.word);

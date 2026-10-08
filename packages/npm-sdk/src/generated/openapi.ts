@@ -610,6 +610,7 @@ export interface components {
       definition: string;
       is_obsolete: boolean;
       examples: string[];
+      quotes?: components['schemas']['MeaningQuoteT'][];
       categories: components['schemas']['CategoryE'][];
       meaning_level: components['schemas']['WordLevelE'] | null;
       area_variant: components['schemas']['EnAreaVariantsE'];
@@ -617,6 +618,12 @@ export interface components {
       translations: components['schemas']['PublicWordV1MeaningTranslationT'][];
       synonyms: string[];
       antonyms: string[];
+    };
+    /** @description A sourced quotation, in authored array order. Missing attribution is explicit. */
+    MeaningQuoteT: {
+      text: string;
+      reference: string | null;
+      source_url?: string | null;
     };
     PublicWordV1MeaningTranslationT: {
       id: number;
@@ -661,6 +668,7 @@ export interface components {
       definition: string;
       is_obsolete: boolean;
       examples: string[];
+      quotes?: components['schemas']['MeaningQuoteT'][];
       categories: components['schemas']['CategoryE'][];
       meaning_level: components['schemas']['WordLevelE'] | null;
       area_variant: components['schemas']['EnAreaVariantsE'];
