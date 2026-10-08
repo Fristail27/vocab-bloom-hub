@@ -1,3 +1,4 @@
+import { AddWordPronunciations1791700000000 } from './1791700000000-AddWordPronunciations';
 import { AddMeaningQuotes1791600000000 } from './1791600000000-AddMeaningQuotes';
 import { AddWordEtymologies1791500000000 } from './1791500000000-AddWordEtymologies';
 import { AddWordOrigins1790200000000 } from './1790200000000-AddWordOrigins';
@@ -26,6 +27,7 @@ export const datasetMigrations = [
   AddEntryAlternatives1791400000000,
   AddWordEtymologies1791500000000,
   AddMeaningQuotes1791600000000,
+  AddWordPronunciations1791700000000,
 ];
 
 /** The table each dataset schema records its applied migrations in */

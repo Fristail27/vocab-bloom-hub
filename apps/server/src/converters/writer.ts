@@ -147,6 +147,7 @@ export class DatasetWriter {
       generated: entry.generated ?? false,
       generated_by_model: entry.generated_by_model ?? '',
       transcription: entry.transcription,
+      ...(entry.pronunciations && { pronunciations: entry.pronunciations }),
       area_variant: entry.area_variant,
       description,
       language_register: entry.language_register,
@@ -179,7 +180,8 @@ export class DatasetWriter {
           word: form.word,
           form_of_word: form.form_of_word,
           area_variant: EnAreaVariantsE.common,
-          transcription: '',
+          transcription: form.transcription ?? '',
+          ...(form.pronunciations && { pronunciations: form.pronunciations }),
           is_obsolete: form.is_obsolete ?? false,
         })),
       };

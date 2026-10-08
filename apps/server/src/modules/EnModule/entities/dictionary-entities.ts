@@ -1,3 +1,4 @@
+import { EnPronunciation } from './en_pronunciation.entity';
 import { EnEtymology } from './en_etymology.entity';
 import { EnChange } from './en_change.entity';
 import { EnEntry } from './en_entry.entity';
@@ -15,6 +16,7 @@ import { EnWord } from './en_word.entity';
 export const DICTIONARY_ENTITIES = [
   EnEntry,
   EnWord,
+  EnPronunciation,
   EnEtymology,
   EnMeaning,
   EnMeaningTranslation,

@@ -204,3 +204,20 @@ are appended in source order; exact matches of text/reference/URL are kept once.
 text with a different reference remains a distinct citation. Other meaning data keeps
 its existing merge rules. Reconvert the source to recover references discarded by an
 older converter.
+
+### Wiktionary pronunciations
+
+The adapter retains every distinct `sounds[].ipa` and `sounds[].enpr` as an
+ordered pronunciation. Exact repeats of type, text and mapped region are merged
+in source encounter order, including across repeated entries. Recognized region
+tags include `General-American`/`US` and `Received-Pronunciation`/`UK`, the existing
+British/American/Australian labels; other tags are ignored and otherwise map to
+`common`. The legacy transcription prefers American IPA, then British IPA, then
+the first remaining IPA. EnPR-only records leave that field empty.
+
+A sound with `form` belongs only to that spelling. The adapter attaches it to a
+recognized form (or the headword if explicitly named), and also retains IPA in
+`forms[].ipa`. Form lists are separate from the base list; the public read may
+inherit from the base when a form has no pronunciation of its own. Audio fields
+are reserved for the subsequent audio feature. See
+[the portable format](../../../../docs/offline-import.md#pronunciations).

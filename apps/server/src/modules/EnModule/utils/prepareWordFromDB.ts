@@ -1,3 +1,4 @@
+import { adminPronunciations } from './pronunciations';
 import { licensesOf } from '../../../../core/utils/provenance';
 import { alternativeSpellings } from './entryAlternatives';
 import { EnWord } from '../entities/en_word.entity';
@@ -10,6 +11,7 @@ export const prepareWordFromDB = (row: EnWord): EnWordT => {
   const { createdAt: _createdAt, updateAt: _updateAt, short_translations, ...other } = row;
   return {
     ...other,
+    pronunciations: adminPronunciations(row),
     etymologies: [...(row.etymologies ?? [])]
       .sort((a, b) => a.number - b.number)
       .map(({ id, number, text }) => ({ id, number, text })),

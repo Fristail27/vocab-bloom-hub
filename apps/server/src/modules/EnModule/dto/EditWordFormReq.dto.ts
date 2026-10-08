@@ -1,8 +1,9 @@
+import { WithPronunciationsDTO } from './Pronunciation.dto';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsEnum, IsNumber, IsOptional } from 'class-validator';
 import { EnAreaVariantsE } from '../../../../types';
 
-export class EditWordFormReqDTO {
+export class EditWordFormReqDTO extends WithPronunciationsDTO {
   @ApiProperty()
   @IsNumber()
   id!: number;

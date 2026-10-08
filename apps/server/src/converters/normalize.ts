@@ -1,3 +1,5 @@
+import type { PronunciationT } from '../../types';
+import { primaryIPA } from '../modules/EnModule/utils/pronunciations';
 import { CategoryE, EnPartOfSpeechE, EnWordFormsE } from '../../types';
 import { ConvertedEntryT, ConvertedFormT, ConvertedMeaningT } from './types';
 
@@ -27,6 +29,16 @@ export const titleOf = (definition: string): string => {
 
 const unique = <T>(items: T[]): T[] => [...new Set(items)];
 
+/** Preserve source encounter order and every distinct type/text/region variant. */
+export const mergePronunciations = (...lists: (readonly PronunciationT[] | undefined)[]): PronunciationT[] => {
+  const unique = new Map<string, PronunciationT>();
+  for (const value of lists.flatMap((list) => list ?? [])) {
+    const key = JSON.stringify([value.type, value.text, value.area_variant]);
+    if (!unique.has(key)) unique.set(key, { ...value, sort_order: unique.size });
+  }
+  return [...unique.values()];
+};
+
 // a form two records share is listed once, and lives when one of them says so
 const mergeForms = (a: ConvertedFormT[], b: ConvertedFormT[]): ConvertedFormT[] => {
   const merged = new Map<string, ConvertedFormT>();
@@ -34,7 +46,12 @@ const mergeForms = (a: ConvertedFormT[], b: ConvertedFormT[]): ConvertedFormT[] 
     const key = `${form.form_of_word} ${form.word}`;
     const known = merged.get(key);
     if (!known) merged.set(key, { ...form });
-    else if (known.is_obsolete && !form.is_obsolete) known.is_obsolete = false;
+    else {
+      if (known.is_obsolete && !form.is_obsolete) known.is_obsolete = false;
+      if (known.pronunciations || form.pronunciations)
+        known.pronunciations = mergePronunciations(known.pronunciations, form.pronunciations);
+      known.transcription = primaryIPA(known.pronunciations) || known.transcription || form.transcription;
+    }
   }
   return [...merged.values()];
 };
@@ -89,7 +106,13 @@ export const mergeEntries = (first: ConvertedEntryT, incoming: ConvertedEntryT):
         ).values(),
       ],
     }),
-    transcription: first.transcription || second.transcription,
+    ...((first.pronunciations || second.pronunciations) && {
+      pronunciations: mergePronunciations(first.pronunciations, second.pronunciations),
+    }),
+    transcription:
+      primaryIPA(mergePronunciations(first.pronunciations, second.pronunciations)) ||
+      first.transcription ||
+      second.transcription,
     area_variant: first.area_variant || second.area_variant,
     language_register: first.language_register || second.language_register,
     categories: unique([...first.categories, ...second.categories]) as CategoryE[],

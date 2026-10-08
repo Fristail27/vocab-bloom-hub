@@ -6,7 +6,8 @@ import { EnWord } from '../../entities/en_word.entity';
 /** Everything a word says: what the history of a creation and of a deletion holds (issue #531) */
 export const WORD_CHANGE_RELATIONS: FindOptionsRelations<EnWord> = {
   word: { alternatives: true },
-  forms: { word: { alternatives: true } },
+  pronunciations: true,
+  forms: { word: { alternatives: true }, pronunciations: true },
   etymologies: true,
   meanings: { etymology: true, translations: true, synonyms: true, antonyms: true },
   short_translations: true,

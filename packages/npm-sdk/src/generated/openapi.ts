@@ -410,6 +410,8 @@ export interface components {
       language_register: components['schemas']['LanguageRegisterE'] | null;
       description: string | null;
       transcription: string | null;
+      /** @description Ordered pronunciations, with legacy transcription and base-form fallback. */
+      pronunciations?: components['schemas']['PronunciationT'][];
       pattern: string[] | null;
       noun___irregular_plural: boolean | null;
       noun___uncountable: boolean | null;
@@ -537,6 +539,14 @@ export interface components {
       | 'culinary';
     /** @enum {string} */
     LanguageRegisterE: 'formal' | 'informal' | 'slang';
+    /** @description Portable pronunciation; database IDs never travel in datasets or public responses. */
+    PronunciationT: {
+      /** @enum {string} */
+      type: 'ipa' | 'enpr';
+      text: string | null;
+      area_variant: components['schemas']['EnAreaVariantsE'];
+      sort_order: number;
+    };
     /** @enum {string} */
     EnVerbTransitivityE: 'transitive' | 'intransitive' | 'both';
     /** @enum {string} */
@@ -548,6 +558,8 @@ export interface components {
       form_of_word: components['schemas']['EnWordFormsE'];
       area_variant: components['schemas']['EnAreaVariantsE'];
       transcription: string | null;
+      /** @description Ordered pronunciations, with legacy transcription and base-form fallback. */
+      pronunciations?: components['schemas']['PronunciationT'][];
     };
     PublicSearchDetailedV1MetaT: {
       page: number;
@@ -586,6 +598,8 @@ export interface components {
       language_register: components['schemas']['LanguageRegisterE'] | null;
       description: string | null;
       transcription: string | null;
+      /** @description Ordered pronunciations, with legacy transcription and base-form fallback. */
+      pronunciations?: components['schemas']['PronunciationT'][];
       pattern: string[] | null;
       noun___irregular_plural: boolean | null;
       noun___uncountable: boolean | null;
@@ -695,6 +709,8 @@ export interface components {
       form_of_word: components['schemas']['EnWordFormsE'];
       area_variant: components['schemas']['EnAreaVariantsE'];
       transcription: string | null;
+      /** @description Ordered pronunciations, with legacy transcription and base-form fallback. */
+      pronunciations?: components['schemas']['PronunciationT'][];
     };
     PublicHeadwordFormsV1ResT: {
       data: components['schemas']['PublicWordFormV1T'][];

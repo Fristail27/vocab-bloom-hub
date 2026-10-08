@@ -1,3 +1,4 @@
+import type { PronunciationT } from './pronunciations';
 import { EnWord } from '../../../src/modules/EnModule/entities/en_word.entity';
 import {
   EnAreaVariantsE,
@@ -30,7 +31,7 @@ export type EnMeaningDST = Omit<
   language_register: LanguageRegisterE | '';
 };
 export type EnShortTranslationDST = Omit<EnShortTranslationT, 'id'>;
-export type EnWordFormDST = Omit<EnWordFormT, 'id'>;
+export type EnWordFormDST = Omit<EnWordFormT, 'id' | 'pronunciations'> & { pronunciations?: PronunciationT[] };
 
 // The key of a base-form entry, as the collection files name their parent
 // (issue #442): the headword and its part of speech, unique among base
@@ -52,6 +53,7 @@ export type DataSetShortTranslationT = DataSetWordKeyT & EnShortTranslationDST;
 
 export type DataSetWordT = Omit<
   EnWord,
+  | 'pronunciations'
   | 'etymologies'
   | 'contributions'
   | 'createdAt'
@@ -72,6 +74,7 @@ export type DataSetWordT = Omit<
   | 'verb___transitivity'
   | 'verb___phrasal_object_pattern'
 > & {
+  pronunciations?: PronunciationT[];
   etymologies?: { number: number; text: string }[];
   alternatives?: string[];
   word: string;
@@ -92,6 +95,7 @@ export type DataSetWordT = Omit<
 
 export type DataSetPhraseT = Omit<
   EnWord,
+  | 'pronunciations'
   | 'etymologies'
   | 'contributions'
   | 'createdAt'
@@ -120,6 +124,7 @@ export type DataSetPhraseT = Omit<
   | 'is_abbreviation'
   | 'part_of_speech'
 > & {
+  pronunciations?: PronunciationT[];
   etymologies?: { number: number; text: string }[];
   alternatives?: string[];
   phrase: string;

@@ -1,3 +1,4 @@
+import { storedPronunciations } from '../pronunciations';
 import { etymologySnapshot } from '../etymologies';
 import { alternativeSpellings } from '../entryAlternatives';
 import { ChangeDiffT, ChangeRecordT, EnAreaVariantsE } from '../../../../../types';
@@ -59,6 +60,7 @@ export const formSnapshot = (form: EnWord): SnapshotT => ({
   word: form.word.word,
   form_of_word: form.form_of_word,
   transcription: kept(form.transcription),
+  ...(form.pronunciations?.length && { pronunciations: storedPronunciations(form) }),
   area_variant: kept(form.area_variant),
   is_obsolete: Boolean(form.is_obsolete),
 });
@@ -69,6 +71,7 @@ export const wordSnapshot = (word: EnWord): SnapshotT => ({
   origins: word.origins ?? null,
   description: kept(word.description),
   transcription: kept(word.transcription),
+  ...(word.pronunciations?.length && { pronunciations: storedPronunciations(word) }),
   word_level: kept(word.word_level),
   area_variant: kept(word.area_variant),
   language_register: kept(word.language_register),

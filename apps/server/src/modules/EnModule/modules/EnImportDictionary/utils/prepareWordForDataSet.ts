@@ -1,3 +1,4 @@
+import { storedPronunciations } from '../../../utils/pronunciations';
 import { etymologiesOf } from '../../../utils/etymologies';
 import { alternativeSpellings } from '../../../utils/entryAlternatives';
 import {
@@ -92,6 +93,7 @@ export const mapFormsForDS = (f: EnWord): EnWordFormDST => {
     alternatives: alternativeSpellings(f.word),
     is_obsolete: !!f.is_obsolete,
     transcription: f.transcription || '',
+    pronunciations: storedPronunciations(f),
     word: f.word.word,
     // the column is nullable, the form contract is not: an unmarked form is common
     area_variant: f.area_variant ?? EnAreaVariantsE.common,
@@ -104,6 +106,7 @@ export const prepareWordForDataSet = (word: EnWord): DataSetWordT => {
   return {
     alternatives: alternativeSpellings(word.word),
     etymologies: etymologiesOf(word),
+    pronunciations: storedPronunciations(word),
     origins: word.origins?.length ? word.origins : undefined,
     categories: sortStrings(w.categories),
     generated: Boolean(w.generated),

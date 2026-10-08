@@ -1,3 +1,5 @@
+import { savePronunciations, primaryIPA } from '../../utils/pronunciations';
+import type { PronunciationT } from '../../../../../types';
 import { normalizeQuotes } from '../../utils/quotes';
 import { saveEtymologies, resolveEtymology, validateEtymologies } from '../../utils/etymologies';
 import { normalizeAlternatives, replaceAlternatives } from '../../utils/entryAlternatives';
@@ -533,6 +535,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
           short_translations: _shortTranslations,
           phrasal_variants: _phrasalVariants,
           etymologies: _etymologies,
+          pronunciations: _pronunciations,
           alternatives: _alternatives,
           ...rest
         } = line;
@@ -556,10 +559,17 @@ export class EnImportDictionaryService implements OnModuleDestroy {
           await saveEtymologies(em, id, line.etymologies);
         }
 
+      for (const line of toInsert)
+        if (line.pronunciations?.length) {
+          const id = idByKey.get(wordKey(line.word, line.part_of_speech, line.form_of_word))!;
+          await savePronunciations(em, id, line.pronunciations);
+        }
+
       // 6. forms belong to their base row: "axes" can be the plural of both
       // "axe" and "axis". The bases are new, so only deduplicate within each
       // line, never against forms belonging to another base (or earlier chunk).
       const formRows = [];
+      const formSounds = new Map<string, PronunciationT[]>();
       for (const line of toInsert) {
         const baseId = idByKey.get(wordKey(line.word, line.part_of_speech, line.form_of_word));
         const seenForms = new Set<string>();
@@ -567,9 +577,12 @@ export class EnImportDictionaryService implements OnModuleDestroy {
           const key = wordKey(f.word, line.part_of_speech, f.form_of_word);
           if (seenForms.has(key)) continue;
           seenForms.add(key);
-          const { id: _fid, word: formWord, alternatives: _alternatives, ...fRest } = f;
+          const { id: _fid, word: formWord, alternatives: _alternatives, pronunciations, ...fRest } = f;
+          if (pronunciations?.length)
+            formSounds.set(`${baseId}\0${formWord}\0${f.form_of_word}`, pronunciations);
           formRows.push({
             ...fRest,
+            transcription: fRest.transcription || primaryIPA(pronunciations) || fRest.transcription,
             word: { word: formWord } as EnEntry,
             part_of_speech: line.part_of_speech,
             base_form: { id: baseId } as EnWord,
@@ -578,6 +591,19 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       }
       for (const batch of chunked(formRows, SQL_PARAMS_CHUNK)) {
         await em.getRepository(EnWord).insert(batch);
+      }
+
+      if (formSounds.size) {
+        const savedForms = await em
+          .getRepository(EnWord)
+          .createQueryBuilder('f')
+          .select(['f.id AS id', 'f.word AS word', 'f.form_of_word AS form', 'f.base_form AS base'])
+          .where('f.base_form IN (:...ids)', { ids: [...idByKey.values()] })
+          .getRawMany<{ id: number; word: string; form: string; base: number }>();
+        for (const form of savedForms) {
+          const sounds = formSounds.get(`${form.base}\0${form.word}\0${form.form}`);
+          if (sounds) await savePronunciations(em, form.id, sounds);
+        }
       }
 
       // 7. meanings need their generated ids for the nested translations, so they
@@ -1917,10 +1943,11 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         keys: keys.filter(words),
         relations: {
           etymologies: true,
+          pronunciations: true,
           base_phrasal: { word: true },
           phrasal_variants: { word: true },
           word: { alternatives: true },
-          forms: { word: { alternatives: true } },
+          forms: { word: { alternatives: true }, pronunciations: true },
         },
         prepare: (w) => [versioned(prepareWordForDataSet(w))],
       },
@@ -1940,14 +1967,14 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         files: [{ path: file(DATASET_FILE_NAMES.phrases), keep: EVERY_LINE }],
         stage: EnDictionaryImportPhasesE.saving_phrases,
         keys: keys.filter(phrases),
-        relations: { word: { alternatives: true }, etymologies: true },
+        relations: { word: { alternatives: true }, etymologies: true, pronunciations: true },
         prepare: (w) => [versioned(preparePhraseForDataSet(w))],
       },
       {
         files: [{ path: file(DATASET_FILE_NAMES.grammarPatterns), keep: EVERY_LINE }],
         stage: EnDictionaryImportPhasesE.saving_grammar_patterns,
         keys: keys.filter(grammarPatterns),
-        relations: { word: { alternatives: true }, etymologies: true },
+        relations: { word: { alternatives: true }, etymologies: true, pronunciations: true },
         prepare: (w) => [versioned(prepareGrammarPatternForDataSet(w))],
       },
       {

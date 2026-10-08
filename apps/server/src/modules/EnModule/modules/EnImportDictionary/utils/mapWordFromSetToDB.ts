@@ -1,3 +1,4 @@
+import { primaryIPA } from '../../../utils/pronunciations';
 import { DataSetWordT } from '../../../../../../types/dictionaries/en/EnDataSetTypes';
 import { EnAreaVariantsE, EnWordFormsE } from '../../../../../../types';
 import { getVersion } from '../../../../../../configuration';
@@ -7,6 +8,7 @@ export const mapWordFromSetToDB = (line: DataSetWordT) => {
   return {
     alternatives: line.alternatives,
     etymologies: line.etymologies,
+    pronunciations: line.pronunciations,
     origins: line.origins,
     word: line.word,
     part_of_speech: line.part_of_speech,
@@ -25,7 +27,7 @@ export const mapWordFromSetToDB = (line: DataSetWordT) => {
     noun___is_proper: !!line.noun___is_proper,
     word_level: line.word_level || null,
     description: line.description,
-    transcription: line.transcription,
+    transcription: line.transcription || primaryIPA(line.pronunciations) || line.transcription,
     is_obsolete: line.is_obsolete,
     version: line.version || getVersion(),
     is_abbreviation: line.is_abbreviation,

@@ -290,6 +290,7 @@ describe('EnService word CRUD (issue #187)', () => {
           // a form saved without a region reads as common (the form contract is non-null)
           area_variant: EnAreaVariantsE.common,
           transcription: null,
+          pronunciations: [],
         },
       ]);
       // raw DB service fields must not leak into the API shape

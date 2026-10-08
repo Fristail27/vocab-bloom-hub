@@ -1,3 +1,4 @@
+import type { PronunciationT } from '../../dictionaries/en/pronunciations';
 import type { MeaningQuoteT } from '../../dictionaries/en/quotes';
 import type { OriginT, WordLicenseT } from '../../provenance';
 import type {
@@ -113,6 +114,8 @@ export type PublicWordV1FormT = {
   form_of_word: EnWordFormsE;
   area_variant: EnAreaVariantsE;
   transcription: string | null;
+  /** Ordered pronunciations, with legacy transcription and base-form fallback. */
+  pronunciations?: PronunciationT[];
 };
 
 // An entry as the flat search answers it: the word itself, its grammar and
@@ -138,6 +141,8 @@ export type PublicSearchWordV1T = {
   language_register: LanguageRegisterE | null;
   description: string | null;
   transcription: string | null;
+  /** Ordered pronunciations, with legacy transcription and base-form fallback. */
+  pronunciations?: PronunciationT[];
   // grammar patterns the entry is used in
   pattern: string[] | null;
   noun___irregular_plural: boolean | null;

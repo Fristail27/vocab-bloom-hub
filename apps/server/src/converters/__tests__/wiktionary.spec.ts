@@ -465,3 +465,65 @@ describe('Wiktionary quotations', () => {
     ]);
   });
 });
+
+describe('Wiktionary pronunciations (#578)', () => {
+  it('preserves regional variants and EnPR, ignores unknown tags, associates form sounds and merges without loss', () => {
+    const record: KaikkiRecordT = {
+      word: 'lumoid',
+      lang_code: 'en',
+      pos: 'noun',
+      senses: [{ glosses: ['An invented object.'] }],
+      sounds: [
+        { ipa: '/uk/', tags: ['Received-Pronunciation', 'arbitrary'] },
+        { ipa: '/us/', tags: ['General-American'] },
+        { ipa: '/us-2/', enpr: 'loo', tags: ['US'] },
+        { ipa: '/neutral/', tags: ['unmapped'] },
+        { ipa: '/au/', tags: ['Australia'] },
+        { ipa: '/plural/', form: 'lumoids', tags: ['UK'] },
+        { ipa: '/another-form/', form: 'not-listed' },
+        { ipa: ' ' },
+      ],
+      forms: [
+        { form: 'lumoids', tags: ['plural'], ipa: '/plural-inline/' },
+        { form: 'lumoids', tags: ['plural'], ipa: '/plural-inline-2/' },
+      ],
+    };
+    const entry = convertRecord(record) as ConvertedEntryT;
+    expect(entry.transcription).toBe('/us/');
+    expect(
+      entry.pronunciations?.map(({ type, text, area_variant, sort_order }) => [
+        type,
+        text,
+        area_variant,
+        sort_order,
+      ]),
+    ).toEqual([
+      ['ipa', '/uk/', 'british', 0],
+      ['ipa', '/us/', 'american', 1],
+      ['ipa', '/us-2/', 'american', 2],
+      ['enpr', 'loo', 'american', 3],
+      ['ipa', '/neutral/', 'common', 4],
+      ['ipa', '/au/', 'australian', 5],
+    ]);
+    expect(entry.forms).toHaveLength(1);
+    expect(entry.forms[0].pronunciations?.map(({ text }) => text)).toEqual([
+      '/plural/',
+      '/plural-inline/',
+      '/plural-inline-2/',
+    ]);
+    expect(entry.forms[0].transcription).toBe('/plural/');
+    const next = convertRecord({
+      ...record,
+      sounds: [{ ipa: '/extra/', tags: ['US'] }],
+      forms: [],
+    }) as ConvertedEntryT;
+    const merged = mergeEntries(entry, next);
+    expect(merged.pronunciations).toHaveLength(7);
+    expect(mergeEntries(merged, entry).pronunciations).toEqual(merged.pronunciations);
+    expect(merged.forms).toEqual(entry.forms);
+    expect(merged.transcription).toBe('/us/');
+    const enpr = convertRecord({ ...record, sounds: [{ enpr: 'loo' }] }) as ConvertedEntryT;
+    expect(enpr.transcription).toBe('');
+    expect(enpr.pronunciations?.[0].type).toBe('enpr');
+  });
+});

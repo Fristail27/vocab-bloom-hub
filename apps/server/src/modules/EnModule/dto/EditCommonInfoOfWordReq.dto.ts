@@ -1,3 +1,4 @@
+import { WithPronunciationsDTO } from './Pronunciation.dto';
 import { EtymologyDTO } from './Etymology.dto';
 import { Type } from 'class-transformer';
 import { ArrayMaxSize, ValidateNested } from 'class-validator';
@@ -13,7 +14,7 @@ import {
   WordLevelE,
 } from '../../../../types';
 
-export class EditCommonInfoOfWordReqDTO {
+export class EditCommonInfoOfWordReqDTO extends WithPronunciationsDTO {
   @ApiProperty({ type: [EtymologyDTO], required: false })
   @IsOptional()
   @IsArray()

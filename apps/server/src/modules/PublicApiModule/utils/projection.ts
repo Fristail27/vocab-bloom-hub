@@ -1,3 +1,4 @@
+import { pronunciationsOf } from '../../EnModule/utils/pronunciations';
 import { etymologiesOf } from '../../EnModule/utils/etymologies';
 // the dataset a request works on (issue #540): the active one for the public
 // API, the one an admin request names for the search of the admin UI
@@ -81,7 +82,7 @@ export const toPublicMeaning = (
   antonyms: normalizeWordLinks(row.antonyms?.map((entry) => entry.word)),
 });
 
-export const toPublicForm = (row: EnWord): PublicWordV1FormT => ({
+export const toPublicForm = (row: EnWord, base?: EnWord): PublicWordV1FormT => ({
   id: row.id,
   word: row.word.word,
   alternatives: alternativeSpellings(row.word),
@@ -89,6 +90,7 @@ export const toPublicForm = (row: EnWord): PublicWordV1FormT => ({
   // the column is nullable, the contract is not: an unmarked form is common
   area_variant: row.area_variant ?? EnAreaVariantsE.common,
   transcription: row.transcription ?? null,
+  pronunciations: pronunciationsOf(row, base),
 });
 
 export type PublicSearchWordOptionsT = {
@@ -121,6 +123,7 @@ export const toPublicSearchWord = (
   language_register: row.language_register ?? null,
   description: row.description ?? null,
   transcription: row.transcription ?? null,
+  pronunciations: pronunciationsOf(row, row.base_form),
   pattern: row.pattern ?? null,
   noun___irregular_plural: row.noun___irregular_plural ?? null,
   noun___uncountable: row.noun___uncountable ?? null,
@@ -131,7 +134,7 @@ export const toPublicSearchWord = (
   verb___is_phrasal: row.verb___is_phrasal ?? null,
   verb___phrasal_object_pattern: row.verb___phrasal_object_pattern ?? null,
   base_phrasal: row.base_phrasal?.word?.word ?? null,
-  forms: (row.forms ?? []).map(toPublicForm),
+  forms: (row.forms ?? []).map((form) => toPublicForm(form, row)),
   ...(similarity !== undefined && { similarity }),
   source: source ?? currentDatasetSource(),
   modified: modified ?? false,

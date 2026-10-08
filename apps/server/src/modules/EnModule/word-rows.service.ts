@@ -1,3 +1,4 @@
+import { EnPronunciation } from './entities/en_pronunciation.entity';
 import { EnEtymology } from './entities/en_etymology.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
@@ -172,6 +173,10 @@ export class WordRowsService {
     this.selectScalars(qb, words, 'w');
     qb.leftJoin('w.base_form', 'origin_base').addSelect('origin_base.origins', 'base_origins');
     qb.addSelect('origin_base.word', 'origin_headword').addSelect('origin_base.part_of_speech', 'origin_pos');
+    if (relations.base_form) {
+      this.selectScalars(qb, words, 'origin_base');
+      this.selectKey(qb, 'origin_base', wordFk);
+    }
     this.selectKey(qb, 'w', wordFk);
     if (relations.word) {
       qb.leftJoin('w.word', 'entry');
@@ -200,6 +205,14 @@ export class WordRowsService {
           words.findColumnWithPropertyName('origins')!,
         );
       row.word = relations.word ? this.hydrate(entries, raw, 'entry') : { word: raw[`w_${wordFk}`] };
+      if (relations.base_form)
+        row.base_form =
+          raw.origin_base_id == null
+            ? null
+            : {
+                ...this.hydrate(words, raw, 'origin_base'),
+                ...(this.wantsEntry(relations.base_form) && { word: { word: raw.origin_headword } }),
+              };
       if (relations.base_phrasal) {
         const id = raw['bp_id'];
         row.base_phrasal =
@@ -295,8 +308,40 @@ export class WordRowsService {
       for (const word of found)
         word.etymologies = (groups.get(word.id) ?? []).map((row) => this.hydrate(meta, row, 'e'));
     }
+    await this.loadPronunciations(found, relations);
     await this.loadEntryAlternatives(found, relations);
     return found as unknown as EnWord[];
+  }
+
+  /** All requested owners, including forms and their base, share one indexed query. */
+  private async loadPronunciations(rows: PlainT[], relations: unknown): Promise<void> {
+    const owners: PlainT[] = [];
+    const visit = (value: unknown, options: unknown): void => {
+      if (!value || !options || typeof options !== 'object') return;
+      if (Array.isArray(value)) {
+        for (const row of value) visit(row, options);
+        return;
+      }
+      if (typeof value !== 'object') return;
+      const row = value as PlainT;
+      const wanted = options as PlainT;
+      if (wanted.pronunciations) owners.push(row);
+      for (const [key, child] of Object.entries(wanted)) if (key !== 'pronunciations') visit(row[key], child);
+    };
+    visit(rows, relations);
+    if (!owners.length) return;
+    const meta = this.dataSource.getMetadata(EnPronunciation);
+    const qb = this.dataSource.createQueryBuilder(EnPronunciation, 'p').select([]);
+    this.selectScalars(qb, meta, 'p');
+    const raw = await qb
+      .addSelect('p.word', 'owner')
+      .where('p.word IN (:...ids)', { ids: [...new Set(owners.map((row) => row.id))] })
+      .orderBy('p.sort_order', 'ASC')
+      .addOrderBy('p.id', 'ASC')
+      .getRawMany<PlainT>();
+    const groups = this.groupBy(raw, (row) => row.owner);
+    for (const row of owners)
+      row.pronunciations = (groups.get(row.id) ?? []).map((value) => this.hydrate(meta, value, 'p'));
   }
 
   /** Collect requested headword relations across forms and words; one query per batch. */
