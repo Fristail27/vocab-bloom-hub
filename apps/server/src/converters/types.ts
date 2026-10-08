@@ -1,3 +1,4 @@
+import type { MeaningQuoteT } from '../../types';
 import {
   AvailableTranslationLanguagesE,
   CategoryE,
@@ -23,6 +24,7 @@ export type ConvertedTranslationT = {
 };
 
 export type ConvertedMeaningT = {
+  quotes?: MeaningQuoteT[];
   etymology_number?: number | null;
   definition: string;
   examples: string[];

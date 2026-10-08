@@ -244,6 +244,13 @@ describe('installing a dataset from its source (e2e, issue #527)', () => {
       }),
     );
     expect(noun.forms.map((form: { word: string }) => form.word)).toEqual(['lamps']);
+    expect(noun.meanings[0].quotes).toEqual([
+      {
+        text: 'An invented quotation. '.repeat(30),
+        reference: 'Test Author, Invented Book (2026), chapter 2, p. 19',
+      },
+      { text: 'A second invented quotation.', reference: null },
+    ]);
     expect(noun.meanings.map((meaning: { title: string }) => meaning.title)).toEqual([
       'A device that gives light',
       'A source of spiritual light',

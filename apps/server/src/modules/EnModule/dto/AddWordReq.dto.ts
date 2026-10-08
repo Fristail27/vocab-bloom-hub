@@ -1,3 +1,4 @@
+import { MeaningQuoteDTO } from './MeaningQuote.dto';
 import { EtymologyDTO } from './Etymology.dto';
 import { IsOrigins } from '../../../core/utils/provenance';
 import type { OriginT } from '../../../../types';
@@ -100,6 +101,18 @@ export class AddWordReqShortTranslationDTO {
 }
 
 export class AddWordReqMeaningDTO {
+  @ApiProperty({
+    type: [MeaningQuoteDTO],
+    required: false,
+    nullable: true,
+    description: 'Ordered quotations. Omit to preserve; an empty list clears them.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MeaningQuoteDTO)
+  quotes?: MeaningQuoteDTO[] | null;
+
   @ApiProperty({
     required: false,
     nullable: true,

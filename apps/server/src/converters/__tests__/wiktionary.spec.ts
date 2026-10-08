@@ -284,6 +284,13 @@ describe('wiktionary: the dataset', () => {
     expect(ofNoun[0]).toEqual(
       expect.objectContaining({
         examples: ['She switched the lamp on.', 'A lamp stood in every window.'],
+        quotes: [
+          {
+            text: 'An invented quotation. '.repeat(30),
+            reference: 'Test Author, Invented Book (2026), chapter 2, p. 19',
+          },
+          { text: 'A second invented quotation.', reference: null },
+        ],
         // the headword is never its own synonym
         synonyms: [{ word: 'light', part_of_speech: 'noun' }],
         language_register: '',
@@ -421,5 +428,40 @@ describe('Wiktionary etymology groups', () => {
     expect(mergeEntries(record('Same text.', 1), record('Same text.', 2)).etymologies).toHaveLength(2);
     expect(record().etymologies).toBeUndefined();
     expect(record().meanings[0].etymology_number).toBeUndefined();
+  });
+});
+
+describe('Wiktionary quotations', () => {
+  const record = (examples: NonNullable<NonNullable<KaikkiRecordT['senses']>[number]['examples']>) =>
+    convertRecord({
+      word: 'lumoid',
+      pos: 'noun',
+      lang_code: 'en',
+      senses: [{ glosses: ['An invented definition.'], examples }],
+    }) as ConvertedEntryT;
+  it('keeps complete quotations apart from capped usage examples, with absent attribution explicit', () => {
+    const long = 'An invented line. '.repeat(40);
+    const entry = record([
+      { text: 'An ordinary example.', type: 'example' },
+      { text: long, type: 'quotation', ref: 'Invented Author, 2026, chapter 3, pages 5–8' },
+      { text: 'Unattributed quotation.', type: 'quotation' },
+      { text: 'A reference marks a quotation.', ref: 'Full bibliographic reference' },
+      { text: 'Fourth quotation.', type: 'quotation', ref: '' },
+    ]);
+    expect(entry.meanings[0].examples).toEqual(['An ordinary example.']);
+    expect(entry.meanings[0].quotes).toEqual([
+      { text: long, reference: 'Invented Author, 2026, chapter 3, pages 5–8' },
+      { text: 'Unattributed quotation.', reference: null },
+      { text: 'A reference marks a quotation.', reference: 'Full bibliographic reference' },
+      { text: 'Fourth quotation.', reference: '' },
+    ]);
+  });
+  it('retains additional quotations when equal senses merge, without repeating identical citations', () => {
+    const a = { text: 'First quote', type: 'quotation', ref: 'First reference' };
+    const b = { text: 'Second quote', type: 'quotation', ref: 'Second reference' };
+    expect(mergeEntries(record([a]), record([a, b])).meanings[0].quotes).toEqual([
+      { text: a.text, reference: a.ref },
+      { text: b.text, reference: b.ref },
+    ]);
   });
 });

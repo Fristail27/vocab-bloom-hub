@@ -1,3 +1,4 @@
+import { normalizeQuotes } from '../../utils/quotes';
 import { resolveEtymology } from '../../utils/etymologies';
 import { getOrAddEntry, entryTypeOf } from '../../utils/changes/words';
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
@@ -122,7 +123,16 @@ export class EnMeaningService {
 
   async addMeaning(body: AddMeaningReqDTO, manager?: EntityManager, copied = false): Promise<AddMeaningResT> {
     const em = manager ?? this.enMeaningsRep.manager;
-    const { word_id, id: _id, etymology_number, synonyms, antonyms, translations, ...newMeaning } = body;
+    const {
+      word_id,
+      id: _id,
+      etymology_number,
+      quotes,
+      synonyms,
+      antonyms,
+      translations,
+      ...newMeaning
+    } = body;
     const word = await em
       .getRepository(EnWord)
       .findOne({ where: { id: word_id }, relations: { word: true, base_form: { word: true } } });
@@ -143,7 +153,9 @@ export class EnMeaningService {
       : await this.resolveWordLinks({ synonyms, antonyms }, word.word.word, em);
     const add = async (tx: EntityManager): Promise<EnMeaning> => {
       const etymology = await resolveEtymology(tx, word.id, etymology_number);
-      const saved = await tx.getRepository(EnMeaning).save({ word: word, ...newMeaning, ...links, etymology });
+      const saved = await tx
+        .getRepository(EnMeaning)
+        .save({ word: word, ...newMeaning, ...links, etymology, quotes: normalizeQuotes(quotes) });
       for (const translation of translations) {
         // a part of this meaning: its own row in the history would say it twice
         await this.enMeaningTranslationService.addMeaningTranslation(
@@ -203,6 +215,7 @@ export class EnMeaningService {
       meaning.language_register = body.language_register;
     if (body.area_variant && body.area_variant !== meaning.area_variant)
       meaning.area_variant = body.area_variant;
+    if (body.quotes !== undefined) meaning.quotes = normalizeQuotes(body.quotes);
     // examples is a nullable column: rows imported without examples hold NULL
     if (body.examples && body.examples.join() !== meaning.examples?.join()) meaning.examples = body.examples;
     if (body.categories && body.categories.join() !== meaning.categories?.join())

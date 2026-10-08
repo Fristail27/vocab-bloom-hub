@@ -1,3 +1,4 @@
+import type { MeaningQuoteT } from '../../dictionaries/en/quotes';
 import type { OriginT, WordLicenseT } from '../../provenance';
 import type {
   EnAreaVariantsE,
@@ -93,6 +94,7 @@ export type PublicWordV1MeaningT = {
   definition: string;
   is_obsolete: boolean;
   examples: string[];
+  quotes?: MeaningQuoteT[];
   categories: CategoryE[];
   meaning_level: WordLevelE | null;
   area_variant: EnAreaVariantsE;

@@ -64,6 +64,7 @@ export const mapMeaningForDS = (m: EnMeaning, partOfSpeech: EnPartOfSpeechE): En
     definition: m.definition || '',
     sort_order: m.sort_order || 0,
     examples: m.examples || [],
+    quotes: m.quotes ?? [],
     synonyms: mapWordLinksForDS(m.synonyms, partOfSpeech),
     antonyms: mapWordLinksForDS(m.antonyms, partOfSpeech),
     categories: sortStrings(m.categories),

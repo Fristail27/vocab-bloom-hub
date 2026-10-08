@@ -205,6 +205,7 @@ export class DatasetWriter {
         definition: meaning.definition,
         sort_order: sortOrder,
         examples: meaning.examples,
+        quotes: meaning.quotes ?? [],
         is_obsolete: meaning.is_obsolete,
         area_variant: meaning.area_variant,
         meaning_level: '',

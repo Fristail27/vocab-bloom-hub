@@ -271,6 +271,45 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
     }
   });
 
+  it('stores ordered quotations only in the selected dataset and rolls their column down/up', async () => {
+    const { AddMeaningQuotes1791600000000 } =
+      await import('../src/db/dataset-migrations/1791600000000-AddMeaningQuotes');
+    const runner = dataSource.createQueryRunner();
+    await runner.connect();
+    await runner.startTransaction();
+    try {
+      await runner.query(`SET LOCAL search_path TO "${SCHEMA}", public`);
+      await runner.query(`INSERT INTO en_entries (word) VALUES ('quote-test')`);
+      const [word] = await runner.query(
+        `INSERT INTO en_words (word, part_of_speech, form_of_word) VALUES ('quote-test', 'noun', 'base_form') RETURNING id`,
+      );
+      const quotes = [
+        { text: 'Invented quotation', reference: 'Invented reference', source_url: 'https://example.org/book' },
+        { text: 'Second', reference: null },
+      ];
+      await runner.query(
+        `INSERT INTO en_meanings (word, title, definition, sort_order, quotes) VALUES ($1, 'quote-test', 'Invented definition', 1, $2)`,
+        [word.id, JSON.stringify(quotes)],
+      );
+      expect(await runner.query(`SELECT * FROM public.en_meanings WHERE title = 'quote-test'`)).toEqual([]);
+      expect(
+        JSON.parse((await runner.query(`SELECT quotes FROM en_meanings WHERE title = 'quote-test'`))[0].quotes),
+      ).toEqual(quotes);
+      const migration = new AddMeaningQuotes1791600000000();
+      await migration.down(runner);
+      await migration.up(runner);
+      expect(
+        (await runner.query(`SELECT quotes FROM en_meanings WHERE title = 'quote-test'`))[0].quotes,
+      ).toBeNull();
+      expect((await runner.query(`SELECT title FROM en_meanings WHERE title = 'quote-test'`))[0].title).toBe(
+        'quote-test',
+      );
+    } finally {
+      await runner.rollbackTransaction();
+      await runner.release();
+    }
+  });
+
   it('starts the history empty: an entry edited before is not guessed to differ from its source (issue #531)', async () => {
     // the schema as the version before the history left it: no table, two entries, one of them edited
     await dataSource.query(`DROP TABLE "${SCHEMA}"."en_changes"`);

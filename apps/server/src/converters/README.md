@@ -186,3 +186,21 @@ primary terms remain the baseline for adapters that emit no origins.
 Do not remove the envelope or marker to make a rich export readable by old servers. Receiving
 servers must support the metadata contract, including when downloading from a remote source.
 See [portable compatibility](../../../../docs/offline-import.md#provenance-export-format).
+
+### Wiktionary quotations
+
+The English extractor's [ExampleData schema](https://github.com/tatuylonen/wiktextract/blob/master/src/wiktextract/extractor/en/type_utils.py)
+and [quotation classification](https://github.com/tatuylonen/wiktextract/blob/master/src/wiktextract/extractor/en/page.py)
+use `examples[].text`, `type: "quotation"` and `ref`. The converter puts a nonblank text
+into `quotes` when the record has that type or a nonblank reference. Other records stay
+ordinary examples, subject to the existing three-example / 300-character limits.
+Quotes retain their complete text and `ref` as `reference`, without those limits. Missing
+references become `null`. The English extractor does not declare a quotation URL field;
+no URL is guessed from the reference or from the Wiktionary page. Explicit quote URLs in
+native imports/admin edits are preserved. No HTML or markup rendering is introduced.
+
+When repeated records merge an equal definition within one etymology, additional quotes
+are appended in source order; exact matches of text/reference/URL are kept once. Equal
+text with a different reference remains a distinct citation. Other meaning data keeps
+its existing merge rules. Reconvert the source to recover references discarded by an
+older converter.

@@ -337,3 +337,38 @@ Omitted groups are deleted and their meanings become unassigned, even if a new g
 reuses the old number. Omit the entire field to leave the groups unchanged. The public
 word response returns only `{number, text}`, and its flat meanings expose the nullable
 `etymology_number`. History and reverting retain the associations without database IDs.
+
+## Meaning quotations
+
+Meaning lines (and legacy nested meanings) may carry an ordered `quotes` array:
+
+```json
+{
+  "quotes": [
+    {
+      "text": "An invented quotation.",
+      "reference": "Test Author, Book (2026), p. 7",
+      "source_url": "https://example.org/book"
+    },
+    { "text": "Another quotation.", "reference": null }
+  ]
+}
+```
+
+A quote has nonblank `text`, a bibliographic `reference` (a string, or `null` when
+unknown) and an optional HTTP(S) `source_url`. An omitted reference becomes `null`;
+an absent URL remains absent. Text, reference, line breaks and array order survive
+conversion, import/export, copy/fork and history/revert. No quote-specific length or
+count cap is applied; normal request and import-file size limits still apply. Ordinary
+`examples: string[]` remain separate and retain their existing behavior.
+
+Old files without quotes import an empty list. Updating an unprotected meaning replaces
+its quotes with the imported list; protected entries retain theirs. On the admin meaning
+edit endpoint, omit `quotes` to keep it, or send `[]` to clear it (`null` also clears it).
+Public meaning responses expose an optional `quotes` field so clients remain compatible
+with older servers. Storage uses a nullable JSON-encoded column on each meaning, with
+array order determining quotation order; no separate quote IDs need remapping.
+
+Use an importer that understands quotes to preserve them; older versions may discard
+this optional field. Bibliographic attribution is retained verbatim, independently of
+the word's existing data-origin and contribution license snapshots.

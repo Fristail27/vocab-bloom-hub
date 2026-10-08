@@ -37,6 +37,7 @@ export const meaningSnapshot = (meaning: EnMeaning, withTranslations = false): S
   definition: kept(meaning.definition),
   sort_order: kept(meaning.sort_order),
   examples: meaning.examples ?? [],
+  ...(meaning.quotes?.length && { quotes: meaning.quotes }),
   meaning_level: kept(meaning.meaning_level),
   language_register: kept(meaning.language_register),
   area_variant: kept(meaning.area_variant),

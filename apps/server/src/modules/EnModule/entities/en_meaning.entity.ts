@@ -1,3 +1,4 @@
+import type { MeaningQuoteT } from '../../../../types/dictionaries/en/quotes';
 import { EnEtymology } from './en_etymology.entity';
 import {
   Column,
@@ -74,6 +75,9 @@ export class EnMeaning {
 
   @Column({ type: checkIsPostgres() ? 'text' : 'simple-array', array: true, nullable: true })
   examples!: string[];
+
+  @Column({ type: 'simple-json', nullable: true })
+  quotes?: MeaningQuoteT[] | null;
 
   @OneToMany(() => EnMeaningTranslation, (entry) => entry.meaning, { onDelete: 'CASCADE' })
   translations!: EnMeaningTranslation[];

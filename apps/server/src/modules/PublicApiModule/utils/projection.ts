@@ -65,6 +65,11 @@ export const toPublicMeaning = (
   definition: row.definition,
   is_obsolete: row.is_obsolete ?? false,
   examples: row.examples ?? [],
+  quotes: (row.quotes ?? []).map(({ text, reference, source_url }) => ({
+    text,
+    reference,
+    ...(source_url !== undefined && { source_url }),
+  })),
   categories: row.categories ?? [],
   meaning_level: row.meaning_level ?? null,
   area_variant: row.area_variant ?? EnAreaVariantsE.common,

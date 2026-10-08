@@ -109,12 +109,25 @@ export const mergeEntries = (first: ConvertedEntryT, incoming: ConvertedEntryT):
         : first.verb___transitivity || second.verb___transitivity,
     base_phrasal: first.base_phrasal || second.base_phrasal,
     forms: mergeForms(first.forms, second.forms),
-    meanings: [
-      ...first.meanings,
-      ...second.meanings.filter((meaning) => !first.meanings.some((known) => sameMeaning(known, meaning))),
-    ],
+    meanings: mergeMeanings(first.meanings, second.meanings),
   };
 };
+
+/** Repeated records of a sense may carry additional citations; retain them in encounter order. */
+function mergeMeanings(first: ConvertedMeaningT[], second: ConvertedMeaningT[]): ConvertedMeaningT[] {
+  const result = first.map((meaning) => ({ ...meaning }));
+  for (const meaning of second) {
+    const known = result.slice(0, first.length).find((item) => sameMeaning(item, meaning));
+    if (!known) result.push(meaning);
+    else if (meaning.quotes?.length) {
+      const all = [...(known.quotes ?? []), ...meaning.quotes];
+      known.quotes = [
+        ...new Map(all.map((q) => [JSON.stringify([q.text, q.reference, q.source_url ?? null]), q])).values(),
+      ];
+    }
+  }
+  return result;
+}
 
 // the second word of a phrasal verb: an adverb or a preposition
 const PARTICLES = new Set(

@@ -91,6 +91,14 @@ describe('word provenance and independent forks (#556)', () => {
       meanings: [
         {
           etymology_number: 1,
+          quotes: [
+            {
+              text: 'An invented quotation. '.repeat(30),
+              reference: 'Test Author, Book, p. 1',
+              source_url: 'https://example.org/book',
+            },
+            { text: 'Another invented quotation.', reference: null },
+          ],
           title: 'tree',
           definition: 'An evergreen tree.',
           sort_order: 0,
@@ -132,6 +140,7 @@ describe('word provenance and independent forks (#556)', () => {
     expect(meanings.body.data[0].origins).toEqual(cedar.origins);
     expect(meanings.body.data[0].licenses[0].spdx).toBe('CC-BY-4.0');
     expect(meanings.body.data[0].etymology_number).toBe(1);
+    expect(meanings.body.data[0].quotes).toEqual(cedar.meanings[0].quotes);
     const full = await api().get('/api/v1/words/cedar').expect(200);
     expect(full.body.data[0].etymologies).toEqual([
       { number: 1, text: 'Invented origin for the transfer fixture.' },
@@ -167,6 +176,16 @@ describe('word provenance and independent forks (#556)', () => {
     expect(change.diff.origins.before).toEqual(cedar.origins);
     await api().post(`/api/en/changes/${change.id}/revert`).set(auth).expect(200);
     expect((await read('default', cedar.id)).origins).toEqual(cedar.origins);
+    await api()
+      .patch('/api/en/word/meaning')
+      .set(auth)
+      .send({ id: cedar.meanings[0].id, quotes: [] })
+      .expect(200);
+    const quoteHistory = await api().get('/api/en/changes').query({ headword: 'cedar' }).set(auth).expect(200);
+    const quoteChange = quoteHistory.body.items[0] as ChangeT;
+    expect(quoteChange.diff.quotes.before).toEqual(cedar.meanings[0].quotes);
+    await api().post(`/api/en/changes/${quoteChange.id}/revert`).set(auth).expect(200);
+    expect((await read('default', cedar.id)).meanings[0].quotes).toEqual(cedar.meanings[0].quotes);
   });
 
   pg('copies a word into an inactive own dataset, preserving content and inherited history', async () => {
@@ -231,6 +250,7 @@ describe('word provenance and independent forks (#556)', () => {
       { id: expect.any(Number), number: 1, text: 'Invented origin for the transfer fixture.' },
     ]);
     expect(copy.meanings[0].etymology_number).toBe(1);
+    expect(copy.meanings[0].quotes).toEqual(cedar.meanings[0].quotes);
     expect(copy.etymologies![0].id).not.toBe(cedar.etymologies![0].id);
     expect(copy.origins).toHaveLength(1);
     expect(copy.origins![0]).toMatchObject({
@@ -324,6 +344,7 @@ describe('word provenance and independent forks (#556)', () => {
     expect(first.alternatives).toEqual(['cedarr']);
     expect(first.etymologies).toEqual(cedar.etymologies);
     expect(first.meanings[0].etymology_number).toBe(1);
+    expect(first.meanings[0].quotes).toEqual(cedar.meanings[0].quotes);
     expect((await read('first_fork', first.forms[0].id)).origins).toEqual(first.origins);
     // Check the stored payload as well as the API: no display/projection deduplication.
     const stored = await app
@@ -421,6 +442,7 @@ describe('word provenance and independent forks (#556)', () => {
       { number: 1, text: 'Invented origin for the transfer fixture.' },
     ]);
     expect(restored.meanings[0].etymology_number).toBe(1);
+    expect(restored.meanings[0].quotes).toEqual(before.meanings[0].quotes);
     expect(restored.etymologies![0].id).not.toBe(before.etymologies![0].id);
     expect(restored.licenses).toEqual(before.licenses);
     const listed = await api().get('/api/en/datasets').set(auth).expect(200);
@@ -439,6 +461,10 @@ describe('word provenance and independent forks (#556)', () => {
       .set(auth)
       .expect(200);
     expect((history.body.items as ChangeT[]).every((change) => !!change.inherited_from)).toBe(true);
+    const quoteDiffs = (items: ChangeT[]) =>
+      items.filter((change) => change.diff.quotes).map((change) => change.diff.quotes);
+    expect(quoteDiffs(historyBefore)).toHaveLength(2);
+    expect(quoteDiffs(history.body.items as ChangeT[])).toEqual(quoteDiffs(historyBefore));
     expect((history.body.items as ChangeT[]).map((change) => change.inherited_from)).toEqual(
       historyBefore.map((change) => change.inherited_from),
     );

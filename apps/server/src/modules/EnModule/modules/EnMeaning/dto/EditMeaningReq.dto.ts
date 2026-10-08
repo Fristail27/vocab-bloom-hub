@@ -1,3 +1,6 @@
+import { Type } from 'class-transformer';
+import { ValidateNested } from 'class-validator';
+import { MeaningQuoteDTO } from '../../../dto/MeaningQuote.dto';
 import { IsInt, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { ArrayMaxSize, IsArray, IsBoolean, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
@@ -5,6 +8,18 @@ import { CategoryE, EnAreaVariantsE, EnMeaningT, LanguageRegisterE, WordLevelE }
 import { MAX_WORD_LINKS_PER_MEANING } from '../../../utils/normalizeWordLinks';
 
 export class EditMeaningReqDTO {
+  @ApiProperty({
+    type: [MeaningQuoteDTO],
+    required: false,
+    nullable: true,
+    description: 'Ordered quotations. Omit to preserve; an empty list clears them.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MeaningQuoteDTO)
+  quotes?: MeaningQuoteDTO[] | null;
+
   @ApiProperty({
     required: false,
     nullable: true,

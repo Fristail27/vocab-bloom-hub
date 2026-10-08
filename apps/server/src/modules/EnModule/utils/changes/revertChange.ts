@@ -85,6 +85,7 @@ const MEANING_COLUMNS = [
   'definition',
   'sort_order',
   'examples',
+  'quotes',
   'meaning_level',
   'language_register',
   'area_variant',

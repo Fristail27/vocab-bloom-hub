@@ -25,7 +25,7 @@ import {
  *   `part_of_speech` (sets of links, the stored order carries no meaning);
  * - `phrasal_variants` and `categories`: plain string order.
  *
- * Arrays whose order is authored and carries meaning (`examples`, `pattern`,
+ * Arrays whose order is authored and carries meaning (`examples`, `quotes`, `pattern`,
  * `variants_of_words`) are exported exactly as stored.
  *
  * Strings are compared by UTF-16 code units — never by locale — so the result
