@@ -23,6 +23,7 @@ export type ConvertedTranslationT = {
 };
 
 export type ConvertedMeaningT = {
+  etymology_number?: number | null;
   definition: string;
   examples: string[];
   is_obsolete: boolean;
@@ -43,6 +44,7 @@ export type ConvertedFormT = {
 };
 
 export type ConvertedEntryT = {
+  etymologies?: { number: number; text: string; source_number?: number }[];
   alternatives?: string[];
   generated?: boolean;
   generated_by_model?: string;

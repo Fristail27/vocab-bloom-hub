@@ -242,8 +242,9 @@ export class PublicWordsService {
     if (ids.length === 0) return [];
     const with_meanings = query.with_meanings ?? false;
     const with_translations = query.with_translations ?? false;
-    const relations: FindOptionsRelations<EnWord> = { ...SEARCH_ITEM_RELATIONS };
-    if (with_meanings) relations.meanings = { translations: true, synonyms: true, antonyms: true };
+    const relations: FindOptionsRelations<EnWord> = { ...SEARCH_ITEM_RELATIONS, etymologies: true };
+    if (with_meanings)
+      relations.meanings = { etymology: true, translations: true, synonyms: true, antonyms: true };
     if (with_translations) relations.short_translations = true;
     const rows = await this.wordRows.load(ids, relations);
     const modified = await this.wordRows.modifiedWords(rows);

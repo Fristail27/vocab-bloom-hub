@@ -314,3 +314,26 @@ can clear an imported headword's unprotected links in update mode, unless the re
 endpoint explicitly requests the pair. Links involving a user-modified headword remain
 protected. Export with a version that understands this field to preserve it on round-trip;
 older importers may discard it. Alternative-only Wiktionary words retain the source gloss.
+
+## Etymologies and flat meanings
+
+Word, phrase and grammar-pattern lines may carry `etymologies: [{number, text}]`.
+Numbers are positive integers unique within that word and part of speech; array order is
+not significant. Meaning lines (including nested meanings) carry `etymology_number`,
+which is nullable and must refer to a group on their own word. Database IDs never travel
+in these files. Imports rebuild the references after creating each word's groups, so
+an export can be installed in a database with different IDs. Unknown references and
+repeated group numbers are rejected. Old files without these fields remain valid.
+
+An update replaces the imported word's groups along with its meanings; user-modified
+words retain both under the usual update protection. Export and history retain the
+local numbers and associations. Use an importer that understands these optional fields
+to preserve them on round-trip.
+
+The admin word response includes group IDs. When replacing `etymologies` through the
+common-word edit endpoint, send the existing ID to keep a group and its meaning links;
+omit the ID to create a new group. Changing a kept group's number preserves its links.
+Omitted groups are deleted and their meanings become unassigned, even if a new group
+reuses the old number. Omit the entire field to leave the groups unchanged. The public
+word response returns only `{number, text}`, and its flat meanings expose the nullable
+`etymology_number`. History and reverting retain the associations without database IDs.

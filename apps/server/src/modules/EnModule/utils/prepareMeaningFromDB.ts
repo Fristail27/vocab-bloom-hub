@@ -16,10 +16,12 @@ export const prepareMeaningFromDB = (m: EnMeaning): EnMeaningT => {
     synonyms,
     antonyms,
     translations,
+    etymology,
     ...rest
   } = m;
   return {
     ...rest,
+    etymology_number: etymology?.number ?? null,
     translations: (translations ?? []).map(prepareMeaningTranslationFromDB),
     synonyms: normalizeWordLinks(synonyms?.map((entry) => entry.word)),
     antonyms: normalizeWordLinks(antonyms?.map((entry) => entry.word)),

@@ -138,6 +138,9 @@ export class DatasetWriter {
     const description = entry.meanings[0].definition;
     if (entry.origins) this.hasOrigins = true;
     const shared = {
+      ...(entry.etymologies && {
+        etymologies: entry.etymologies.map(({ number, text }) => ({ number, text })),
+      }),
       ...(entry.alternatives && { alternatives: [...new Set(entry.alternatives)].sort() }),
       ...(entry.origins && { origins: entry.origins }),
       categories: [...entry.categories].sort(),
@@ -197,6 +200,7 @@ export class DatasetWriter {
       const link = (word: string) => ({ word, part_of_speech: entry.part_of_speech });
       const line: DataSetMeaningT = {
         ...wordKey,
+        ...(meaning.etymology_number != null && { etymology_number: meaning.etymology_number }),
         title,
         definition: meaning.definition,
         sort_order: sortOrder,

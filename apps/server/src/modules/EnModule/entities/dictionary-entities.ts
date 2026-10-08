@@ -1,3 +1,4 @@
+import { EnEtymology } from './en_etymology.entity';
 import { EnChange } from './en_change.entity';
 import { EnEntry } from './en_entry.entity';
 import { EnMeaning } from './en_meaning.entity';
@@ -14,6 +15,7 @@ import { EnWord } from './en_word.entity';
 export const DICTIONARY_ENTITIES = [
   EnEntry,
   EnWord,
+  EnEtymology,
   EnMeaning,
   EnMeaningTranslation,
   EnShortTranslation,

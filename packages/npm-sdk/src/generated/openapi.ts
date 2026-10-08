@@ -561,6 +561,10 @@ export interface components {
       meta: components['schemas']['PublicSearchDetailedV1MetaT'];
     };
     PublicWordV1T: {
+      etymologies?: {
+        number: number;
+        text: string;
+      }[];
       meanings: components['schemas']['PublicWordV1MeaningT'][];
       short_translations: components['schemas']['PublicWordV1ShortTranslationT'][];
       phrasal_variants?: string[];
@@ -598,6 +602,8 @@ export interface components {
       modified?: boolean;
     };
     PublicWordV1MeaningT: {
+      /** @description Local number of the owning word etymology; null when unknown. */
+      etymology_number?: number | null;
       id: number;
       sort_order: number;
       title: string;
@@ -647,6 +653,8 @@ export interface components {
       part_of_speech: components['schemas']['EnPartOfSpeechE'];
       source?: string;
       modified?: boolean;
+      /** @description Local number of the owning word etymology; null when unknown. */
+      etymology_number?: number | null;
       id: number;
       sort_order: number;
       title: string;

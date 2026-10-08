@@ -40,57 +40,81 @@ const mergeForms = (a: ConvertedFormT[], b: ConvertedFormT[]): ConvertedFormT[] 
 };
 
 const sameMeaning = (a: ConvertedMeaningT, b: ConvertedMeaningT): boolean =>
+  a.etymology_number === b.etymology_number &&
   a.definition.trim().toLowerCase() === b.definition.trim().toLowerCase();
 
 /**
  * Two records of one headword and part of speech as one entry: a source
  * may split them (the etymology sections of Wiktionary), the model has one
  * entry per pair. The meanings follow each other, a repeated definition is
- * kept once; what one record knows and the other does not is kept
+ * kept once within its etymology; what one record knows and the other does not is kept
  */
-export const mergeEntries = (first: ConvertedEntryT, second: ConvertedEntryT): ConvertedEntryT => ({
-  ...first,
-  ...((first.alternatives || second.alternatives) && {
-    alternatives: unique([...(first.alternatives ?? []), ...(second.alternatives ?? [])]).sort(),
-  }),
-  ...((first.generated || second.generated) && {
-    generated: true,
-    generated_by_model: unique([first.generated_by_model, second.generated_by_model].filter(Boolean)).join(
-      ', ',
-    ),
-  }),
-  ...((first.origins || second.origins) && {
-    origins: [
-      ...new Map(
-        [...(first.origins ?? []), ...(second.origins ?? [])].map((origin) => [JSON.stringify(origin), origin]),
-      ).values(),
+export const mergeEntries = (first: ConvertedEntryT, incoming: ConvertedEntryT): ConvertedEntryT => {
+  const etymologies = [...(first.etymologies ?? [])];
+  const numbers = new Map<number, number>();
+  for (const item of incoming.etymologies ?? []) {
+    const existing = etymologies.find(
+      (known) => known.source_number === item.source_number && known.text === item.text,
+    );
+    const number = existing?.number ?? Math.max(0, ...etymologies.map((known) => known.number)) + 1;
+    if (!existing) etymologies.push({ ...item, number });
+    numbers.set(item.number, number);
+  }
+  const second = {
+    ...incoming,
+    meanings: incoming.meanings.map((meaning) => ({
+      ...meaning,
+      ...(meaning.etymology_number != null && { etymology_number: numbers.get(meaning.etymology_number) }),
+    })),
+  };
+  return {
+    ...first,
+    ...((first.etymologies || incoming.etymologies) && { etymologies }),
+    ...((first.alternatives || second.alternatives) && {
+      alternatives: unique([...(first.alternatives ?? []), ...(second.alternatives ?? [])]).sort(),
+    }),
+    ...((first.generated || second.generated) && {
+      generated: true,
+      generated_by_model: unique([first.generated_by_model, second.generated_by_model].filter(Boolean)).join(
+        ', ',
+      ),
+    }),
+    ...((first.origins || second.origins) && {
+      origins: [
+        ...new Map(
+          [...(first.origins ?? []), ...(second.origins ?? [])].map((origin) => [
+            JSON.stringify(origin),
+            origin,
+          ]),
+        ).values(),
+      ],
+    }),
+    transcription: first.transcription || second.transcription,
+    area_variant: first.area_variant || second.area_variant,
+    language_register: first.language_register || second.language_register,
+    categories: unique([...first.categories, ...second.categories]) as CategoryE[],
+    is_obsolete: first.is_obsolete && second.is_obsolete,
+    is_abbreviation: first.is_abbreviation || second.is_abbreviation,
+    noun___is_proper: first.noun___is_proper || second.noun___is_proper,
+    noun___uncountable: first.noun___uncountable && second.noun___uncountable,
+    noun___always_plural: first.noun___always_plural && second.noun___always_plural,
+    noun___irregular_plural: first.noun___irregular_plural || second.noun___irregular_plural,
+    verb___is_irregular: first.verb___is_irregular || second.verb___is_irregular,
+    verb___is_phrasal: first.verb___is_phrasal || second.verb___is_phrasal,
+    verb___transitivity:
+      first.verb___transitivity &&
+      second.verb___transitivity &&
+      first.verb___transitivity !== second.verb___transitivity
+        ? ('both' as ConvertedEntryT['verb___transitivity'])
+        : first.verb___transitivity || second.verb___transitivity,
+    base_phrasal: first.base_phrasal || second.base_phrasal,
+    forms: mergeForms(first.forms, second.forms),
+    meanings: [
+      ...first.meanings,
+      ...second.meanings.filter((meaning) => !first.meanings.some((known) => sameMeaning(known, meaning))),
     ],
-  }),
-  transcription: first.transcription || second.transcription,
-  area_variant: first.area_variant || second.area_variant,
-  language_register: first.language_register || second.language_register,
-  categories: unique([...first.categories, ...second.categories]) as CategoryE[],
-  is_obsolete: first.is_obsolete && second.is_obsolete,
-  is_abbreviation: first.is_abbreviation || second.is_abbreviation,
-  noun___is_proper: first.noun___is_proper || second.noun___is_proper,
-  noun___uncountable: first.noun___uncountable && second.noun___uncountable,
-  noun___always_plural: first.noun___always_plural && second.noun___always_plural,
-  noun___irregular_plural: first.noun___irregular_plural || second.noun___irregular_plural,
-  verb___is_irregular: first.verb___is_irregular || second.verb___is_irregular,
-  verb___is_phrasal: first.verb___is_phrasal || second.verb___is_phrasal,
-  verb___transitivity:
-    first.verb___transitivity &&
-    second.verb___transitivity &&
-    first.verb___transitivity !== second.verb___transitivity
-      ? ('both' as ConvertedEntryT['verb___transitivity'])
-      : first.verb___transitivity || second.verb___transitivity,
-  base_phrasal: first.base_phrasal || second.base_phrasal,
-  forms: mergeForms(first.forms, second.forms),
-  meanings: [
-    ...first.meanings,
-    ...second.meanings.filter((meaning) => !first.meanings.some((known) => sameMeaning(known, meaning))),
-  ],
-});
+  };
+};
 
 // the second word of a phrasal verb: an adverb or a preposition
 const PARTICLES = new Set(

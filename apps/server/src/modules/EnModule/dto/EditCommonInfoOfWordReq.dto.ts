@@ -1,3 +1,6 @@
+import { EtymologyDTO } from './Etymology.dto';
+import { Type } from 'class-transformer';
+import { ArrayMaxSize, ValidateNested } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, IsArray, IsBoolean, IsEnum } from 'class-validator';
 import {
@@ -11,6 +14,14 @@ import {
 } from '../../../../types';
 
 export class EditCommonInfoOfWordReqDTO {
+  @ApiProperty({ type: [EtymologyDTO], required: false })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(1000)
+  @ValidateNested({ each: true })
+  @Type(() => EtymologyDTO)
+  etymologies?: EtymologyDTO[];
+
   @ApiProperty()
   @IsOptional()
   @IsString()

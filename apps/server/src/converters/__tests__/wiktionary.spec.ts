@@ -1,3 +1,5 @@
+import { mergeEntries } from '../normalize';
+import { ConvertedEntryT } from '../types';
 import { afterEach, beforeEach, describe, expect, it } from '@jest/globals';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import * as os from 'node:os';
@@ -272,11 +274,12 @@ describe('wiktionary: the dataset', () => {
 
     const meanings = await readJsonl(outDir, 'vocab-bloom-hub-en-meanings.jsonl');
     const ofNoun = meanings.filter((line) => line.word === 'lamp' && line.part_of_speech === 'noun');
-    // two etymology sections, one entry; the definition they share is kept once
+    // Two etymologies remain distinct even when their definitions are identical.
     expect(ofNoun.map((line) => [line.sort_order, line.title])).toEqual([
       [1, 'A device that gives light'],
       [2, 'A source of spiritual light'],
       [3, 'A heavy blow'],
+      [4, 'A device that gives light'],
     ]);
     expect(ofNoun[0]).toEqual(
       expect.objectContaining({
@@ -390,5 +393,33 @@ describe('wiktionary alternative spellings (#575)', () => {
         ],
       }),
     );
+  });
+});
+
+describe('Wiktionary etymology groups', () => {
+  const record = (text?: string, number?: number) =>
+    convertRecord({
+      word: 'lumoid',
+      pos: 'noun',
+      lang_code: 'en',
+      etymology_text: text,
+      etymology_number: number,
+      senses: [{ glosses: ['An invented definition.'] }],
+    }) as ConvertedEntryT;
+  it('keeps equal definitions in different groups, including duplicate source numbers', () => {
+    const first = mergeEntries(record('First root.', 1), record('Second root.', 2));
+    expect(first.meanings.map((m) => m.etymology_number)).toEqual([1, 2]);
+    const duplicate = mergeEntries(first, record('Conflicting root.', 2));
+    expect(duplicate.etymologies).toHaveLength(3);
+    expect(duplicate.meanings).toHaveLength(3);
+    expect(mergeEntries(duplicate, record('Second root.', 2)).meanings).toHaveLength(3);
+  });
+  it('assigns missing numbers by encounter order; repeated identical unnumbered text shares a group', () => {
+    const merged = mergeEntries(record('Same text.'), record('Same text.'));
+    expect(merged.etymologies).toHaveLength(1);
+    expect(merged.meanings).toHaveLength(1);
+    expect(mergeEntries(record('Same text.', 1), record('Same text.', 2)).etymologies).toHaveLength(2);
+    expect(record().etymologies).toBeUndefined();
+    expect(record().meanings[0].etymology_number).toBeUndefined();
   });
 });

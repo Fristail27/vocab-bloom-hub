@@ -78,8 +78,13 @@ export type PublicWordV1MeaningTranslationT = {
   variants_of_words: string[];
 };
 
+/** @asType integer */
+type EtymologyNumberT = number;
+
 // `synonyms` and `antonyms` are the linked headwords (sorted, lowercase)
 export type PublicWordV1MeaningT = {
+  /** Local number of the owning word etymology; null when unknown. */
+  etymology_number?: EtymologyNumberT | null;
   /** @asType integer */
   id: number;
   /** @asType integer */
@@ -169,6 +174,11 @@ export type PublicSearchWordV1T = {
 // otherwise); `phrasal_variants` (the phrasal verbs built on this base verb)
 // is present on the headword, id, batch and random reads
 export type PublicWordV1T = PublicSearchWordV1T & {
+  etymologies?: {
+    /** @asType integer */
+    number: number;
+    text: string;
+  }[];
   meanings: PublicWordV1MeaningT[];
   short_translations: PublicWordV1ShortTranslationT[];
   phrasal_variants?: string[];

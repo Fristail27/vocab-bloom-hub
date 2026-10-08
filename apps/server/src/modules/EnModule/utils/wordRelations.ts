@@ -37,7 +37,8 @@ export const SEARCH_ITEM_RELATIONS: FindOptionsRelations<EnWord> = {
 
 export const FULL_WORD_RELATIONS: FindOptionsRelations<EnWord> = {
   forms: { word: { alternatives: true } },
-  meanings: { translations: true, synonyms: true, antonyms: true },
+  etymologies: true,
+  meanings: { etymology: true, translations: true, synonyms: true, antonyms: true },
   phrasal_variants: { word: true },
   base_phrasal: { word: true },
   short_translations: true,

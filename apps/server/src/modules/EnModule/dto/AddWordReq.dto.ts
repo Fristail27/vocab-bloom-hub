@@ -1,3 +1,4 @@
+import { EtymologyDTO } from './Etymology.dto';
 import { IsOrigins } from '../../../core/utils/provenance';
 import type { OriginT } from '../../../../types';
 import { ApiProperty } from '@nestjs/swagger';
@@ -99,6 +100,16 @@ export class AddWordReqShortTranslationDTO {
 }
 
 export class AddWordReqMeaningDTO {
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    description: 'Local etymology number of this word; null clears the link.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  etymology_number?: number | null;
+
   @IsOptional()
   @IsNumber()
   id?: EnMeaningT['id'] | undefined;
@@ -186,6 +197,14 @@ export class CopyWordSourceDTO {
 }
 
 export class AddWordReqDTO {
+  @ApiProperty({ type: [EtymologyDTO], required: false })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(1000)
+  @ValidateNested({ each: true })
+  @Type(() => EtymologyDTO)
+  etymologies?: EtymologyDTO[];
+
   @ApiProperty({ type: CopyWordSourceDTO, required: false })
   @IsOptional()
   @ValidateNested()

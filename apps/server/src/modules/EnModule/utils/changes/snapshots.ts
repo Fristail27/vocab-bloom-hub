@@ -1,3 +1,4 @@
+import { etymologySnapshot } from '../etymologies';
 import { alternativeSpellings } from '../entryAlternatives';
 import { ChangeDiffT, ChangeRecordT, EnAreaVariantsE } from '../../../../../types';
 import { EnMeaning } from '../../entities/en_meaning.entity';
@@ -31,6 +32,7 @@ export const shortTranslationSnapshot = (translation: EnShortTranslation): Snaps
 
 /** The meaning itself; its translations are records of their own and come with `withTranslations` */
 export const meaningSnapshot = (meaning: EnMeaning, withTranslations = false): SnapshotT => ({
+  ...(meaning.etymology && { etymology_number: meaning.etymology.number }),
   title: kept(meaning.title),
   definition: kept(meaning.definition),
   sort_order: kept(meaning.sort_order),
@@ -62,6 +64,7 @@ export const formSnapshot = (form: EnWord): SnapshotT => ({
 
 /** The fields of the word itself: what the card of a word edits as its common data */
 export const wordSnapshot = (word: EnWord): SnapshotT => ({
+  ...(word.etymologies?.length && { etymologies: etymologySnapshot(word) }),
   origins: word.origins ?? null,
   description: kept(word.description),
   transcription: kept(word.transcription),

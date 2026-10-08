@@ -52,6 +52,8 @@ type KaikkiSenseT = {
   alt_of?: KaikkiLinkT[];
 };
 export type KaikkiRecordT = {
+  etymology_text?: string;
+  etymology_number?: number;
   word?: string;
   pos?: string;
   lang_code?: string;
@@ -408,6 +410,17 @@ export const convertRecord = (
   }
   const entry = emptyEntry(word, partOfSpeech);
   if (alternatives.length) entry.alternatives = alternatives;
+  const text = record.etymology_text?.trim() ?? '';
+  const sourceNumber =
+    Number.isSafeInteger(record.etymology_number) && record.etymology_number! > 0
+      ? record.etymology_number
+      : undefined;
+  if (text || sourceNumber !== undefined) {
+    entry.etymologies = [
+      { number: 1, text, ...(sourceNumber !== undefined && { source_number: sourceNumber }) },
+    ];
+    for (const meaning of meanings) meaning.etymology_number = 1;
+  }
   entry.meanings = meanings;
   entry.transcription = transcriptionOf(record);
   entry.is_obsolete = meanings.every((meaning) => meaning.is_obsolete);

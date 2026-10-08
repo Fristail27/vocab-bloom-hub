@@ -1,3 +1,4 @@
+import { EnEtymology } from './entities/en_etymology.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityMetadata, FindOptionsRelations, SelectQueryBuilder } from 'typeorm';
@@ -226,7 +227,13 @@ export class WordRowsService {
       relations.forms
         ? this.loadForms(words, entries, foundIds, wordFk, baseFormFk, this.wantsEntry(relations.forms))
         : null,
-      relations.meanings ? this.loadMeanings(meanings, foundIds) : null,
+      relations.meanings
+        ? this.loadMeanings(
+            meanings,
+            foundIds,
+            typeof relations.meanings === 'object' && Boolean(relations.meanings.etymology),
+          )
+        : null,
       relations.short_translations ? this.loadShortTranslations(shorts, foundIds) : null,
       relations.phrasal_variants
         ? this.loadVariants(
@@ -275,6 +282,19 @@ export class WordRowsService {
       }
     }
 
+    if (relations.etymologies) {
+      const meta = this.dataSource.getMetadata(EnEtymology);
+      const eq = this.dataSource.createQueryBuilder(EnEtymology, 'e').select([]);
+      this.selectScalars(eq, meta, 'e');
+      const rows = await eq
+        .addSelect('e.word', 'owner')
+        .where('e.word IN (:...ids)', { ids: foundIds })
+        .orderBy('e.number', 'ASC')
+        .getRawMany<PlainT>();
+      const groups = this.groupBy(rows, (row) => row.owner);
+      for (const word of found)
+        word.etymologies = (groups.get(word.id) ?? []).map((row) => this.hydrate(meta, row, 'e'));
+    }
     await this.loadEntryAlternatives(found, relations);
     return found as unknown as EnWord[];
   }
@@ -376,17 +396,27 @@ export class WordRowsService {
   private async loadMeanings(
     meanings: EntityMetadata,
     ids: number[],
+    withEtymology: boolean,
   ): Promise<Array<PlainT & { owner: unknown }>> {
     const meaningFk = this.fk(meanings, 'word');
     const mq = this.dataSource.createQueryBuilder(EnMeaning, 'm').select([]);
     this.selectScalars(mq, meanings, 'm');
     this.selectKey(mq, 'm', meaningFk);
+    const etymologies = this.dataSource.getMetadata(EnEtymology);
+    if (withEtymology) {
+      mq.leftJoin('m.etymology', 'e');
+      this.selectScalars(mq, etymologies, 'e');
+    }
     const raw = (await mq
       .where(`${this.column('m', meaningFk)} IN (:...ids)`, { ids })
       .orderBy(this.column('m', 'sort_order'), 'ASC')
       .addOrderBy(this.column('m', 'id'), 'ASC')
       .getRawMany()) as PlainT[];
-    return raw.map((r) => ({ ...this.hydrate(meanings, r, 'm'), owner: r[`m_${meaningFk}`] }));
+    return raw.map((r) => ({
+      ...this.hydrate(meanings, r, 'm'),
+      owner: r[`m_${meaningFk}`],
+      ...(withEtymology && { etymology: r.e_id == null ? null : this.hydrate(etymologies, r, 'e') }),
+    }));
   }
 
   private async loadTranslations(

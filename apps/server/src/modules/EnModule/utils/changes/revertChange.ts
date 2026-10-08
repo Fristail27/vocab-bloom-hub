@@ -1,3 +1,4 @@
+import { restoreEtymologies, resolveEtymology } from '../etymologies';
 import { alternativeSpellings, replaceAlternatives } from '../entryAlternatives';
 import { Dataset } from '../../../DatasetsModule/entities/dataset.entity';
 import { defaultOrigins } from '../../../../../core/utils/provenance';
@@ -200,6 +201,9 @@ const addMeaning = async (em: EntityManager, word: EnWord, values: SnapshotT): P
   const headword = word.word.word;
   const saved = await em.getRepository(EnMeaning).save({
     ...columnsOf(values, MEANING_COLUMNS),
+    ...('etymology_number' in values && {
+      etymology: await resolveEtymology(em, word.id, values.etymology_number as number | null),
+    }),
     word,
     synonyms: await linkedEntries(em, headword, values.synonyms),
     antonyms: await linkedEntries(em, headword, values.antonyms),
@@ -207,7 +211,7 @@ const addMeaning = async (em: EntityManager, word: EnWord, values: SnapshotT): P
   for (const translation of listOf(values.translations)) await addTranslation(em, saved, translation);
   return em.getRepository(EnMeaning).findOneOrFail({
     where: { id: saved.id },
-    relations: { translations: true, synonyms: true, antonyms: true },
+    relations: { etymology: true, translations: true, synonyms: true, antonyms: true },
   });
 };
 
@@ -236,6 +240,7 @@ const addWord = async (em: EntityManager, change: EnChange, values: SnapshotT): 
   });
   const word = Object.assign(saved, { word: entry });
   await restoreAlternatives(em, entry.word, values.alternatives);
+  if ('etymologies' in values) await restoreEtymologies(em, word.id, values.etymologies);
   for (const form of listOf(values.forms)) await addForm(em, word, form);
   for (const meaning of listOf(values.meanings)) await addMeaning(em, word, meaning);
   for (const translation of listOf(values.short_translations)) {
@@ -323,6 +328,7 @@ const revertWord = async (em: EntityManager, change: EnChange, diff: ChangeDiffT
     ...columnsOf(values, WORD_COLUMNS),
     ...('base_phrasal' in values && { base_phrasal: await basePhrasalOf(em, values.base_phrasal) }),
   });
+  if ('etymologies' in values) await restoreEtymologies(em, word.id, values.etymologies);
   const after = (await findWord(em, change.headword, change.part_of_speech as string)) as EnWord;
   return updated(null, before, wordSnapshot(after));
 };
@@ -368,7 +374,7 @@ const revertForm = async (
   return updated(record, before, formSnapshot(after));
 };
 
-const MEANING_RELATIONS = { translations: true, synonyms: true, antonyms: true } as const;
+const MEANING_RELATIONS = { etymology: true, translations: true, synonyms: true, antonyms: true } as const;
 
 const revertMeaning = async (
   em: EntityManager,
@@ -402,6 +408,9 @@ const revertMeaning = async (
   await em.getRepository(EnMeaning).save({
     id: meaning.id,
     ...columnsOf(values, MEANING_COLUMNS),
+    ...('etymology_number' in values && {
+      etymology: await resolveEtymology(em, word.id, values.etymology_number as number | null),
+    }),
     ...('synonyms' in values && { synonyms: await linkedEntries(em, headword, values.synonyms) }),
     ...('antonyms' in values && { antonyms: await linkedEntries(em, headword, values.antonyms) }),
   });

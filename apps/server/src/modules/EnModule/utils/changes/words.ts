@@ -7,7 +7,8 @@ import { EnWord } from '../../entities/en_word.entity';
 export const WORD_CHANGE_RELATIONS: FindOptionsRelations<EnWord> = {
   word: { alternatives: true },
   forms: { word: { alternatives: true } },
-  meanings: { translations: true, synonyms: true, antonyms: true },
+  etymologies: true,
+  meanings: { etymology: true, translations: true, synonyms: true, antonyms: true },
   short_translations: true,
   base_phrasal: { word: { alternatives: true } },
 };

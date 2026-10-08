@@ -1,3 +1,4 @@
+import { etymologiesOf } from '../../../utils/etymologies';
 import { alternativeSpellings } from '../../../utils/entryAlternatives';
 import {
   DataSetWordT,
@@ -54,6 +55,7 @@ const mapWordLinksForDS = (entries: EnEntry[] | undefined, partOfSpeech: EnPartO
 
 export const mapMeaningForDS = (m: EnMeaning, partOfSpeech: EnPartOfSpeechE): EnMeaningDST => {
   return {
+    etymology_number: m.etymology?.number ?? null,
     title: m.title || '',
     area_variant: m.area_variant || EnAreaVariantsE.common,
     meaning_level: m.meaning_level || '',
@@ -100,6 +102,7 @@ export const prepareWordForDataSet = (word: EnWord): DataSetWordT => {
   const { pattern: _p, form_of_word: _f, ...w } = word;
   return {
     alternatives: alternativeSpellings(word.word),
+    etymologies: etymologiesOf(word),
     origins: word.origins?.length ? word.origins : undefined,
     categories: sortStrings(w.categories),
     generated: Boolean(w.generated),
