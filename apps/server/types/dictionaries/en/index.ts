@@ -85,6 +85,7 @@ export type EnShortTranslationT = Omit<EnShortTranslation, 'updateAt' | 'created
 // circular Pick<Omit<…>>. The shape is the same as before
 export type EnWordFormT = Pick<EnWord, 'id' | 'transcription' | 'form_of_word' | 'is_obsolete'> & {
   word: string;
+  alternatives?: string[];
   // required on the write path (AddWordReqFormDTO), so never null on a form
   area_variant: EnAreaVariantsE;
 };
@@ -105,6 +106,7 @@ export type EnWordT = Omit<
   meanings: EnMeaningT[];
   short_translations: EnShortTranslationT[];
   forms: EnWordFormT[];
+  alternatives?: string[];
   phrasal_variants?: string[] | undefined;
   base_phrasal: string | undefined;
   base_form?: Omit<EnWordT, 'base_form'> | undefined;

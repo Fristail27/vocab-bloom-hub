@@ -334,9 +334,18 @@ export const convertRecord = (
   let partOfSpeech = PARTS_OF_SPEECH[record.pos];
   if (!partOfSpeech) return 'unsupported_part_of_speech';
 
-  // an inflected form or another spelling of a word has a page of its own in
-  // Wiktionary; here it is a form of its entry, or nothing
-  const own = record.senses.filter((sense) => !sense.form_of?.length && !sense.alt_of?.length);
+  // Inflections remain forms of their base. Alternative-only records retain
+  // their source gloss (e.g. 'Alternative spelling of ...') and spelling links.
+  const own = record.senses.filter((sense) => !sense.form_of?.length);
+  const alternatives = linkedWords(
+    [
+      ...(record.forms ?? [])
+        .filter((form) => has(form.tags, 'alternative'))
+        .map((form) => ({ word: form.form })),
+      ...own.flatMap((sense) => sense.alt_of ?? []),
+    ],
+    word,
+  ).sort();
   if (own.length === 0) return 'form_or_alternative';
 
   const meanings: ConvertedMeaningT[] = [];
@@ -398,6 +407,7 @@ export const convertRecord = (
     partOfSpeech = EnPartOfSpeechE.modal_verb;
   }
   const entry = emptyEntry(word, partOfSpeech);
+  if (alternatives.length) entry.alternatives = alternatives;
   entry.meanings = meanings;
   entry.transcription = transcriptionOf(record);
   entry.is_obsolete = meanings.every((meaning) => meaning.is_obsolete);

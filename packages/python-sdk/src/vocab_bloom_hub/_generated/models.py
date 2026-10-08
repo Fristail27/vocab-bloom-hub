@@ -236,6 +236,7 @@ class EnPhrasalObjectPatternE(Enum):
 
 
 class PublicWordV1FormT(BaseModel):
+    alternatives: list[str] | None = None
     id: int
     word: str
     form_of_word: EnWordFormsE
@@ -451,6 +452,7 @@ class PublicWordFormV1T(BaseModel):
     part_of_speech: EnPartOfSpeechE
     source: str | None = None
     modified: bool | None = None
+    alternatives: list[str] | None = None
     id: int
     word: str
     form_of_word: EnWordFormsE
@@ -546,6 +548,9 @@ class PublicMetaV1ResT(BaseModel):
 
 
 class PublicSearchWordV1T(BaseModel):
+    alternatives: list[str] | None = Field(
+        None, description="Alternative spellings of this headword, shared by all its parts of speech."
+    )
     origins: list[OriginT] | None = None
     contributions: list[OriginT] | None = Field(
         None, description="Terms of the datasets whose edits still contribute to this word."
@@ -636,6 +641,9 @@ class PublicWordV1T(BaseModel):
     meanings: list[PublicWordV1MeaningT]
     short_translations: list[PublicWordV1ShortTranslationT]
     phrasal_variants: list[str] | None = None
+    alternatives: list[str] | None = Field(
+        None, description="Alternative spellings of this headword, shared by all its parts of speech."
+    )
     origins: list[OriginT] | None = None
     contributions: list[OriginT] | None = Field(
         None, description="Terms of the datasets whose edits still contribute to this word."

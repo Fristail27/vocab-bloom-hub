@@ -1,5 +1,6 @@
 // the dataset a request works on (issue #540): the active one for the public
 // API, the one an admin request names for the search of the admin UI
+import { alternativeSpellings } from '../../EnModule/utils/entryAlternatives';
 import { licensesOf } from '../../../../core/utils/provenance';
 import { currentDatasetSource } from '../../../core/utils/dataset-scope';
 import { EnChange } from '../../EnModule/entities/en_change.entity';
@@ -76,6 +77,7 @@ export const toPublicMeaning = (
 export const toPublicForm = (row: EnWord): PublicWordV1FormT => ({
   id: row.id,
   word: row.word.word,
+  alternatives: alternativeSpellings(row.word),
   form_of_word: row.form_of_word,
   // the column is nullable, the contract is not: an unmarked form is common
   area_variant: row.area_variant ?? EnAreaVariantsE.common,
@@ -101,6 +103,7 @@ export const toPublicSearchWord = (
 ): PublicSearchWordV1T => ({
   id: row.id,
   word: row.word.word,
+  alternatives: alternativeSpellings(row.word),
   part_of_speech: row.part_of_speech,
   form_of_word: row.form_of_word,
   is_obsolete: row.is_obsolete ?? false,

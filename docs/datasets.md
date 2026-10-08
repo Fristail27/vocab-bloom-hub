@@ -758,3 +758,15 @@ All mutation routes require admin authentication:
 
 See [the portable format](./offline-import.md#provenance-export-format) before moving these
 records to another instance or publishing them on Hugging Face.
+
+## Alternative spellings
+
+Alternative spellings belong to the headword (`EnEntry`), shared by all its parts of
+speech. Word and form responses expose sorted `alternatives: string[]`. Links are
+reciprocal, preserve case, omit self-links, and do not imply transitive equivalence.
+They point only to headwords that exist in the same dataset.
+
+The Wiktionary converter reads `forms` tagged `alternative` and senses with `alt_of`.
+Alternative-only records keep their source definition, rather than copying the target's
+meanings. Import resolves links after loading all words, phrases and forms. Reconvert
+and reinstall the source to recover alternatives discarded by older converters.

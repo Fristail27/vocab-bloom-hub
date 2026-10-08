@@ -71,6 +71,7 @@ export type DataSetWordT = Omit<
   | 'verb___transitivity'
   | 'verb___phrasal_object_pattern'
 > & {
+  alternatives?: string[];
   word: string;
   word_level: WordLevelE | '';
   area_variant: EnAreaVariantsE | '';
@@ -116,6 +117,7 @@ export type DataSetPhraseT = Omit<
   | 'is_abbreviation'
   | 'part_of_speech'
 > & {
+  alternatives?: string[];
   phrase: string;
   level: WordLevelE | '';
   area_variant: EnAreaVariantsE | '';

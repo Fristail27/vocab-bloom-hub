@@ -43,6 +43,7 @@ export type ConvertedFormT = {
 };
 
 export type ConvertedEntryT = {
+  alternatives?: string[];
   generated?: boolean;
   generated_by_model?: string;
   /** Exact terms when the source identifies them per word. */

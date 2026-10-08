@@ -1,4 +1,5 @@
 import { licensesOf } from '../../../../core/utils/provenance';
+import { alternativeSpellings } from './entryAlternatives';
 import { EnWord } from '../entities/en_word.entity';
 import { EnWordT } from '../../../../types';
 import { prepareWordForm } from './prepareWordForm';
@@ -9,6 +10,7 @@ export const prepareWordFromDB = (row: EnWord): EnWordT => {
   const { createdAt: _createdAt, updateAt: _updateAt, short_translations, ...other } = row;
   return {
     ...other,
+    alternatives: alternativeSpellings(row.word),
     word: row.word.word,
     licenses: licensesOf([...(row.origins ?? []), ...(row.contributions ?? [])]),
     user_modified: row.word.user_modified ?? false,

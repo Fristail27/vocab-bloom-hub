@@ -45,14 +45,16 @@ Start or restart the selected client in the repository root after setup. Follow 
 workspace trust and MCP approval prompts.
 
 Codex's generated configuration reserves 64 KiB for project instructions and allows 60 seconds
-for Context7's cold start. Trust this checkout so Codex loads the project configuration; start
-a new session after generating it. See the official OpenAI documentation on
+for Context7's cold start. For this repository it uses `approval_policy = "never"` with
+`workspace-write` and network access enabled. Commands run without approval prompts inside
+that sandbox; protected paths and managed application restrictions still apply. Trust this checkout
+so Codex loads the project configuration; start a new session after generating it. See the official OpenAI documentation on
 [configuration files](https://learn.chatgpt.com/docs/config-file/config-basic) and
 [MCP settings](https://learn.chatgpt.com/docs/extend/mcp).
 
 Gemini's generated settings point `context.fileName` at `AGENTS.md` and `GEMINI.md`, so it reads
-the shared instructions without another copy. Setup does not choose a model or change approval
-policies for any client.
+the shared instructions without another copy. Setup does not choose a model. The Codex approval
+settings above are repository defaults; setup does not change approval policies for other clients.
 
 ## Existing files and updates
 

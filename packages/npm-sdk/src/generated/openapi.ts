@@ -392,6 +392,8 @@ export interface components {
       meta: components['schemas']['PublicSearchV1MetaT'];
     };
     PublicSearchWordV1T: {
+      /** @description Alternative spellings of this headword, shared by all its parts of speech. */
+      alternatives?: string[];
       origins?: components['schemas']['OriginT'][];
       /** @description Terms of the datasets whose edits still contribute to this word. */
       contributions?: components['schemas']['OriginT'][];
@@ -540,6 +542,7 @@ export interface components {
     /** @enum {string} */
     EnPhrasalObjectPatternE: 'no_object' | 'inseparable' | 'separable' | 'separable_pronoun_only';
     PublicWordV1FormT: {
+      alternatives?: string[];
       id: number;
       word: string;
       form_of_word: components['schemas']['EnWordFormsE'];
@@ -561,6 +564,8 @@ export interface components {
       meanings: components['schemas']['PublicWordV1MeaningT'][];
       short_translations: components['schemas']['PublicWordV1ShortTranslationT'][];
       phrasal_variants?: string[];
+      /** @description Alternative spellings of this headword, shared by all its parts of speech. */
+      alternatives?: string[];
       origins?: components['schemas']['OriginT'][];
       /** @description Terms of the datasets whose edits still contribute to this word. */
       contributions?: components['schemas']['OriginT'][];
@@ -668,6 +673,7 @@ export interface components {
       part_of_speech: components['schemas']['EnPartOfSpeechE'];
       source?: string;
       modified?: boolean;
+      alternatives?: string[];
       id: number;
       word: string;
       form_of_word: components['schemas']['EnWordFormsE'];

@@ -138,6 +138,7 @@ export class DatasetWriter {
     const description = entry.meanings[0].definition;
     if (entry.origins) this.hasOrigins = true;
     const shared = {
+      ...(entry.alternatives && { alternatives: [...new Set(entry.alternatives)].sort() }),
       ...(entry.origins && { origins: entry.origins }),
       categories: [...entry.categories].sort(),
       generated: entry.generated ?? false,

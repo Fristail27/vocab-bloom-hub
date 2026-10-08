@@ -275,7 +275,43 @@ export class WordRowsService {
       }
     }
 
+    await this.loadEntryAlternatives(found, relations);
     return found as unknown as EnWord[];
+  }
+
+  /** Collect requested headword relations across forms and words; one query per batch. */
+  private async loadEntryAlternatives(rows: PlainT[], relations: unknown): Promise<void> {
+    const entries: PlainT[] = [];
+    const visit = (value: unknown, options: unknown): void => {
+      if (!value || !options || typeof options !== 'object') return;
+      if (Array.isArray(value)) {
+        for (const item of value) visit(item, options);
+        return;
+      }
+      if (typeof value !== 'object') return;
+      const row = value as PlainT;
+      const wanted = options as PlainT;
+      if (wanted.alternatives && typeof row.word === 'string') entries.push(row);
+      for (const [name, child] of Object.entries(wanted)) if (name !== 'alternatives') visit(row[name], child);
+    };
+    visit(rows, relations);
+    if (!entries.length) return;
+    const names = [...new Set(entries.map((entry) => entry.word as string))];
+    const meta = this.dataSource.getMetadata(EnEntry);
+    const { table, owner, inverse } = this.junction(meta, 'alternatives');
+    const qb = this.dataSource
+      .createQueryBuilder()
+      .select(this.column('j', owner), 'owner')
+      .from(table, 'j')
+      .innerJoin(meta.tableName, 'a', `${this.column('a', 'word')} = ${this.column('j', inverse)}`);
+    this.selectScalars(qb, meta, 'a');
+    const raw = await qb
+      .where(`${this.column('j', owner)} IN (:...names)`, { names })
+      .orderBy(this.column('j', inverse), 'ASC')
+      .getRawMany<PlainT>();
+    const groups = this.groupBy(raw, (row) => row.owner);
+    for (const entry of entries)
+      entry.alternatives = (groups.get(entry.word) ?? []).map((row) => this.hydrate(meta, row, 'a'));
   }
 
   /** One indexed query per batch, including edits inherited from earlier forks. */

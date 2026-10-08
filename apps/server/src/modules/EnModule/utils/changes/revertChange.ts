@@ -1,3 +1,4 @@
+import { alternativeSpellings, replaceAlternatives } from '../entryAlternatives';
 import { Dataset } from '../../../DatasetsModule/entities/dataset.entity';
 import { defaultOrigins } from '../../../../../core/utils/provenance';
 import { currentDatasetName } from '../../../../core/utils/dataset-scope';
@@ -163,6 +164,16 @@ const basePhrasalOf = async (em: EntityManager, value: unknown): Promise<EnWord 
   return findWord(em, value, EnPartOfSpeechE.verb);
 };
 
+/** A restored spelling keeps links of any surviving POS, plus those in its snapshot. */
+const restoreAlternatives = async (em: EntityManager, headword: string, value: unknown): Promise<void> => {
+  if (!Array.isArray(value)) return;
+  const entry = await em.findOneOrFail(EnEntry, {
+    where: { word: headword },
+    relations: { alternatives: true },
+  });
+  await replaceAlternatives(em, new Map([[headword, [...alternativeSpellings(entry), ...spellingsOf(value)]]]));
+};
+
 // ------------------------------------------------------------ creation
 
 const addForm = async (em: EntityManager, word: EnWord, values: SnapshotT): Promise<EnWord> => {
@@ -174,7 +185,8 @@ const addForm = async (em: EntityManager, word: EnWord, values: SnapshotT): Prom
     base_form: word,
     generated: false,
   });
-  return Object.assign(saved, { word: entry });
+  await restoreAlternatives(em, entry.word, values.alternatives);
+  return em.findOneOrFail(EnWord, { where: { id: saved.id }, relations: { word: { alternatives: true } } });
 };
 
 const addTranslation = async (
@@ -223,6 +235,7 @@ const addWord = async (em: EntityManager, change: EnChange, values: SnapshotT): 
     base_phrasal: await basePhrasalOf(em, values.base_phrasal),
   });
   const word = Object.assign(saved, { word: entry });
+  await restoreAlternatives(em, entry.word, values.alternatives);
   for (const form of listOf(values.forms)) await addForm(em, word, form);
   for (const meaning of listOf(values.meanings)) await addMeaning(em, word, meaning);
   for (const translation of listOf(values.short_translations)) {
@@ -295,7 +308,8 @@ const revertWord = async (em: EntityManager, change: EnChange, diff: ChangeDiffT
 
   if (change.action === ChangeActionE.create) {
     const before = fullWordSnapshot(word);
-    assertStillSays(before, sideOf(diff, 'after'));
+    const { alternatives: _sharedAlternatives, ...left } = sideOf(diff, 'after');
+    assertStillSays(before, left);
     await deleteWordRows(em, word);
     return deleted(null, before);
   }
@@ -331,7 +345,8 @@ const revertForm = async (
   if (!form) return outdated();
   const before = formSnapshot(form);
   const record = formRecord(form);
-  assertStillSays(before, left);
+  const { alternatives: _sharedAlternatives, ...leftForm } = left;
+  assertStillSays(before, leftForm);
 
   if (change.action === ChangeActionE.create) {
     await em.getRepository(EnWord).delete({ id: form.id });
@@ -343,10 +358,13 @@ const revertForm = async (
   const spelling = typeof values.word === 'string' && values.word !== '' ? values.word : form.word.word;
   const entry = await getOrAddEntry(em, spelling, entryTypeOf(EnPartOfSpeechE.noun));
   await em.getRepository(EnWord).save({ id: form.id, ...columnsOf(values, FORM_COLUMNS), word: entry });
-  if (spelling !== form.word.word) await dropEntryIfUnused(em, form.word.word);
+  if (spelling !== form.word.word) {
+    await dropEntryIfUnused(em, form.word.word);
+    await restoreAlternatives(em, spelling, values.alternatives);
+  }
   const after = await em
     .getRepository(EnWord)
-    .findOneOrFail({ where: { id: form.id }, relations: { word: true } });
+    .findOneOrFail({ where: { id: form.id }, relations: { word: { alternatives: true } } });
   return updated(record, before, formSnapshot(after));
 };
 
@@ -465,6 +483,62 @@ const revertShortTranslation = async (
 };
 
 const revertRecord = async (em: EntityManager, change: EnChange, diff: ChangeDiffT): Promise<RevertedT> => {
+  if (change.entity === ChangeEntityE.word && change.part_of_speech === null) {
+    if (change.action !== ChangeActionE.update || Object.keys(diff).some((key) => key !== 'alternatives'))
+      return outdated();
+    const entry = await em.findOne(EnEntry, {
+      where: { word: change.headword },
+      relations: { alternatives: true },
+    });
+    if (!entry) return outdated();
+    const before = { alternatives: alternativeSpellings(entry) };
+    assertStillSays(before, sideOf(diff, 'after'));
+    const restored = spellingsOf(sideOf(diff, 'before').alternatives);
+    const peers = new Map<string, string[]>();
+    for (const name of new Set([...before.alternatives, ...restored])) {
+      const peer = await em.findOne(EnEntry, { where: { word: name }, relations: { alternatives: true } });
+      if (peer) peers.set(name, alternativeSpellings(peer));
+    }
+    await replaceAlternatives(em, new Map([[entry.word, restored]]));
+    // Reverting either endpoint also undoes the reciprocal history record.
+    for (const [headword, previous] of peers) {
+      const peer = await em.findOneOrFail(EnEntry, {
+        where: { word: headword },
+        relations: { alternatives: true },
+      });
+      const current = alternativeSpellings(peer);
+      const peerDiff = changedFields({ alternatives: previous }, { alternatives: current });
+      if (!peerDiff) continue;
+      const active = await em.find(EnChange, {
+        where: { headword, part_of_speech: IsNull(), superseded_at: IsNull() },
+        order: { id: 'DESC' },
+      });
+      const inverse = active.find(
+        (item) =>
+          !item.inherited_from &&
+          item.entity === ChangeEntityE.word &&
+          item.action === ChangeActionE.update &&
+          Object.keys(item.diff).length === 1 &&
+          saysTheSame(item.diff.alternatives?.after, previous) &&
+          saysTheSame(item.diff.alternatives?.before, current),
+      );
+      await recordChange(em, {
+        headword,
+        part_of_speech: null,
+        entity: ChangeEntityE.word,
+        action: ChangeActionE.update,
+        diff: peerDiff,
+      });
+      if (inverse) await em.update(EnChange, { id: inverse.id }, { superseded_at: new Date() });
+      if (!(await em.count(EnChange, { where: { headword, superseded_at: IsNull() } })))
+        await em.update(EnEntry, { word: headword }, { user_modified: false });
+    }
+    const after = await em.findOneOrFail(EnEntry, {
+      where: { word: entry.word },
+      relations: { alternatives: true },
+    });
+    return updated(null, before, { alternatives: alternativeSpellings(after) });
+  }
   if (change.entity === ChangeEntityE.word) return revertWord(em, change, diff);
   if (!change.record) return outdated();
   const word = await findWord(em, change.headword, change.part_of_speech as string);
@@ -485,7 +559,13 @@ const revertRecord = async (em: EntityManager, change: EnChange, diff: ChangeDif
 
 /** Whether a change can be taken back at all: it still shows in what is served, and names its word */
 export const isRevertible = (change: EnChange): boolean =>
-  !change.inherited_from && !change.superseded_at && Boolean(change.part_of_speech);
+  !change.inherited_from &&
+  !change.superseded_at &&
+  (Boolean(change.part_of_speech) ||
+    (change.entity === ChangeEntityE.word &&
+      change.action === ChangeActionE.update &&
+      Object.keys(change.diff).length === 1 &&
+      'alternatives' in change.diff));
 
 /**
  * Takes a change back, with the manager of one transaction and inside
@@ -497,12 +577,14 @@ export const isRevertible = (change: EnChange): boolean =>
 export const revertChange = async (em: EntityManager, change: EnChange): Promise<void> => {
   if (!isRevertible(change)) throw new ConflictException(ErrorCodes.change_not_revertible);
   const changes = em.getRepository(EnChange);
-  const word = { headword: change.headword, part_of_speech: change.part_of_speech as string };
+  const word = { headword: change.headword, part_of_speech: change.part_of_speech };
   const reverted = await revertRecord(em, change, change.diff);
 
   // the last change of the entry that shows: the entry gets its version back
-  const shown = await changes.count({ where: { ...word, superseded_at: IsNull() } });
-  const version = shown <= 1 ? await restoreVersion(em, change) : null;
+  const shown = await changes.count({
+    where: { ...word, part_of_speech: word.part_of_speech ?? IsNull(), superseded_at: IsNull() },
+  });
+  const version = change.part_of_speech && shown <= 1 ? await restoreVersion(em, change) : null;
   const diff =
     version && change.entity === ChangeEntityE.word && reverted.action === ChangeActionE.update
       ? { ...reverted.diff, [VERSION]: version }

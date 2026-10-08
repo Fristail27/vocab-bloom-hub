@@ -30,6 +30,7 @@ const SCHEMA = `ds_${NAME}`;
 const HEADWORD = `zzpgspec${Date.now().toString(36)}`;
 
 const DICTIONARY_TABLES = [
+  'en_entry_alternatives',
   'en_entries',
   'en_words',
   'en_meanings',
@@ -195,6 +196,36 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
     expect(await columnsOf(SCHEMA)).toEqual(await columnsOf('public'));
     expect(await indexesOf(SCHEMA)).toEqual(await indexesOf('public'));
     expect(await foreignKeysOf(SCHEMA)).toEqual(await foreignKeysOf('public'));
+  });
+
+  it('isolates reciprocal alternatives per schema and rolls their migration down/up', async () => {
+    const { replaceAlternatives } = await import('../src/modules/EnModule/utils/entryAlternatives');
+    const { AddEntryAlternatives1791400000000 } =
+      await import('../src/db/dataset-migrations/1791400000000-AddEntryAlternatives');
+    const runner = dataSource.createQueryRunner();
+    await runner.connect();
+    await runner.startTransaction();
+    try {
+      await runner.query(`SET LOCAL search_path TO "${SCHEMA}", public`);
+      await runner.query(`INSERT INTO en_entries (word) VALUES ('alt-test-a'), ('alt-test-b')`);
+      await replaceAlternatives(runner.manager, new Map([['alt-test-a', ['alt-test-b']]]));
+      expect(await runner.query('SELECT word, alternative FROM en_entry_alternatives ORDER BY word')).toEqual([
+        { word: 'alt-test-a', alternative: 'alt-test-b' },
+        { word: 'alt-test-b', alternative: 'alt-test-a' },
+      ]);
+      expect(
+        await runner.query(`SELECT * FROM public.en_entry_alternatives WHERE word = 'alt-test-a'`),
+      ).toEqual([]);
+      await runner.query(`DELETE FROM en_entries WHERE word = 'alt-test-b'`);
+      expect(await runner.query('SELECT * FROM en_entry_alternatives')).toEqual([]);
+      const migration = new AddEntryAlternatives1791400000000();
+      await migration.down(runner);
+      await migration.up(runner);
+      expect(await runner.query('SELECT * FROM en_entry_alternatives')).toEqual([]);
+    } finally {
+      await runner.rollbackTransaction();
+      await runner.release();
+    }
   });
 
   it('starts the history empty: an entry edited before is not guessed to differ from its source (issue #531)', async () => {

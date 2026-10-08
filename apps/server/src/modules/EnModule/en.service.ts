@@ -1,3 +1,4 @@
+import { alternativeSpellings, replaceAlternatives } from './utils/entryAlternatives';
 import { WordCopyService, CopiedWordT } from './word-copy.service';
 import { EnChange } from './entities/en_change.entity';
 import { recordCopiedEdits } from './utils/changes/recordCopiedEdits';
@@ -130,6 +131,7 @@ export class EnService {
       meanings: _meanings,
       forms: _forms,
       phrasal_variants: _phrasalVariants,
+      alternatives: _alternatives,
       id: _id,
       base_phrasal,
       ...other
@@ -166,7 +168,9 @@ export class EnService {
       .getOne();
   }
   private async getOrAddEntry(em: EntityManager, word: string, type: EnEntryTypesE): Promise<EnEntry> {
-    const entry = await em.getRepository(EnEntry).findOne({ where: { word }, relations: { entries: true } });
+    const entry = await em
+      .getRepository(EnEntry)
+      .findOne({ where: { word }, relations: { entries: true, alternatives: true } });
     if (entry) {
       return entry;
     }
@@ -179,7 +183,7 @@ export class EnService {
     baseWord: EnWord,
     copied = false,
   ) {
-    const { id: _id, word, ...f } = wordForm;
+    const { id: _id, word, alternatives: _alternatives, ...f } = wordForm;
     const formEntry = await this.getOrAddEntry(em, word, EnEntryTypesE.word);
     const wordRow = await this.getWordRow(word, baseWord.part_of_speech, f.form_of_word, em);
     if (wordRow) {
@@ -292,6 +296,59 @@ export class EnService {
             em,
           );
         }
+      }
+
+      const alternatives = new Map<string, string[]>();
+      const supplied = body.alternatives ?? copied?.row.word.alternatives?.map((entry) => entry.word);
+      if (supplied) alternatives.set(body.word, supplied);
+      for (const form of body.forms ?? []) {
+        const sourceForm = copied?.row.forms?.find((item) => item.word.word === form.word);
+        const suppliedForm = form.alternatives ?? sourceForm?.word.alternatives?.map((item) => item.word);
+        if (suppliedForm) alternatives.set(form.word, suppliedForm);
+      }
+      for (const [headword, values] of alternatives) {
+        const entry = await em.findOneOrFail(EnEntry, {
+          where: { word: headword },
+          relations: { alternatives: true },
+        });
+        alternatives.set(headword, [...alternativeSpellings(entry), ...values]);
+      }
+      // Capture reciprocal changes for every affected headword, with no POS qualifier.
+      const affected = [...new Set([...alternatives].flatMap(([word, values]) => [word, ...values]))];
+      const beforeAlternatives = new Map<string, string[]>();
+      for (const headword of affected) {
+        const entry = await em.findOne(EnEntry, {
+          where: { word: headword },
+          relations: { alternatives: true },
+        });
+        if (entry) beforeAlternatives.set(headword, alternativeSpellings(entry));
+      }
+      await replaceAlternatives(em, alternatives);
+      for (const [headword, before] of beforeAlternatives) {
+        const entry = await em.findOneOrFail(EnEntry, {
+          where: { word: headword },
+          relations: { alternatives: true },
+        });
+        const after = alternativeSpellings(entry);
+        let beforeList = before;
+        const sourceEntry =
+          copied &&
+          (headword === body.word
+            ? copied.row.word
+            : copied.row.forms?.find((form) => form.word.word === headword)?.word);
+        if (sourceEntry) {
+          const sourceList = sourceEntry.alternatives?.map((item) => item.word) ?? [];
+          const available: string[] = [];
+          for (const word of sourceList) if (await em.existsBy(EnEntry, { word })) available.push(word);
+          beforeList = [...new Set([...before, ...available])].sort();
+        }
+        await recordChange(em, {
+          headword,
+          part_of_speech: null,
+          entity: ChangeEntityE.word,
+          action: ChangeActionE.update,
+          diff: changedFields({ alternatives: beforeList }, { alternatives: after }),
+        });
       }
 
       // an admin-created word is the admin's own content from the start: kept
@@ -583,7 +640,7 @@ export class EnService {
   }
 
   async editWordForm(body: EditWordFormReqDTO): Promise<EditWordFormResT> {
-    const word = await this.requireWord(body.id, { word: true, base_form: { word: true } });
+    const word = await this.requireWord(body.id, { word: { alternatives: true }, base_form: { word: true } });
 
     const valuesBefore = formSnapshot(word);
     const recordBefore = formRecord(word);

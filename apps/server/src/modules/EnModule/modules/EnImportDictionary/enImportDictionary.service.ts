@@ -1,3 +1,4 @@
+import { normalizeAlternatives, replaceAlternatives } from '../../utils/entryAlternatives';
 import { portableManifest } from './utils/parseManifest';
 import { DATASET_FORMAT_FILE_NAME } from './constants';
 import { defaultOrigins } from '../../../../../core/utils/provenance';
@@ -438,6 +439,15 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     const { chunked, wordKey, entryTypeOf } = EnImportDictionaryService;
     this.assertNothingGenerated(lines);
     for (const line of lines) {
+      for (const record of [line, ...(line.forms ?? [])]) {
+        if (
+          record.alternatives !== undefined &&
+          (!Array.isArray(record.alternatives) ||
+            record.alternatives.some((value) => typeof value !== 'string' || value.length > 128))
+        ) {
+          throw new BadRequestException(ErrorCodes.dataset_invalid);
+        }
+      }
       if (line.origins != null) {
         if (!this.provenanceFormat || line.origins.length === 0)
           throw new BadRequestException(ErrorCodes.dataset_invalid);
@@ -504,6 +514,11 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       await this.supersedeChangesOf(em, toInsert);
       for (const line of toInsert) this.written?.add(wordKeyOf(line.word, line.part_of_speech));
 
+      for (const line of toInsert) {
+        this.collectAlternatives(line.word, line.alternatives);
+        for (const form of line.forms ?? []) this.collectAlternatives(form.word, form.alternatives);
+      }
+
       // 4. base rows in bulk (nested structures stripped, entry linked by its string PK)
       const toBaseRow = (line: EnWordT) => {
         const {
@@ -515,6 +530,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
           meanings: _meanings,
           short_translations: _shortTranslations,
           phrasal_variants: _phrasalVariants,
+          alternatives: _alternatives,
           ...rest
         } = line;
         return { ...rest, origins: line.origins ?? this.importingOrigins, word: { word } as EnEntry };
@@ -541,7 +557,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
           const key = wordKey(f.word, line.part_of_speech, f.form_of_word);
           if (seenForms.has(key)) continue;
           seenForms.add(key);
-          const { id: _fid, word: formWord, ...fRest } = f;
+          const { id: _fid, word: formWord, alternatives: _alternatives, ...fRest } = f;
           formRows.push({
             ...fRest,
             word: { word: formWord } as EnEntry,
@@ -656,6 +672,15 @@ export class EnImportDictionaryService implements OnModuleDestroy {
   // carries a history (issue #531): an edit of the copy shows in what is
   // served only where the content of the copy was taken
   private written: Set<string> | null = null;
+  private pendingAlternatives = new Map<string, string[]>();
+
+  private collectAlternatives(word: string, alternatives: string[] | undefined): void {
+    if (alternatives === undefined) return;
+    this.pendingAlternatives.set(
+      word,
+      normalizeAlternatives([...(this.pendingAlternatives.get(word) ?? []), ...alternatives], word),
+    );
+  }
 
   // whether the dataset being filled has edits that still show: asked once
   // per import, so an import into a dataset nobody edited costs nothing
@@ -1622,6 +1647,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     }
     if (!made) progress.start();
     // a manifest that lists no history has none; without a manifest the file may still be there
+    this.pendingAlternatives = new Map();
     this.written = !manifest || manifest.files[DATASET_FILE_NAMES.changes] ? new Set() : null;
 
     const startedAt = Date.now();
@@ -1669,6 +1695,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       await this.saveMeanings(source, progress, allLength, plusCount, pendingLinks, updateCtx);
       await this.saveMeaningTranslations(source, progress, allLength, plusCount, updateCtx);
       await this.saveShortTranslations(source, progress, allLength, plusCount, updateCtx);
+      await this.db.transaction((em) => replaceAlternatives(em, this.pendingAlternatives, true));
       // after every entry is in: what the import just brought in has taken
       // the place of the edits it superseded, the history of the copy is added
       await this.saveChanges(source, progress, allLength, plusCount);
@@ -1685,6 +1712,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       this.metrics?.transferFinished('import', 'failure');
       throw error;
     } finally {
+      this.pendingAlternatives.clear();
       await source.dispose().catch((error) => {
         this.logger.warn(
           `Failed to clean up the dataset source: ${error instanceof Error ? error.message : String(error)}`,
@@ -1871,8 +1899,8 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         relations: {
           base_phrasal: { word: true },
           phrasal_variants: { word: true },
-          word: true,
-          forms: { word: true },
+          word: { alternatives: true },
+          forms: { word: { alternatives: true } },
         },
         prepare: (w) => [versioned(prepareWordForDataSet(w))],
       },
@@ -1892,21 +1920,24 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         files: [{ path: file(DATASET_FILE_NAMES.phrases), keep: EVERY_LINE }],
         stage: EnDictionaryImportPhasesE.saving_phrases,
         keys: keys.filter(phrases),
-        relations: { word: true },
+        relations: { word: { alternatives: true } },
         prepare: (w) => [versioned(preparePhraseForDataSet(w))],
       },
       {
         files: [{ path: file(DATASET_FILE_NAMES.grammarPatterns), keep: EVERY_LINE }],
         stage: EnDictionaryImportPhasesE.saving_grammar_patterns,
         keys: keys.filter(grammarPatterns),
-        relations: { word: true },
+        relations: { word: { alternatives: true } },
         prepare: (w) => [versioned(prepareGrammarPatternForDataSet(w))],
       },
       {
         files: [{ path: file(DATASET_FILE_NAMES.meanings), keep: EVERY_LINE }],
         stage: EnDictionaryImportPhasesE.saving_meanings,
         keys,
-        relations: { word: true, meanings: { synonyms: { entries: true }, antonyms: { entries: true } } },
+        relations: {
+          word: true,
+          meanings: { synonyms: { entries: true }, antonyms: { entries: true } },
+        },
         prepare: prepareMeaningsForDataSet,
       },
       // the translations: one file per language of the enum, a line goes to

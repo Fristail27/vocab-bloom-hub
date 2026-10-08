@@ -300,3 +300,17 @@ Words with a WordNet source retain both OpenGloss and Princeton WordNet 3.0 snap
 words retain the OpenGloss snapshot. Export/import preserves the converted dictionary, its
 source versions, links and notices. It does not restore upstream Parquet fields that the
 [converter deliberately leaves out](./datasets.md#opengloss-24).
+
+## Alternative spelling links
+
+Word, phrase and grammar-pattern lines may carry `alternatives: string[]`; form objects
+may carry the same field for their own headword. Export repeats the headword's list for
+every part of speech. Import unions supplied lists for a headword before resolving them,
+so file/chunk/POS order does not affect the result. Links are reciprocal and use exact
+spellings, never local IDs or part-of-speech qualifiers. Missing targets are skipped.
+
+An omitted field in an older file preserves existing links. An explicitly empty list
+can clear an imported headword's unprotected links in update mode, unless the reciprocal
+endpoint explicitly requests the pair. Links involving a user-modified headword remain
+protected. Export with a version that understands this field to preserve it on round-trip;
+older importers may discard it. Alternative-only Wiktionary words retain the source gloss.

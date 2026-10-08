@@ -5,6 +5,7 @@ import { mapMeaningFromSetToDB } from './mapMeaningFromSetToDB';
 
 export const mapWordFromSetToDB = (line: DataSetWordT) => {
   return {
+    alternatives: line.alternatives,
     origins: line.origins,
     word: line.word,
     part_of_speech: line.part_of_speech,

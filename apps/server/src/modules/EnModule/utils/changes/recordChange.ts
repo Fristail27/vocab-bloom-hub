@@ -9,7 +9,8 @@ import { captureContribution } from './contribution';
 /** The word an edit belongs to: the headword and the part of speech of the base word */
 export type WordKeyT = { headword: string; part_of_speech: string };
 
-export type NewChangeT = WordKeyT & {
+export type NewChangeT = Omit<WordKeyT, 'part_of_speech'> & {
+  part_of_speech: string | null;
   reason?: string;
   entity: ChangeEntityE;
   action: ChangeActionE;
