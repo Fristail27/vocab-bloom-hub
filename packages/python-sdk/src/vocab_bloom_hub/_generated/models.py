@@ -252,6 +252,11 @@ class PublicSearchDetailedV1MetaT(BaseModel):
     short_term: bool
 
 
+class Etymology(BaseModel):
+    number: int
+    text: str
+
+
 class AvailableTranslationLanguagesE(Enum):
     ru = "ru"
     es = "es"
@@ -424,6 +429,9 @@ class PublicMeaningV1T(BaseModel):
     part_of_speech: EnPartOfSpeechE
     source: str | None = None
     modified: bool | None = None
+    etymology_number: int | None = Field(
+        None, description="Local number of the owning word etymology; null when unknown."
+    )
     id: int
     sort_order: int
     title: str
@@ -585,6 +593,9 @@ class PublicSearchWordV1T(BaseModel):
 
 
 class PublicWordV1MeaningT(BaseModel):
+    etymology_number: int | None = Field(
+        None, description="Local number of the owning word etymology; null when unknown."
+    )
     id: int
     sort_order: int
     title: str
@@ -638,6 +649,7 @@ class PublicSearchV1ResT(BaseModel):
 
 
 class PublicWordV1T(BaseModel):
+    etymologies: list[Etymology] | None = None
     meanings: list[PublicWordV1MeaningT]
     short_translations: list[PublicWordV1ShortTranslationT]
     phrasal_variants: list[str] | None = None

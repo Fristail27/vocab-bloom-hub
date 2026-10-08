@@ -1,3 +1,4 @@
+import { etymologiesOf } from '../../EnModule/utils/etymologies';
 // the dataset a request works on (issue #540): the active one for the public
 // API, the one an admin request names for the search of the admin UI
 import { alternativeSpellings } from '../../EnModule/utils/entryAlternatives';
@@ -57,6 +58,7 @@ export const toPublicMeaning = (
   row: EnMeaning,
   filter: PublicTranslationFilterT = {},
 ): PublicWordV1MeaningT => ({
+  etymology_number: row.etymology?.number ?? null,
   id: row.id,
   sort_order: row.sort_order,
   title: row.title,
@@ -145,6 +147,7 @@ export type PublicWordOptionsT = PublicTranslationFilterT &
 
 /** The full entry: the search item plus meanings, short translations and, when loaded, phrasal variants */
 export const toPublicWord = (row: EnWord, options: PublicWordOptionsT = {}): PublicWordV1T => ({
+  etymologies: etymologiesOf(row),
   ...toPublicSearchWord(row, options),
   meanings: options.with_meanings ? (row.meanings ?? []).map((m) => toPublicMeaning(m, options)) : [],
   short_translations: options.with_translations

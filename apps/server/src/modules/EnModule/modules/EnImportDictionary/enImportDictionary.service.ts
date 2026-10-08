@@ -1,3 +1,4 @@
+import { saveEtymologies, resolveEtymology, validateEtymologies } from '../../utils/etymologies';
 import { normalizeAlternatives, replaceAlternatives } from '../../utils/entryAlternatives';
 import { portableManifest } from './utils/parseManifest';
 import { DATASET_FORMAT_FILE_NAME } from './constants';
@@ -530,6 +531,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
           meanings: _meanings,
           short_translations: _shortTranslations,
           phrasal_variants: _phrasalVariants,
+          etymologies: _etymologies,
           alternatives: _alternatives,
           ...rest
         } = line;
@@ -545,6 +547,13 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       (await this.selectWordRows(em, insertedNames)).forEach((r) =>
         idByKey.set(wordKey(r.word, r.pos, r.form), r.id),
       );
+
+      for (const line of toInsert)
+        if (line.etymologies !== undefined) {
+          validateEtymologies(line.etymologies);
+          const id = idByKey.get(wordKey(line.word, line.part_of_speech, line.form_of_word))!;
+          await saveEtymologies(em, id, line.etymologies);
+        }
 
       // 6. forms belong to their base row: "axes" can be the plural of both
       // "axe" and "axis". The bases are new, so only deduplicate within each
@@ -578,8 +587,11 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       for (const line of toInsert) {
         const wordId = idByKey.get(wordKey(line.word, line.part_of_speech, line.form_of_word));
         for (const m of line.meanings ?? []) {
-          const { id: _mid, translations, synonyms, antonyms, ...mRest } = m;
-          const res = await em.getRepository(EnMeaning).insert({ ...mRest, word: { id: wordId } as EnWord });
+          const { id: _mid, etymology_number, translations, synonyms, antonyms, ...mRest } = m;
+          const etymology = await resolveEtymology(em, wordId!, etymology_number);
+          const res = await em
+            .getRepository(EnMeaning)
+            .insert({ ...mRest, etymology, word: { id: wordId } as EnWord });
           const meaningId = res.identifiers[0]?.id as number;
           // synonyms / antonyms link to entries that may only appear later in the
           // dataset (or in another file), so they are resolved once every file is in
@@ -1328,8 +1340,11 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         }
         seen.add(key);
 
-        const { id: _id, translations: _translations, synonyms, antonyms, ...rest } = meaning;
-        const res = await em.getRepository(EnMeaning).insert({ ...rest, word: { id: wordId } as EnWord });
+        const { id: _id, etymology_number, translations: _translations, synonyms, antonyms, ...rest } = meaning;
+        const etymology = await resolveEtymology(em, wordId, etymology_number);
+        const res = await em
+          .getRepository(EnMeaning)
+          .insert({ ...rest, etymology, word: { id: wordId } as EnWord });
         const meaningId = res.identifiers[0]?.id as number;
         for (const kind of WORD_LINK_KINDS) {
           const words = normalizeWordLinks(kind === 'synonyms' ? synonyms : antonyms, line.word);
@@ -1897,6 +1912,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         stage: EnDictionaryImportPhasesE.saving_words,
         keys: keys.filter(words),
         relations: {
+          etymologies: true,
           base_phrasal: { word: true },
           phrasal_variants: { word: true },
           word: { alternatives: true },
@@ -1920,14 +1936,14 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         files: [{ path: file(DATASET_FILE_NAMES.phrases), keep: EVERY_LINE }],
         stage: EnDictionaryImportPhasesE.saving_phrases,
         keys: keys.filter(phrases),
-        relations: { word: { alternatives: true } },
+        relations: { word: { alternatives: true }, etymologies: true },
         prepare: (w) => [versioned(preparePhraseForDataSet(w))],
       },
       {
         files: [{ path: file(DATASET_FILE_NAMES.grammarPatterns), keep: EVERY_LINE }],
         stage: EnDictionaryImportPhasesE.saving_grammar_patterns,
         keys: keys.filter(grammarPatterns),
-        relations: { word: { alternatives: true } },
+        relations: { word: { alternatives: true }, etymologies: true },
         prepare: (w) => [versioned(prepareGrammarPatternForDataSet(w))],
       },
       {
@@ -1936,7 +1952,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         keys,
         relations: {
           word: true,
-          meanings: { synonyms: { entries: true }, antonyms: { entries: true } },
+          meanings: { etymology: true, synonyms: { entries: true }, antonyms: { entries: true } },
         },
         prepare: prepareMeaningsForDataSet,
       },

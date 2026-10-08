@@ -1,3 +1,4 @@
+import { etymologiesOf } from '../../../utils/etymologies';
 import { alternativeSpellings } from '../../../utils/entryAlternatives';
 import { DataSetPhraseT } from '../../../../../../types/dictionaries/en/EnDataSetTypes';
 import { EnWord } from '../../../entities/en_word.entity';
@@ -7,6 +8,7 @@ export const preparePhraseForDataSet = (word: EnWord): DataSetPhraseT => {
   const { pattern: _p, form_of_word: _f, ...w } = word;
   return {
     alternatives: alternativeSpellings(word.word),
+    etymologies: etymologiesOf(word),
     origins: word.origins?.length ? word.origins : undefined,
     categories: sortStrings(w.categories),
     generated: Boolean(w.generated),

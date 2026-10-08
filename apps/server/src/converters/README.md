@@ -100,7 +100,12 @@ the sources have. The decisions, in one place:
 
 - **One entry per headword and part of speech.** Wiktionary splits a word by etymology; the
   records of one headword follow each other in the extract, so the writer merges the ones that
-  share a part of speech: the meanings follow each other, a repeated definition is kept once.
+  share a part of speech. Meanings stay flat and link to ordered etymology groups. The
+  converter preserves `etymology_text` and uses `etymology_number` to distinguish source
+  groups, assigning portable local numbers. Repeated records with the same source number
+  and trimmed text share a group; conflicting texts stay separate. Without a source number,
+  equal nonempty texts share a group. Without either field, meanings remain unassigned.
+  A repeated definition is deduplicated only within the same group.
 - **A meaning needs a title.** It is the head of its definition: the first clause, cut at a
   word, at most 60 characters (`titleOf`).
 - **An inflected form is a form of its entry, not an entry.** The pages Wiktionary keeps for

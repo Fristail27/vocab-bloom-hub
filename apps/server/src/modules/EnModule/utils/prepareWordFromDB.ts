@@ -10,6 +10,9 @@ export const prepareWordFromDB = (row: EnWord): EnWordT => {
   const { createdAt: _createdAt, updateAt: _updateAt, short_translations, ...other } = row;
   return {
     ...other,
+    etymologies: [...(row.etymologies ?? [])]
+      .sort((a, b) => a.number - b.number)
+      .map(({ id, number, text }) => ({ id, number, text })),
     alternatives: alternativeSpellings(row.word),
     word: row.word.word,
     licenses: licensesOf([...(row.origins ?? []), ...(row.contributions ?? [])]),

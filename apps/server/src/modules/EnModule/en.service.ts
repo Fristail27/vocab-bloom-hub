@@ -1,3 +1,4 @@
+import { saveEtymologies } from './utils/etymologies';
 import { alternativeSpellings, replaceAlternatives } from './utils/entryAlternatives';
 import { WordCopyService, CopiedWordT } from './word-copy.service';
 import { EnChange } from './entities/en_change.entity';
@@ -131,6 +132,7 @@ export class EnService {
       meanings: _meanings,
       forms: _forms,
       phrasal_variants: _phrasalVariants,
+      etymologies: _etymologies,
       alternatives: _alternatives,
       id: _id,
       base_phrasal,
@@ -263,6 +265,7 @@ export class EnService {
       const baseEntry = await this.getOrAddEntry(em, body.word, type);
       const baseWord = await this.addWordRow(em, baseEntry, body);
       await em.getRepository(EnWord).update(baseWord.id, { origins });
+      if (body.etymologies) await saveEtymologies(em, baseWord.id, body.etymologies);
 
       if (body.forms) {
         for (const form of body.forms) await this.addFormOfWord(em, form, baseWord, Boolean(copied));
@@ -456,6 +459,8 @@ export class EnService {
   async editWord(id: number, body: EditCommonInfoOfWordReqDTO): Promise<EditCommonInfoOfWordResT> {
     this.assertNotGenerated(body.generated);
     const word = await this.requireWord(id, {
+      etymologies: true,
+      meanings: { etymology: true },
       word: true,
       base_form: { word: true },
       base_phrasal: { word: true },
@@ -520,16 +525,26 @@ export class EnService {
     if (pattern && pattern.join() !== word.pattern?.join()) word.pattern = pattern;
     // A dialog saved as it was opened changes nothing, and leaves nothing: the
     // entry keeps the version of its dataset, no row is written (issue #531)
-    const diff = changedFields(valuesBefore, word.base_form ? formSnapshot(word) : wordSnapshot(word));
-    if (!diff) return { success: true };
-
-    // The entry becomes the owner's version of it. The history keeps the
-    // version it had: taking the last change of the entry back returns it
-    if (word.version !== CustomVersionDictionaryOfWord) {
-      diff.version = { before: word.version, after: CustomVersionDictionaryOfWord };
-    }
-    word.version = CustomVersionDictionaryOfWord;
     await this.dataSource.transaction(async (em) => {
+      if (body.etymologies !== undefined) {
+        if (word.base_form) throw new BadRequestException('Edit etymologies on the base word');
+        await saveEtymologies(em, word.id, body.etymologies, true);
+        const fresh = await em.findOneOrFail(EnWord, {
+          where: { id: word.id },
+          relations: { etymologies: true, meanings: { etymology: true } },
+        });
+        word.etymologies = fresh.etymologies;
+        word.meanings = fresh.meanings;
+      }
+      const diff = changedFields(valuesBefore, word.base_form ? formSnapshot(word) : wordSnapshot(word));
+      if (!diff) return;
+
+      // The entry becomes the owner's version of it. The history keeps the
+      // version it had: taking the last change of the entry back returns it
+      if (word.version !== CustomVersionDictionaryOfWord) {
+        diff.version = { before: word.version, after: CustomVersionDictionaryOfWord };
+      }
+      word.version = CustomVersionDictionaryOfWord;
       await em.getRepository(EnWord).save(word);
       await recordChange(em, {
         ...wordKeyOf(word),

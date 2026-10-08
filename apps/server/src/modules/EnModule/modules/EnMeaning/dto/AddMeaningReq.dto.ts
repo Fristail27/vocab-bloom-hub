@@ -1,3 +1,4 @@
+import { IsInt, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import {
   ArrayMaxSize,
@@ -15,6 +16,16 @@ import { Type } from 'class-transformer';
 import { MAX_WORD_LINKS_PER_MEANING } from '../../../utils/normalizeWordLinks';
 
 export class AddMeaningReqDTO {
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    description: 'Local etymology number of this word; null clears the link.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  etymology_number?: number | null;
+
   @ApiProperty()
   @IsNumber()
   word_id!: number;

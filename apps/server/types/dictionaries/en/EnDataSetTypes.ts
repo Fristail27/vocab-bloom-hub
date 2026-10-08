@@ -52,6 +52,7 @@ export type DataSetShortTranslationT = DataSetWordKeyT & EnShortTranslationDST;
 
 export type DataSetWordT = Omit<
   EnWord,
+  | 'etymologies'
   | 'contributions'
   | 'createdAt'
   | 'updateAt'
@@ -71,6 +72,7 @@ export type DataSetWordT = Omit<
   | 'verb___transitivity'
   | 'verb___phrasal_object_pattern'
 > & {
+  etymologies?: { number: number; text: string }[];
   alternatives?: string[];
   word: string;
   word_level: WordLevelE | '';
@@ -90,6 +92,7 @@ export type DataSetWordT = Omit<
 
 export type DataSetPhraseT = Omit<
   EnWord,
+  | 'etymologies'
   | 'contributions'
   | 'createdAt'
   | 'updateAt'
@@ -117,6 +120,7 @@ export type DataSetPhraseT = Omit<
   | 'is_abbreviation'
   | 'part_of_speech'
 > & {
+  etymologies?: { number: number; text: string }[];
   alternatives?: string[];
   phrase: string;
   level: WordLevelE | '';

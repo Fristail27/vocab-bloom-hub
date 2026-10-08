@@ -165,6 +165,102 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
     await ds.synchronize(true);
   });
 
+  it('resolves portable etymology numbers in flat files and preserves protected groups on update', async () => {
+    const files = (text: string) => ({
+      'vocab-bloom-hub-en-words.jsonl': toNdjson([
+        makeSetWord('luma', {
+          etymologies: [
+            { number: 7, text },
+            { number: 2, text: 'Second root' },
+          ],
+        }),
+        makeSetWord('legacy'),
+      ]),
+      'vocab-bloom-hub-en-meanings.jsonl': toNdjson(
+        [7, 2, null].map((number, index) => ({
+          word: 'luma',
+          part_of_speech: 'verb',
+          title: 'same',
+          definition: 'The same invented definition.',
+          sort_order: index + 1,
+          etymology_number: number,
+          examples: [],
+          categories: [],
+          synonyms: [],
+          antonyms: [],
+          translations: [],
+        })),
+      ),
+    });
+    const read = async () => {
+      const row = await ds
+        .getRepository(EnWord)
+        .createQueryBuilder('w')
+        .where('w.word = :word', { word: 'luma' })
+        .getOneOrFail();
+      return ds.getRepository(EnWord).findOneOrFail({ where: { id: row.id }, relations: FULL_WORD_RELATIONS });
+    };
+    mockDatasetFiles(files('First root'));
+    await service.importDictionary({}, new FakeProgressRes() as unknown as ExpressResponse);
+    const original = await read();
+    expect(original.meanings.map((m) => m.etymology?.number ?? null)).toEqual([7, 2, null]);
+    expect(original.etymologies!.map((e) => e.id)).not.toContain(7);
+    jest.restoreAllMocks();
+    mockDatasetFiles(files('Updated root'));
+    await service.importDictionary({ update: true }, new FakeProgressRes() as unknown as ExpressResponse);
+    const updated = await read();
+    expect(updated.etymologies!.find((e) => e.number === 7)!.text).toBe('Updated root');
+    expect(updated.meanings.map((m) => m.etymology?.number ?? null)).toEqual([7, 2, null]);
+    await ds.getRepository(EnEntry).update('luma', { user_modified: true });
+    jest.restoreAllMocks();
+    mockDatasetFiles(files('Must not replace'));
+    await service.importDictionary({ update: true }, new FakeProgressRes() as unknown as ExpressResponse);
+    expect((await read()).etymologies!.find((e) => e.number === 7)!.text).toBe('Updated root');
+    expect((await read()).meanings.map((m) => m.etymology?.number ?? null)).toEqual([7, 2, null]);
+    const legacy = await ds.getRepository(EnWord).findOneOrFail({
+      where: {
+        id: (
+          await ds
+            .getRepository(EnWord)
+            .createQueryBuilder('w')
+            .where('w.word = :word', { word: 'legacy' })
+            .getOneOrFail()
+        ).id,
+      },
+      relations: { etymologies: true },
+    });
+    expect(legacy.etymologies).toEqual([]);
+  });
+
+  it('rejects meaning references to another word and rolls back malformed nested data', async () => {
+    const importer = service as unknown as { bulkSaveWords(lines: unknown[]): Promise<void> };
+    const map = (word: string, extra: Record<string, unknown>) =>
+      mapWordFromSetToDB(makeSetWord(word, extra) as DataSetWordT);
+    await importer.bulkSaveWords([map('owner', { etymologies: [{ number: 7, text: 'Root' }] })]);
+    await expect(
+      importer.bulkSaveWords([
+        map('other', { meanings: [{ title: 'test', definition: 'test', sort_order: 1, etymology_number: 7 }] }),
+      ]),
+    ).rejects.toThrow('does not belong');
+    expect(
+      await ds
+        .getRepository(EnWord)
+        .createQueryBuilder('w')
+        .where('w.word = :word', { word: 'other' })
+        .getCount(),
+    ).toBe(0);
+    await expect(
+      importer.bulkSaveWords([
+        map('invalid', {
+          etymologies: [
+            { number: 1, text: 'a' },
+            { number: 1, text: 'b' },
+          ],
+        }),
+      ]),
+    ).rejects.toThrow('unique');
+  });
+
   it.each([false, true])(
     'keeps shared inflections attached to each base (separate chunks: %s)',
     async (split) => {

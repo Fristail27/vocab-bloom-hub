@@ -1,3 +1,4 @@
+import { EnEtymology } from './en_etymology.entity';
 import {
   Column,
   Entity,
@@ -47,6 +48,9 @@ import { MANUALLY_MANAGED_INDEX } from './manually-managed-index';
 // AddCaseFoldedWordIndexes migration (issue #440)
 @Index('IDX_EN_WORD_LOWER_C', ['word'], MANUALLY_MANAGED_INDEX)
 export class EnWord {
+  @OneToMany(() => EnEtymology, (etymology) => etymology.word)
+  etymologies?: EnEtymology[];
+
   /** Derived from active history; never stored or edited as word origins. */
   contributions?: import('../../../../types/provenance').OriginT[];
 

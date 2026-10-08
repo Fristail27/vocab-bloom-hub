@@ -583,6 +583,24 @@
   "PublicWordV1T": {
     "type": "object",
     "properties": {
+      "etymologies": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "number": {
+              "type": "integer"
+            },
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "number",
+            "text"
+          ]
+        }
+      },
       "meanings": {
         "type": "array",
         "items": {
@@ -781,6 +799,11 @@
   "PublicWordV1MeaningT": {
     "type": "object",
     "properties": {
+      "etymology_number": {
+        "description": "Local number of the owning word etymology; null when unknown.",
+        "type": "integer",
+        "nullable": true
+      },
       "id": {
         "type": "integer"
       },
@@ -1051,6 +1074,11 @@
       },
       "modified": {
         "type": "boolean"
+      },
+      "etymology_number": {
+        "description": "Local number of the owning word etymology; null when unknown.",
+        "type": "integer",
+        "nullable": true
       },
       "id": {
         "type": "integer"

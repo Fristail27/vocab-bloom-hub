@@ -1,3 +1,4 @@
+import { EnEtymology } from './en_etymology.entity';
 import {
   Column,
   CreateDateColumn,
@@ -19,9 +20,14 @@ import { CategoryE, EnAreaVariantsE, LanguageRegisterE, WordLevelE } from '../..
 import { checkIsPostgres } from '../../../../configuration';
 
 @Entity('en_meanings')
+@Index('IDX_EN_MEANING_ETYMOLOGY', ['etymology'])
 @Index('IDX_EN_MEANING_WORD', ['word'])
 @Index('IDX_EN_MEANING_WORD_SORT', ['word', 'sort_order'])
 export class EnMeaning {
+  @ManyToOne(() => EnEtymology, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'etymology_id' })
+  etymology?: EnEtymology | null;
+
   /** @asType integer */
   @PrimaryGeneratedColumn()
   @IsNumber()

@@ -1,3 +1,4 @@
+import { resolveEtymology } from '../../utils/etymologies';
 import { getOrAddEntry, entryTypeOf } from '../../utils/changes/words';
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ChangeActionE, ChangeEntityE } from '../../../../../types';
@@ -121,7 +122,7 @@ export class EnMeaningService {
 
   async addMeaning(body: AddMeaningReqDTO, manager?: EntityManager, copied = false): Promise<AddMeaningResT> {
     const em = manager ?? this.enMeaningsRep.manager;
-    const { word_id, id: _id, synonyms, antonyms, translations, ...newMeaning } = body;
+    const { word_id, id: _id, etymology_number, synonyms, antonyms, translations, ...newMeaning } = body;
     const word = await em
       .getRepository(EnWord)
       .findOne({ where: { id: word_id }, relations: { word: true, base_form: { word: true } } });
@@ -141,7 +142,8 @@ export class EnMeaningService {
       ? { synonyms: await copyLinks(synonyms), antonyms: await copyLinks(antonyms) }
       : await this.resolveWordLinks({ synonyms, antonyms }, word.word.word, em);
     const add = async (tx: EntityManager): Promise<EnMeaning> => {
-      const saved = await tx.getRepository(EnMeaning).save({ word: word, ...newMeaning, ...links });
+      const etymology = await resolveEtymology(tx, word.id, etymology_number);
+      const saved = await tx.getRepository(EnMeaning).save({ word: word, ...newMeaning, ...links, etymology });
       for (const translation of translations) {
         // a part of this meaning: its own row in the history would say it twice
         await this.enMeaningTranslationService.addMeaningTranslation(
@@ -156,7 +158,7 @@ export class EnMeaningService {
       }
       const created = await tx.getRepository(EnMeaning).findOneOrFail({
         where: { id: saved.id },
-        relations: { translations: true, synonyms: true, antonyms: true },
+        relations: { etymology: true, translations: true, synonyms: true, antonyms: true },
       });
       await recordChange(tx, {
         ...wordKeyOf(word),
@@ -176,7 +178,12 @@ export class EnMeaningService {
   async editMeaning(body: EditMeaningReqDTO): Promise<EditMeaningResT> {
     const meaning = await this.enMeaningsRep.findOne({
       where: { id: body.id },
-      relations: { synonyms: true, antonyms: true, word: { word: true, base_form: { word: true } } },
+      relations: {
+        etymology: true,
+        synonyms: true,
+        antonyms: true,
+        word: { word: true, base_form: { word: true } },
+      },
     });
 
     if (!meaning) {
@@ -213,12 +220,14 @@ export class EnMeaningService {
     assertNoSynonymAntonymConflict(meaning.synonyms, meaning.antonyms, headword, this.logger);
 
     await this.enMeaningsRep.manager.transaction(async (em) => {
+      if (body.etymology_number !== undefined)
+        meaning.etymology = await resolveEtymology(em, meaning.word.id, body.etymology_number);
       await em.getRepository(EnMeaning).save(meaning);
       // the history holds what the database holds after the edit, read back:
       // not what the object in memory was given
       const saved = await em.getRepository(EnMeaning).findOneOrFail({
         where: { id: meaning.id },
-        relations: { synonyms: true, antonyms: true },
+        relations: { etymology: true, synonyms: true, antonyms: true },
       });
       await recordChange(em, {
         ...wordKeyOf(meaning.word),
@@ -239,6 +248,7 @@ export class EnMeaningService {
       where: { id },
       relations: {
         word: { word: true, base_form: { word: true } },
+        etymology: true,
         translations: true,
         synonyms: true,
         antonyms: true,

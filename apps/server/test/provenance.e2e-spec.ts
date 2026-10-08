@@ -78,6 +78,7 @@ describe('word provenance and independent forks (#556)', () => {
       version: 'source-1',
       generated: false,
       description: 'a tree',
+      etymologies: [{ number: 1, text: 'Invented origin for the transfer fixture.' }],
       forms: [
         {
           word: 'cedars',
@@ -89,6 +90,7 @@ describe('word provenance and independent forks (#556)', () => {
       ],
       meanings: [
         {
+          etymology_number: 1,
           title: 'tree',
           definition: 'An evergreen tree.',
           sort_order: 0,
@@ -129,6 +131,11 @@ describe('word provenance and independent forks (#556)', () => {
     const meanings = await api().get('/api/v1/words/cedar/meanings').expect(200);
     expect(meanings.body.data[0].origins).toEqual(cedar.origins);
     expect(meanings.body.data[0].licenses[0].spdx).toBe('CC-BY-4.0');
+    expect(meanings.body.data[0].etymology_number).toBe(1);
+    const full = await api().get('/api/v1/words/cedar').expect(200);
+    expect(full.body.data[0].etymologies).toEqual([
+      { number: 1, text: 'Invented origin for the transfer fixture.' },
+    ]);
     expect((await read('default', cedar.forms[0].id)).origins).toEqual(cedar.origins);
     const history = await api().get('/api/en/changes').query({ headword: 'cedar' }).set(auth).expect(200);
     expect(history.body.items).toHaveLength(0);
@@ -170,6 +177,7 @@ describe('word provenance and independent forks (#556)', () => {
       .set(auth)
       .send({
         word: 'unrelated',
+        etymologies: [{ number: 1, text: 'An unrelated origin.' }],
         part_of_speech: 'noun',
         form_of_word: 'base_form',
         area_variant: 'common',
@@ -219,6 +227,11 @@ describe('word provenance and independent forks (#556)', () => {
     expect(copy.forms[0].word).toBe('cedars');
     expect(copy.forms[0].alternatives).toEqual(['cedarr']);
     expect(copy.alternatives).toEqual(['cedarr']);
+    expect(copy.etymologies).toEqual([
+      { id: expect.any(Number), number: 1, text: 'Invented origin for the transfer fixture.' },
+    ]);
+    expect(copy.meanings[0].etymology_number).toBe(1);
+    expect(copy.etymologies![0].id).not.toBe(cedar.etymologies![0].id);
     expect(copy.origins).toHaveLength(1);
     expect(copy.origins![0]).toMatchObject({
       ...cedar.origins![0],
@@ -309,6 +322,8 @@ describe('word provenance and independent forks (#556)', () => {
     });
     expect(first.licenses).toEqual(cedar.licenses);
     expect(first.alternatives).toEqual(['cedarr']);
+    expect(first.etymologies).toEqual(cedar.etymologies);
+    expect(first.meanings[0].etymology_number).toBe(1);
     expect((await read('first_fork', first.forms[0].id)).origins).toEqual(first.origins);
     // Check the stored payload as well as the API: no display/projection deduplication.
     const stored = await app
@@ -385,6 +400,8 @@ describe('word provenance and independent forks (#556)', () => {
     expect(zip.includes(Buffer.from('provenance.v1.json'))).toBe(false);
     await api().delete('/api/en/datasets/second_fork').set(auth).expect(200);
     await create('second_fork');
+    const target = await app.get(DatasetsService).reader(await app.get(DatasetsService).find('second_fork'));
+    await target.query("SELECT setval(pg_get_serial_sequence('en_etymologies', 'id'), 1000)");
     const imported = await api()
       .post('/api/en/dictionary/import/upload')
       .set(auth)
@@ -400,6 +417,11 @@ describe('word provenance and independent forks (#556)', () => {
     const restored = await read('second_fork', search.body[0].id as number);
     expect(restored.origins).toEqual(before.origins);
     expect(restored.alternatives).toEqual(['cedarr']);
+    expect(restored.etymologies?.map(({ number, text }) => ({ number, text }))).toEqual([
+      { number: 1, text: 'Invented origin for the transfer fixture.' },
+    ]);
+    expect(restored.meanings[0].etymology_number).toBe(1);
+    expect(restored.etymologies![0].id).not.toBe(before.etymologies![0].id);
     expect(restored.licenses).toEqual(before.licenses);
     const listed = await api().get('/api/en/datasets').set(auth).expect(200);
     expect(

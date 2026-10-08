@@ -248,6 +248,15 @@ describe('installing a dataset from its source (e2e, issue #527)', () => {
       'A device that gives light',
       'A source of spiritual light',
       'A heavy blow',
+      'A device that gives light',
+    ]);
+    // Equal definitions in distinct source etymologies must survive installation.
+    expect(noun.etymologies).toEqual([
+      { number: 1, text: '' },
+      { number: 2, text: '' },
+    ]);
+    expect(noun.meanings.map((meaning: { etymology_number: number }) => meaning.etymology_number)).toEqual([
+      1, 1, 2, 2,
     ]);
     expect(
       noun.meanings[0].translations.map((t: { language: string; title: string }) => [t.language, t.title]),

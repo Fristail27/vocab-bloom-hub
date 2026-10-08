@@ -33,6 +33,7 @@ const DICTIONARY_TABLES = [
   'en_entry_alternatives',
   'en_entries',
   'en_words',
+  'en_etymologies',
   'en_meanings',
   'en_meanings_translations',
   'en_short_translations',
@@ -222,6 +223,48 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
       await migration.down(runner);
       await migration.up(runner);
       expect(await runner.query('SELECT * FROM en_entry_alternatives')).toEqual([]);
+    } finally {
+      await runner.rollbackTransaction();
+      await runner.release();
+    }
+  });
+
+  it('isolates etymologies, detaches deleted groups, and rolls the migration down/up', async () => {
+    const { AddWordEtymologies1791500000000 } =
+      await import('../src/db/dataset-migrations/1791500000000-AddWordEtymologies');
+    const runner = dataSource.createQueryRunner();
+    await runner.connect();
+    await runner.startTransaction();
+    try {
+      await runner.query(`SET LOCAL search_path TO "${SCHEMA}", public`);
+      await runner.query(`INSERT INTO en_entries (word) VALUES ('etym-test')`);
+      const [word] = await runner.query(
+        `INSERT INTO en_words (word, part_of_speech, form_of_word) VALUES ('etym-test', 'noun', 'base_form') RETURNING id`,
+      );
+      const [group] = await runner.query(
+        `INSERT INTO en_etymologies (word, number, text) VALUES ($1, 1, 'Invented origin') RETURNING id`,
+        [word.id],
+      );
+      await runner.query(
+        `INSERT INTO en_meanings (word, title, definition, sort_order, etymology_id) VALUES ($1, 'Invented meaning', 'Invented definition', 1, $2)`,
+        [word.id, group.id],
+      );
+      expect(await runner.query(`SELECT * FROM public.en_etymologies WHERE text = 'Invented origin'`)).toEqual(
+        [],
+      );
+      await runner.query('DELETE FROM en_etymologies WHERE id = $1', [group.id]);
+      expect(await runner.query('SELECT etymology_id FROM en_meanings WHERE word = $1', [word.id])).toEqual([
+        { etymology_id: null },
+      ]);
+      await runner.query(`INSERT INTO en_etymologies (word, number, text) VALUES ($1, 1, 'Another origin')`, [
+        word.id,
+      ]);
+      await runner.query('DELETE FROM en_words WHERE id = $1', [word.id]);
+      expect(await runner.query('SELECT * FROM en_etymologies WHERE word = $1', [word.id])).toEqual([]);
+      const migration = new AddWordEtymologies1791500000000();
+      await migration.down(runner);
+      await migration.up(runner);
+      expect(await runner.query('SELECT * FROM en_etymologies')).toEqual([]);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

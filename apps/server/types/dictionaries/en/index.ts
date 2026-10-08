@@ -72,8 +72,9 @@ export type EnMeaningTranslationT = Omit<EnMeaningTranslation, 'updateAt' | 'cre
 // through the API as the plain headwords (sorted, lowercase)
 export type EnMeaningT = Omit<
   EnMeaning,
-  'updateAt' | 'createdAt' | 'translations' | 'word' | 'synonyms' | 'antonyms'
+  'updateAt' | 'createdAt' | 'translations' | 'word' | 'synonyms' | 'antonyms' | 'etymology'
 > & {
+  etymology_number?: number | null;
   translations: EnMeaningTranslationT[];
   synonyms: string[];
   antonyms: string[];
@@ -92,6 +93,7 @@ export type EnWordFormT = Pick<EnWord, 'id' | 'transcription' | 'form_of_word' |
 
 export type EnWordT = Omit<
   EnWord,
+  | 'etymologies'
   | 'createdAt'
   | 'updateAt'
   | 'meanings'
@@ -103,6 +105,7 @@ export type EnWordT = Omit<
   | 'phrasal_variants'
 > & {
   word: string;
+  etymologies?: { id?: number; number: number; text: string }[];
   meanings: EnMeaningT[];
   short_translations: EnShortTranslationT[];
   forms: EnWordFormT[];
