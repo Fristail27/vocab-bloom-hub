@@ -1,3 +1,4 @@
+import type { PronunciationT } from '../../types';
 import type { MeaningQuoteT } from '../../types';
 import {
   AvailableTranslationLanguagesE,
@@ -39,6 +40,8 @@ export type ConvertedMeaningT = {
 };
 
 export type ConvertedFormT = {
+  transcription?: string;
+  pronunciations?: PronunciationT[];
   word: string;
   form_of_word: EnWordFormsE;
   /** A form of a word nobody uses any more: listed, and not what the irregular flags are read from */
@@ -46,6 +49,7 @@ export type ConvertedFormT = {
 };
 
 export type ConvertedEntryT = {
+  pronunciations?: PronunciationT[];
   etymologies?: { number: number; text: string; source_number?: number }[];
   alternatives?: string[];
   generated?: boolean;

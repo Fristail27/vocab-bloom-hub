@@ -31,12 +31,16 @@ export const RELATION_LOAD_STRATEGY = 'query' as const;
  */
 export const SEARCH_ITEM_RELATIONS: FindOptionsRelations<EnWord> = {
   word: { alternatives: true },
-  forms: { word: { alternatives: true } },
+  pronunciations: true,
+  base_form: { pronunciations: true },
+  forms: { word: { alternatives: true }, pronunciations: true },
   base_phrasal: { word: true },
 };
 
 export const FULL_WORD_RELATIONS: FindOptionsRelations<EnWord> = {
-  forms: { word: { alternatives: true } },
+  pronunciations: true,
+  base_form: { pronunciations: true },
+  forms: { word: { alternatives: true }, pronunciations: true },
   etymologies: true,
   meanings: { etymology: true, translations: true, synonyms: true, antonyms: true },
   phrasal_variants: { word: true },

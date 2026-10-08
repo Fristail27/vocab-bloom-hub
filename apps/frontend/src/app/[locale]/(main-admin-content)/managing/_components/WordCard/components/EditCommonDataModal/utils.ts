@@ -7,6 +7,7 @@ export const getDefaultValue = (
   const {
     alternatives: _alternatives,
     etymologies: _etymologies,
+    pronunciations: _pronunciations,
     origins: _origins,
     licenses: _licenses,
     contributions: _contributions,

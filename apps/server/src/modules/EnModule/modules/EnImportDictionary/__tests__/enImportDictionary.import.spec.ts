@@ -241,6 +241,70 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
     expect(legacy.etymologies).toEqual([]);
   });
 
+  it('replaces imported pronunciation lists, preserves protected entries and retains legacy-only forms', async () => {
+    const sound = (text: string) => ({
+      type: 'ipa' as const,
+      text,
+      area_variant: EnAreaVariantsE.american,
+      sort_order: 0,
+    });
+    const files = (text: string) => ({
+      'vocab-bloom-hub-en-words.jsonl': toNdjson([
+        makeSetWord('luma', {
+          transcription: '',
+          pronunciations: [sound(text)],
+          forms: [
+            {
+              word: 'lumas',
+              form_of_word: EnWordFormsE.third_person_singular,
+              area_variant: EnAreaVariantsE.common,
+              transcription: '/keep-legacy/',
+              pronunciations: [sound(`${text}-form`)],
+            },
+            {
+              word: 'lumad',
+              form_of_word: EnWordFormsE.past_simple,
+              area_variant: EnAreaVariantsE.common,
+              transcription: '/legacy-only/',
+            },
+          ],
+        }),
+      ]),
+    });
+    const read = async () => {
+      const row = await ds
+        .getRepository(EnWord)
+        .createQueryBuilder('w')
+        .where('w.word = :word', { word: 'luma' })
+        .getOneOrFail();
+      return ds.getRepository(EnWord).findOneOrFail({ where: { id: row.id }, relations: FULL_WORD_RELATIONS });
+    };
+    mockDatasetFiles(files('/first/'));
+    await service.importDictionary({}, new FakeProgressRes() as unknown as ExpressResponse);
+    const first = await read();
+    expect(first.transcription).toBe('/first/');
+    expect(first.pronunciations?.[0].text).toBe('/first/');
+    expect(first.forms.find((form) => form.word.word === 'lumas')?.transcription).toBe('/keep-legacy/');
+    expect(first.forms.find((form) => form.word.word === 'lumad')?.pronunciations).toEqual([]);
+    jest.restoreAllMocks();
+    mockDatasetFiles(files('/second/'));
+    await service.importDictionary({ update: true }, new FakeProgressRes() as unknown as ExpressResponse);
+    const second = await read();
+    expect(second.pronunciations?.[0].text).toBe('/second/');
+    expect(second.forms.find((form) => form.word.word === 'lumas')?.pronunciations?.[0].text).toBe(
+      '/second/-form',
+    );
+    const exported = prepareWordForDataSet(second);
+    expect(exported.pronunciations).toEqual([sound('/second/')]);
+    expect(exported.forms.find((form) => form.word === 'lumad')?.pronunciations).toEqual([]);
+    await ds.getRepository(EnEntry).update('luma', { user_modified: true });
+    jest.restoreAllMocks();
+    mockDatasetFiles(files('/ignored/'));
+    await service.importDictionary({ update: true }, new FakeProgressRes() as unknown as ExpressResponse);
+    expect(prepareWordForDataSet(await read())).toEqual(exported);
+    expect(await ds.getRepository(EnChange).count()).toBe(0);
+  });
+
   it('rejects meaning references to another word and rolls back malformed nested data', async () => {
     const importer = service as unknown as { bulkSaveWords(lines: unknown[]): Promise<void> };
     const map = (word: string, extra: Record<string, unknown>) =>

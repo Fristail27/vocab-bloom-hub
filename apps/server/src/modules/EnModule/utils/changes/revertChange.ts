@@ -1,3 +1,5 @@
+import { savePronunciations } from '../pronunciations';
+import type { PronunciationT } from '../../../../../types';
 import { restoreEtymologies, resolveEtymology } from '../etymologies';
 import { alternativeSpellings, replaceAlternatives } from '../entryAlternatives';
 import { Dataset } from '../../../DatasetsModule/entities/dataset.entity';
@@ -178,6 +180,11 @@ const restoreAlternatives = async (em: EntityManager, headword: string, value: u
 
 // ------------------------------------------------------------ creation
 
+const restorePronunciations = async (em: EntityManager, id: number, values: SnapshotT): Promise<void> => {
+  if ('pronunciations' in values)
+    await savePronunciations(em, id, (values.pronunciations ?? []) as PronunciationT[]);
+};
+
 const addForm = async (em: EntityManager, word: EnWord, values: SnapshotT): Promise<EnWord> => {
   const entry = await getOrAddEntry(em, String(values.word), entryTypeOf(EnPartOfSpeechE.noun));
   const saved = await em.getRepository(EnWord).save({
@@ -188,7 +195,11 @@ const addForm = async (em: EntityManager, word: EnWord, values: SnapshotT): Prom
     generated: false,
   });
   await restoreAlternatives(em, entry.word, values.alternatives);
-  return em.findOneOrFail(EnWord, { where: { id: saved.id }, relations: { word: { alternatives: true } } });
+  await restorePronunciations(em, saved.id, values);
+  return em.findOneOrFail(EnWord, {
+    where: { id: saved.id },
+    relations: { word: { alternatives: true }, pronunciations: true },
+  });
 };
 
 const addTranslation = async (
@@ -242,6 +253,7 @@ const addWord = async (em: EntityManager, change: EnChange, values: SnapshotT): 
   const word = Object.assign(saved, { word: entry });
   await restoreAlternatives(em, entry.word, values.alternatives);
   if ('etymologies' in values) await restoreEtymologies(em, word.id, values.etymologies);
+  await restorePronunciations(em, word.id, values);
   for (const form of listOf(values.forms)) await addForm(em, word, form);
   for (const meaning of listOf(values.meanings)) await addMeaning(em, word, meaning);
   for (const translation of listOf(values.short_translations)) {
@@ -330,6 +342,7 @@ const revertWord = async (em: EntityManager, change: EnChange, diff: ChangeDiffT
     ...('base_phrasal' in values && { base_phrasal: await basePhrasalOf(em, values.base_phrasal) }),
   });
   if ('etymologies' in values) await restoreEtymologies(em, word.id, values.etymologies);
+  await restorePronunciations(em, word.id, values);
   const after = (await findWord(em, change.headword, change.part_of_speech as string)) as EnWord;
   return updated(null, before, wordSnapshot(after));
 };
@@ -369,9 +382,11 @@ const revertForm = async (
     await dropEntryIfUnused(em, form.word.word);
     await restoreAlternatives(em, spelling, values.alternatives);
   }
-  const after = await em
-    .getRepository(EnWord)
-    .findOneOrFail({ where: { id: form.id }, relations: { word: { alternatives: true } } });
+  await restorePronunciations(em, form.id, values);
+  const after = await em.getRepository(EnWord).findOneOrFail({
+    where: { id: form.id },
+    relations: { word: { alternatives: true }, pronunciations: true },
+  });
   return updated(record, before, formSnapshot(after));
 };
 

@@ -222,6 +222,22 @@ class LanguageRegisterE(Enum):
     slang = "slang"
 
 
+class Type(Enum):
+    ipa = "ipa"
+    enpr = "enpr"
+
+
+class PronunciationT(BaseModel):
+    """
+    Portable pronunciation; database IDs never travel in datasets or public responses.
+    """
+
+    type: Type
+    text: str | None = Field(...)
+    area_variant: EnAreaVariantsE
+    sort_order: int
+
+
 class EnVerbTransitivityE(Enum):
     transitive = "transitive"
     intransitive = "intransitive"
@@ -242,6 +258,9 @@ class PublicWordV1FormT(BaseModel):
     form_of_word: EnWordFormsE
     area_variant: EnAreaVariantsE
     transcription: str | None = Field(...)
+    pronunciations: list[PronunciationT] | None = Field(
+        None, description="Ordered pronunciations, with legacy transcription and base-form fallback."
+    )
 
 
 class PublicSearchDetailedV1MetaT(BaseModel):
@@ -477,6 +496,9 @@ class PublicWordFormV1T(BaseModel):
     form_of_word: EnWordFormsE
     area_variant: EnAreaVariantsE
     transcription: str | None = Field(...)
+    pronunciations: list[PronunciationT] | None = Field(
+        None, description="Ordered pronunciations, with legacy transcription and base-form fallback."
+    )
 
 
 class PublicHeadwordFormsV1ResT(BaseModel):
@@ -587,6 +609,9 @@ class PublicSearchWordV1T(BaseModel):
     language_register: LanguageRegisterE | None = Field(...)
     description: str | None = Field(...)
     transcription: str | None = Field(...)
+    pronunciations: list[PronunciationT] | None = Field(
+        None, description="Ordered pronunciations, with legacy transcription and base-form fallback."
+    )
     pattern: list[str] | None = Field(...)
     noun___irregular_plural: bool | None = Field(...)
     noun___uncountable: bool | None = Field(...)
@@ -685,6 +710,9 @@ class PublicWordV1T(BaseModel):
     language_register: LanguageRegisterE | None = Field(...)
     description: str | None = Field(...)
     transcription: str | None = Field(...)
+    pronunciations: list[PronunciationT] | None = Field(
+        None, description="Ordered pronunciations, with legacy transcription and base-form fallback."
+    )
     pattern: list[str] | None = Field(...)
     noun___irregular_plural: bool | None = Field(...)
     noun___uncountable: bool | None = Field(...)

@@ -1,3 +1,4 @@
+import { WithPronunciationsDTO } from './Pronunciation.dto';
 import { MeaningQuoteDTO } from './MeaningQuote.dto';
 import { EtymologyDTO } from './Etymology.dto';
 import { IsOrigins } from '../../../core/utils/provenance';
@@ -42,7 +43,7 @@ import { MAX_WORD_LINKS_PER_MEANING } from '../utils/normalizeWordLinks';
 // with a DB default; dropping the value lets TypeORM apply that default
 const NullMeansColumnDefault = Transform(({ value }: { value: unknown }) => value ?? undefined);
 
-export class AddWordReqFormDTO {
+export class AddWordReqFormDTO extends WithPronunciationsDTO {
   @ApiProperty({ type: [String], required: false })
   @IsOptional()
   @IsArray()
@@ -209,7 +210,7 @@ export class CopyWordSourceDTO {
   revision!: string;
 }
 
-export class AddWordReqDTO {
+export class AddWordReqDTO extends WithPronunciationsDTO {
   @ApiProperty({ type: [EtymologyDTO], required: false })
   @IsOptional()
   @IsArray()

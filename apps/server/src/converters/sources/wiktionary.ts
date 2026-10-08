@@ -1,3 +1,6 @@
+import type { PronunciationT } from '../../../types';
+import { primaryIPA } from '../../modules/EnModule/utils/pronunciations';
+import { mergePronunciations } from '../normalize';
 import {
   AvailableTranslationLanguagesE,
   CategoryE,
@@ -58,8 +61,8 @@ export type KaikkiRecordT = {
   pos?: string;
   lang_code?: string;
   senses?: KaikkiSenseT[];
-  forms?: Array<{ form?: string; tags?: string[] }>;
-  sounds?: Array<{ ipa?: string; tags?: string[] }>;
+  forms?: Array<{ form?: string; ipa?: string; tags?: string[] }>;
+  sounds?: Array<{ ipa?: string; enpr?: string; form?: string; tags?: string[] }>;
   translations?: KaikkiTranslationT[];
   synonyms?: Array<KaikkiLinkT & { sense?: string }>;
   antonyms?: Array<KaikkiLinkT & { sense?: string }>;
@@ -302,20 +305,56 @@ const formsOf = (record: KaikkiRecordT): ConvertedFormT[] => {
     const kind = FORMS.find(
       ([, wanted]) => wanted.length === tags.length && wanted.every((tag) => tags.includes(tag)),
     )?.[0];
-    if (kind && !forms.some((known) => known.word === word && known.form_of_word === kind)) {
-      forms.push({ word, form_of_word: kind });
+    if (kind) {
+      const pronunciations = mergePronunciations(
+        soundsOf(record, word),
+        form.ipa?.trim()
+          ? [
+              {
+                type: 'ipa',
+                text: form.ipa.trim(),
+                area_variant: soundArea(tags),
+                sort_order: 0,
+              },
+            ]
+          : [],
+      );
+      const known = forms.find((value) => value.word === word && value.form_of_word === kind);
+      if (known) {
+        known.pronunciations = mergePronunciations(known.pronunciations, pronunciations);
+        known.transcription = primaryIPA(known.pronunciations);
+      } else
+        forms.push({
+          word,
+          form_of_word: kind,
+          ...(pronunciations.length && {
+            pronunciations,
+            transcription: primaryIPA(pronunciations),
+          }),
+        });
     }
   }
   return forms;
 };
 
-const transcriptionOf = (record: KaikkiRecordT): string => {
-  const sounds = (record.sounds ?? []).filter((sound) => sound.ipa);
-  const preferred =
-    sounds.find((sound) => has(sound.tags, 'General-American', 'US')) ??
-    sounds.find((sound) => has(sound.tags, 'Received-Pronunciation', 'UK')) ??
-    sounds[0];
-  return preferred?.ipa?.trim() ?? '';
+const soundArea = (tags: string[] | undefined): EnAreaVariantsE =>
+  has(tags, 'General-American')
+    ? EnAreaVariantsE.american
+    : has(tags, 'Received-Pronunciation')
+      ? EnAreaVariantsE.british
+      : firstMatch(AREAS, tags ?? []) || EnAreaVariantsE.common;
+
+const soundsOf = (record: KaikkiRecordT, form?: string): PronunciationT[] => {
+  const values: PronunciationT[] = [];
+  for (const sound of record.sounds ?? []) {
+    // A source explicitly names the form it pronounced. Never attach it to another spelling.
+    if (form === undefined ? sound.form && sound.form !== record.word : sound.form !== form) continue;
+    for (const type of ['ipa', 'enpr'] as const) {
+      const text = sound[type]?.trim();
+      if (text) values.push({ type, text, area_variant: soundArea(sound.tags), sort_order: values.length });
+    }
+  }
+  return mergePronunciations(values);
 };
 
 /** One record of the extract as an entry; a string says why it is left out */
@@ -427,7 +466,8 @@ export const convertRecord = (
     for (const meaning of meanings) meaning.etymology_number = 1;
   }
   entry.meanings = meanings;
-  entry.transcription = transcriptionOf(record);
+  entry.pronunciations = soundsOf(record);
+  entry.transcription = primaryIPA(entry.pronunciations);
   entry.is_obsolete = meanings.every((meaning) => meaning.is_obsolete);
   // a word of one etymology nobody uses any more ("limp" as "to happen", past "lamp"): its forms
   // are listed as dead, and say nothing about the living word of the same spelling

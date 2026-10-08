@@ -34,6 +34,7 @@ const DICTIONARY_TABLES = [
   'en_entries',
   'en_words',
   'en_etymologies',
+  'en_pronunciations',
   'en_meanings',
   'en_meanings_translations',
   'en_short_translations',
@@ -223,6 +224,37 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
       await migration.down(runner);
       await migration.up(runner);
       expect(await runner.query('SELECT * FROM en_entry_alternatives')).toEqual([]);
+    } finally {
+      await runner.rollbackTransaction();
+      await runner.release();
+    }
+  });
+
+  it('isolates pronunciations, cascades word deletion and rolls the migration down/up', async () => {
+    const { AddWordPronunciations1791700000000 } =
+      await import('../src/db/dataset-migrations/1791700000000-AddWordPronunciations');
+    const runner = dataSource.createQueryRunner();
+    await runner.connect();
+    await runner.startTransaction();
+    try {
+      await runner.query(`SET LOCAL search_path TO "${SCHEMA}", public`);
+      await runner.query(`INSERT INTO en_entries (word) VALUES ('pron-test')`);
+      const [word] = await runner.query(
+        `INSERT INTO en_words (word, part_of_speech, form_of_word) VALUES ('pron-test', 'noun', 'base_form') RETURNING id`,
+      );
+      await runner.query(
+        `INSERT INTO en_pronunciations (word, type, text, area_variant, sort_order) VALUES ($1, 'ipa', '/pron-test/', 'american', 0)`,
+        [word.id],
+      );
+      expect(await runner.query(`SELECT * FROM public.en_pronunciations WHERE text = '/pron-test/'`)).toEqual(
+        [],
+      );
+      await runner.query('DELETE FROM en_words WHERE id = $1', [word.id]);
+      expect(await runner.query('SELECT * FROM en_pronunciations WHERE word = $1', [word.id])).toEqual([]);
+      const migration = new AddWordPronunciations1791700000000();
+      await migration.down(runner);
+      await migration.up(runner);
+      expect(await runner.query('SELECT * FROM en_pronunciations')).toEqual([]);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

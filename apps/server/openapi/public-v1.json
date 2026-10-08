@@ -1771,6 +1771,13 @@
             "type": "string",
             "nullable": true
           },
+          "pronunciations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PronunciationT"
+            },
+            "description": "Ordered pronunciations, with legacy transcription and base-form fallback."
+          },
           "pattern": {
             "type": "array",
             "items": {
@@ -2134,6 +2141,35 @@
           "slang"
         ]
       },
+      "PronunciationT": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "ipa",
+              "enpr"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "area_variant": {
+            "$ref": "#/components/schemas/EnAreaVariantsE"
+          },
+          "sort_order": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "type",
+          "text",
+          "area_variant",
+          "sort_order"
+        ],
+        "description": "Portable pronunciation; database IDs never travel in datasets or public responses."
+      },
       "EnVerbTransitivityE": {
         "type": "string",
         "enum": [
@@ -2175,6 +2211,13 @@
           "transcription": {
             "type": "string",
             "nullable": true
+          },
+          "pronunciations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PronunciationT"
+            },
+            "description": "Ordered pronunciations, with legacy transcription and base-form fallback."
           }
         },
         "required": [
@@ -2350,6 +2393,13 @@
           "transcription": {
             "type": "string",
             "nullable": true
+          },
+          "pronunciations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PronunciationT"
+            },
+            "description": "Ordered pronunciations, with legacy transcription and base-form fallback."
           },
           "pattern": {
             "type": "array",
@@ -2879,6 +2929,13 @@
           "transcription": {
             "type": "string",
             "nullable": true
+          },
+          "pronunciations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PronunciationT"
+            },
+            "description": "Ordered pronunciations, with legacy transcription and base-form fallback."
           }
         },
         "required": [

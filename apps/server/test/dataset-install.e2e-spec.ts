@@ -244,6 +244,11 @@ describe('installing a dataset from its source (e2e, issue #527)', () => {
       }),
     );
     expect(noun.forms.map((form: { word: string }) => form.word)).toEqual(['lamps']);
+    expect(noun.pronunciations).toEqual([
+      { type: 'ipa', text: '/læmp/', area_variant: 'british', sort_order: 0 },
+      { type: 'ipa', text: '/lɛəmp/', area_variant: 'american', sort_order: 1 },
+    ]);
+    expect(noun.forms[0].pronunciations).toEqual(noun.pronunciations);
     expect(noun.meanings[0].quotes).toEqual([
       {
         text: 'An invented quotation. '.repeat(30),

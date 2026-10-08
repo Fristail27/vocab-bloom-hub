@@ -372,3 +372,40 @@ array order determining quotation order; no separate quote IDs need remapping.
 Use an importer that understands quotes to preserve them; older versions may discard
 this optional field. Bibliographic attribution is retained verbatim, independently of
 the word's existing data-origin and contribution license snapshots.
+
+### Pronunciations
+
+Word, phrase, grammar-pattern and nested form lines may carry
+`pronunciations: [{type, text, area_variant, sort_order}]`. `type` is `ipa` or
+`enpr`; `area_variant` is `common`, `british`, `american` or `australian`;
+`sort_order` is a nonnegative integer. Multiple pronunciations for one region
+are preserved. Export and history contain no pronunciation IDs. Import and copy
+allocate new IDs; forks preserve their snapshot's IDs within the new dataset.
+
+Lists are presented by `sort_order`, then type, region and text for ties.
+The primary IPA is the first American variant, otherwise the first British
+variant, otherwise the first IPA in this order. EnPR is never put in
+`transcription`. Conversion writes the primary IPA into this legacy field.
+Import and creation preserve an explicitly supplied nonempty `transcription`
+(in particular a form's existing transcription); when empty, they use the
+primary IPA of that record's own list.
+
+Public word and form responses expose optional `pronunciations`. A record with
+no usable list falls back to its own legacy `transcription` as one IPA item.
+A form with neither falls back to its base word's pronunciation. This is a read
+projection: it writes no duplicate rows or human edits. Admin responses, export,
+copy payloads and history contain only the record's own list. Old datasets
+without lists need no backfill and keep their legacy transcription.
+
+The admin create/edit endpoints accept the same list. Admin reads also return
+internal IDs: retain an ID when editing its record; omit it to create a new one.
+IDs from other owners are rejected on edit, and ignored on import/copy. Omitting
+the list on edit preserves it; `[]` clears it. Replacing a list also updates
+`transcription` to its primary IPA (or `''`) unless the request explicitly
+supplies `transcription`. Clearing `transcription` alone leaves the list intact.
+All content edits and deletions can be reverted through the portable history.
+
+The storage column `text` is nullable for future audio-only pronunciations, but
+current writes require nonblank text and public responses omit unusable records.
+Audio is a separate feature. Use an importer supporting pronunciation lists to
+preserve them: older versions can retain only the legacy transcription.

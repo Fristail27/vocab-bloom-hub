@@ -1,3 +1,4 @@
+import { savePronunciations, primaryIPA } from './utils/pronunciations';
 import { saveEtymologies } from './utils/etymologies';
 import { alternativeSpellings, replaceAlternatives } from './utils/entryAlternatives';
 import { WordCopyService, CopiedWordT } from './word-copy.service';
@@ -133,6 +134,7 @@ export class EnService {
       forms: _forms,
       phrasal_variants: _phrasalVariants,
       etymologies: _etymologies,
+      pronunciations: _pronunciations,
       alternatives: _alternatives,
       id: _id,
       base_phrasal,
@@ -149,6 +151,7 @@ export class EnService {
     return em.getRepository(EnWord).save({
       word: entry,
       ...other,
+      transcription: other.transcription || primaryIPA(data.pronunciations) || other.transcription,
       ...(basePhrasalWord && { base_phrasal: basePhrasalWord }),
     });
   }
@@ -185,19 +188,22 @@ export class EnService {
     baseWord: EnWord,
     copied = false,
   ) {
-    const { id: _id, word, alternatives: _alternatives, ...f } = wordForm;
+    const { id: _id, word, alternatives: _alternatives, pronunciations, ...f } = wordForm;
     const formEntry = await this.getOrAddEntry(em, word, EnEntryTypesE.word);
     const wordRow = await this.getWordRow(word, baseWord.part_of_speech, f.form_of_word, em);
     if (wordRow) {
       if (copied) throw new ConflictException(ErrorCodes.word_already_exists);
       return wordRow;
     } else {
-      return em.getRepository(EnWord).save({
+      const saved: EnWord = await em.getRepository(EnWord).save({
         word: formEntry,
         ...f,
         part_of_speech: baseWord.part_of_speech,
         base_form: baseWord,
+        transcription: f.transcription || primaryIPA(pronunciations) || f.transcription,
       });
+      if (pronunciations) await savePronunciations(em, saved.id, pronunciations);
+      return saved;
     }
   }
 
@@ -265,6 +271,7 @@ export class EnService {
       const baseEntry = await this.getOrAddEntry(em, body.word, type);
       const baseWord = await this.addWordRow(em, baseEntry, body);
       await em.getRepository(EnWord).update(baseWord.id, { origins });
+      if (body.pronunciations) await savePronunciations(em, baseWord.id, body.pronunciations);
       if (body.etymologies) await saveEtymologies(em, baseWord.id, body.etymologies);
 
       if (body.forms) {
@@ -459,6 +466,7 @@ export class EnService {
   async editWord(id: number, body: EditCommonInfoOfWordReqDTO): Promise<EditCommonInfoOfWordResT> {
     this.assertNotGenerated(body.generated);
     const word = await this.requireWord(id, {
+      pronunciations: true,
       etymologies: true,
       meanings: { etymology: true },
       word: true,
@@ -516,7 +524,8 @@ export class EnService {
       word.verb___phrasal_object_pattern = verb___phrasal_object_pattern;
     if (verb___transitivity && verb___transitivity !== word.verb___transitivity)
       word.verb___transitivity = verb___transitivity;
-    if (transcription && transcription !== word.transcription) word.transcription = transcription;
+    if (typeof transcription === 'string' && transcription !== word.transcription)
+      word.transcription = transcription;
     if (word_level && word_level !== word.word_level) word.word_level = word_level;
     if (language_register && language_register !== word.language_register)
       word.language_register = language_register;
@@ -535,6 +544,10 @@ export class EnService {
         });
         word.etymologies = fresh.etymologies;
         word.meanings = fresh.meanings;
+      }
+      if (body.pronunciations !== undefined) {
+        word.pronunciations = await savePronunciations(em, word.id, body.pronunciations, true);
+        if (body.transcription === undefined) word.transcription = primaryIPA(body.pronunciations);
       }
       const diff = changedFields(valuesBefore, word.base_form ? formSnapshot(word) : wordSnapshot(word));
       if (!diff) return;
@@ -630,14 +643,16 @@ export class EnService {
     const baseWord = await this.requireWord(body.base_word_id, { word: true });
     const res = await this.dataSource.transaction(async (em) => {
       const entry = await this.getOrAddEntry(em, body.word, EnEntryTypesE.word);
-      const saved = await em.getRepository(EnWord).save({
+      const saved: EnWord = await em.getRepository(EnWord).save({
         word: entry,
         form_of_word: body.form_of_word,
         area_variant: body.area_variant,
         base_form: baseWord,
         part_of_speech: baseWord.part_of_speech,
-        transcription: body.transcription,
+        transcription: body.transcription || primaryIPA(body.pronunciations) || body.transcription,
       });
+      if (body.pronunciations)
+        saved.pronunciations = await savePronunciations(em, saved.id, body.pronunciations);
       // a new form is an edit of its base word's entry (issue #328)
       await recordChange(em, {
         ...wordKeyOf(baseWord),
@@ -655,7 +670,11 @@ export class EnService {
   }
 
   async editWordForm(body: EditWordFormReqDTO): Promise<EditWordFormResT> {
-    const word = await this.requireWord(body.id, { word: { alternatives: true }, base_form: { word: true } });
+    const word = await this.requireWord(body.id, {
+      word: { alternatives: true },
+      base_form: { word: true },
+      pronunciations: true,
+    });
 
     const valuesBefore = formSnapshot(word);
     const recordBefore = formRecord(word);
@@ -671,13 +690,17 @@ export class EnService {
         await dropEntryIfUnused(em, oldWord);
       }
 
-      if (body.transcription && body.transcription !== word.transcription) {
+      if (typeof body.transcription === 'string' && body.transcription !== word.transcription) {
         word.transcription = body.transcription;
       }
       if (body.area_variant && body.area_variant !== word.area_variant) {
         word.area_variant = body.area_variant;
       }
 
+      if (body.pronunciations !== undefined) {
+        word.pronunciations = await savePronunciations(em, word.id, body.pronunciations, true);
+        if (body.transcription === undefined) word.transcription = primaryIPA(body.pronunciations);
+      }
       await wordsRep.save(word);
       await recordChange(em, {
         ...wordKeyOf(word),

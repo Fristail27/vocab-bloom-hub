@@ -1,3 +1,4 @@
+import { primaryIPA } from '../../../utils/pronunciations';
 import { DataSetGrammarPatternT } from '../../../../../../types/dictionaries/en/EnDataSetTypes';
 import { EnAreaVariantsE, EnPartOfSpeechE, EnWordFormsE, EnWordT } from '../../../../../../types';
 import { getVersion } from '../../../../../../configuration';
@@ -7,6 +8,7 @@ export const mapGrammarPatternFromSetToDB = (ph: DataSetGrammarPatternT): EnWord
   return {
     alternatives: ph.alternatives,
     etymologies: ph.etymologies,
+    pronunciations: ph.pronunciations,
     origins: ph.origins,
     word: ph.phrase,
     part_of_speech: EnPartOfSpeechE.grammar_pattern,
@@ -26,7 +28,7 @@ export const mapGrammarPatternFromSetToDB = (ph: DataSetGrammarPatternT): EnWord
     noun___is_proper: false,
     word_level: ph.level || null,
     description: ph.description,
-    transcription: ph.transcription,
+    transcription: ph.transcription || primaryIPA(ph.pronunciations) || ph.transcription,
     is_obsolete: ph.is_obsolete,
     is_abbreviation: false,
     noun___uncountable: false,

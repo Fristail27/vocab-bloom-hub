@@ -78,13 +78,15 @@ describe('word provenance and independent forks (#556)', () => {
       version: 'source-1',
       generated: false,
       description: 'a tree',
+      pronunciations: [{ type: 'ipa', text: '/seed-er/', area_variant: 'american', sort_order: 0 }],
       etymologies: [{ number: 1, text: 'Invented origin for the transfer fixture.' }],
       forms: [
         {
           word: 'cedars',
           form_of_word: 'plural_form',
           area_variant: 'common',
-          transcription: '',
+          transcription: '/legacy-seeders/',
+          pronunciations: [{ type: 'ipa', text: '/seed-ers/', area_variant: 'british', sort_order: 0 }],
           alternatives: ['cedarr'],
         },
       ],
@@ -249,6 +251,13 @@ describe('word provenance and independent forks (#556)', () => {
     expect(copy.etymologies).toEqual([
       { id: expect.any(Number), number: 1, text: 'Invented origin for the transfer fixture.' },
     ]);
+    expect(copy.pronunciations?.map(({ id: _id, ...value }) => value)).toEqual(
+      cedar.pronunciations?.map(({ id: _id, ...value }) => value),
+    );
+    expect(copy.forms[0].pronunciations?.map(({ id: _id, ...value }) => value)).toEqual(
+      cedar.forms[0].pronunciations?.map(({ id: _id, ...value }) => value),
+    );
+    expect(copy.forms[0].transcription).toBe('/legacy-seeders/');
     expect(copy.meanings[0].etymology_number).toBe(1);
     expect(copy.meanings[0].quotes).toEqual(cedar.meanings[0].quotes);
     expect(copy.etymologies![0].id).not.toBe(cedar.etymologies![0].id);
@@ -343,6 +352,8 @@ describe('word provenance and independent forks (#556)', () => {
     expect(first.licenses).toEqual(cedar.licenses);
     expect(first.alternatives).toEqual(['cedarr']);
     expect(first.etymologies).toEqual(cedar.etymologies);
+    expect(first.pronunciations).toEqual(cedar.pronunciations);
+    expect(first.forms[0].pronunciations).toEqual(cedar.forms[0].pronunciations);
     expect(first.meanings[0].etymology_number).toBe(1);
     expect(first.meanings[0].quotes).toEqual(cedar.meanings[0].quotes);
     expect((await read('first_fork', first.forms[0].id)).origins).toEqual(first.origins);
@@ -423,6 +434,7 @@ describe('word provenance and independent forks (#556)', () => {
     await create('second_fork');
     const target = await app.get(DatasetsService).reader(await app.get(DatasetsService).find('second_fork'));
     await target.query("SELECT setval(pg_get_serial_sequence('en_etymologies', 'id'), 1000)");
+    await target.query("SELECT setval(pg_get_serial_sequence('en_pronunciations', 'id'), 1000)");
     const imported = await api()
       .post('/api/en/dictionary/import/upload')
       .set(auth)
@@ -437,6 +449,14 @@ describe('word provenance and independent forks (#556)', () => {
       .expect(200);
     const restored = await read('second_fork', search.body[0].id as number);
     expect(restored.origins).toEqual(before.origins);
+    expect(restored.pronunciations?.map(({ id: _id, ...value }) => value)).toEqual(
+      before.pronunciations?.map(({ id: _id, ...value }) => value),
+    );
+    expect(restored.pronunciations![0].id).not.toBe(before.pronunciations![0].id);
+    expect(restored.forms[0].pronunciations?.map(({ id: _id, ...value }) => value)).toEqual(
+      before.forms[0].pronunciations?.map(({ id: _id, ...value }) => value),
+    );
+    expect(restored.forms[0].transcription).toBe('/legacy-seeders/');
     expect(restored.alternatives).toEqual(['cedarr']);
     expect(restored.etymologies?.map(({ number, text }) => ({ number, text }))).toEqual([
       { number: 1, text: 'Invented origin for the transfer fixture.' },

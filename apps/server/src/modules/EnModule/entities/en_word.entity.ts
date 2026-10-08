@@ -1,3 +1,4 @@
+import { EnPronunciation } from './en_pronunciation.entity';
 import { EnEtymology } from './en_etymology.entity';
 import {
   Column,
@@ -48,6 +49,9 @@ import { MANUALLY_MANAGED_INDEX } from './manually-managed-index';
 // AddCaseFoldedWordIndexes migration (issue #440)
 @Index('IDX_EN_WORD_LOWER_C', ['word'], MANUALLY_MANAGED_INDEX)
 export class EnWord {
+  @OneToMany(() => EnPronunciation, (pronunciation) => pronunciation.word)
+  pronunciations?: EnPronunciation[];
+
   @OneToMany(() => EnEtymology, (etymology) => etymology.word)
   etymologies?: EnEtymology[];
 
