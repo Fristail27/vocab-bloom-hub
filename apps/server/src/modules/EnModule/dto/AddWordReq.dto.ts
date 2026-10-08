@@ -4,6 +4,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
+  MaxLength,
   IsArray,
   IsBoolean,
   IsEnum,
@@ -40,6 +41,14 @@ import { MAX_WORD_LINKS_PER_MEANING } from '../utils/normalizeWordLinks';
 const NullMeansColumnDefault = Transform(({ value }: { value: unknown }) => value ?? undefined);
 
 export class AddWordReqFormDTO {
+  @ApiProperty({ type: [String], required: false })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(1000)
+  @IsString({ each: true })
+  @MaxLength(128, { each: true })
+  alternatives?: string[];
+
   // Client-side ids may leak through for already-persisted rows; the service ignores them
   @IsOptional()
   @IsNumber()
@@ -317,6 +326,14 @@ export class AddWordReqDTO {
   @IsOptional()
   @IsString()
   base_phrasal?: EnWordT['base_phrasal'] | undefined;
+
+  @ApiProperty({ type: [String], required: false })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(1000)
+  @IsString({ each: true })
+  @MaxLength(128, { each: true })
+  alternatives?: string[];
 
   // Present when the payload was pasted from an exported word; the service ignores it
   @IsOptional()

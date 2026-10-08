@@ -30,16 +30,16 @@ export const RELATION_LOAD_STRATEGY = 'query' as const;
  * item, so the relation is loaded (one join) rather than answered null
  */
 export const SEARCH_ITEM_RELATIONS: FindOptionsRelations<EnWord> = {
-  word: true,
-  forms: { word: true },
+  word: { alternatives: true },
+  forms: { word: { alternatives: true } },
   base_phrasal: { word: true },
 };
 
 export const FULL_WORD_RELATIONS: FindOptionsRelations<EnWord> = {
-  forms: { word: true },
+  forms: { word: { alternatives: true } },
   meanings: { translations: true, synonyms: true, antonyms: true },
   phrasal_variants: { word: true },
   base_phrasal: { word: true },
   short_translations: true,
-  word: true,
+  word: { alternatives: true },
 };

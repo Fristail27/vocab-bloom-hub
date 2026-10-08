@@ -5,11 +5,11 @@ import { EnWord } from '../../entities/en_word.entity';
 
 /** Everything a word says: what the history of a creation and of a deletion holds (issue #531) */
 export const WORD_CHANGE_RELATIONS: FindOptionsRelations<EnWord> = {
-  word: true,
-  forms: { word: true },
+  word: { alternatives: true },
+  forms: { word: { alternatives: true } },
   meanings: { translations: true, synonyms: true, antonyms: true },
   short_translations: true,
-  base_phrasal: { word: true },
+  base_phrasal: { word: { alternatives: true } },
 };
 
 /** The word of a headword and a part of speech: the row of the base word, with everything it says */

@@ -70,16 +70,16 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@next/eslint-plugin-next": "patch:@next/eslint-plugin-next@npm%3A16.3.8#~/.yarn/patches/@next-eslint-plugin-next-npm-16.3.8-c19f8e3168.patch",
+    "@next/eslint-plugin-next": "patch:@next/eslint-plugin-next@npm%3A16.4.0#~/.yarn/patches/@next-eslint-plugin-next-npm-16.4.0.patch",
     "@types/jest": "^30.0.0",
-    "@types/node": "^26",
-    "concurrently": "^10.0.5",
-    "eslint": "^10.11.0",
+    "@types/node": "^26.6.4",
+    "concurrently": "^10.0.6",
+    "eslint": "^10.12.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-simple-import-sort": "^14.0.0",
     "eslint-plugin-unused-imports": "^4.4.1",
-    "globals": "^17.12.0",
+    "globals": "^17.13.0",
     "husky": "^9.1.7",
     "identity-obj-proxy": "^3.0.0",
     "jest": "^30.5.2",
@@ -90,7 +90,7 @@
     "semver": "^7.8.5",
     "ts-jest": "^29.4.14",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.71.0"
+    "typescript-eslint": "^8.71.1"
   },
   "engines": {
     "node": ">=22.13",
@@ -98,9 +98,10 @@
   },
   "resolutions": {
     "@next/eslint-plugin-next/fast-glob": "npm:tinyglobby@0.2.17",
-    "multer@npm:2.2.0": "2.3.0",
+    "multer@npm:2.2.0": "2.4.0",
     "js-yaml@npm:4.3.1": "4.3.2",
-    "concurrently/shell-quote": "1.11.0"
+    "concurrently/shell-quote": "1.12.0",
+    "nwsapi": "2.2.23"
   },
   "packageManager": "yarn@4.17.1",
   "dependencies": {

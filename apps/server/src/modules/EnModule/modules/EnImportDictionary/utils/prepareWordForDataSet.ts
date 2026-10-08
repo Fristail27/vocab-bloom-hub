@@ -1,3 +1,4 @@
+import { alternativeSpellings } from '../../../utils/entryAlternatives';
 import {
   DataSetWordT,
   EnMeaningDST,
@@ -85,6 +86,7 @@ export const mapShortTranslationForDS = (t: EnShortTranslation): EnShortTranslat
 
 export const mapFormsForDS = (f: EnWord): EnWordFormDST => {
   return {
+    alternatives: alternativeSpellings(f.word),
     is_obsolete: !!f.is_obsolete,
     transcription: f.transcription || '',
     word: f.word.word,
@@ -97,6 +99,7 @@ export const mapFormsForDS = (f: EnWord): EnWordFormDST => {
 export const prepareWordForDataSet = (word: EnWord): DataSetWordT => {
   const { pattern: _p, form_of_word: _f, ...w } = word;
   return {
+    alternatives: alternativeSpellings(word.word),
     origins: word.origins?.length ? word.origins : undefined,
     categories: sortStrings(w.categories),
     generated: Boolean(w.generated),

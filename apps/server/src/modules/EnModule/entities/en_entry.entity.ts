@@ -1,4 +1,14 @@
-import { Column, CreateDateColumn, Entity, Index, OneToMany, PrimaryColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  JoinTable,
+  ManyToMany,
+  OneToMany,
+  PrimaryColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { MANUALLY_MANAGED_INDEX } from './manually-managed-index';
 import { IsDate } from 'class-validator';
 import { EnWord } from './en_word.entity';
@@ -38,6 +48,15 @@ export class EnEntry {
   // the unit a dataset update replaces.
   @Column({ type: 'boolean', default: false })
   user_modified?: boolean;
+
+  /** Reciprocal spelling links, shared by every part of speech of this headword. */
+  @ManyToMany(() => EnEntry, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+  @JoinTable({
+    name: 'en_entry_alternatives',
+    joinColumn: { name: 'word', referencedColumnName: 'word' },
+    inverseJoinColumn: { name: 'alternative', referencedColumnName: 'word' },
+  })
+  alternatives?: EnEntry[];
 
   @OneToMany(() => EnWord, (entry) => entry.word, { onDelete: 'CASCADE' })
   entries!: EnWord[];

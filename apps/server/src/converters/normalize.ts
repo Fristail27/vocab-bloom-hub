@@ -50,6 +50,9 @@ const sameMeaning = (a: ConvertedMeaningT, b: ConvertedMeaningT): boolean =>
  */
 export const mergeEntries = (first: ConvertedEntryT, second: ConvertedEntryT): ConvertedEntryT => ({
   ...first,
+  ...((first.alternatives || second.alternatives) && {
+    alternatives: unique([...(first.alternatives ?? []), ...(second.alternatives ?? [])]).sort(),
+  }),
   ...((first.generated || second.generated) && {
     generated: true,
     generated_by_model: unique([first.generated_by_model, second.generated_by_model].filter(Boolean)).join(

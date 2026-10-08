@@ -361,3 +361,34 @@ describe('wiktionary: the dataset', () => {
     await expectImportable(outDir);
   });
 });
+
+describe('wiktionary alternative spellings (#575)', () => {
+  it('retains both forms and alt_of links, including an alternative-only source gloss', () => {
+    const converted = convertRecord({
+      word: 'lumah',
+      lang_code: 'en',
+      pos: 'noun',
+      forms: [
+        { form: 'lumma', tags: ['alternative'] },
+        { form: 'lumahs', tags: ['plural'] },
+      ],
+      senses: [
+        {
+          glosses: ['An alternative spelling of the invented word luma.'],
+          alt_of: [{ word: 'luma' }],
+          tags: ['alt-of', 'alternative'],
+        },
+      ],
+    });
+    expect(converted).toEqual(
+      expect.objectContaining({
+        word: 'lumah',
+        alternatives: ['luma', 'lumma'],
+        forms: [expect.objectContaining({ word: 'lumahs' })],
+        meanings: [
+          expect.objectContaining({ definition: 'An alternative spelling of the invented word luma.' }),
+        ],
+      }),
+    );
+  });
+});

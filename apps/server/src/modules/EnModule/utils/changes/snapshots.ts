@@ -1,3 +1,4 @@
+import { alternativeSpellings } from '../entryAlternatives';
 import { ChangeDiffT, ChangeRecordT, EnAreaVariantsE } from '../../../../../types';
 import { EnMeaning } from '../../entities/en_meaning.entity';
 import { EnMeaningTranslation } from '../../entities/en_meaning_translation.entity';
@@ -51,6 +52,7 @@ export const meaningSnapshot = (meaning: EnMeaning, withTranslations = false): S
 });
 
 export const formSnapshot = (form: EnWord): SnapshotT => ({
+  ...(form.word.alternatives?.length && { alternatives: alternativeSpellings(form.word) }),
   word: form.word.word,
   form_of_word: form.form_of_word,
   transcription: kept(form.transcription),
@@ -90,6 +92,7 @@ export const wordSnapshot = (word: EnWord): SnapshotT => ({
  */
 export const fullWordSnapshot = (word: EnWord): SnapshotT => ({
   ...wordSnapshot(word),
+  alternatives: alternativeSpellings(word.word),
   version: kept(word.version),
   forms: [...(word.forms ?? [])]
     .map(formSnapshot)

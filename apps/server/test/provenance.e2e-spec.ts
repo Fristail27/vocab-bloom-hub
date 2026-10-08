@@ -78,7 +78,15 @@ describe('word provenance and independent forks (#556)', () => {
       version: 'source-1',
       generated: false,
       description: 'a tree',
-      forms: [{ word: 'cedars', form_of_word: 'plural_form', area_variant: 'common', transcription: '' }],
+      forms: [
+        {
+          word: 'cedars',
+          form_of_word: 'plural_form',
+          area_variant: 'common',
+          transcription: '',
+          alternatives: ['cedarr'],
+        },
+      ],
       meanings: [
         {
           title: 'tree',
@@ -96,7 +104,16 @@ describe('word provenance and independent forks (#556)', () => {
     await api()
       .post('/api/en/dictionary/import/upload')
       .set(auth)
-      .attach('words', Buffer.from(JSON.stringify(line) + '\n'), 'words.jsonl')
+      .attach(
+        'words',
+        Buffer.from(
+          [
+            JSON.stringify({ ...line, alternatives: ['cedarr'] }),
+            JSON.stringify({ ...line, word: 'cedarr', forms: [], meanings: [], alternatives: ['cedar'] }),
+          ].join('\n') + '\n',
+        ),
+        'words.jsonl',
+      )
       .expect(201);
     const publicRead = await api().get('/api/v1/words/cedar').expect(200);
     cedar = await read('default', publicRead.body.data[0].id as number);
@@ -174,6 +191,18 @@ describe('word provenance and independent forks (#556)', () => {
       })
       .expect(201);
     const unrelatedBefore = await read('copied_words', unrelated.body.id as number);
+    await api()
+      .post('/api/en/add/word')
+      .query({ dataset: 'copied_words' })
+      .set(auth)
+      .send({
+        word: 'cedarr',
+        part_of_speech: 'noun',
+        form_of_word: 'base_form',
+        area_variant: 'common',
+        generated: false,
+      })
+      .expect(201);
     const preview = (await api().get(`/api/en/copy-preview/default/${cedar.id}`).set(auth).expect(200))
       .body as EnWordT;
     const saved = await api()
@@ -188,6 +217,8 @@ describe('word provenance and independent forks (#556)', () => {
     expect(copy.meanings[0].translations[0].id).not.toBe(unrelatedBefore.meanings[0].translations[0].id);
     expect(await read('copied_words', unrelated.body.id as number)).toEqual(unrelatedBefore);
     expect(copy.forms[0].word).toBe('cedars');
+    expect(copy.forms[0].alternatives).toEqual(['cedarr']);
+    expect(copy.alternatives).toEqual(['cedarr']);
     expect(copy.origins).toHaveLength(1);
     expect(copy.origins![0]).toMatchObject({
       ...cedar.origins![0],
@@ -277,6 +308,7 @@ describe('word provenance and independent forks (#556)', () => {
       acquisitions: [{ method: 'fork', recorded_at: expect.any(String), revision: expect.any(String) }],
     });
     expect(first.licenses).toEqual(cedar.licenses);
+    expect(first.alternatives).toEqual(['cedarr']);
     expect((await read('first_fork', first.forms[0].id)).origins).toEqual(first.origins);
     // Check the stored payload as well as the API: no display/projection deduplication.
     const stored = await app
@@ -367,6 +399,7 @@ describe('word provenance and independent forks (#556)', () => {
       .expect(200);
     const restored = await read('second_fork', search.body[0].id as number);
     expect(restored.origins).toEqual(before.origins);
+    expect(restored.alternatives).toEqual(['cedarr']);
     expect(restored.licenses).toEqual(before.licenses);
     const listed = await api().get('/api/en/datasets').set(auth).expect(200);
     expect(

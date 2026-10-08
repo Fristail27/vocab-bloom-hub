@@ -1,3 +1,6 @@
+import { FULL_WORD_RELATIONS } from '../../../utils/wordRelations';
+import { prepareWordForDataSet } from '../utils/prepareWordForDataSet';
+import { replaceAlternatives } from '../../../utils/entryAlternatives';
 import '../../../__tests__/helpers/clearDatabaseUrl';
 
 import { afterAll, afterEach, beforeAll, describe, expect, it, jest } from '@jest/globals';
@@ -219,6 +222,63 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
     });
     expect(meaning.synonyms.map((word) => word.word).sort()).toEqual(['Polish', 'polish']);
     expect(meaning.antonyms.map((word) => word.word)).toEqual(['Northstar']);
+  });
+
+  it('imports reciprocal headword alternatives across POS and round-trips portable spellings', async () => {
+    mockDatasetFiles({
+      'vocab-bloom-hub-en-words.jsonl': toNdjson([
+        makeSetWord('luma', { alternatives: ['lumah', 'missing', 'luma', 'lumah'] }),
+        makeSetWord('luma', { part_of_speech: EnPartOfSpeechE.noun, alternatives: ['lumma'] }),
+        makeSetWord('lumah'),
+        makeSetWord('lumma'),
+      ]),
+    });
+    await service.importDictionary({}, new FakeProgressRes() as unknown as ExpressResponse);
+    const rows = await ds.getRepository(EnEntry).find({ relations: { alternatives: true } });
+    const lists = Object.fromEntries(
+      rows.map((row) => [row.word, row.alternatives!.map((item) => item.word).sort()]),
+    );
+    expect(lists).toEqual({ luma: ['lumah', 'lumma'], lumah: ['luma'], lumma: ['luma'] });
+    expect(await ds.getRepository(EnChange).count()).toBe(0);
+    // A fresh target gets different IDs; only headword spellings travel.
+    const loader = new WordRowsService(ds);
+    const words = await loader.load(
+      (await ds.getRepository(EnWord).find()).map((word) => word.id),
+      FULL_WORD_RELATIONS,
+    );
+    const exported = words.map(prepareWordForDataSet);
+    await ds.synchronize(true);
+    mockDatasetFiles({ 'vocab-bloom-hub-en-words.jsonl': toNdjson(exported.reverse()) });
+    await service.importDictionary({}, new FakeProgressRes() as unknown as ExpressResponse);
+    const restored = await ds.getRepository(EnEntry).find({ relations: { alternatives: true } });
+    expect(
+      Object.fromEntries(restored.map((row) => [row.word, row.alternatives!.map((item) => item.word).sort()])),
+    ).toEqual(lists);
+  });
+
+  it('unions alternatives across import chunks and protects the reciprocal edited endpoint on update', async () => {
+    const importer = service as unknown as {
+      bulkSaveWords(lines: unknown[]): Promise<void>;
+      pendingAlternatives: Map<string, string[]>;
+    };
+    for (const line of [
+      makeSetWord('luma', { alternatives: ['lumah'] }),
+      makeSetWord('lumah'),
+      makeSetWord('luma', { part_of_speech: EnPartOfSpeechE.noun, alternatives: ['lumma'] }),
+      makeSetWord('lumma'),
+    ]) {
+      await importer.bulkSaveWords([mapWordFromSetToDB(line as DataSetWordT)]);
+    }
+    await ds.transaction((em) => replaceAlternatives(em, importer.pendingAlternatives));
+    await ds.getRepository(EnEntry).update('lumah', { user_modified: true });
+    mockDatasetFiles({
+      'vocab-bloom-hub-en-words.jsonl': toNdjson([makeSetWord('luma', { alternatives: [] })]),
+    });
+    await service.importDictionary({ update: true }, new FakeProgressRes() as unknown as ExpressResponse);
+    const entry = await ds
+      .getRepository(EnEntry)
+      .findOneOrFail({ where: { word: 'luma' }, relations: { alternatives: true } });
+    expect(entry.alternatives!.map((item) => item.word)).toEqual(['lumah']);
   });
 
   describe('full import flow', () => {

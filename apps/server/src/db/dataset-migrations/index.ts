@@ -11,6 +11,8 @@ import { ChangesCarryValues1789900000000 } from './1789900000000-ChangesCarryVal
 // the baseline is marked as applied. They name no schema: the connection's
 // search_path decides where they land. A change to a dictionary table goes
 // here, not into ../migrations (docs/migrations.md).
+import { AddEntryAlternatives1791400000000 } from './1791400000000-AddEntryAlternatives';
+
 export const datasetMigrations = [
   DatasetBaseline1789500000000,
   AddChanges1789700000000,
@@ -19,6 +21,7 @@ export const datasetMigrations = [
   AddWordOrigins1790200000000,
   NormalizeWordOrigins1790200001000,
   AddChangeContribution1790200003000,
+  AddEntryAlternatives1791400000000,
 ];
 
 /** The table each dataset schema records its applied migrations in */

@@ -302,6 +302,53 @@ describe('taking a change back', () => {
     expect(await readWord('lamp')).not.toBeNull();
   });
 
+  it('restores reciprocal alternative spelling links after deletion', async () => {
+    await imported('light');
+    const created = await words.addWord({ ...lamp(), alternatives: ['light'] });
+    expect((await readWord('lamp'))?.word.alternatives?.map((item) => item.word)).toEqual(['light']);
+    await words.deleteWord(idOf(created));
+    const deletion = await last();
+    expect((await readWord('light'))?.word.alternatives).toEqual([]);
+    await changes.revert(deletion.id);
+    expect((await readWord('lamp'))?.word.alternatives?.map((item) => item.word)).toEqual(['light']);
+    expect((await readWord('light'))?.word.alternatives?.map((item) => item.word)).toEqual(['lamp']);
+  });
+
+  it('records and reverts spelling changes at headword level without a POS', async () => {
+    await imported('light');
+    await words.addWord({ ...lamp(), alternatives: ['light'] });
+    const shared = (await history()).find(
+      (change) => change.headword === 'lamp' && change.part_of_speech === null,
+    )!;
+    expect(shared.diff).toEqual({ alternatives: { before: [], after: ['light'] } });
+    await changes.revert(shared.id);
+    expect((await readWord('lamp'))?.word.alternatives).toEqual([]);
+    expect((await readWord('light'))?.word.alternatives).toEqual([]);
+    expect((await entry('light'))?.user_modified).toBe(false);
+    expect((await changes.list({ headword: 'light', active: true })).total).toBe(0);
+    const creation = (await history()).find(
+      (change) => change.headword === 'lamp' && change.action === ChangeActionE.create,
+    )!;
+    await changes.revert(creation.id);
+    expect(await entry('lamp')).toBeNull();
+  });
+
+  it('restores alternative links of forms after rename and deletion', async () => {
+    await imported('light');
+    await imported('lampez');
+    const body = lamp();
+    body.forms![0].alternatives = ['lampez'];
+    await words.addWord(body);
+    const form = (await readWord('lamp'))!.forms[0];
+    await words.editWordForm({ id: form.id, word: 'lampes' });
+    await changes.revert((await last()).id);
+    expect((await readWord('lamp'))!.forms[0].word.alternatives?.map((item) => item.word)).toEqual(['lampez']);
+    await words.deleteWord(form.id);
+    await changes.revert((await last()).id);
+    expect((await readWord('lamp'))!.forms[0].word.alternatives?.map((item) => item.word)).toEqual(['lampez']);
+    expect((await readWord('lampez'))!.word.alternatives?.map((item) => item.word)).toEqual(['lamps']);
+  });
+
   it('brings a deleted word back with everything it said', async () => {
     await imported('light');
     const created = await words.addWord(lamp());

@@ -39,6 +39,13 @@
   "PublicSearchWordV1T": {
     "type": "object",
     "properties": {
+      "alternatives": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Alternative spellings of this headword, shared by all its parts of speech."
+      },
       "origins": {
         "type": "array",
         "items": {
@@ -497,6 +504,12 @@
   "PublicWordV1FormT": {
     "type": "object",
     "properties": {
+      "alternatives": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
       "id": {
         "type": "integer"
       },
@@ -587,6 +600,13 @@
         "items": {
           "type": "string"
         }
+      },
+      "alternatives": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Alternative spellings of this headword, shared by all its parts of speech."
       },
       "origins": {
         "type": "array",
@@ -1165,6 +1185,12 @@
       },
       "modified": {
         "type": "boolean"
+      },
+      "alternatives": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
       },
       "id": {
         "type": "integer"

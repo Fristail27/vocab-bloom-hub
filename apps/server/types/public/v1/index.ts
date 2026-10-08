@@ -99,6 +99,7 @@ export type PublicWordV1MeaningT = {
 
 // An inflected form of an entry ("ran" of the verb "run")
 export type PublicWordV1FormT = {
+  alternatives?: string[];
   /** @asType integer */
   id: number;
   word: string;
@@ -111,6 +112,8 @@ export type PublicWordV1FormT = {
 // its forms — no meanings, no translations (the detailed search, the
 // headword and id reads carry those)
 export type PublicSearchWordV1T = {
+  /** Alternative spellings of this headword, shared by all its parts of speech. */
+  alternatives?: string[];
   origins?: OriginT[];
   /** Terms of the datasets whose edits still contribute to this word. */
   contributions?: OriginT[];

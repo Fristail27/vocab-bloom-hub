@@ -33,6 +33,14 @@ export const recordCopiedEdits = async (em: EntityManager, original: EnWord, sav
     before?: SnapshotT,
     after?: SnapshotT,
   ) => {
+    // Shared spelling links are recorded under their own headword, without a POS.
+    // Keep them in creation/deletion/rename snapshots only, for restoration.
+    if (entity === ChangeEntityE.word_form && before && after && before.word === after.word) {
+      const { alternatives: _beforeAlternatives, ...previous } = before;
+      const { alternatives: _afterAlternatives, ...current } = after;
+      before = previous;
+      after = current;
+    }
     const diff =
       before && after ? changedFields(before, after) : before ? deletedFields(before) : createdFields(after!);
     if (!diff) return;
