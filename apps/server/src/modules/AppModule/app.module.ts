@@ -1,3 +1,4 @@
+import { DictModule } from '../DictModule/dict.module';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
@@ -32,6 +33,7 @@ import { getLoggerParams } from '../../core/logging/logger';
     EnModule,
     SettingsModule,
     PublicApiModule,
+    DictModule,
     // reader feedback on the dictionary data (issue #327)
     SuggestionsModule,
     MetricsModule,

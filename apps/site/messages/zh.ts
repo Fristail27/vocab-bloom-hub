@@ -124,6 +124,7 @@ export default {
       caution: '小心',
     },
     sections: {
+      dict: 'DICT / TCP',
       start: '快速开始',
       deployment: '部署',
       database: '数据库',

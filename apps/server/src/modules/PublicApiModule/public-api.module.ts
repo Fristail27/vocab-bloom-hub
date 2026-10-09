@@ -49,6 +49,7 @@ import { PublicOpenApiService } from './public-openapi.service';
     PublicDictionaryController,
     PublicOpenApiController,
   ],
+  exports: [PublicMetaService],
   providers: [
     FreeDictionaryApiService,
     FreeDictionaryJsonInterceptor,

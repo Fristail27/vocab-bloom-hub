@@ -127,6 +127,7 @@ export default {
       caution: 'Caution',
     },
     sections: {
+      dict: 'DICT / TCP',
       start: 'Getting started',
       deployment: 'Deployment',
       database: 'Database',

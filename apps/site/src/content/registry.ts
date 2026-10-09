@@ -6,6 +6,7 @@ export enum DocSectionE {
   database = 'database',
   operations = 'operations',
   api = 'api',
+  dict = 'dict',
   sdk = 'sdk',
   data = 'data',
   project = 'project',
@@ -146,6 +147,14 @@ export const DOC_PAGES: DocPageT[] = [
     section: DocSectionE.api,
     title: 'API surfaces',
     titleRu: 'Устройство API',
+  },
+  {
+    slug: 'dict',
+    file: 'docs/dict.md',
+    translations: { [InterfaceLanguageEnum.ru]: 'docs/dict.ru.md' },
+    section: DocSectionE.dict,
+    title: 'Connecting over TCP',
+    titleRu: 'Подключение по TCP',
   },
   {
     slug: 'api-tools',
