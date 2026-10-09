@@ -50,6 +50,11 @@ services:
       # inside the container the server always listens on 3010; SERVER_PORT in
       # .env is the host port it is published on (3240 by default)
       SERVER_PORT: 3010
+      # Optional TCP listener in this server; enable it with DICT_ENABLED=true.
+      # DICT_PORT in .env selects the host port; the internal port stays fixed.
+      DICT_ENABLED: ${DICT_ENABLED:-false}
+      DICT_HOST: 0.0.0.0
+      DICT_PORT: 2628
       # the bundled database (profile `db`) unless .env names another one;
       # a database on the Docker host is host.docker.internal, not localhost
       DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-vocab}:${POSTGRES_PASSWORD:-vocab}@postgres:5432/${POSTGRES_DB:-vocab_bloom}}
@@ -63,6 +68,7 @@ services:
       - ./imports:/data/dictionary-imports:ro
     ports:
       - '127.0.0.1:${SERVER_PORT:-3240}:3010'
+      - '127.0.0.1:${DICT_PORT:-2628}:2628'
     # no depends_on: the database may live outside this file. The server
     # retries the connection for a minute at start and, past that, exits and
     # is restarted here — a bundled Postgres is ready long before.

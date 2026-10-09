@@ -32,16 +32,16 @@ DICT_HOST=127.0.0.1
 DICT_PORT=2628
 ```
 
-For Docker, add the supplied overlay:
+For Docker, set `DICT_ENABLED=true` in `.env` and run the ordinary Compose command:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dict.yml up -d
+docker compose up -d
 ```
 
-The overlay enables the listener on port 2628 inside the server container and publishes it
-on localhost. `DICT_PORT` in the Compose environment selects the host port; the internal port
-stays 2628. Combine with `docker-compose.build.yml` when building this checkout.
-The ordinary Compose file opens no DICT port.
+The main Compose file configures DICT in the server container on `0.0.0.0:2628` and
+publishes the port on host localhost. `DICT_PORT` in `.env` selects the host port; the
+internal port stays 2628. No separate container or additional required variables are needed.
+When `DICT_ENABLED=false`, the listener is disabled but the Compose port mapping remains.
 
 A DICT client such as `dict` can connect with:
 
@@ -122,8 +122,8 @@ before the imported database modules shut down.
 | Setting                | Default     | Meaning                                                                |
 | ---------------------- | ----------- | ---------------------------------------------------------------------- |
 | `DICT_ENABLED`         | `false`     | Start the TCP listener (`true`/`false`)                                |
-| `DICT_HOST`            | `127.0.0.1` | Bind address; overlay sets `0.0.0.0` inside the container              |
-| `DICT_PORT`            | `2628`      | TCP port, 1–65535; host port when using the overlay                    |
+| `DICT_HOST`            | `127.0.0.1` | Bind address; Docker Compose sets `0.0.0.0` inside the container       |
+| `DICT_PORT`            | `2628`      | TCP port, 1–65535; host port when using Docker Compose                 |
 | `DICT_MAX_CONNECTIONS` | `64`        | Total accepted connections, 1–4096                                     |
 | `DICT_IDLE_TIMEOUT`    | `60`        | Inactivity timeout in seconds, 1–3600                                  |
 | `DICT_RATE_LIMIT`      | `100`       | Commands per peer IP per 60 seconds, 1–10000; shared across reconnects |
