@@ -331,5 +331,7 @@ pull request, probing `/api/ready`, the login page and the website.
 
 ### Optional DICT listener
 
-Add `docker-compose.dict.yml` to enable the separate RFC 2229 TCP port on localhost.
+Set `DICT_ENABLED=true` in `.env` and run `docker compose up -d` to enable the RFC 2229
+TCP listener in the server container. The main Compose file publishes it on localhost;
+`DICT_PORT` selects the host port (2628 by default).
 See [DICT configuration and client examples](../dict.md). The default stack keeps it disabled.
