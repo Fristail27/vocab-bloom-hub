@@ -9,7 +9,7 @@
 # the `site` profile: COMPOSE_PROFILES=db,site starts it too — off by
 # default, an installation does not need it. Nothing in this file needs
 # editing either way.
-# The apps are published on localhost only, on ports away from the usual
+# The HTTP apps are published on localhost only, on ports away from the usual
 # 3000 / 9090 of other tools: the API on 3240, the admin UI on 3241, the
 # website on 3242 (SERVER_PORT / FRONT_PORT / SITE_PORT in .env; the
 # observability overlay continues with 3243 and 3244). Put a reverse proxy with TLS in
@@ -68,7 +68,7 @@ services:
       - ./imports:/data/dictionary-imports:ro
     ports:
       - '127.0.0.1:${SERVER_PORT:-3240}:3010'
-      - '127.0.0.1:${DICT_PORT:-2628}:2628'
+      - '${DICT_PORT:-2628}:2628'
     # no depends_on: the database may live outside this file. The server
     # retries the connection for a minute at start and, past that, exits and
     # is restarted here — a bundled Postgres is ready long before.

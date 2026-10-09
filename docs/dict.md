@@ -39,9 +39,16 @@ docker compose up -d
 ```
 
 The main Compose file configures DICT in the server container on `0.0.0.0:2628` and
-publishes the port on host localhost. `DICT_PORT` in `.env` selects the host port; the
+publishes the port on all host interfaces. `DICT_PORT` in `.env` selects the host port; the
 internal port stays 2628. No separate container or additional required variables are needed.
 When `DICT_ENABLED=false`, the listener is disabled but the Compose port mapping remains.
+
+Allow inbound TCP traffic to this port in the host firewall for remote clients.
+Use the server hostname in place of `127.0.0.1` when connecting remotely, for example:
+
+```bash
+curl 'dict://vocab-bloom-hub.com:2628/d:hello:default'
+```
 
 A DICT client such as `dict` can connect with:
 
