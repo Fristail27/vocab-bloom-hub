@@ -189,11 +189,11 @@ describe('public API responses match their OpenAPI schemas (e2e, issue #305)', (
     throw new Error(`Operation ${operationId} is not in the served document`);
   };
 
-  const validate = (operationId: string, status: number, body: unknown) => {
+  const validate = (operationId: string, status: number, body: unknown, contentType = 'application/json') => {
     const { responses } = findOperation(operationId);
     const response = responses[String(status)] as JsonObjectT | undefined;
     expect(response).toBeDefined();
-    const schema = (response!.content as Record<string, { schema: JsonObjectT }>)['application/json'].schema;
+    const schema = (response!.content as Record<string, { schema: JsonObjectT }>)[contentType].schema;
     const key = `${operationId}:${status}`;
     let validator = validators.get(key);
     if (!validator) {
@@ -213,6 +213,20 @@ describe('public API responses match their OpenAPI schemas (e2e, issue #305)', (
       // one 2xx per operation: 200 for the reads, 201 for the suggestion intake
       expect(Object.keys(responses).filter((status) => status.startsWith('2'))).toHaveLength(1);
     }
+  });
+
+  it('freedictionaryapi JSON and text error schemas', async () => {
+    const result = await request(server())
+      .get('/api/compat/freedictionaryapi/v1/entries/en/run?translations=true')
+      .expect(200);
+    validate('FreeDictionaryApiController_entries', 200, result.body);
+    const languages = await request(server()).get('/api/compat/freedictionaryapi/v1/languages').expect(200);
+    validate('FreeDictionaryApiController_languages', 200, languages.body);
+    const invalid = await request(server())
+      .get('/api/compat/freedictionaryapi/v1/languages?pretty=1')
+      .expect(400);
+    expect(invalid.headers['content-type']).toContain('text/plain');
+    validate('FreeDictionaryApiController_languages', 400, invalid.text, 'text/plain');
   });
 
   it('dictionaryapi v1/v2 successes and errors', async () => {

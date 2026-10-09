@@ -868,6 +868,15 @@ export default {
     empty_short_translations: 'Short translations with empty description',
   },
   documentation: {
+    endpoint_freedictionaryapi_entries: 'freedictionaryapi.com lookup',
+    desc_freedictionaryapi_entries:
+      'Exact, case-sensitive English lookup in the active dataset (language: en or all). Returns word, entries and source; full terms in vocabBloom. Missing words return empty entries.',
+    endpoint_freedictionaryapi_languages: 'Headword languages',
+    desc_freedictionaryapi_languages:
+      'English and the number of readable spellings in the active dataset, including forms and alternatives.',
+    param_desc_translations: 'Include supported sense translations (true/false; default false).',
+    param_desc_pretty: 'Indent JSON with two spaces (true/false; default false).',
+
     endpoint_dictionaryapi_v1: 'dictionaryapi.dev v1',
     desc_dictionaryapi_v1:
       'English lookup in the active dataset. Returns an array in dictionaryapi.dev v1 format, with complete sources and licenses in vocabBloom. Uses the shared public rate limit.',
@@ -934,7 +943,8 @@ export default {
     param_desc_headword: 'Headword the report is about, case-insensitive; 404 when unknown',
     param_desc_message: 'What is wrong and, ideally, what would be right',
     param_desc_word_id: 'Id of one entry of the headword, when the report concerns a specific part of speech',
-    param_desc_word: 'Headword spelling, case-insensitive; spaces are allowed for phrases',
+    param_desc_word:
+      'Headword spelling; phrases may contain spaces. freedictionaryapi.com routes distinguish case.',
     param_desc_dataset:
       'Name of a dataset of the instance, as dataset of a group says it: default, wiktionary, wordnet, wordnet_princeton',
     param_desc_words: 'Headword spellings, 1 to 50, comma-separated; each matched like the headword lookup',
@@ -947,7 +957,7 @@ export default {
     param_desc_area_variant: 'Regional labels to keep',
     param_desc_form_of_word: 'Word forms to list; base forms only by default',
     param_desc_language:
-      'Language codes: translation filter on native routes; en (or en_US / en_GB) on dictionaryapi.dev routes.',
+      'Language codes: translation filter on native routes; en (or en_US / en_GB) on dictionaryapi.dev; en or all on freedictionaryapi.com.',
     param_desc_search:
       'Search term; on the list and the random entry a case-insensitive headword prefix (ru — run, rung, runner, …)',
     param_desc_is_obsolete: 'true: obsolete entries only, false: current ones only',

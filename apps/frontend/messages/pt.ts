@@ -877,6 +877,15 @@ export default {
     empty_short_translations: 'Traduções curtas com descrição vazia',
   },
   documentation: {
+    endpoint_freedictionaryapi_entries: 'Busca freedictionaryapi.com',
+    desc_freedictionaryapi_entries:
+      'Busca inglesa exata, sensível a maiúsculas, no conjunto ativo (language: en ou all). Retorna word, entries e source; termos completos em vocabBloom. Palavras desconhecidas retornam entries vazio.',
+    endpoint_freedictionaryapi_languages: 'Idiomas do dicionário',
+    desc_freedictionaryapi_languages:
+      'Inglês e número de grafias consultáveis no conjunto ativo, incluindo formas e alternativas.',
+    param_desc_translations: 'Incluir traduções de sentidos disponíveis (true/false; padrão false).',
+    param_desc_pretty: 'Indentar JSON com dois espaços (true/false; padrão false).',
+
     endpoint_dictionaryapi_v1: 'dictionaryapi.dev v1',
     desc_dictionaryapi_v1:
       'Pesquisa palavras em inglês no conjunto de dados ativo. Retorna um array no formato dictionaryapi.dev v1, com fontes e licenças completas em vocabBloom. Compartilha o limite público de requisições.',
@@ -944,7 +953,7 @@ export default {
     param_desc_message: 'O que está errado e, idealmente, o que seria correto',
     param_desc_word_id:
       'Id de um verbete da palavra, quando o relato diz respeito a uma classe gramatical específica',
-    param_desc_word: 'Grafia da palavra, sem diferenciar maiúsculas; espaços são permitidos para frases',
+    param_desc_word: 'Grafia; expressões podem conter espaços. freedictionaryapi.com diferencia maiúsculas.',
     param_desc_dataset:
       'Nome de um conjunto de dados da instância, como dataset de um grupo o indica: default, wiktionary, wordnet, wordnet_princeton',
     param_desc_words:
@@ -958,7 +967,7 @@ export default {
     param_desc_area_variant: 'Marcas regionais a manter',
     param_desc_form_of_word: 'Formas de palavra a listar; por padrão só as formas base',
     param_desc_language:
-      'Códigos de idioma: filtro de traduções nas rotas nativas; en (ou en_US / en_GB) no dictionaryapi.dev.',
+      'Códigos de idioma: filtro de tradução na API nativa; en (ou en_US / en_GB) em dictionaryapi.dev; en ou all em freedictionaryapi.com.',
     param_desc_search:
       'Termo de busca; na lista e no verbete aleatório, um prefixo da palavra sem diferenciar maiúsculas (ru — run, rung, runner, …)',
     param_desc_is_obsolete: 'true: apenas verbetes obsoletos, false: apenas os atuais',

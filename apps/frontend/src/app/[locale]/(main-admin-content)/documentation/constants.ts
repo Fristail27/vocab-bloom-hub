@@ -31,6 +31,8 @@ export enum ApiEndpointKeyE {
   meta = 'meta',
   suggestions = 'suggestions',
   openapi = 'openapi',
+  freedictionaryapi_entries = 'freedictionaryapi_entries',
+  freedictionaryapi_languages = 'freedictionaryapi_languages',
   dictionaryapi_v1 = 'dictionaryapi_v1',
   dictionaryapi_v2 = 'dictionaryapi_v2',
 }
@@ -197,6 +199,46 @@ const SEARCH_DETAILED_PARAMS: ApiParamDocT[] = [
 ];
 
 export const DOCUMENTED_ENDPOINTS: ApiEndpointDocT[] = [
+  {
+    key: ApiEndpointKeyE.freedictionaryapi_entries,
+    slug: 'freedictionaryapi-entries',
+    method: 'GET',
+    path: '/api/compat/freedictionaryapi/v1/entries/{language}/{word}',
+    clientPath: '/compat/freedictionaryapi/v1/entries/{language}/{word}',
+    responseType: 'FreeDictionaryEntriesResT',
+    params: [
+      {
+        name: 'language',
+        type: 'string',
+        control: ParamControlE.enum,
+        required: true,
+        inPath: true,
+        defaultValue: 'en',
+        options: ['en', 'all'],
+      },
+      HEADWORD_PARAM,
+      {
+        name: 'translations',
+        type: 'boolean',
+        control: ParamControlE.boolean,
+        required: false,
+        defaultValue: false,
+      },
+      { name: 'pretty', type: 'boolean', control: ParamControlE.boolean, required: false, defaultValue: false },
+    ],
+  },
+  {
+    key: ApiEndpointKeyE.freedictionaryapi_languages,
+    slug: 'freedictionaryapi-languages',
+    method: 'GET',
+    path: '/api/compat/freedictionaryapi/v1/languages',
+    clientPath: '/compat/freedictionaryapi/v1/languages',
+    responseType: 'FreeDictionaryLanguagesResT',
+    params: [
+      { name: 'pretty', type: 'boolean', control: ParamControlE.boolean, required: false, defaultValue: false },
+    ],
+  },
+
   {
     key: ApiEndpointKeyE.dictionaryapi_v1,
     slug: 'dictionaryapi-v1',

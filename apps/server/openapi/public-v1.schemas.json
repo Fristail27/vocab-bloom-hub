@@ -2649,5 +2649,302 @@
       "synonyms",
       "antonyms"
     ]
+  },
+  "FreeDictionaryEntriesResT": {
+    "type": "object",
+    "properties": {
+      "word": {
+        "type": "string"
+      },
+      "entries": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/FreeDictionaryEntryT"
+        }
+      },
+      "source": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "license": {
+            "$ref": "#/components/schemas/DictionaryApiLicenseT"
+          }
+        },
+        "required": [
+          "url",
+          "license"
+        ]
+      },
+      "vocabBloom": {
+        "$ref": "#/components/schemas/PublicDatasetTermsV1T",
+        "description": "Active dataset terms. Word-specific origins are retained on each entry."
+      }
+    },
+    "required": [
+      "word",
+      "entries",
+      "source",
+      "vocabBloom"
+    ]
+  },
+  "FreeDictionaryEntryT": {
+    "type": "object",
+    "properties": {
+      "language": {
+        "$ref": "#/components/schemas/FreeDictionaryLanguageT"
+      },
+      "partOfSpeech": {
+        "type": "string"
+      },
+      "pronunciations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "ipa",
+                "enpr"
+              ]
+            },
+            "text": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "type",
+            "text",
+            "tags"
+          ]
+        }
+      },
+      "forms": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "word": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "word",
+            "tags"
+          ]
+        }
+      },
+      "senses": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/FreeDictionarySenseT"
+        }
+      },
+      "synonyms": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "antonyms": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "vocabBloom": {
+        "type": "object",
+        "properties": {
+          "word": {
+            "type": "string"
+          },
+          "dataset": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "modified": {
+            "type": "boolean"
+          },
+          "origins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginT"
+            }
+          },
+          "contributions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginT"
+            }
+          },
+          "licenses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WordLicenseT"
+            }
+          }
+        },
+        "required": [
+          "contributions",
+          "dataset",
+          "licenses",
+          "modified",
+          "origins",
+          "source",
+          "word"
+        ],
+        "description": "Native entry identity and lossless terms; additive to the upstream format."
+      }
+    },
+    "required": [
+      "language",
+      "partOfSpeech",
+      "pronunciations",
+      "forms",
+      "senses",
+      "synonyms",
+      "antonyms",
+      "vocabBloom"
+    ]
+  },
+  "FreeDictionaryLanguageT": {
+    "type": "object",
+    "properties": {
+      "code": {
+        "type": "string"
+      },
+      "name": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "code",
+      "name"
+    ]
+  },
+  "FreeDictionarySenseT": {
+    "type": "object",
+    "properties": {
+      "definition": {
+        "type": "string"
+      },
+      "tags": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "examples": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "quotes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string"
+            },
+            "reference": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "text",
+            "reference"
+          ]
+        }
+      },
+      "synonyms": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "antonyms": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "translations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "language": {
+              "$ref": "#/components/schemas/FreeDictionaryLanguageT"
+            },
+            "word": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "language",
+            "word"
+          ]
+        }
+      },
+      "subsenses": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/FreeDictionarySenseT"
+        }
+      }
+    },
+    "required": [
+      "definition",
+      "tags",
+      "examples",
+      "quotes",
+      "synonyms",
+      "antonyms",
+      "subsenses"
+    ]
+  },
+  "FreeDictionaryErrorT": {
+    "type": "string",
+    "description": "Upstream parameter errors are plain text, not the native error envelope."
+  },
+  "FreeDictionaryLanguagesResT": {
+    "type": "array",
+    "items": {
+      "type": "object",
+      "properties": {
+        "words": {
+          "type": "integer"
+        },
+        "code": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "name",
+        "words"
+      ]
+    }
   }
 }

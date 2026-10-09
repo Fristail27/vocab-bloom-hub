@@ -103,7 +103,11 @@ const responsesOf = (operation: OperationT, spec: PublicResponseSpecT, schemas: 
   for (const status of spec.errors) {
     responses[String(status)] = {
       description: PUBLIC_ERROR_DESCRIPTIONS[status] ?? 'Error',
-      content: { 'application/json': { schema: schemaRef(spec.errorType ?? PUBLIC_ERROR_SCHEMA) } },
+      content: {
+        [spec.errorContentType ?? 'application/json']: {
+          schema: schemaRef(spec.errorType ?? PUBLIC_ERROR_SCHEMA),
+        },
+      },
     };
   }
   const errorType = spec.errorType ?? PUBLIC_ERROR_SCHEMA;
@@ -173,6 +177,7 @@ export const buildPublicDocument = (
       `Read-only dictionary API under ${PUBLIC_API_PREFIX} (contract version ${PUBLIC_API_VERSION}): ` +
         'no authentication, every answer in a { data, meta } envelope, errors as ' +
         '{ statusCode, message, error: true }, X-API-Version on every response. ' +
+        'The /api/compat/freedictionaryapi/v1 routes use freedictionaryapi.com objects, language lists and plain-text errors. ' +
         'The /api/compat/dictionaryapi routes use dictionaryapi.dev v1/v2 arrays and errors, with additive vocabBloom provenance. ' +
         'Successful GET answers carry ETag, Last-Modified and Cache-Control. ' +
         `Documentation: ${projectWebsitePage('en', '/docs/api')}.`,

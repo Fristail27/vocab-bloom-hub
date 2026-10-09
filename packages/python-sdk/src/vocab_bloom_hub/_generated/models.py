@@ -440,6 +440,64 @@ class DictionaryApiMeaningT(BaseModel):
     antonyms: list[str]
 
 
+class Source(BaseModel):
+    url: str
+    license: DictionaryApiLicenseT
+
+
+class Pronunciation(BaseModel):
+    type: Type
+    text: str
+    tags: list[str]
+
+
+class Form(BaseModel):
+    word: str
+    tags: list[str]
+
+
+class FreeDictionaryLanguageT(BaseModel):
+    code: str
+    name: str
+
+
+class Quote(BaseModel):
+    text: str
+    reference: str
+
+
+class Translation(BaseModel):
+    language: FreeDictionaryLanguageT
+    word: str
+
+
+class FreeDictionarySenseT(BaseModel):
+    definition: str
+    tags: list[str]
+    examples: list[str]
+    quotes: list[Quote]
+    synonyms: list[str]
+    antonyms: list[str]
+    translations: list[Translation] | None = None
+    subsenses: list[FreeDictionarySenseT]
+
+
+class FreeDictionaryErrorT(RootModel[str]):
+    root: str = Field(
+        ..., description="Upstream parameter errors are plain text, not the native error envelope."
+    )
+
+
+class FreeDictionaryLanguagesResTItem(BaseModel):
+    words: int
+    code: str
+    name: str
+
+
+class FreeDictionaryLanguagesResT(RootModel[list[FreeDictionaryLanguagesResTItem]]):
+    root: list[FreeDictionaryLanguagesResTItem]
+
+
 class OriginT(BaseModel):
     id: str
     name: str
@@ -602,6 +660,23 @@ class PublicHeadwordLinksV1ResT(BaseModel):
     meta: PublicHeadwordV1MetaT
 
 
+class PublicDatasetTermsV1T(BaseModel):
+    origins: list[OriginT] | None = None
+    licenses: list[WordLicenseT] | None = None
+    description: str | None = None
+    dataset: str
+    title: str | None = None
+    active: bool
+    source: str
+    dataset_version: str | None = Field(...)
+    license: str
+    license_url: str
+    attribution: str
+    attribution_url: str | None = Field(...)
+    notice: str
+    license_text: str
+
+
 class PublicHeadwordTranslationsV1T(BaseModel):
     short_translations: list[PublicShortTranslationV1T]
     meaning_translations: list[PublicMeaningTranslationV1T]
@@ -676,6 +751,33 @@ class DictionaryApiV2ResTItem(BaseModel):
 
 class DictionaryApiV2ResT(RootModel[list[DictionaryApiV2ResTItem]]):
     root: list[DictionaryApiV2ResTItem]
+
+
+class VocabBloom3(BaseModel):
+    """
+    Native entry identity and lossless terms; additive to the upstream format.
+    """
+
+    word: str
+    dataset: str
+    source: str
+    modified: bool
+    origins: list[OriginT]
+    contributions: list[OriginT]
+    licenses: list[WordLicenseT]
+
+
+class FreeDictionaryEntryT(BaseModel):
+    language: FreeDictionaryLanguageT
+    partOfSpeech: str
+    pronunciations: list[Pronunciation]
+    forms: list[Form]
+    senses: list[FreeDictionarySenseT]
+    synonyms: list[str]
+    antonyms: list[str]
+    vocabBloom: VocabBloom3 = Field(
+        ..., description="Native entry identity and lossless terms; additive to the upstream format."
+    )
 
 
 class PublicSearchWordV1T(BaseModel):
@@ -787,6 +889,15 @@ class DictionaryApiV1ResT(RootModel[list[DictionaryApiV1ResTItem]]):
     root: list[DictionaryApiV1ResTItem]
 
 
+class FreeDictionaryEntriesResT(BaseModel):
+    word: str
+    entries: list[FreeDictionaryEntryT]
+    source: Source
+    vocabBloom: PublicDatasetTermsV1T = Field(
+        ..., description="Active dataset terms. Word-specific origins are retained on each entry."
+    )
+
+
 class PublicSearchV1ResT(BaseModel):
     data: list[PublicSearchWordV1T]
     meta: PublicSearchV1MetaT
@@ -890,3 +1001,6 @@ class PublicWordsV1ResT(BaseModel):
 class PublicSearchDetailedV1ResT(BaseModel):
     data: list[PublicWordV1T]
     meta: PublicSearchDetailedV1MetaT
+
+
+FreeDictionarySenseT.model_rebuild()

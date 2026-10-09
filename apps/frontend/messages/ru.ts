@@ -870,6 +870,15 @@ export default {
     empty_short_translations: 'Короткие переводы с пустым описанием',
   },
   documentation: {
+    endpoint_freedictionaryapi_entries: 'Поиск freedictionaryapi.com',
+    desc_freedictionaryapi_entries:
+      'Точный поиск английского написания с учётом регистра в активном датасете (language: en или all). Ответ: word, entries и source; полные условия — в vocabBloom. Для неизвестного слова entries пуст.',
+    endpoint_freedictionaryapi_languages: 'Языки словаря',
+    desc_freedictionaryapi_languages:
+      'Английский и число доступных написаний в активном датасете, включая формы и альтернативные написания.',
+    param_desc_translations: 'Включить поддерживаемые переводы значений (true/false; по умолчанию false).',
+    param_desc_pretty: 'Форматировать JSON с отступом в два пробела (true/false; по умолчанию false).',
+
     endpoint_dictionaryapi_v1: 'dictionaryapi.dev v1',
     desc_dictionaryapi_v1:
       'Поиск английского слова в активном датасете. Возвращает массив в формате dictionaryapi.dev v1; полные источники и лицензии — в vocabBloom. Использует общий лимит публичного API.',
@@ -935,7 +944,8 @@ export default {
     param_desc_headword: 'Слово, о котором жалоба, без учёта регистра; 404, если оно неизвестно',
     param_desc_message: 'Что не так и, в идеале, как правильно',
     param_desc_word_id: 'Id одной записи слова, если жалоба про конкретную часть речи',
-    param_desc_word: 'Написание слова без учёта регистра; для фраз допустимы пробелы',
+    param_desc_word:
+      'Написание слова; во фразах допустимы пробелы. Маршруты freedictionaryapi.com учитывают регистр.',
     param_desc_dataset:
       'Имя датасета экземпляра, как его называет поле dataset группы: default, wiktionary, wordnet, wordnet_princeton',
     param_desc_words:
@@ -949,7 +959,7 @@ export default {
     param_desc_area_variant: 'Региональные пометы, которые нужно оставить',
     param_desc_form_of_word: 'Какие словоформы перечислять; по умолчанию только базовые',
     param_desc_language:
-      'Коды языков: фильтр переводов на основных маршрутах; en (или en_US / en_GB) на маршрутах dictionaryapi.dev.',
+      'Коды языков: фильтр переводов в native API; en (или en_US / en_GB) для dictionaryapi.dev; en или all для freedictionaryapi.com.',
     param_desc_search:
       'Поисковый запрос; для списка и случайной записи — префикс заголовочного слова без учёта регистра (ru — run, rung, runner, …)',
     param_desc_is_obsolete: 'true: только устаревшие записи, false: только актуальные',

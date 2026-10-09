@@ -9,6 +9,7 @@ type QueryScalarT = string | number | boolean;
 export type ApiQueryT = Record<string, QueryScalarT | QueryScalarT[] | undefined | null>;
 type RequestOptions = RequestInit & {
   query?: ApiQueryT;
+  plainTextErrors?: boolean;
 };
 
 export type DownloadedFileT = { blob: Blob; filename?: string };
@@ -78,7 +79,7 @@ export class AbstractBaseApi {
   }
 
   static async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T | ErrorResT> {
-    const { query, headers = {}, body, ...fetchOptions } = options;
+    const { query, headers = {}, body, plainTextErrors, ...fetchOptions } = options;
     try {
       const url = this.buildUrl(endpoint, await this.withDataset(endpoint, query));
 
@@ -92,6 +93,7 @@ export class AbstractBaseApi {
         ...(body && { body: JSON.stringify(body) }),
         ...fetchOptions,
       });
+      if (plainTextErrors && !res.ok) return { error: true, message: await res.text() };
       let data: T | null = null;
       try {
         data = await res.json();

@@ -45,6 +45,16 @@ describe('ApiPlayground (issue #245)', () => {
     jest.clearAllMocks();
   });
 
+  it('runs freedictionaryapi with default options omitted and shows its object response', async () => {
+    (EnApi.publicGet as jest.Mock).mockResolvedValue({ word: 'take flight', entries: [], source: {} });
+    const endpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.freedictionaryapi_entries)!;
+    render(<ApiPlayground endpoint={endpoint} />);
+    typeSearch('take flight');
+    await send();
+    expect(EnApi.publicGet).toHaveBeenCalledWith('/compat/freedictionaryapi/v1/entries/en/take%20flight', {});
+    expect(screen.getByText(/"entries":/)).toBeInTheDocument();
+  });
+
   it('runs the compatibility route with English selected and shows the raw array', async () => {
     (EnApi.publicGet as jest.Mock).mockResolvedValue([
       { word: 'take flight', phonetics: [], meaning: { verb: [] } },

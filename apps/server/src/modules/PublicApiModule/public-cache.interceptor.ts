@@ -33,8 +33,8 @@ abstract class CacheHeadersInterceptor implements NestInterceptor {
       mergeMap(async (body: unknown) => {
         const lastModified = await this.lastModified();
         res.setHeader('Cache-Control', publicCacheControl(getPublicApiCacheMaxAge()));
-        // the same string Express is about to send (res.json → JSON.stringify)
-        res.setHeader('ETag', weakEtagOf(JSON.stringify(body)));
+        // The bytes Express sends: JSON by default, or an already serialized compatibility response.
+        res.setHeader('ETag', weakEtagOf(typeof body === 'string' ? body : JSON.stringify(body)));
         if (lastModified) {
           res.setHeader('Last-Modified', lastModified.toUTCString());
         }

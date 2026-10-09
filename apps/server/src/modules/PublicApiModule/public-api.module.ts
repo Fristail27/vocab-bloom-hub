@@ -1,3 +1,6 @@
+import { FreeDictionaryApiController } from './freedictionaryapi/freedictionaryapi.controller';
+import { FreeDictionaryApiService } from './freedictionaryapi/freedictionaryapi.service';
+import { FreeDictionaryJsonInterceptor } from './freedictionaryapi/json.interceptor';
 import { DictionaryApiController } from './dictionaryapi/dictionaryapi.controller';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -37,6 +40,7 @@ import { PublicOpenApiService } from './public-openapi.service';
   ],
   controllers: [
     DictionaryApiController,
+    FreeDictionaryApiController,
     PublicSearchController,
     // before the reads of the served dataset: /words/id/datasets is about the
     // headword "id", and /words/id/{id} of the next controller would take it
@@ -46,6 +50,8 @@ import { PublicOpenApiService } from './public-openapi.service';
     PublicOpenApiController,
   ],
   providers: [
+    FreeDictionaryApiService,
+    FreeDictionaryJsonInterceptor,
     PublicWordsService,
     PublicMetaService,
     DictionaryLastModifiedService,

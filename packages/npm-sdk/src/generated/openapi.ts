@@ -64,6 +64,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/compat/freedictionaryapi/v1/entries/{language}/{word}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * freedictionaryapi.com lookup in the active dataset
+     * @description Exact spelling. en and all read the English database; other languages and missing spellings return empty entries. Full terms in vocabBloom.
+     */
+    get: operations['FreeDictionaryApiController_entries'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/compat/freedictionaryapi/v1/languages': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Available headword languages and readable spelling counts
+     * @description English only. Counts include phrases, inflections and alternative-only entry rows in the active dataset, once per readable spelling; unlinked placeholders are excluded.
+     */
+    get: operations['FreeDictionaryApiController_languages'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/search': {
     parameters: {
       query?: never;
@@ -876,6 +916,22 @@ export interface components {
       data: components['schemas']['PublicChangeV1T'][];
       meta: components['schemas']['PublicHeadwordHistoryV1MetaT'];
     };
+    PublicDatasetTermsV1T: {
+      origins?: components['schemas']['OriginT'][];
+      licenses?: components['schemas']['WordLicenseT'][];
+      description?: string | null;
+      dataset: string;
+      title?: string;
+      active: boolean;
+      source: string;
+      dataset_version: string | null;
+      license: string;
+      license_url: string;
+      attribution: string;
+      attribution_url: string | null;
+      notice: string;
+      license_text: string;
+    };
     PublicWordDatasetV1T: {
       word: string;
       variants: string[];
@@ -1054,6 +1110,70 @@ export interface components {
       synonyms: string[];
       antonyms: string[];
     };
+    FreeDictionaryEntriesResT: {
+      word: string;
+      entries: components['schemas']['FreeDictionaryEntryT'][];
+      source: {
+        url: string;
+        license: components['schemas']['DictionaryApiLicenseT'];
+      };
+      /** @description Active dataset terms. Word-specific origins are retained on each entry. */
+      vocabBloom: components['schemas']['PublicDatasetTermsV1T'];
+    };
+    FreeDictionaryEntryT: {
+      language: components['schemas']['FreeDictionaryLanguageT'];
+      partOfSpeech: string;
+      pronunciations: {
+        /** @enum {string} */
+        type: 'ipa' | 'enpr';
+        text: string;
+        tags: string[];
+      }[];
+      forms: {
+        word: string;
+        tags: string[];
+      }[];
+      senses: components['schemas']['FreeDictionarySenseT'][];
+      synonyms: string[];
+      antonyms: string[];
+      /** @description Native entry identity and lossless terms; additive to the upstream format. */
+      vocabBloom: {
+        word: string;
+        dataset: string;
+        source: string;
+        modified: boolean;
+        origins: components['schemas']['OriginT'][];
+        contributions: components['schemas']['OriginT'][];
+        licenses: components['schemas']['WordLicenseT'][];
+      };
+    };
+    FreeDictionaryLanguageT: {
+      code: string;
+      name: string;
+    };
+    FreeDictionarySenseT: {
+      definition: string;
+      tags: string[];
+      examples: string[];
+      quotes: {
+        text: string;
+        reference: string;
+      }[];
+      synonyms: string[];
+      antonyms: string[];
+      translations?: {
+        language: components['schemas']['FreeDictionaryLanguageT'];
+        word: string;
+      }[];
+      subsenses: components['schemas']['FreeDictionarySenseT'][];
+    };
+    /** @description Upstream parameter errors are plain text, not the native error envelope. */
+    FreeDictionaryErrorT: string;
+    FreeDictionaryLanguagesResT: {
+      words: number;
+      code: string;
+      name: string;
+    }[];
   };
   responses: never;
   parameters: never;
@@ -1221,6 +1341,95 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['DictionaryApiErrorT'];
+        };
+      };
+    };
+  };
+  FreeDictionaryApiController_entries: {
+    parameters: {
+      query?: {
+        /** @description Indent JSON with two spaces; default false. */
+        pretty?: boolean;
+        /** @description Include supported translations; default false. Only true/false, first occurrence wins. */
+        translations?: boolean;
+      };
+      header?: never;
+      path: {
+        /** @description en or all; other values return empty entries */
+        language: string;
+        /** @description Exact case-sensitive spelling, encoded as one URL segment */
+        word: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['FreeDictionaryEntriesResT'];
+        };
+      };
+      /** @description Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'text/plain': components['schemas']['FreeDictionaryErrorT'];
+        };
+      };
+      /** @description Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'text/plain': components['schemas']['FreeDictionaryErrorT'];
+        };
+      };
+    };
+  };
+  FreeDictionaryApiController_languages: {
+    parameters: {
+      query?: {
+        /** @description Indent JSON with two spaces; default false. */
+        pretty?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['FreeDictionaryLanguagesResT'];
+        };
+      };
+      /** @description Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'text/plain': components['schemas']['FreeDictionaryErrorT'];
+        };
+      };
+      /** @description Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'text/plain': components['schemas']['FreeDictionaryErrorT'];
         };
       };
     };

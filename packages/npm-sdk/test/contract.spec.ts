@@ -45,7 +45,12 @@ describe('SDK coverage of the public contract (issue #275)', () => {
     const compatibility = Object.entries(spec.paths)
       .filter(([path]) => !path.startsWith('/api/v1/'))
       .flatMap(([, item]) => Object.values(item).map((op) => op.operationId));
-    expect(compatibility.sort()).toEqual(['DictionaryApiController_v1', 'DictionaryApiController_v2']);
+    expect(compatibility.sort()).toEqual([
+      'DictionaryApiController_v1',
+      'DictionaryApiController_v2',
+      'FreeDictionaryApiController_entries',
+      'FreeDictionaryApiController_languages',
+    ]);
   });
 
   it('maps every native operation of openapi/public-v1.json to a client method', () => {

@@ -150,7 +150,8 @@ export class EnApi extends AbstractBaseApi {
       query,
       ...this.PUBLIC_READ,
       // Upstream-compatible reads use wildcard CORS and must not send cookies.
-      ...(path.startsWith('/compat/dictionaryapi/') && { credentials: 'omit' as const }),
+      ...(path.startsWith('/compat/') && { credentials: 'omit' as const }),
+      ...(path.startsWith('/compat/freedictionaryapi/') && { plainTextErrors: true }),
     });
   }
 
