@@ -126,6 +126,7 @@ export default {
       caution: 'Осторожно',
     },
     sections: {
+      dict: 'DICT / TCP',
       start: 'Начало',
       deployment: 'Развёртывание',
       database: 'База данных',

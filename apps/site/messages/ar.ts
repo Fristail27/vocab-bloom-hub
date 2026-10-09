@@ -126,6 +126,7 @@ export default {
       caution: 'انتباه',
     },
     sections: {
+      dict: 'DICT / TCP',
       start: 'البدء',
       deployment: 'النشر',
       database: 'قاعدة البيانات',

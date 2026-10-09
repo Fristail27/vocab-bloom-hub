@@ -825,3 +825,8 @@ successful/missing/case-sensitive lookups, languages, unsupported codes, repeate
 booleans, translations and pretty output. Automated tests use original fixtures and require no
 upstream availability. No database migration, import/export format change or RFC 2229 server
 is part of this adapter.
+
+## DICT over TCP
+
+The optional [RFC 2229 listener](./dict.md) serves installed datasets through DICT commands.
+It has its own port and configuration and does not change these HTTP contracts.

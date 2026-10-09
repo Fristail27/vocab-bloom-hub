@@ -328,3 +328,8 @@ The packages live at <https://github.com/Fristail27?tab=packages>.
 
 CI builds the three images from the checkout and runs `docker compose up` against them on every
 pull request, probing `/api/ready`, the login page and the website.
+
+### Optional DICT listener
+
+Add `docker-compose.dict.yml` to enable the separate RFC 2229 TCP port on localhost.
+See [DICT configuration and client examples](../dict.md). The default stack keeps it disabled.

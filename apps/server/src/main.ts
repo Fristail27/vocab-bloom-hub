@@ -1,3 +1,4 @@
+import { getDictConfig } from './modules/DictModule/config';
 import { apiCorsOptions } from './core/utils/api-cors';
 import { config } from 'dotenv';
 import path from 'path';
@@ -80,6 +81,7 @@ async function bootstrap() {
   try {
     assertRequiredConfig();
     assertPublicApiConfig();
+    getDictConfig();
     assertUpdateCheckConfig();
     assertDatabaseDriverConsistent();
     getShutdownTimeout();
