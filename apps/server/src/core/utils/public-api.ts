@@ -2,6 +2,9 @@ import { timingSafeEqual } from 'node:crypto';
 import { ConfigurationError } from '../../../configuration';
 
 export const PUBLIC_API_PREFIX = '/api/v1';
+export const DICTIONARY_API_PREFIX = '/api/compat/dictionaryapi';
+export const isDictionaryApiPath = (path: string): boolean =>
+  path === DICTIONARY_API_PREFIX || path.startsWith(`${DICTIONARY_API_PREFIX}/`);
 export const PUBLIC_API_VERSION = '1';
 export const API_VERSION_HEADER = 'X-API-Version';
 
@@ -161,7 +164,7 @@ export const requestPath = (req: { originalUrl?: string; url: string }): string 
   (req.originalUrl ?? req.url).split('?')[0];
 
 export const isPublicApiPath = (path: string): boolean =>
-  path === PUBLIC_API_PREFIX || path.startsWith(`${PUBLIC_API_PREFIX}/`);
+  path === PUBLIC_API_PREFIX || path.startsWith(`${PUBLIC_API_PREFIX}/`) || isDictionaryApiPath(path);
 
 export const isAdminApiPath = (path: string): boolean =>
   ADMIN_API_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));

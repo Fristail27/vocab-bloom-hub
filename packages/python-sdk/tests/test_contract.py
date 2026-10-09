@@ -1,4 +1,4 @@
-"""Every operation of the public spec has a client method (sync and async)."""
+"""Every native operation of the public spec has a client method (sync and async)."""
 
 from __future__ import annotations
 
@@ -34,7 +34,20 @@ METHOD_BY_OPERATION = {
 
 def test_every_operation_has_a_method() -> None:
     spec = json.loads(SPEC.read_text())
-    operations = sorted(op["operationId"] for item in spec["paths"].values() for op in item.values())
+    operations = sorted(
+        op["operationId"]
+        for path, item in spec["paths"].items()
+        if path.startswith("/api/v1/")
+        for op in item.values()
+    )
+    # Compatibility adapters are consumed by third-party clients replacing their base URL.
+    compatibility = sorted(
+        op["operationId"]
+        for path, item in spec["paths"].items()
+        if not path.startswith("/api/v1/")
+        for op in item.values()
+    )
+    assert compatibility == ["DictionaryApiController_v1", "DictionaryApiController_v2"]
     assert operations == sorted(METHOD_BY_OPERATION)
     for method in METHOD_BY_OPERATION.values():
         assert callable(getattr(VocabBloomClient, method))

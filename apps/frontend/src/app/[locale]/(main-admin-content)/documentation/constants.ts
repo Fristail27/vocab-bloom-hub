@@ -31,6 +31,8 @@ export enum ApiEndpointKeyE {
   meta = 'meta',
   suggestions = 'suggestions',
   openapi = 'openapi',
+  dictionaryapi_v1 = 'dictionaryapi_v1',
+  dictionaryapi_v2 = 'dictionaryapi_v2',
 }
 
 export enum ParamControlE {
@@ -195,6 +197,46 @@ const SEARCH_DETAILED_PARAMS: ApiParamDocT[] = [
 ];
 
 export const DOCUMENTED_ENDPOINTS: ApiEndpointDocT[] = [
+  {
+    key: ApiEndpointKeyE.dictionaryapi_v1,
+    slug: 'dictionaryapi-v1',
+    method: 'GET',
+    path: '/api/compat/dictionaryapi/v1/entries/{language}/{word}',
+    clientPath: '/compat/dictionaryapi/v1/entries/{language}/{word}',
+    responseType: 'DictionaryApiV1ResT',
+    params: [
+      {
+        name: 'language',
+        type: 'string',
+        control: ParamControlE.enum,
+        required: true,
+        inPath: true,
+        defaultValue: 'en',
+        options: ['en', 'en_US', 'en_GB'],
+      },
+      HEADWORD_PARAM,
+    ],
+  },
+  {
+    key: ApiEndpointKeyE.dictionaryapi_v2,
+    slug: 'dictionaryapi-v2',
+    method: 'GET',
+    path: '/api/compat/dictionaryapi/v2/entries/{language}/{word}',
+    clientPath: '/compat/dictionaryapi/v2/entries/{language}/{word}',
+    responseType: 'DictionaryApiV2ResT',
+    params: [
+      {
+        name: 'language',
+        type: 'string',
+        control: ParamControlE.enum,
+        required: true,
+        inPath: true,
+        defaultValue: 'en',
+        options: ['en', 'en_US', 'en_GB'],
+      },
+      HEADWORD_PARAM,
+    ],
+  },
   {
     key: ApiEndpointKeyE.search_get,
     slug: 'search',

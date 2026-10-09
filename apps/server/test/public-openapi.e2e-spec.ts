@@ -57,7 +57,9 @@ describe('GET /api/v1/openapi.json (e2e, issue #273)', () => {
     expect(document.info.title).toBe('VocabBloom Public API');
 
     const paths = Object.keys(document.paths);
-    expect(paths.every((path) => path.startsWith('/api/v1/'))).toBe(true);
+    expect(
+      paths.every((path) => path.startsWith('/api/v1/') || path.startsWith('/api/compat/dictionaryapi/')),
+    ).toBe(true);
     expect(paths).toEqual(
       expect.arrayContaining([
         '/api/v1/search',

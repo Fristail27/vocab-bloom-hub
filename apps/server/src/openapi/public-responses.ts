@@ -13,6 +13,7 @@ export type PublicResponseSpecT = {
   type: string | null;
   // error statuses the route answers with (all in the PublicApiErrorT shape)
   errors: number[];
+  errorType?: string;
 };
 
 export const PUBLIC_ERROR_SCHEMA = 'PublicApiErrorT';
@@ -25,6 +26,16 @@ export const PUBLIC_ERROR_DESCRIPTIONS: Record<number, string> = {
 };
 
 export const PUBLIC_RESPONSES: Record<string, PublicResponseSpecT> = {
+  DictionaryApiController_v1: {
+    type: 'DictionaryApiV1ResT',
+    errors: [400, 404, 429],
+    errorType: 'DictionaryApiErrorT',
+  },
+  DictionaryApiController_v2: {
+    type: 'DictionaryApiV2ResT',
+    errors: [400, 404, 429],
+    errorType: 'DictionaryApiErrorT',
+  },
   PublicSearchController_searchGet: { type: 'PublicSearchV1ResT', errors: [400, 429] },
   PublicSearchController_searchDetailedGet: { type: 'PublicSearchDetailedV1ResT', errors: [400, 429] },
   PublicWordsController_list: { type: 'PublicWordsV1ResT', errors: [400, 429] },

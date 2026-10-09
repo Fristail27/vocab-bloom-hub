@@ -146,7 +146,12 @@ export class EnApi extends AbstractBaseApi {
 
   /** Any GET read of the public prefix, e.g. `/v1/words/run` (the documentation playground) */
   static async publicGet<T>(path: string, query?: ApiQueryT): Promise<T | ErrorResT> {
-    return this.get<T>(`${this.baseURL}${path}`, { query, ...this.PUBLIC_READ });
+    return this.get<T>(`${this.baseURL}${path}`, {
+      query,
+      ...this.PUBLIC_READ,
+      // Upstream-compatible reads use wildcard CORS and must not send cookies.
+      ...(path.startsWith('/compat/dictionaryapi/') && { credentials: 'omit' as const }),
+    });
   }
 
   /** Any POST of the public prefix, e.g. `/v1/suggestions` (the documentation playground) */

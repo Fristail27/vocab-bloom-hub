@@ -95,6 +95,8 @@ describe('public API configuration (issue #271)', () => {
   it('tells the public prefix from the admin prefixes by path', () => {
     expect(isPublicApiPath('/api/v1/search')).toBe(true);
     expect(isPublicApiPath('/api/v1')).toBe(true);
+    expect(isPublicApiPath('/api/compat/dictionaryapi/v2/entries/en/word')).toBe(true);
+    expect(isPublicApiPath('/api/compat/dictionaryapi-other')).toBe(false);
     expect(isPublicApiPath('/api/v10/search')).toBe(false);
     expect(isPublicApiPath('/api/en/search')).toBe(false);
     expect(isAdminApiPath('/api/en/search')).toBe(true);

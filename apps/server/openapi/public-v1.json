@@ -74,6 +74,162 @@
         ]
       }
     },
+    "/api/compat/dictionaryapi/v2/entries/{language}/{word}": {
+      "get": {
+        "description": "Array response, with lossless provenance in vocabBloom. English only; native headword and inflection resolution. No dataset query parameter.",
+        "operationId": "DictionaryApiController_v2",
+        "parameters": [
+          {
+            "name": "language",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "en",
+                "en_US",
+                "en_GB"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "word",
+            "required": true,
+            "in": "path",
+            "description": "Headword spelling, case-insensitive (spaces URL-encoded for phrases). An inflected form resolves to its base entry",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictionaryApiV2ResT"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictionaryApiErrorT"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nothing matches",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictionaryApiErrorT"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictionaryApiErrorT"
+                }
+              }
+            }
+          }
+        },
+        "summary": "dictionaryapi.dev v2 lookup in the active dataset",
+        "tags": [
+          "dictionaryapi.dev compatibility"
+        ]
+      }
+    },
+    "/api/compat/dictionaryapi/v1/entries/{language}/{word}": {
+      "get": {
+        "description": "Same entries and terms as v2, with a meaning object keyed by part of speech instead of meanings. English only.",
+        "operationId": "DictionaryApiController_v1",
+        "parameters": [
+          {
+            "name": "language",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "en",
+                "en_US",
+                "en_GB"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "word",
+            "required": true,
+            "in": "path",
+            "description": "Headword spelling, case-insensitive (spaces URL-encoded for phrases). An inflected form resolves to its base entry",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictionaryApiV1ResT"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictionaryApiErrorT"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nothing matches",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictionaryApiErrorT"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DictionaryApiErrorT"
+                }
+              }
+            }
+          }
+        },
+        "summary": "dictionaryapi.dev legacy v1 lookup in the active dataset",
+        "tags": [
+          "dictionaryapi.dev compatibility"
+        ]
+      }
+    },
     "/api/v1/search": {
       "get": {
         "description": "Tiers in relevance order: exact, phrasal, starts-with, phrases, ends-with, contains. When none matches, a trigram similarity tier answers typos (`meta.fuzzy: true`, `similarity` on every item; Postgres instances only). A term shorter than 3 characters searches the exact and prefix tiers only (`meta.short_term: true`). Cacheable: the answer carries `ETag`, `Last-Modified` and `Cache-Control` like every public GET.",
@@ -1543,7 +1699,7 @@
   },
   "info": {
     "title": "VocabBloom Public API",
-    "description": "Read-only dictionary API under /api/v1 (contract version 1): no authentication, every answer in a { data, meta } envelope, errors as { statusCode, message, error: true }, X-API-Version on every response. Successful GET answers carry ETag, Last-Modified and Cache-Control. Documentation: https://vocab-bloom-hub.com/en/docs/api.",
+    "description": "Read-only dictionary API under /api/v1 (contract version 1): no authentication, every answer in a { data, meta } envelope, errors as { statusCode, message, error: true }, X-API-Version on every response. The /api/compat/dictionaryapi routes use dictionaryapi.dev v1/v2 arrays and errors, with additive vocabBloom provenance. Successful GET answers carry ETag, Last-Modified and Cache-Control. Documentation: https://vocab-bloom-hub.com/en/docs/api.",
     "version": "1.2.0",
     "contact": {}
   },
@@ -3882,6 +4038,315 @@
           "error",
           "message",
           "statusCode"
+        ]
+      },
+      "DictionaryApiErrorT": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "resolution": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "message",
+          "resolution"
+        ]
+      },
+      "DictionaryApiV1ResT": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "meaning": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DictionaryApiDefinitionT"
+                }
+              }
+            },
+            "word": {
+              "type": "string"
+            },
+            "phonetic": {
+              "type": "string"
+            },
+            "phonetics": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/DictionaryApiPhoneticT"
+              }
+            },
+            "origin": {
+              "type": "string"
+            },
+            "license": {
+              "$ref": "#/components/schemas/DictionaryApiLicenseT"
+            },
+            "sourceUrls": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "vocabBloom": {
+              "type": "object",
+              "properties": {
+                "dataset": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "modified": {
+                  "type": "boolean"
+                },
+                "origins": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OriginT"
+                  }
+                },
+                "contributions": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OriginT"
+                  }
+                },
+                "licenses": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WordLicenseT"
+                  }
+                }
+              },
+              "required": [
+                "dataset",
+                "source",
+                "modified",
+                "origins",
+                "contributions",
+                "licenses"
+              ],
+              "description": "Complete terms and modification indication, additive to the upstream shape."
+            }
+          },
+          "required": [
+            "meaning",
+            "phonetics",
+            "sourceUrls",
+            "vocabBloom",
+            "word"
+          ]
+        }
+      },
+      "DictionaryApiDefinitionT": {
+        "type": "object",
+        "properties": {
+          "definition": {
+            "type": "string"
+          },
+          "example": {
+            "type": "string"
+          },
+          "synonyms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "antonyms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "definition",
+          "synonyms",
+          "antonyms"
+        ]
+      },
+      "DictionaryApiPhoneticT": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "audio": {
+            "type": "string"
+          },
+          "sourceUrl": {
+            "type": "string"
+          },
+          "license": {
+            "$ref": "#/components/schemas/DictionaryApiLicenseT"
+          },
+          "vocabBloom": {
+            "type": "object",
+            "properties": {
+              "attribution": {
+                "type": "string",
+                "nullable": true
+              },
+              "licenses": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/OriginLicenseT"
+                }
+              }
+            },
+            "required": [
+              "attribution",
+              "licenses"
+            ],
+            "description": "Lossless recording terms; the upstream singular license cannot express all of these."
+          }
+        },
+        "required": [
+          "audio"
+        ]
+      },
+      "DictionaryApiLicenseT": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "url"
+        ]
+      },
+      "DictionaryApiV2ResT": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "meanings": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/DictionaryApiMeaningT"
+              }
+            },
+            "word": {
+              "type": "string"
+            },
+            "phonetic": {
+              "type": "string"
+            },
+            "phonetics": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/DictionaryApiPhoneticT"
+              }
+            },
+            "origin": {
+              "type": "string"
+            },
+            "license": {
+              "$ref": "#/components/schemas/DictionaryApiLicenseT"
+            },
+            "sourceUrls": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "vocabBloom": {
+              "type": "object",
+              "properties": {
+                "dataset": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "modified": {
+                  "type": "boolean"
+                },
+                "origins": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OriginT"
+                  }
+                },
+                "contributions": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OriginT"
+                  }
+                },
+                "licenses": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WordLicenseT"
+                  }
+                }
+              },
+              "required": [
+                "dataset",
+                "source",
+                "modified",
+                "origins",
+                "contributions",
+                "licenses"
+              ],
+              "description": "Complete terms and modification indication, additive to the upstream shape."
+            }
+          },
+          "required": [
+            "meanings",
+            "phonetics",
+            "sourceUrls",
+            "vocabBloom",
+            "word"
+          ]
+        }
+      },
+      "DictionaryApiMeaningT": {
+        "type": "object",
+        "properties": {
+          "partOfSpeech": {
+            "type": "string"
+          },
+          "definitions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DictionaryApiDefinitionT"
+            }
+          },
+          "synonyms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "antonyms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "partOfSpeech",
+          "definitions",
+          "synonyms",
+          "antonyms"
         ]
       }
     }

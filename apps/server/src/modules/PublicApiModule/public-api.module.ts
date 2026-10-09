@@ -1,3 +1,4 @@
+import { DictionaryApiController } from './dictionaryapi/dictionaryapi.controller';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EnModule } from '../EnModule/en.module';
@@ -35,6 +36,7 @@ import { PublicOpenApiService } from './public-openapi.service';
     SettingsModule,
   ],
   controllers: [
+    DictionaryApiController,
     PublicSearchController,
     // before the reads of the served dataset: /words/id/datasets is about the
     // headword "id", and /words/id/{id} of the next controller would take it

@@ -2,13 +2,14 @@
 
 The server exposes two surfaces on one host:
 
-| Surface    | Prefixes                                  | Auth                              | Purpose                                                                   |
-| ---------- | ----------------------------------------- | --------------------------------- | ------------------------------------------------------------------------- |
-| **Public** | `/api/v1/*`                               | none                              | Read-only, versioned contract for consuming applications                  |
-| **Admin**  | `/api/en/*`, `/api/settings`, `/api/auth` | admin JWT (cookie / Bearer token) | Everything the admin UI does: editing, import / export, statistics, login |
+| Surface    | Prefixes                                   | Auth                              | Purpose                                                                   |
+| ---------- | ------------------------------------------ | --------------------------------- | ------------------------------------------------------------------------- |
+| **Public** | `/api/v1/*`, `/api/compat/dictionaryapi/*` | none                              | Read-only, versioned contract for consuming applications                  |
+| **Admin**  | `/api/en/*`, `/api/settings`, `/api/auth`  | admin JWT (cookie / Bearer token) | Everything the admin UI does: editing, import / export, statistics, login |
 
-Nothing under `/api/v1` mutates data or requires a login; nothing outside it is part of the
-public contract. The public contract is also served as an [OpenAPI document](#openapi-document);
+The native public contract lives under `/api/v1`; the separate
+[dictionaryapi.dev adapter](#dictionaryapidev-compatibility) uses upstream response shapes.
+Compatibility reads require no login. The public contract is also served as an [OpenAPI document](#openapi-document);
 Swagger UI, the website's reference and the other ways to read the API are compared in
 [api-tools.md](./api-tools.md).
 
@@ -622,3 +623,100 @@ source and license. A consumer cannot infer that distinction from `source: "open
 or `/meta.license` alone. These fields are optional so clients continue to read older v1 servers. The generated
 TypeScript and Python SDK models include them. See [datasets](./datasets.md#multiple-origins-and-word-licenses)
 for editing and [offline import](./offline-import.md#provenance-export-format) for compatibility.
+
+## dictionaryapi.dev compatibility
+
+Replace the base URL `https://api.dictionaryapi.dev/api` with
+`https://<your-instance>/api/compat/dictionaryapi`. Both lookup versions are supported:
+
+```text
+GET /api/compat/dictionaryapi/v2/entries/en/hello
+GET /api/compat/dictionaryapi/v1/entries/en/hello
+```
+
+These are anonymous reads of **the active dataset only**, using the native headword reader;
+they never contact dictionaryapi.dev or combine dictionaries. Activate the desired dataset
+in the admin UI. `vocabBloom.dataset` identifies it in each result. Only English is supported:
+`en`, and the historical `en_US` / `en_GB` aliases (case-insensitive). The aliases do not filter
+pronunciation regions. A language is not stored on each word. Query parameters, including
+`dataset` and the historical `include=example` option, are unsupported and return 400.
+
+### Response mapping
+
+Both versions return a JSON **array**, without the native `{ data, meta }` envelope. One item
+represents one native entry (part of speech); entries with distinct provenance are not merged.
+A headword with several parts of speech can therefore have more array items than upstream.
+Version 2 has `meanings: [{ partOfSpeech, definitions, synonyms, antonyms }]`; version 1 has
+`meaning: { "noun": [definitions], ... }`, as in the upstream legacy contract. Other fields
+are the same. The adapter is listed in `/api/v1/openapi.json` and the website's API reference.
+Generated SDK types include it; the native SDK methods and native response envelopes are unchanged.
+
+- Definitions stay flat and in native meaning order. Both definition-level and meaning-level
+  synonym/antonym arrays are sorted and deduplicated; the latter are derived from definitions.
+- `example` is the first nonempty stored example, omitted when none exists. Quotes are not
+  silently substituted for examples. The native API retains all examples and quotes.
+- `modal_verb` maps to `verb`, `numeral_fractional` to `numeral`, `grammar_pattern` to `phrase`;
+  all other supported part-of-speech names are unchanged. Arbitrary source tags are ignored.
+- `origin` joins nonempty etymology texts by local number, separated by blank lines. Missing
+  etymology omits the field. The native API retains the meaning-to-etymology references.
+- `phonetic` is the preferred IPA (American, then British, then the first remaining IPA).
+  `phonetics` follows stored pronunciation order. Each recording becomes its own item, so
+  multiple recordings do not overwrite each other. IPA without audio has `audio: ""`;
+  audio without IPA omits `text`. EnPR is not presented as IPA; its recordings can still be
+  returned without text. `sourceUrl` and audio `license` are omitted when unknown. No region
+  field exists upstream; regions affect IPA preference but are not invented in its response.
+- Empty arrays remain arrays; absent optional scalars are omitted, not `null`. Empty entries
+  can have an empty `definitions` array; the adapter does not invent a definition.
+- Matching follows native rules: case-insensitive when unambiguous, exact capitalization when
+  distinct spellings exist, all matching spellings when neither is exact. Inflections resolve
+  to their base entries (including the base spelling and pronunciations in the answer).
+  Encode words, including spaces and literal percent signs, as one URL path segment.
+
+### Sources and licenses
+
+The adapter does **not** label our data as Wiktionary. Its additive `vocabBloom` object carries
+`dataset`, `source`, `modified`, and complete `origins`, `contributions`, and `licenses` snapshots,
+including attribution, notices, custom license texts and `all`/`any` license relations. Keep
+these terms when storing or redistributing the data. Audio items carry their own
+`vocabBloom: { attribution, licenses }`; text licenses never become recording licenses.
+
+The upstream singular `license: { name, url }` is a summary. For one distinct license it uses
+that license's name and URL. For multiple licenses it says `Multiple licenses — see vocabBloom
+terms` and links to the native word/datasets response, instead of choosing one and losing
+obligations. A license without its own URL also links there; unknown licenses omit `license`.
+`sourceUrls` includes exact source/record URLs, the native word/datasets link and, for modified
+entries, the dataset-specific edit history. These native links are absolute URLs on the
+requested host. A reverse proxy must preserve the public Host and configure `TRUST_PROXY`
+correctly for HTTPS links. Follow the group named by `vocabBloom.dataset` in a datasets response.
+The inline snapshots remain the authoritative terms of the returned content even if the
+instance later changes its active dataset or terms.
+
+### HTTP behavior and compatibility limits
+
+Successful reads use `application/json`, ETag, Last-Modified and the instance's
+`PUBLIC_API_CACHE_MAX_AGE`. Conditional GET/HEAD requests can return 304. The adapter shares
+`PUBLIC_API_RATE_LIMIT` with `/api/v1`, respects `INTERNAL_API_TOKEN` and is hidden by
+`PUBLIC_API_ENABLED=false`. It does not send the native `X-API-Version: 1` header. Browser reads
+allow any origin (`Access-Control-Allow-Origin: *`, without credentials); admin and native
+CORS settings remain controlled by `CORS_ORIGINS`.
+
+Missing words, unsupported languages and unknown routes/versions return 404 with the upstream
+three-string `{ title, message, resolution }` error shape. Invalid input returns 400 and rate
+limits return 429 with the same shape and `Retry-After`; errors use `Cache-Control: no-store`.
+Error wording for 400/429/500 and cache/rate-limit durations are local policies, not promises
+to reproduce upstream infrastructure behavior.
+
+The scope is the **English v1 and v2 lookup contracts**, with the documented additive provenance
+fields and mapping choices. Clients that reject unknown JSON properties must allow `vocabBloom`.
+This does not reproduce upstream word coverage, sense grouping, definitions, recordings,
+pronunciation-region selection, unsupported language databases, optional query extensions,
+or upstream media hosting. Converters can only expose data preserved in the installed dataset;
+see [datasets](./datasets.md) and [offline import](./offline-import.md).
+
+Contract evidence checked on 2026-10-09: the [upstream documentation](https://dictionaryapi.dev/),
+[legacy v1 specification](https://github.com/meetDeveloper/freeDictionaryAPI#regarding-v1-version),
+and [error/route implementation](https://github.com/meetDeveloper/freeDictionaryAPI/blob/master/app.js).
+Live `hello` requests confirmed both versions and the newer license/source URL fields. Live
+missing-word and invalid-language probes timed out; their documented error shape/status is
+based on the published implementation, not on a CDN timeout. Tests use original local fixtures
+and never require upstream availability.

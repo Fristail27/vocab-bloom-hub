@@ -855,8 +855,14 @@ export default {
     empty_short_translations: 'ترجمات موجزة بوصف فارغ',
   },
   documentation: {
+    endpoint_dictionaryapi_v1: 'dictionaryapi.dev v1',
+    desc_dictionaryapi_v1:
+      'البحث عن كلمات إنجليزية في مجموعة البيانات النشطة. يعيد مصفوفة بتنسيق dictionaryapi.dev v1 مع المصادر والتراخيص الكاملة في vocabBloom. يستخدم حد الطلبات العام المشترك.',
+    endpoint_dictionaryapi_v2: 'dictionaryapi.dev v2',
+    desc_dictionaryapi_v2:
+      'البحث عن كلمات إنجليزية في مجموعة البيانات النشطة. يعيد مصفوفة بتنسيق dictionaryapi.dev v2 مع المصادر والتراخيص الكاملة في vocabBloom. يستخدم حد الطلبات العام المشترك.',
     intro:
-      "واجهة برمجة التطبيقات العامة للقراءة فقط تحت /api/v1: دون تفويض، كل استجابة داخل غلاف '{ data, meta }'، والأخطاء بصيغة '{ statusCode, message, error: true }'، وكل استجابة تحمل X-API-Version. تصف كل صفحة مرشّحات الطلب وتتيح لك تنفيذ طلب حقيقي على قاعدة البيانات الحالية.",
+      "واجهة برمجة التطبيقات العامة للقراءة فقط تحت /api/v1: دون تفويض، كل استجابة داخل غلاف '{ data, meta }'، والأخطاء بصيغة '{ statusCode, message, error: true }'، وكل استجابة تحمل X-API-Version. تصف كل صفحة مرشّحات الطلب وتتيح لك تنفيذ طلب حقيقي على قاعدة البيانات الحالية. تعيد مسارات التوافق /api/compat/dictionaryapi مصفوفات v1/v2 بدلاً من بنية الاستجابة الأصلية.",
     public_endpoints: 'نقاط النهاية العامة',
     endpoint_search_get: 'البحث الأساسي',
     endpoint_search_detailed_get: 'البحث المفصّل',
@@ -927,7 +933,8 @@ export default {
     param_desc_category: 'الكلمات الموسومة بأي من الفئات',
     param_desc_area_variant: 'الوسوم الإقليمية المراد الإبقاء عليها',
     param_desc_form_of_word: 'صيغ الكلمات المراد سردها؛ الصيغ الأساسية فقط افتراضيًا',
-    param_desc_language: 'لغات الترجمة؛ عدم تحديد قيمة يعني كلها',
+    param_desc_language:
+      'رموز اللغات: مرشح الترجمات للمسارات الأصلية؛ en (أو en_US / en_GB) لمسارات dictionaryapi.dev.',
     param_desc_search:
       'مصطلح البحث؛ في القائمة والمدخل العشوائي يكون بادئة للمدخل الرئيسي دون تمييز حالة الأحرف (ru — run، rung، runner، …)',
     param_desc_is_obsolete: 'true: المدخلات المهجورة فقط، false: الحالية فقط',
