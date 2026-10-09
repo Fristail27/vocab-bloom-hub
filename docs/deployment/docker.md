@@ -233,7 +233,7 @@ curl -s localhost:3240/api/ready   # 503 while the dictionary loads, then {"stat
 | Prometheus | `http://localhost:3243` | `PROMETHEUS_PORT` |
 | Grafana    | `http://localhost:3244` | `GRAFANA_PORT`    |
 
-Everything is published on **localhost only**; Postgres is not published at all. To move a
+The HTTP services are published on **localhost only**; Postgres is not published at all. To move a
 service, set its variable in `.env` — nothing inside the compose network changes, the apps keep
 talking to each other on their container ports. Only `CORS_ORIGINS` follows the admin UI and the
 website, and only for browsers that call the API directly.
@@ -332,6 +332,8 @@ pull request, probing `/api/ready`, the login page and the website.
 ### Optional DICT listener
 
 Set `DICT_ENABLED=true` in `.env` and run `docker compose up -d` to enable the RFC 2229
-TCP listener in the server container. The main Compose file publishes it on localhost;
+TCP listener in the server container. The main Compose file publishes it on all host interfaces;
 `DICT_PORT` selects the host port (2628 by default).
 See [DICT configuration and client examples](../dict.md). The default stack keeps it disabled.
+
+Allow inbound TCP traffic to the DICT port in the host firewall for remote clients.
