@@ -4,7 +4,7 @@ import {
   API_VERSION_HEADER,
   getApiSurfaces,
   isAdminApiPath,
-  isDictionaryApiPath,
+  isCompatibilityApiPath,
   isPublicApiPath,
   PUBLIC_API_VERSION,
   requestPath,
@@ -22,7 +22,7 @@ export const apiSurfaceMiddleware = (req: Request, res: Response, next: NextFunc
   const path = requestPath(req);
   const surfaces = getApiSurfaces();
   if (isPublicApiPath(path)) {
-    if (!isDictionaryApiPath(path)) res.setHeader(API_VERSION_HEADER, PUBLIC_API_VERSION);
+    if (!isCompatibilityApiPath(path)) res.setHeader(API_VERSION_HEADER, PUBLIC_API_VERSION);
     if (!surfaces.publicApi) return next(new NotFoundException());
   } else if (isAdminApiPath(path)) {
     // editing state and credentials: no cache anywhere may keep these answers

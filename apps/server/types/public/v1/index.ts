@@ -482,3 +482,8 @@ export type PublicApiErrorT = ErrorResT & {
 };
 
 export type { DictionaryApiErrorT, DictionaryApiV1ResT, DictionaryApiV2ResT } from '../dictionaryapi';
+export type {
+  FreeDictionaryEntriesResT,
+  FreeDictionaryErrorT,
+  FreeDictionaryLanguagesResT,
+} from '../freedictionaryapi';

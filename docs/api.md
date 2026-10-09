@@ -2,13 +2,14 @@
 
 The server exposes two surfaces on one host:
 
-| Surface    | Prefixes                                   | Auth                              | Purpose                                                                   |
-| ---------- | ------------------------------------------ | --------------------------------- | ------------------------------------------------------------------------- |
-| **Public** | `/api/v1/*`, `/api/compat/dictionaryapi/*` | none                              | Read-only, versioned contract for consuming applications                  |
-| **Admin**  | `/api/en/*`, `/api/settings`, `/api/auth`  | admin JWT (cookie / Bearer token) | Everything the admin UI does: editing, import / export, statistics, login |
+| Surface    | Prefixes                                                                      | Auth                              | Purpose                                                                   |
+| ---------- | ----------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------- |
+| **Public** | `/api/v1/*`, `/api/compat/dictionaryapi/*`, `/api/compat/freedictionaryapi/*` | none                              | Read-only, versioned contract for consuming applications                  |
+| **Admin**  | `/api/en/*`, `/api/settings`, `/api/auth`                                     | admin JWT (cookie / Bearer token) | Everything the admin UI does: editing, import / export, statistics, login |
 
 The native public contract lives under `/api/v1`; the separate
-[dictionaryapi.dev adapter](#dictionaryapidev-compatibility) uses upstream response shapes.
+[dictionaryapi.dev adapter](#dictionaryapidev-compatibility) and
+[freedictionaryapi.com adapter](#freedictionaryapicom-compatibility) use upstream response shapes.
 Compatibility reads require no login. The public contract is also served as an [OpenAPI document](#openapi-document);
 Swagger UI, the website's reference and the other ways to read the API are compared in
 [api-tools.md](./api-tools.md).
@@ -720,3 +721,107 @@ Live `hello` requests confirmed both versions and the newer license/source URL f
 missing-word and invalid-language probes timed out; their documented error shape/status is
 based on the published implementation, not on a CDN timeout. Tests use original local fixtures
 and never require upstream availability.
+
+## freedictionaryapi.com compatibility
+
+Replace `https://freedictionaryapi.com/api/v1` with
+`https://<your-instance>/api/compat/freedictionaryapi/v1`:
+
+```http
+GET /api/compat/freedictionaryapi/v1/entries/en/hello?translations=true
+GET /api/compat/freedictionaryapi/v1/languages?pretty=true
+```
+
+These routes read the **active dataset**, without calling the upstream service. The entries
+response has `word`, `entries` and `source`; the languages response is an array of
+`{ code, name, words }`. The native API and dictionaryapi.dev adapter keep their own contracts.
+
+### Lookup and query rules
+
+- `en` and `all` both read the English database. Other language codes, including `EN` and
+  `en_US`, return `200` with empty `entries`. No language column is stored.
+- Spelling is **case-sensitive**, with no trimming or fuzzy matching. Missing words also return
+  `200` with empty `entries`; the top-level `word` preserves the requested spelling. Encode the
+  word as one URL segment; phrases and literal percent signs are decoded once.
+- A stored inflection resolves to its base entry, using the form's effective pronunciations.
+  An alternative spelling with its own entries returns those entries. An alternative-only
+  `EnEntry` follows its spelling links one hop to readable entries, including their base forms;
+  no part-of-speech relation or transitive spelling chain is inferred. `entries[].vocabBloom.word`
+  identifies the actual base spelling returned.
+- `translations` defaults to `false`: the sense field is **omitted**, not an empty array.
+  With `true`, each sense has a translations array, possibly empty. `pretty` defaults to `false`;
+  `true` uses two-space indentation without a trailing newline, for either route.
+- Both options accept only the lowercase strings `true` and `false`. Empty strings, `1`, `0`
+  and other values produce a `400` plain-text boolean parsing error. For repeated parameters,
+  the first occurrence wins. `/languages` ignores `translations`, as upstream does.
+  Other unrecognized parameters are ignored, except `dataset`, which returns `400` because
+  these routes cannot select another dataset.
+- `/languages` returns only English, even when empty. `words` counts distinct **readable
+  spellings** in the active database, including phrases, inflections and one-hop alternative-only
+  spellings. Multiple parts of speech count once. Unlinked placeholder rows created for
+  thesaurus links do not count. This is not a count of meanings or translation languages.
+
+### Mapping the stored data
+
+Each base word/part of speech becomes one entry. IPA and EnPR records with text become
+`pronunciations`; regions map to broad `British`, `American` and `Australian` tags. Common
+pronunciations have no region tag. Audio-only records are omitted: this upstream contract has
+no audio or etymology fields. Use the native API for those fields.
+
+Meanings stay **flat**, with `subsenses: []`. Definitions, all stored examples, sense synonyms
+and antonyms are preserved. Entry-level synonyms and antonyms are deduplicated unions of the
+senses. Quotes keep their text; `reference` combines a supplied reference and source URL, or
+is an empty string when neither is known. No bibliographic details are invented.
+
+Known enums map to response strings, without adding tag columns: modal verbs become `verb`,
+fractional numerals `numeral`, grammar patterns `phrase`; other parts of speech keep their
+names. Sense tags include stored region, register, obsolete/uncountable/transitivity flags
+and categories (`IT` becomes `computing`). Word-level region and register supply defaults for
+meanings. Arbitrary source tags are not preserved.
+
+`forms` maps the existing form enums: plural; singular/plural possessives; past; past/present
+participles; third-person singular present; comparative/superlative; object; possessive
+adjective/pronoun; reflexive; ordinal; multiplicative. A base spelling returned for a form or
+alias has `canonical`; spelling links have `alternative`, separate from inflections.
+The Wiktionary converter currently recognizes seven inflection patterns: plural, comparative,
+superlative, past, past participle, present participle and third-person singular present.
+Other native form enums can be supplied through native editing/import; the adapter does not
+recover forms or tags discarded during conversion.
+
+Translations come from each meaning's lexical `variants_of_words`, with `{ language: { code,
+name }, word }` per variant. Supported languages remain `ru`, `es`, `fr`, `de`, `pt`, `zh`, `ar`.
+Localized definition/title text and word-level short translations are not misrepresented as
+sense translation words. Converter limits (including supported languages, three examples and
+six translation words per imported sense/language) still apply; this adapter does not restore
+source data absent from an installed dataset.
+
+### Sources, licenses and HTTP behavior
+
+`source` describes the returned data, **never a hard-coded Wiktionary attribution**. A unique
+source URL is retained; multiple sources use a link to the native word/datasets response. One
+license is summarized by name and URL; custom terms without a URL link to that native response.
+Multiple licenses use a summary pointing to the full terms, without choosing one license to
+cover the whole response. Unknown terms are identified as unavailable. Empty results use the
+active dataset's terms and the native metadata URL.
+
+The additive `vocabBloom` object at the top contains the active dataset's terms. On every entry
+it contains the dataset, resolved spelling, source, modified state, exact origin and contribution
+snapshots, and their derived licenses. These retain attribution, notices, custom license text,
+versions and `all`/`any` license relations. Consumers must retain the applicable terms in these
+extensions; a single upstream-shaped `source.license` cannot express all obligations. Clients
+that reject unknown fields must allow `vocabBloom`.
+
+Reads share the native and dictionaryapi.dev rate budget and `PUBLIC_API_ENABLED` switch.
+They allow anonymous wildcard CORS without credentials, support HEAD and conditional caching
+with ETag/Last-Modified, and do not carry the native `X-API-Version` header. Compact and pretty
+representations have different ETags. Errors are plain text with `Cache-Control: no-store`;
+rate limits return `429` with `Retry-After`. The 128-character word limit, rate/cache durations
+and non-boolean error wording are local policies. Upstream word coverage, nested sense grouping,
+arbitrary tags and unsupported language databases are not promised.
+
+Evidence checked on 2026-10-09: [upstream documentation](https://freedictionaryapi.com/) and
+[OpenAPI contract](https://freedictionaryapi.com/api/v1/openapi.json), plus live probes of
+successful/missing/case-sensitive lookups, languages, unsupported codes, repeated and invalid
+booleans, translations and pretty output. Automated tests use original fixtures and require no
+upstream availability. No database migration, import/export format change or RFC 2229 server
+is part of this adapter.

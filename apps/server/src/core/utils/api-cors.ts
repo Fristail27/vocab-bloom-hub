@@ -1,6 +1,6 @@
 import type { CorsOptionsDelegate } from '@nestjs/common/interfaces/external/cors-options.interface';
 import type { Request } from 'express';
-import { isDictionaryApiPath, requestPath } from './public-api';
+import { isCompatibilityApiPath, requestPath } from './public-api';
 
 /** Compatibility reads are anonymous and usable from any browser, as upstream is. */
 export const apiCorsOptions =
@@ -8,7 +8,7 @@ export const apiCorsOptions =
   (req, callback) => {
     callback(
       null,
-      isDictionaryApiPath(requestPath(req))
+      isCompatibilityApiPath(requestPath(req))
         ? {
             origin: '*',
             methods: ['GET', 'HEAD', 'OPTIONS'],

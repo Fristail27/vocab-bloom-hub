@@ -14,6 +14,7 @@ export type PublicResponseSpecT = {
   // error statuses the route answers with (all in the PublicApiErrorT shape)
   errors: number[];
   errorType?: string;
+  errorContentType?: string;
 };
 
 export const PUBLIC_ERROR_SCHEMA = 'PublicApiErrorT';
@@ -26,6 +27,18 @@ export const PUBLIC_ERROR_DESCRIPTIONS: Record<number, string> = {
 };
 
 export const PUBLIC_RESPONSES: Record<string, PublicResponseSpecT> = {
+  FreeDictionaryApiController_entries: {
+    type: 'FreeDictionaryEntriesResT',
+    errors: [400, 429],
+    errorType: 'FreeDictionaryErrorT',
+    errorContentType: 'text/plain',
+  },
+  FreeDictionaryApiController_languages: {
+    type: 'FreeDictionaryLanguagesResT',
+    errors: [400, 429],
+    errorType: 'FreeDictionaryErrorT',
+    errorContentType: 'text/plain',
+  },
   DictionaryApiController_v1: {
     type: 'DictionaryApiV1ResT',
     errors: [400, 404, 429],

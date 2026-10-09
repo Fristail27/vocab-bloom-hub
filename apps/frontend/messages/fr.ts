@@ -886,6 +886,16 @@ export default {
     empty_short_translations: 'Traductions courtes avec une description vide',
   },
   documentation: {
+    endpoint_freedictionaryapi_entries: 'Recherche freedictionaryapi.com',
+    desc_freedictionaryapi_entries:
+      'Recherche anglaise exacte, sensible à la casse, dans le jeu actif (language : en ou all). Renvoie word, entries et source ; conditions complètes dans vocabBloom. Les mots inconnus renvoient entries vide.',
+    endpoint_freedictionaryapi_languages: 'Langues du dictionnaire',
+    desc_freedictionaryapi_languages:
+      'Anglais et nombre de graphies consultables dans le jeu actif, formes et variantes comprises.',
+    param_desc_translations:
+      'Inclure les traductions de sens prises en charge (true/false ; false par défaut).',
+    param_desc_pretty: 'Indenter le JSON de deux espaces (true/false ; false par défaut).',
+
     endpoint_dictionaryapi_v1: 'dictionaryapi.dev v1',
     desc_dictionaryapi_v1:
       'Recherche anglaise dans le jeu de données actif. Renvoie un tableau au format dictionaryapi.dev v1, avec les sources et licences complètes dans vocabBloom. Partage la limite de requêtes publique.',
@@ -955,7 +965,7 @@ export default {
     param_desc_word_id:
       "Id d'une entrée du mot-vedette, quand le signalement concerne une catégorie grammaticale précise",
     param_desc_word:
-      'Graphie du mot-vedette, sans tenir compte de la casse ; les espaces sont permis pour les expressions',
+      'Graphie ; les expressions peuvent contenir des espaces. freedictionaryapi.com distingue la casse.',
     param_desc_dataset:
       'Nom d’un jeu de données de l’instance, tel que dataset d’un groupe l’indique : default, wiktionary, wordnet, wordnet_princeton',
     param_desc_words:
@@ -969,7 +979,7 @@ export default {
     param_desc_area_variant: 'Marques régionales à conserver',
     param_desc_form_of_word: 'Formes de mot à lister ; formes de base uniquement par défaut',
     param_desc_language:
-      'Codes de langue : filtre des traductions pour les routes natives ; en (ou en_US / en_GB) pour dictionaryapi.dev.',
+      'Codes de langue : filtre de traduction dans les routes natives ; en (ou en_US / en_GB) pour dictionaryapi.dev ; en ou all pour freedictionaryapi.com.',
     param_desc_search:
       "Terme de recherche ; sur la liste et l'entrée aléatoire, un préfixe de mot-vedette sans tenir compte de la casse (ru — run, rung, runner, …)",
     param_desc_is_obsolete: 'true : entrées obsolètes uniquement, false : entrées en vigueur uniquement',

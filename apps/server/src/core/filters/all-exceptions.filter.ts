@@ -2,7 +2,12 @@ import { ArgumentsHost, Catch, HttpException, HttpStatus, Logger } from '@nestjs
 import { BaseExceptionFilter } from '@nestjs/core';
 import type { Request, Response } from 'express';
 import { dictionaryApiError } from '../utils/dictionaryapi-error';
-import { isDictionaryApiPath, isPublicApiPath, requestPath } from '../utils/public-api';
+import {
+  isDictionaryApiPath,
+  isFreeDictionaryApiPath,
+  isPublicApiPath,
+  requestPath,
+} from '../utils/public-api';
 import { CACHE_CONTROL_NO_STORE } from '../utils/http-cache';
 import { PublicApiErrorT } from '../../../types';
 
@@ -47,6 +52,16 @@ export class AllExceptionsFilter extends BaseExceptionFilter {
       // a miss or a rate-limit hit is transient: no cache may serve it later
       res.setHeader('Cache-Control', CACHE_CONTROL_NO_STORE);
       const status = this.publicStatus(exception);
+      if (isFreeDictionaryApiPath(requestPath(req))) {
+        const message = this.publicBody(exception).message;
+        res
+          .status(status)
+          .type('text/plain')
+          .send(
+            status >= 500 ? 'Internal Server Error' : Array.isArray(message) ? message.join('\n') : message,
+          );
+        return;
+      }
       res
         .status(status)
         .json(isDictionaryApiPath(requestPath(req)) ? dictionaryApiError(status) : this.publicBody(exception));

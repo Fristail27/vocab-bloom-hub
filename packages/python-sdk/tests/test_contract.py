@@ -47,7 +47,12 @@ def test_every_operation_has_a_method() -> None:
         if not path.startswith("/api/v1/")
         for op in item.values()
     )
-    assert compatibility == ["DictionaryApiController_v1", "DictionaryApiController_v2"]
+    assert compatibility == [
+        "DictionaryApiController_v1",
+        "DictionaryApiController_v2",
+        "FreeDictionaryApiController_entries",
+        "FreeDictionaryApiController_languages",
+    ]
     assert operations == sorted(METHOD_BY_OPERATION)
     for method in METHOD_BY_OPERATION.values():
         assert callable(getattr(VocabBloomClient, method))

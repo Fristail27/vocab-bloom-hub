@@ -230,6 +230,141 @@
         ]
       }
     },
+    "/api/compat/freedictionaryapi/v1/entries/{language}/{word}": {
+      "get": {
+        "description": "Exact spelling. en and all read the English database; other languages and missing spellings return empty entries. Full terms in vocabBloom.",
+        "operationId": "FreeDictionaryApiController_entries",
+        "parameters": [
+          {
+            "name": "language",
+            "required": true,
+            "in": "path",
+            "description": "en or all; other values return empty entries",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "word",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "description": "Exact case-sensitive spelling, encoded as one URL segment"
+          },
+          {
+            "name": "pretty",
+            "required": false,
+            "in": "query",
+            "description": "Indent JSON with two spaces; default false.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "translations",
+            "required": false,
+            "in": "query",
+            "description": "Include supported translations; default false. Only true/false, first occurrence wins.",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreeDictionaryEntriesResT"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreeDictionaryErrorT"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreeDictionaryErrorT"
+                }
+              }
+            }
+          }
+        },
+        "summary": "freedictionaryapi.com lookup in the active dataset",
+        "tags": [
+          "freedictionaryapi.com compatibility"
+        ]
+      }
+    },
+    "/api/compat/freedictionaryapi/v1/languages": {
+      "get": {
+        "description": "English only. Counts include phrases, inflections and alternative-only entry rows in the active dataset, once per readable spelling; unlinked placeholders are excluded.",
+        "operationId": "FreeDictionaryApiController_languages",
+        "parameters": [
+          {
+            "name": "pretty",
+            "required": false,
+            "in": "query",
+            "description": "Indent JSON with two spaces; default false.",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreeDictionaryLanguagesResT"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreeDictionaryErrorT"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreeDictionaryErrorT"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Available headword languages and readable spelling counts",
+        "tags": [
+          "freedictionaryapi.com compatibility"
+        ]
+      }
+    },
     "/api/v1/search": {
       "get": {
         "description": "Tiers in relevance order: exact, phrasal, starts-with, phrases, ends-with, contains. When none matches, a trigram similarity tier answers typos (`meta.fuzzy: true`, `similarity` on every item; Postgres instances only). A term shorter than 3 characters searches the exact and prefix tiers only (`meta.short_term: true`). Cacheable: the answer carries `ETag`, `Last-Modified` and `Cache-Control` like every public GET.",
@@ -1699,7 +1834,7 @@
   },
   "info": {
     "title": "VocabBloom Public API",
-    "description": "Read-only dictionary API under /api/v1 (contract version 1): no authentication, every answer in a { data, meta } envelope, errors as { statusCode, message, error: true }, X-API-Version on every response. The /api/compat/dictionaryapi routes use dictionaryapi.dev v1/v2 arrays and errors, with additive vocabBloom provenance. Successful GET answers carry ETag, Last-Modified and Cache-Control. Documentation: https://vocab-bloom-hub.com/en/docs/api.",
+    "description": "Read-only dictionary API under /api/v1 (contract version 1): no authentication, every answer in a { data, meta } envelope, errors as { statusCode, message, error: true }, X-API-Version on every response. The /api/compat/freedictionaryapi/v1 routes use freedictionaryapi.com objects, language lists and plain-text errors. The /api/compat/dictionaryapi routes use dictionaryapi.dev v1/v2 arrays and errors, with additive vocabBloom provenance. Successful GET answers carry ETag, Last-Modified and Cache-Control. Documentation: https://vocab-bloom-hub.com/en/docs/api.",
     "version": "1.2.0",
     "contact": {}
   },
@@ -3586,6 +3721,74 @@
           "meta"
         ]
       },
+      "PublicDatasetTermsV1T": {
+        "type": "object",
+        "properties": {
+          "origins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginT"
+            }
+          },
+          "licenses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WordLicenseT"
+            }
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "dataset": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "source": {
+            "type": "string"
+          },
+          "dataset_version": {
+            "type": "string",
+            "nullable": true
+          },
+          "license": {
+            "type": "string"
+          },
+          "license_url": {
+            "type": "string"
+          },
+          "attribution": {
+            "type": "string"
+          },
+          "attribution_url": {
+            "type": "string",
+            "nullable": true
+          },
+          "notice": {
+            "type": "string"
+          },
+          "license_text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset",
+          "active",
+          "source",
+          "dataset_version",
+          "license",
+          "license_url",
+          "attribution",
+          "attribution_url",
+          "notice",
+          "license_text"
+        ]
+      },
       "PublicWordDatasetV1T": {
         "type": "object",
         "properties": {
@@ -4348,6 +4551,303 @@
           "synonyms",
           "antonyms"
         ]
+      },
+      "FreeDictionaryEntriesResT": {
+        "type": "object",
+        "properties": {
+          "word": {
+            "type": "string"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FreeDictionaryEntryT"
+            }
+          },
+          "source": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string"
+              },
+              "license": {
+                "$ref": "#/components/schemas/DictionaryApiLicenseT"
+              }
+            },
+            "required": [
+              "url",
+              "license"
+            ]
+          },
+          "vocabBloom": {
+            "$ref": "#/components/schemas/PublicDatasetTermsV1T",
+            "description": "Active dataset terms. Word-specific origins are retained on each entry."
+          }
+        },
+        "required": [
+          "word",
+          "entries",
+          "source",
+          "vocabBloom"
+        ]
+      },
+      "FreeDictionaryEntryT": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "$ref": "#/components/schemas/FreeDictionaryLanguageT"
+          },
+          "partOfSpeech": {
+            "type": "string"
+          },
+          "pronunciations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "ipa",
+                    "enpr"
+                  ]
+                },
+                "text": {
+                  "type": "string"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "type",
+                "text",
+                "tags"
+              ]
+            }
+          },
+          "forms": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "word": {
+                  "type": "string"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "word",
+                "tags"
+              ]
+            }
+          },
+          "senses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FreeDictionarySenseT"
+            }
+          },
+          "synonyms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "antonyms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "vocabBloom": {
+            "type": "object",
+            "properties": {
+              "word": {
+                "type": "string"
+              },
+              "dataset": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "modified": {
+                "type": "boolean"
+              },
+              "origins": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/OriginT"
+                }
+              },
+              "contributions": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/OriginT"
+                }
+              },
+              "licenses": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/WordLicenseT"
+                }
+              }
+            },
+            "required": [
+              "contributions",
+              "dataset",
+              "licenses",
+              "modified",
+              "origins",
+              "source",
+              "word"
+            ],
+            "description": "Native entry identity and lossless terms; additive to the upstream format."
+          }
+        },
+        "required": [
+          "language",
+          "partOfSpeech",
+          "pronunciations",
+          "forms",
+          "senses",
+          "synonyms",
+          "antonyms",
+          "vocabBloom"
+        ]
+      },
+      "FreeDictionaryLanguageT": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ]
+      },
+      "FreeDictionarySenseT": {
+        "type": "object",
+        "properties": {
+          "definition": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "examples": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "quotes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "reference": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "text",
+                "reference"
+              ]
+            }
+          },
+          "synonyms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "antonyms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "translations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "language": {
+                  "$ref": "#/components/schemas/FreeDictionaryLanguageT"
+                },
+                "word": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "language",
+                "word"
+              ]
+            }
+          },
+          "subsenses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FreeDictionarySenseT"
+            }
+          }
+        },
+        "required": [
+          "definition",
+          "tags",
+          "examples",
+          "quotes",
+          "synonyms",
+          "antonyms",
+          "subsenses"
+        ]
+      },
+      "FreeDictionaryErrorT": {
+        "type": "string",
+        "description": "Upstream parameter errors are plain text, not the native error envelope."
+      },
+      "FreeDictionaryLanguagesResT": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "words": {
+              "type": "integer"
+            },
+            "code": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "name",
+            "words"
+          ]
+        }
       }
     }
   },

@@ -884,6 +884,15 @@ export default {
     empty_short_translations: 'Kurzübersetzungen mit leerer Beschreibung',
   },
   documentation: {
+    endpoint_freedictionaryapi_entries: 'freedictionaryapi.com-Suche',
+    desc_freedictionaryapi_entries:
+      'Exakte englische Schreibweise mit Groß-/Kleinschreibung im aktiven Datensatz (language: en oder all). Antwort: word, entries und source; vollständige Bedingungen in vocabBloom. Unbekannte Wörter liefern leere entries.',
+    endpoint_freedictionaryapi_languages: 'Wörterbuchsprachen',
+    desc_freedictionaryapi_languages:
+      'Englisch und die Anzahl abrufbarer Schreibweisen im aktiven Datensatz, einschließlich Formen und Alternativen.',
+    param_desc_translations: 'Unterstützte Bedeutungsübersetzungen einschließen (true/false; Standard false).',
+    param_desc_pretty: 'JSON mit zwei Leerzeichen einrücken (true/false; Standard false).',
+
     endpoint_dictionaryapi_v1: 'dictionaryapi.dev v1',
     desc_dictionaryapi_v1:
       'Englische Wörter im aktiven Datensatz suchen. Gibt ein Array im Format dictionaryapi.dev v1 zurück, mit vollständigen Quellen und Lizenzen in vocabBloom. Nutzt das gemeinsame öffentliche Anfragelimit.',
@@ -952,7 +961,7 @@ export default {
     param_desc_message: 'Was falsch ist und, idealerweise, was richtig wäre',
     param_desc_word_id: 'ID eines Eintrags des Stichworts, wenn die Meldung eine bestimmte Wortart betrifft',
     param_desc_word:
-      'Schreibweise des Stichworts, ohne Groß-/Kleinschreibung; Leerzeichen sind für Phrasen erlaubt',
+      'Schreibweise; Wortgruppen dürfen Leerzeichen enthalten. freedictionaryapi.com unterscheidet Groß- und Kleinschreibung.',
     param_desc_dataset:
       'Name eines Datensatzes der Instanz, wie ihn dataset einer Gruppe nennt: default, wiktionary, wordnet, wordnet_princeton',
     param_desc_words:
@@ -966,7 +975,7 @@ export default {
     param_desc_area_variant: 'Zu behaltende regionale Markierungen',
     param_desc_form_of_word: 'Zu listende Wortformen; standardmäßig nur Grundformen',
     param_desc_language:
-      'Sprachcodes: Übersetzungsfilter für native Routen; en (oder en_US / en_GB) für dictionaryapi.dev.',
+      'Sprachcodes: Übersetzungsfilter der nativen API; en (oder en_US / en_GB) bei dictionaryapi.dev; en oder all bei freedictionaryapi.com.',
     param_desc_search:
       'Suchbegriff; bei der Liste und dem zufälligen Eintrag ein Stichwortpräfix ohne Groß-/Kleinschreibung (ru — run, rung, runner, …)',
     param_desc_is_obsolete: 'true: nur veraltete Einträge, false: nur aktuelle',

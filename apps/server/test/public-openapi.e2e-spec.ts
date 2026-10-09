@@ -58,7 +58,12 @@ describe('GET /api/v1/openapi.json (e2e, issue #273)', () => {
 
     const paths = Object.keys(document.paths);
     expect(
-      paths.every((path) => path.startsWith('/api/v1/') || path.startsWith('/api/compat/dictionaryapi/')),
+      paths.every(
+        (path) =>
+          path.startsWith('/api/v1/') ||
+          path.startsWith('/api/compat/dictionaryapi/') ||
+          path.startsWith('/api/compat/freedictionaryapi/'),
+      ),
     ).toBe(true);
     expect(paths).toEqual(
       expect.arrayContaining([

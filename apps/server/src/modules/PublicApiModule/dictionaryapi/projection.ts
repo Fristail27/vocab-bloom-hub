@@ -1,7 +1,6 @@
-import type { OriginLicenseT, PublicWordV1T } from '../../../../types';
-import { EnPartOfSpeechE } from '../../../../types';
+import { COMPATIBILITY_POS, compatibilityLicense } from '../utils/compatibility';
+import type { PublicWordV1T } from '../../../../types';
 import type {
-  DictionaryApiLicenseT,
   DictionaryApiPhoneticT,
   DictionaryApiV1ResT,
   DictionaryApiV2ResT,
@@ -9,34 +8,7 @@ import type {
 import { orderedPronunciations, primaryIPA } from '../../EnModule/utils/pronunciations';
 import { orderedAudio } from '../../EnModule/utils/pronunciationAudio';
 
-const POS: Record<EnPartOfSpeechE, string> = {
-  noun: 'noun',
-  verb: 'verb',
-  modal_verb: 'verb',
-  adjective: 'adjective',
-  adverb: 'adverb',
-  pronoun: 'pronoun',
-  numeral: 'numeral',
-  numeral_fractional: 'numeral',
-  determiner: 'determiner',
-  interjection: 'interjection',
-  article: 'article',
-  preposition: 'preposition',
-  conjunction: 'conjunction',
-  letter: 'letter',
-  phrase: 'phrase',
-  grammar_pattern: 'phrase',
-};
 const unique = (values: string[]): string[] => [...new Set(values.filter(Boolean))].sort();
-
-// Never select one of several licenses and imply it covers the entire work.
-// Complex/custom terms point to the native record; full snapshots also travel inline.
-function licenseOf(values: OriginLicenseT[], nativeUrl: string): DictionaryApiLicenseT | undefined {
-  const licenses = [...new Map(values.map((value) => [JSON.stringify(value), value])).values()];
-  if (!licenses.length) return undefined;
-  if (licenses.length === 1) return { name: licenses[0].name, url: licenses[0].url || nativeUrl };
-  return { name: 'Multiple licenses — see vocabBloom terms', url: nativeUrl };
-}
 
 /** One array item per native entry: entries with different provenance are never merged. */
 export function toDictionaryApiV2(
@@ -50,7 +22,7 @@ export function toDictionaryApiV2(
     const contributions = entry.contributions ?? [];
     const terms = [...origins, ...contributions];
     const licenses = terms.flatMap((origin) => origin.licenses);
-    const license = licenseOf(licenses, nativeUrl);
+    const license = compatibilityLicense(licenses, nativeUrl);
     const pronunciations = orderedPronunciations(entry.pronunciations ?? []);
     const phonetics: DictionaryApiPhoneticT[] = pronunciations.flatMap<DictionaryApiPhoneticT>(
       (pronunciation) => {
@@ -58,7 +30,7 @@ export function toDictionaryApiV2(
         const recordings = orderedAudio(pronunciation.audio ?? []);
         if (!recordings.length) return text ? [{ text, audio: '' }] : [];
         return recordings.map((recording) => {
-          const audioLicense = licenseOf(recording.licenses, nativeUrl);
+          const audioLicense = compatibilityLicense(recording.licenses, nativeUrl);
           return {
             ...(text && { text }),
             audio: recording.url,
@@ -88,7 +60,7 @@ export function toDictionaryApiV2(
       ...(origin && { origin }),
       meanings: [
         {
-          partOfSpeech: POS[entry.part_of_speech],
+          partOfSpeech: COMPATIBILITY_POS[entry.part_of_speech],
           definitions,
           synonyms: unique(definitions.flatMap((value) => value.synonyms)),
           antonyms: unique(definitions.flatMap((value) => value.antonyms)),

@@ -855,6 +855,15 @@ export default {
     empty_short_translations: 'ترجمات موجزة بوصف فارغ',
   },
   documentation: {
+    endpoint_freedictionaryapi_entries: 'بحث freedictionaryapi.com',
+    desc_freedictionaryapi_entries:
+      'بحث إنجليزي بالتهجئة الدقيقة مع مراعاة حالة الأحرف في مجموعة البيانات النشطة (language: en أو all). يعيد word وentries وsource؛ الشروط الكاملة في vocabBloom. الكلمات غير الموجودة تعيد entries فارغة.',
+    endpoint_freedictionaryapi_languages: 'لغات القاموس',
+    desc_freedictionaryapi_languages:
+      'الإنجليزية وعدد التهجئات المتاحة في مجموعة البيانات النشطة، بما فيها الصيغ والتهجئات البديلة.',
+    param_desc_translations: 'تضمين ترجمات المعاني المدعومة (true/false؛ الافتراضي false).',
+    param_desc_pretty: 'تنسيق JSON بمسافتين (true/false؛ الافتراضي false).',
+
     endpoint_dictionaryapi_v1: 'dictionaryapi.dev v1',
     desc_dictionaryapi_v1:
       'البحث عن كلمات إنجليزية في مجموعة البيانات النشطة. يعيد مصفوفة بتنسيق dictionaryapi.dev v1 مع المصادر والتراخيص الكاملة في vocabBloom. يستخدم حد الطلبات العام المشترك.',
@@ -920,7 +929,8 @@ export default {
     param_desc_headword: 'المدخل الرئيسي الذي يخصه البلاغ، دون تمييز حالة الأحرف؛ 404 عندما يكون غير معروف',
     param_desc_message: 'ما هو الخطأ، والأفضل أن يُذكر ما هو الصواب',
     param_desc_word_id: 'معرّف مدخل واحد من المدخل الرئيسي، عندما يخص البلاغ قسم كلام محددًا',
-    param_desc_word: 'كتابة المدخل الرئيسي، دون تمييز حالة الأحرف؛ المسافات مسموح بها للعبارات',
+    param_desc_word:
+      'تهجئة الكلمة؛ يمكن أن تحتوي العبارات على مسافات. مسارات freedictionaryapi.com تميز حالة الأحرف.',
     param_desc_dataset:
       'اسم مجموعة بيانات على هذا الخادم، كما يسمّيها الحقل dataset في المجموعة: default و wiktionary و wordnet و wordnet_princeton',
     param_desc_words:
@@ -934,7 +944,7 @@ export default {
     param_desc_area_variant: 'الوسوم الإقليمية المراد الإبقاء عليها',
     param_desc_form_of_word: 'صيغ الكلمات المراد سردها؛ الصيغ الأساسية فقط افتراضيًا',
     param_desc_language:
-      'رموز اللغات: مرشح الترجمات للمسارات الأصلية؛ en (أو en_US / en_GB) لمسارات dictionaryapi.dev.',
+      'رموز اللغات: مرشح الترجمة في الواجهة الأصلية؛ en (أو en_US / en_GB) في dictionaryapi.dev؛ en أو all في freedictionaryapi.com.',
     param_desc_search:
       'مصطلح البحث؛ في القائمة والمدخل العشوائي يكون بادئة للمدخل الرئيسي دون تمييز حالة الأحرف (ru — run، rung، runner، …)',
     param_desc_is_obsolete: 'true: المدخلات المهجورة فقط، false: الحالية فقط',

@@ -835,6 +835,14 @@ export default {
     empty_short_translations: '描述为空的简短翻译',
   },
   documentation: {
+    endpoint_freedictionaryapi_entries: 'freedictionaryapi.com 查询',
+    desc_freedictionaryapi_entries:
+      '在当前数据集中按精确拼写查询英语，区分大小写（language：en 或 all）。返回 word、entries 和 source；完整条款见 vocabBloom。未知单词返回空 entries。',
+    endpoint_freedictionaryapi_languages: '词典语言',
+    desc_freedictionaryapi_languages: '英语及当前数据集中可查询的拼写数量，包括词形和替代拼写。',
+    param_desc_translations: '包含支持的释义翻译（true/false；默认 false）。',
+    param_desc_pretty: '以两个空格缩进 JSON（true/false；默认 false）。',
+
     endpoint_dictionaryapi_v1: 'dictionaryapi.dev v1',
     desc_dictionaryapi_v1:
       '在当前数据集中查询英语单词。返回 dictionaryapi.dev v1 格式的数组，vocabBloom 包含完整来源和许可。与公共 API 共用请求限额。',
@@ -898,7 +906,7 @@ export default {
     param_desc_headword: '报告所涉及的词目，不区分大小写；未知时返回 404',
     param_desc_message: '哪里有错，最好也说明正确的应该是什么',
     param_desc_word_id: '词目下某一个词条的 id，当报告涉及特定词性时使用',
-    param_desc_word: '词目拼写，不区分大小写；短语可包含空格',
+    param_desc_word: '词目拼写；短语可包含空格。freedictionaryapi.com 接口区分大小写。',
     param_desc_dataset:
       '实例中数据集的名称，与分组的 dataset 字段一致：default、wiktionary、wordnet、wordnet_princeton',
     param_desc_words: '词目拼写，1 到 50 个，以逗号分隔；每个都按词目查询的方式匹配',
@@ -910,7 +918,8 @@ export default {
     param_desc_category: '标记了任一类别的单词',
     param_desc_area_variant: '要保留的地区标签',
     param_desc_form_of_word: '要列出的词形；默认只列出基础形式',
-    param_desc_language: '语言代码：原生接口用于筛选翻译；dictionaryapi.dev 接口使用 en（或 en_US / en_GB）。',
+    param_desc_language:
+      '语言代码：原生接口用于筛选翻译；dictionaryapi.dev 使用 en（或 en_US / en_GB）；freedictionaryapi.com 使用 en 或 all。',
     param_desc_search: '搜索词；在列表和随机词条中为不区分大小写的词目前缀（ru — run、rung、runner……）',
     param_desc_is_obsolete: 'true：仅过时的词条，false：仅现行的词条',
     param_desc_type: '将搜索限定为一种词条类型',
