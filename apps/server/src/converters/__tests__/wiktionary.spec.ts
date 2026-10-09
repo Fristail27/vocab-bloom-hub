@@ -527,3 +527,51 @@ describe('Wiktionary pronunciations (#578)', () => {
     expect(enpr.pronunciations?.[0].type).toBe('enpr');
   });
 });
+
+describe('Wiktionary recordings (#579)', () => {
+  it('associates only explicit audio-IPA/form data, retains both formats and never invents license metadata', () => {
+    const ogg = 'https://upload.wikimedia.org/wikipedia/commons/a/aa/Test.ogg';
+    const entry = convertRecord({
+      word: 'lumoid',
+      lang_code: 'en',
+      pos: 'noun',
+      senses: [{ glosses: ['Invented object.'] }],
+      forms: [{ form: 'lumoids', tags: ['plural'] }],
+      sounds: [
+        { ipa: '/unrelated/' },
+        { audio: 'Test.ogg', ogg_url: ogg, mp3_url: 'https://example.org/test.mp3', tags: ['US'] },
+        { 'audio-ipa': '/recorded/', audio: 'Test.ogg', ogg_url: ogg, tags: ['UK'] },
+        { 'audio-ipa': '/recorded/', ogg_url: 'https://example.org/second.ogg', tags: ['UK'] },
+        { ipa: '/displayed/', 'audio-ipa': '/actual/', ogg_url: ogg },
+        { form: 'lumoids', 'audio-ipa': '/plural/', ogg_url: 'https://example.org/plural.ogg' },
+        { enpr: 'loo', ogg_url: 'https://example.org/enpr.ogg' },
+        { audio: 'unresolved.ogg' },
+        { ogg_url: 'javascript:alert(1)' },
+      ],
+    }) as ConvertedEntryT;
+    expect(entry.pronunciations?.map(({ text }) => text)).toEqual([
+      '/unrelated/',
+      null,
+      '/recorded/',
+      '/displayed/',
+      '/actual/',
+      'loo',
+    ]);
+    expect(entry.pronunciations![0].audio).toBeUndefined();
+    expect(entry.pronunciations![1].audio).toHaveLength(2);
+    expect(entry.pronunciations![1].audio![0]).toMatchObject({
+      url: ogg,
+      source_url: 'https://commons.wikimedia.org/wiki/File:Test.ogg',
+      attribution: null,
+      licenses: [],
+    });
+    expect(entry.pronunciations![1].audio![1].source_url).toBeNull();
+    expect(entry.pronunciations![2].audio).toHaveLength(2);
+    expect(entry.pronunciations![3].audio).toBeUndefined();
+    expect(entry.pronunciations![4].audio![0].url).toBe(ogg);
+    expect(entry.pronunciations![5].audio).toHaveLength(1);
+    expect(entry.forms[0].pronunciations![0].audio![0].url).toBe('https://example.org/plural.ogg');
+    expect(mergeEntries(entry, entry).pronunciations).toEqual(entry.pronunciations);
+    expect(mergeEntries(entry, entry).forms).toEqual(entry.forms);
+  });
+});

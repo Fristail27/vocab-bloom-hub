@@ -466,7 +466,7 @@ export class EnService {
   async editWord(id: number, body: EditCommonInfoOfWordReqDTO): Promise<EditCommonInfoOfWordResT> {
     this.assertNotGenerated(body.generated);
     const word = await this.requireWord(id, {
-      pronunciations: true,
+      pronunciations: { audio: true },
       etymologies: true,
       meanings: { etymology: true },
       word: true,
@@ -673,7 +673,7 @@ export class EnService {
     const word = await this.requireWord(body.id, {
       word: { alternatives: true },
       base_form: { word: true },
-      pronunciations: true,
+      pronunciations: { audio: true },
     });
 
     const valuesBefore = formSnapshot(word);

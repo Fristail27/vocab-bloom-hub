@@ -1,3 +1,4 @@
+import type { AdminPronunciationT } from '../types';
 import { AuditService } from '../src/modules/AuditModule/audit.service';
 import { DatasetsService } from '../src/modules/DatasetsModule/datasets.service';
 import { runDatasetMigrations } from '../src/db/datasets';
@@ -21,6 +22,18 @@ describe('word provenance and independent forks (#556)', () => {
   const api = () => request(app.getHttpServer());
   const pg = checkIsPostgres() ? it : it.skip;
   let cedar: EnWordT;
+  const recording = (url: string) => ({
+    url,
+    source_url: 'https://example.org/speaker',
+    attribution: 'Invented speaker',
+    licenses: [{ spdx: 'CC0-1.0', name: 'CC0', url: 'https://creativecommons.org/publicdomain/zero/1.0/' }],
+    sort_order: 0,
+  });
+  const portablePronunciations = (values: AdminPronunciationT[] | undefined) =>
+    values?.map(({ id: _id, audio, ...value }) => ({
+      ...value,
+      ...(audio?.length && { audio: audio.map(({ id: _audioId, ...recording }) => recording) }),
+    }));
   const manual: OriginT = {
     id: 'manual-source-v2',
     name: 'Example glossary',
@@ -78,7 +91,15 @@ describe('word provenance and independent forks (#556)', () => {
       version: 'source-1',
       generated: false,
       description: 'a tree',
-      pronunciations: [{ type: 'ipa', text: '/seed-er/', area_variant: 'american', sort_order: 0 }],
+      pronunciations: [
+        {
+          type: 'ipa',
+          text: '/seed-er/',
+          area_variant: 'american',
+          sort_order: 0,
+          audio: [recording('https://example.org/cedar.ogg')],
+        },
+      ],
       etymologies: [{ number: 1, text: 'Invented origin for the transfer fixture.' }],
       forms: [
         {
@@ -86,7 +107,15 @@ describe('word provenance and independent forks (#556)', () => {
           form_of_word: 'plural_form',
           area_variant: 'common',
           transcription: '/legacy-seeders/',
-          pronunciations: [{ type: 'ipa', text: '/seed-ers/', area_variant: 'british', sort_order: 0 }],
+          pronunciations: [
+            {
+              type: 'ipa',
+              text: null,
+              area_variant: 'british',
+              sort_order: 0,
+              audio: [recording('https://example.org/cedars.ogg')],
+            },
+          ],
           alternatives: ['cedarr'],
         },
       ],
@@ -147,6 +176,9 @@ describe('word provenance and independent forks (#556)', () => {
     expect(full.body.data[0].etymologies).toEqual([
       { number: 1, text: 'Invented origin for the transfer fixture.' },
     ]);
+    expect(full.body.data[0].pronunciations[0].audio[0].licenses).toEqual(recording('').licenses);
+    expect(full.body.data[0].pronunciations[0].audio[0]).not.toHaveProperty('id');
+    expect(full.body.data[0].forms[0].pronunciations[0].text).toBeNull();
     expect((await read('default', cedar.forms[0].id)).origins).toEqual(cedar.origins);
     const history = await api().get('/api/en/changes').query({ headword: 'cedar' }).set(auth).expect(200);
     expect(history.body.items).toHaveLength(0);
@@ -188,6 +220,17 @@ describe('word provenance and independent forks (#556)', () => {
     expect(quoteChange.diff.quotes.before).toEqual(cedar.meanings[0].quotes);
     await api().post(`/api/en/changes/${quoteChange.id}/revert`).set(auth).expect(200);
     expect((await read('default', cedar.id)).meanings[0].quotes).toEqual(cedar.meanings[0].quotes);
+    const sounds = cedar.pronunciations!.map((value) => ({ ...value, audio: [] }));
+    await api().patch(`/api/en/common-info/${cedar.id}`).set(auth).send({ pronunciations: sounds }).expect(200);
+    const audioHistory = await api().get('/api/en/changes').query({ headword: 'cedar' }).set(auth).expect(200);
+    const audioChange = audioHistory.body.items[0] as ChangeT;
+    expect(audioChange.diff.pronunciations.before).toEqual(portablePronunciations(cedar.pronunciations));
+    await api().post(`/api/en/changes/${audioChange.id}/revert`).set(auth).expect(200);
+    const restored = await read('default', cedar.id);
+    expect(portablePronunciations(restored.pronunciations)).toEqual(
+      portablePronunciations(cedar.pronunciations),
+    );
+    cedar = restored;
   });
 
   pg('copies a word into an inactive own dataset, preserving content and inherited history', async () => {
@@ -251,11 +294,9 @@ describe('word provenance and independent forks (#556)', () => {
     expect(copy.etymologies).toEqual([
       { id: expect.any(Number), number: 1, text: 'Invented origin for the transfer fixture.' },
     ]);
-    expect(copy.pronunciations?.map(({ id: _id, ...value }) => value)).toEqual(
-      cedar.pronunciations?.map(({ id: _id, ...value }) => value),
-    );
-    expect(copy.forms[0].pronunciations?.map(({ id: _id, ...value }) => value)).toEqual(
-      cedar.forms[0].pronunciations?.map(({ id: _id, ...value }) => value),
+    expect(portablePronunciations(copy.pronunciations)).toEqual(portablePronunciations(cedar.pronunciations));
+    expect(portablePronunciations(copy.forms[0].pronunciations)).toEqual(
+      portablePronunciations(cedar.forms[0].pronunciations),
     );
     expect(copy.forms[0].transcription).toBe('/legacy-seeders/');
     expect(copy.meanings[0].etymology_number).toBe(1);
@@ -435,6 +476,7 @@ describe('word provenance and independent forks (#556)', () => {
     const target = await app.get(DatasetsService).reader(await app.get(DatasetsService).find('second_fork'));
     await target.query("SELECT setval(pg_get_serial_sequence('en_etymologies', 'id'), 1000)");
     await target.query("SELECT setval(pg_get_serial_sequence('en_pronunciations', 'id'), 1000)");
+    await target.query("SELECT setval(pg_get_serial_sequence('en_pronunciation_audio', 'id'), 2000)");
     const imported = await api()
       .post('/api/en/dictionary/import/upload')
       .set(auth)
@@ -449,12 +491,13 @@ describe('word provenance and independent forks (#556)', () => {
       .expect(200);
     const restored = await read('second_fork', search.body[0].id as number);
     expect(restored.origins).toEqual(before.origins);
-    expect(restored.pronunciations?.map(({ id: _id, ...value }) => value)).toEqual(
-      before.pronunciations?.map(({ id: _id, ...value }) => value),
+    expect(portablePronunciations(restored.pronunciations)).toEqual(
+      portablePronunciations(before.pronunciations),
     );
     expect(restored.pronunciations![0].id).not.toBe(before.pronunciations![0].id);
-    expect(restored.forms[0].pronunciations?.map(({ id: _id, ...value }) => value)).toEqual(
-      before.forms[0].pronunciations?.map(({ id: _id, ...value }) => value),
+    expect(restored.pronunciations![0].audio![0].id).not.toBe(before.pronunciations![0].audio![0].id);
+    expect(portablePronunciations(restored.forms[0].pronunciations)).toEqual(
+      portablePronunciations(before.forms[0].pronunciations),
     );
     expect(restored.forms[0].transcription).toBe('/legacy-seeders/');
     expect(restored.alternatives).toEqual(['cedarr']);
@@ -485,6 +528,10 @@ describe('word provenance and independent forks (#556)', () => {
       items.filter((change) => change.diff.quotes).map((change) => change.diff.quotes);
     expect(quoteDiffs(historyBefore)).toHaveLength(2);
     expect(quoteDiffs(history.body.items as ChangeT[])).toEqual(quoteDiffs(historyBefore));
+    const audioDiffs = (items: ChangeT[]) =>
+      items.filter((change) => change.diff.pronunciations).map((change) => change.diff.pronunciations);
+    expect(audioDiffs(historyBefore)).toHaveLength(2);
+    expect(audioDiffs(history.body.items as ChangeT[])).toEqual(audioDiffs(historyBefore));
     expect((history.body.items as ChangeT[]).map((change) => change.inherited_from)).toEqual(
       historyBefore.map((change) => change.inherited_from),
     );

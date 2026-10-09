@@ -1,3 +1,5 @@
+import { isAudioUrl } from '../../modules/EnModule/utils/pronunciationAudio';
+import type { PronunciationAudioT } from '../../../types';
 import type { PronunciationT } from '../../../types';
 import { primaryIPA } from '../../modules/EnModule/utils/pronunciations';
 import { mergePronunciations } from '../normalize';
@@ -62,7 +64,16 @@ export type KaikkiRecordT = {
   lang_code?: string;
   senses?: KaikkiSenseT[];
   forms?: Array<{ form?: string; ipa?: string; tags?: string[] }>;
-  sounds?: Array<{ ipa?: string; enpr?: string; form?: string; tags?: string[] }>;
+  sounds?: Array<{
+    ipa?: string;
+    enpr?: string;
+    form?: string;
+    tags?: string[];
+    'audio-ipa'?: string;
+    audio?: string;
+    ogg_url?: string;
+    mp3_url?: string;
+  }>;
   translations?: KaikkiTranslationT[];
   synonyms?: Array<KaikkiLinkT & { sense?: string }>;
   antonyms?: Array<KaikkiLinkT & { sense?: string }>;
@@ -344,15 +355,55 @@ const soundArea = (tags: string[] | undefined): EnAreaVariantsE =>
       ? EnAreaVariantsE.british
       : firstMatch(AREAS, tags ?? []) || EnAreaVariantsE.common;
 
+const audioOf = (sound: NonNullable<KaikkiRecordT['sounds']>[number]): PronunciationAudioT[] => {
+  const urls = [...new Set([sound.ogg_url, sound.mp3_url].filter(isAudioUrl))];
+  // The extract supplies filenames and media URLs, but neither creator nor license terms.
+  // Only Commons media URLs establish that this filename names a Commons source page.
+  const filename = sound.audio?.trim();
+  return urls.map((url, sort_order) => ({
+    url,
+    sort_order,
+    source_url:
+      filename &&
+      new URL(url).hostname === 'upload.wikimedia.org' &&
+      new URL(url).pathname.startsWith('/wikipedia/commons/')
+        ? `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(filename.replace(/^File:/i, '').replace(/ /g, '_'))}`
+        : null,
+    attribution: null,
+    licenses: [],
+  }));
+};
+
 const soundsOf = (record: KaikkiRecordT, form?: string): PronunciationT[] => {
   const values: PronunciationT[] = [];
   for (const sound of record.sounds ?? []) {
     // A source explicitly names the form it pronounced. Never attach it to another spelling.
     if (form === undefined ? sound.form && sound.form !== record.word : sound.form !== form) continue;
+    const audio = audioOf(sound);
+    const recordingText = sound['audio-ipa']?.trim();
+    // Only the same source sound can associate a recording with text. In particular,
+    // a following audio-only sound is never attached to a preceding IPA line.
+    const audioType = recordingText || sound.ipa?.trim() ? 'ipa' : sound.enpr?.trim() ? 'enpr' : 'ipa';
+    const audioText = recordingText || sound[audioType]?.trim() || null;
     for (const type of ['ipa', 'enpr'] as const) {
       const text = sound[type]?.trim();
-      if (text) values.push({ type, text, area_variant: soundArea(sound.tags), sort_order: values.length });
+      if (text)
+        values.push({
+          type,
+          text,
+          area_variant: soundArea(sound.tags),
+          sort_order: values.length,
+          ...(audio.length && type === audioType && text === audioText && { audio }),
+        });
     }
+    if (audio.length && (!audioText || sound[audioType]?.trim() !== audioText))
+      values.push({
+        type: audioType,
+        text: audioText,
+        area_variant: soundArea(sound.tags),
+        sort_order: values.length,
+        audio,
+      });
   }
   return mergePronunciations(values);
 };

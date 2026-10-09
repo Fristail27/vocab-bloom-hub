@@ -1,3 +1,5 @@
+import { portableAudio } from '../modules/EnModule/utils/pronunciationAudio';
+import type { PronunciationAudioT } from '../../types';
 import type { PronunciationT } from '../../types';
 import { primaryIPA } from '../modules/EnModule/utils/pronunciations';
 import { CategoryE, EnPartOfSpeechE, EnWordFormsE } from '../../types';
@@ -29,12 +31,29 @@ export const titleOf = (definition: string): string => {
 
 const unique = <T>(items: T[]): T[] => [...new Set(items)];
 
+const mergeAudio = (...lists: (readonly PronunciationAudioT[] | undefined)[]): PronunciationAudioT[] => {
+  const unique = new Map<string, PronunciationAudioT>();
+  for (const value of lists.flatMap((list) => list ?? [])) {
+    const { sort_order: _sortOrder, ...content } = portableAudio(value);
+    const key = JSON.stringify(content);
+    if (!unique.has(key)) unique.set(key, { ...content, sort_order: unique.size });
+  }
+  return [...unique.values()];
+};
+
 /** Preserve source encounter order and every distinct type/text/region variant. */
 export const mergePronunciations = (...lists: (readonly PronunciationT[] | undefined)[]): PronunciationT[] => {
   const unique = new Map<string, PronunciationT>();
   for (const value of lists.flatMap((list) => list ?? [])) {
     const key = JSON.stringify([value.type, value.text, value.area_variant]);
-    if (!unique.has(key)) unique.set(key, { ...value, sort_order: unique.size });
+    const known = unique.get(key);
+    if (!known)
+      unique.set(key, {
+        ...value,
+        sort_order: unique.size,
+        ...(value.audio?.length && { audio: mergeAudio(value.audio) }),
+      });
+    else if (value.audio?.length) known.audio = mergeAudio(known.audio, value.audio);
   }
   return [...unique.values()];
 };

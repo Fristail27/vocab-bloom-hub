@@ -218,6 +218,32 @@ the first remaining IPA. EnPR-only records leave that field empty.
 A sound with `form` belongs only to that spelling. The adapter attaches it to a
 recognized form (or the headword if explicitly named), and also retains IPA in
 `forms[].ipa`. Form lists are separate from the base list; the public read may
-inherit from the base when a form has no pronunciation of its own. Audio fields
-are reserved for the subsequent audio feature. See
+inherit from the base when a form has no pronunciation of its own. Audio is
+preserved as described below. See
 [the portable format](../../../../docs/offline-import.md#pronunciations).
+
+### Wiktionary audio and its metadata
+
+The English Wiktextract [sound schema](https://github.com/tatuylonen/wiktextract/blob/master/src/wiktextract/extractor/en/type_utils.py)
+and [pronunciation extractor](https://github.com/tatuylonen/wiktextract/blob/master/src/wiktextract/extractor/en/pronunciation.py)
+provide `ogg_url`, `mp3_url`, `audio` (filename) and `audio-ipa` when known. They do
+not provide recording creators, attribution strings or license terms. The converter
+keeps each distinct HTTP(S) media URL, Ogg before MP3 within a source sound, and
+sets attribution to null and licenses to an empty list. It never substitutes the
+Wiktionary text license. A Commons file-page URL is derived from the filename only
+when the media URL points into `upload.wikimedia.org/wikipedia/commons/`; other
+records have `source_url: null`. A filename without a media URL is not enough to
+create a recording. No per-record metadata requests or media downloads are made.
+
+`audio-ipa` explicitly associates the recording with its transcription. Otherwise,
+IPA or EnPR in the same sound object supplies the association (IPA preferred when
+both are present). If `audio-ipa` differs from `ipa`, both transcriptions survive,
+with audio attached to the former. A separate sound containing only audio produces
+`type: "ipa", text: null`; this type is a model placeholder, not a claimed phonetic
+transcription. A neighboring IPA, or a transcription of another region/form, is
+never guessed as its target. Explicit `form` associations apply to audio too.
+
+When equal pronunciation records merge, recordings merge in encounter order;
+exact repeated URL/source/attribution/license metadata is deduplicated. Different
+metadata for the same URL remains distinct. Unknown source tags are still ignored.
+See [the portable audio format](../../../../docs/offline-import.md#pronunciation-audio).

@@ -227,14 +227,15 @@ class Type(Enum):
     enpr = "enpr"
 
 
-class PronunciationT(BaseModel):
+class PronunciationAudioT(BaseModel):
     """
-    Portable pronunciation; database IDs never travel in datasets or public responses.
+    External recordings only; missing license metadata is an empty list, never the text license.
     """
 
-    type: Type
-    text: str | None = Field(...)
-    area_variant: EnAreaVariantsE
+    url: str
+    source_url: str | None = None
+    attribution: str | None = None
+    licenses: list[OriginLicenseT]
     sort_order: int
 
 
@@ -249,18 +250,6 @@ class EnPhrasalObjectPatternE(Enum):
     inseparable = "inseparable"
     separable = "separable"
     separable_pronoun_only = "separable_pronoun_only"
-
-
-class PublicWordV1FormT(BaseModel):
-    alternatives: list[str] | None = None
-    id: int
-    word: str
-    form_of_word: EnWordFormsE
-    area_variant: EnAreaVariantsE
-    transcription: str | None = Field(...)
-    pronunciations: list[PronunciationT] | None = Field(
-        None, description="Ordered pronunciations, with legacy transcription and base-form fallback."
-    )
 
 
 class PublicSearchDetailedV1MetaT(BaseModel):
@@ -439,6 +428,32 @@ class OriginT(BaseModel):
     )
     inherited: bool = Field(
         ..., description="Automatically inherited terms cannot be removed by ordinary editing."
+    )
+
+
+class PronunciationT(BaseModel):
+    """
+    Portable pronunciation; database IDs never travel in datasets or public responses.
+    """
+
+    audio: list[PronunciationAudioT] | None = Field(
+        None, description="Recordings carry their own terms, independent of the word's text."
+    )
+    type: Type
+    text: str | None = Field(...)
+    area_variant: EnAreaVariantsE
+    sort_order: int
+
+
+class PublicWordV1FormT(BaseModel):
+    alternatives: list[str] | None = None
+    id: int
+    word: str
+    form_of_word: EnWordFormsE
+    area_variant: EnAreaVariantsE
+    transcription: str | None = Field(...)
+    pronunciations: list[PronunciationT] | None = Field(
+        None, description="Ordered pronunciations, with legacy transcription and base-form fallback."
     )
 
 
