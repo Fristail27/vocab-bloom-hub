@@ -884,8 +884,14 @@ export default {
     empty_short_translations: 'Kurzübersetzungen mit leerer Beschreibung',
   },
   documentation: {
+    endpoint_dictionaryapi_v1: 'dictionaryapi.dev v1',
+    desc_dictionaryapi_v1:
+      'Englische Wörter im aktiven Datensatz suchen. Gibt ein Array im Format dictionaryapi.dev v1 zurück, mit vollständigen Quellen und Lizenzen in vocabBloom. Nutzt das gemeinsame öffentliche Anfragelimit.',
+    endpoint_dictionaryapi_v2: 'dictionaryapi.dev v2',
+    desc_dictionaryapi_v2:
+      'Englische Wörter im aktiven Datensatz suchen. Gibt ein Array im Format dictionaryapi.dev v2 zurück, mit vollständigen Quellen und Lizenzen in vocabBloom. Nutzt das gemeinsame öffentliche Anfragelimit.',
     intro:
-      "Die öffentliche, nur lesende API unter /api/v1: ohne Autorisierung, jede Antwort in einer Hülle '{ data, meta }', Fehler als '{ statusCode, message, error: true }', jede Antwort trägt X-API-Version. Jede Seite beschreibt die Filter der Anfrage und lässt Sie eine echte Anfrage gegen die aktuelle Datenbank ausführen.",
+      "Die öffentliche, nur lesende API unter /api/v1: ohne Autorisierung, jede Antwort in einer Hülle '{ data, meta }', Fehler als '{ statusCode, message, error: true }', jede Antwort trägt X-API-Version. Jede Seite beschreibt die Filter der Anfrage und lässt Sie eine echte Anfrage gegen die aktuelle Datenbank ausführen. Kompatibilitätsrouten unter /api/compat/dictionaryapi geben v1/v2-Arrays statt der nativen Antwortstruktur zurück.",
     public_endpoints: 'Öffentliche Endpunkte',
     endpoint_search_get: 'Einfache Suche',
     endpoint_search_detailed_get: 'Detaillierte Suche',
@@ -959,7 +965,8 @@ export default {
     param_desc_category: 'Wörter mit einer der Kategorien',
     param_desc_area_variant: 'Zu behaltende regionale Markierungen',
     param_desc_form_of_word: 'Zu listende Wortformen; standardmäßig nur Grundformen',
-    param_desc_language: 'Übersetzungssprachen; kein Wert bedeutet alle',
+    param_desc_language:
+      'Sprachcodes: Übersetzungsfilter für native Routen; en (oder en_US / en_GB) für dictionaryapi.dev.',
     param_desc_search:
       'Suchbegriff; bei der Liste und dem zufälligen Eintrag ein Stichwortpräfix ohne Groß-/Kleinschreibung (ru — run, rung, runner, …)',
     param_desc_is_obsolete: 'true: nur veraltete Einträge, false: nur aktuelle',

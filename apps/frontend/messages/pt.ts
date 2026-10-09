@@ -877,8 +877,14 @@ export default {
     empty_short_translations: 'Traduções curtas com descrição vazia',
   },
   documentation: {
+    endpoint_dictionaryapi_v1: 'dictionaryapi.dev v1',
+    desc_dictionaryapi_v1:
+      'Pesquisa palavras em inglês no conjunto de dados ativo. Retorna um array no formato dictionaryapi.dev v1, com fontes e licenças completas em vocabBloom. Compartilha o limite público de requisições.',
+    endpoint_dictionaryapi_v2: 'dictionaryapi.dev v2',
+    desc_dictionaryapi_v2:
+      'Pesquisa palavras em inglês no conjunto de dados ativo. Retorna um array no formato dictionaryapi.dev v2, com fontes e licenças completas em vocabBloom. Compartilha o limite público de requisições.',
     intro:
-      "A API pública somente leitura em /api/v1: sem autorização, cada resposta em um envelope '{ data, meta }', erros como '{ statusCode, message, error: true }', cada resposta traz X-API-Version. Cada página descreve os filtros da requisição e permite executar uma requisição real contra o banco de dados atual.",
+      "A API pública somente leitura em /api/v1: sem autorização, cada resposta em um envelope '{ data, meta }', erros como '{ statusCode, message, error: true }', cada resposta traz X-API-Version. Cada página descreve os filtros da requisição e permite executar uma requisição real contra o banco de dados atual. As rotas de compatibilidade /api/compat/dictionaryapi retornam arrays v1/v2 em vez da estrutura nativa.",
     public_endpoints: 'Endpoints públicos',
     endpoint_search_get: 'Busca básica',
     endpoint_search_detailed_get: 'Busca detalhada',
@@ -951,7 +957,8 @@ export default {
     param_desc_category: 'Palavras marcadas com qualquer uma das categorias',
     param_desc_area_variant: 'Marcas regionais a manter',
     param_desc_form_of_word: 'Formas de palavra a listar; por padrão só as formas base',
-    param_desc_language: 'Idiomas de tradução; sem valor significa todos',
+    param_desc_language:
+      'Códigos de idioma: filtro de traduções nas rotas nativas; en (ou en_US / en_GB) no dictionaryapi.dev.',
     param_desc_search:
       'Termo de busca; na lista e no verbete aleatório, um prefixo da palavra sem diferenciar maiúsculas (ru — run, rung, runner, …)',
     param_desc_is_obsolete: 'true: apenas verbetes obsoletos, false: apenas os atuais',

@@ -24,6 +24,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/compat/dictionaryapi/v2/entries/{language}/{word}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * dictionaryapi.dev v2 lookup in the active dataset
+     * @description Array response, with lossless provenance in vocabBloom. English only; native headword and inflection resolution. No dataset query parameter.
+     */
+    get: operations['DictionaryApiController_v2'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/compat/dictionaryapi/v1/entries/{language}/{word}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * dictionaryapi.dev legacy v1 lookup in the active dataset
+     * @description Same entries and terms as v2, with a meaning object keyed by part of speech instead of meanings. English only.
+     */
+    get: operations['DictionaryApiController_v1'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/search': {
     parameters: {
       query?: never;
@@ -944,6 +984,76 @@ export interface components {
       message: string;
       error: boolean;
     };
+    DictionaryApiErrorT: {
+      title: string;
+      message: string;
+      resolution: string;
+    };
+    DictionaryApiV1ResT: {
+      meaning: {
+        [key: string]: components['schemas']['DictionaryApiDefinitionT'][];
+      };
+      word: string;
+      phonetic?: string;
+      phonetics: components['schemas']['DictionaryApiPhoneticT'][];
+      origin?: string;
+      license?: components['schemas']['DictionaryApiLicenseT'];
+      sourceUrls: string[];
+      /** @description Complete terms and modification indication, additive to the upstream shape. */
+      vocabBloom: {
+        dataset: string;
+        source: string;
+        modified: boolean;
+        origins: components['schemas']['OriginT'][];
+        contributions: components['schemas']['OriginT'][];
+        licenses: components['schemas']['WordLicenseT'][];
+      };
+    }[];
+    DictionaryApiDefinitionT: {
+      definition: string;
+      example?: string;
+      synonyms: string[];
+      antonyms: string[];
+    };
+    DictionaryApiPhoneticT: {
+      text?: string;
+      audio: string;
+      sourceUrl?: string;
+      license?: components['schemas']['DictionaryApiLicenseT'];
+      /** @description Lossless recording terms; the upstream singular license cannot express all of these. */
+      vocabBloom?: {
+        attribution: string | null;
+        licenses: components['schemas']['OriginLicenseT'][];
+      };
+    };
+    DictionaryApiLicenseT: {
+      name: string;
+      url: string;
+    };
+    DictionaryApiV2ResT: {
+      meanings: components['schemas']['DictionaryApiMeaningT'][];
+      word: string;
+      phonetic?: string;
+      phonetics: components['schemas']['DictionaryApiPhoneticT'][];
+      origin?: string;
+      license?: components['schemas']['DictionaryApiLicenseT'];
+      sourceUrls: string[];
+      /** @description Complete terms and modification indication, additive to the upstream shape. */
+      vocabBloom: {
+        dataset: string;
+        source: string;
+        modified: boolean;
+        origins: components['schemas']['OriginT'][];
+        contributions: components['schemas']['OriginT'][];
+        licenses: components['schemas']['WordLicenseT'][];
+      };
+    }[];
+    DictionaryApiMeaningT: {
+      partOfSpeech: string;
+      definitions: components['schemas']['DictionaryApiDefinitionT'][];
+      synonyms: string[];
+      antonyms: string[];
+    };
   };
   responses: never;
   parameters: never;
@@ -1009,6 +1119,108 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+    };
+  };
+  DictionaryApiController_v2: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        language: 'en' | 'en_US' | 'en_GB';
+        /** @description Headword spelling, case-insensitive (spaces URL-encoded for phrases). An inflected form resolves to its base entry */
+        word: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DictionaryApiV2ResT'];
+        };
+      };
+      /** @description Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DictionaryApiErrorT'];
+        };
+      };
+      /** @description Nothing matches */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DictionaryApiErrorT'];
+        };
+      };
+      /** @description Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DictionaryApiErrorT'];
+        };
+      };
+    };
+  };
+  DictionaryApiController_v1: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        language: 'en' | 'en_US' | 'en_GB';
+        /** @description Headword spelling, case-insensitive (spaces URL-encoded for phrases). An inflected form resolves to its base entry */
+        word: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DictionaryApiV1ResT'];
+        };
+      };
+      /** @description Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DictionaryApiErrorT'];
+        };
+      };
+      /** @description Nothing matches */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DictionaryApiErrorT'];
+        };
+      };
+      /** @description Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DictionaryApiErrorT'];
         };
       };
     };

@@ -886,8 +886,14 @@ export default {
     empty_short_translations: 'Traductions courtes avec une description vide',
   },
   documentation: {
+    endpoint_dictionaryapi_v1: 'dictionaryapi.dev v1',
+    desc_dictionaryapi_v1:
+      'Recherche anglaise dans le jeu de données actif. Renvoie un tableau au format dictionaryapi.dev v1, avec les sources et licences complètes dans vocabBloom. Partage la limite de requêtes publique.',
+    endpoint_dictionaryapi_v2: 'dictionaryapi.dev v2',
+    desc_dictionaryapi_v2:
+      'Recherche anglaise dans le jeu de données actif. Renvoie un tableau au format dictionaryapi.dev v2, avec les sources et licences complètes dans vocabBloom. Partage la limite de requêtes publique.',
     intro:
-      "L'API publique en lecture seule sous /api/v1 : sans autorisation, chaque réponse dans une enveloppe '{ data, meta }', les erreurs sous la forme '{ statusCode, message, error: true }', chaque réponse porte X-API-Version. Chaque page décrit les filtres de la requête et permet de lancer une vraie requête sur la base de données actuelle.",
+      "L'API publique en lecture seule sous /api/v1 : sans autorisation, chaque réponse dans une enveloppe '{ data, meta }', les erreurs sous la forme '{ statusCode, message, error: true }', chaque réponse porte X-API-Version. Chaque page décrit les filtres de la requête et permet de lancer une vraie requête sur la base de données actuelle. Les routes de compatibilité /api/compat/dictionaryapi renvoient des tableaux v1/v2 au lieu de l’enveloppe native.",
     public_endpoints: 'Points de terminaison publics',
     endpoint_search_get: 'Recherche simple',
     endpoint_search_detailed_get: 'Recherche détaillée',
@@ -962,7 +968,8 @@ export default {
     param_desc_category: "Mots étiquetés avec l'une des catégories",
     param_desc_area_variant: 'Marques régionales à conserver',
     param_desc_form_of_word: 'Formes de mot à lister ; formes de base uniquement par défaut',
-    param_desc_language: 'Langues de traduction ; sans valeur, toutes',
+    param_desc_language:
+      'Codes de langue : filtre des traductions pour les routes natives ; en (ou en_US / en_GB) pour dictionaryapi.dev.',
     param_desc_search:
       "Terme de recherche ; sur la liste et l'entrée aléatoire, un préfixe de mot-vedette sans tenir compte de la casse (ru — run, rung, runner, …)",
     param_desc_is_obsolete: 'true : entrées obsolètes uniquement, false : entrées en vigueur uniquement',

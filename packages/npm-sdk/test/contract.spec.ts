@@ -5,7 +5,7 @@ import { VocabBloomClient } from '../src';
 
 type PathsT = Record<string, Record<string, { operationId: string }>>;
 
-// Every public operation has a client method (issue #275): a new endpoint
+// Every native public operation has a client method (issue #275): a new endpoint
 // in the spec fails here until the SDK covers it
 const METHOD_BY_OPERATION: Record<string, keyof VocabBloomClient> = {
   // the searches are GET reads (issue #396); their POST forms were removed (issue #440)
@@ -37,11 +37,18 @@ describe('SDK coverage of the public contract (issue #275)', () => {
   ) as {
     paths: PathsT;
   };
-  const operations = Object.values(spec.paths).flatMap((item) =>
-    Object.values(item).map((op) => op.operationId),
-  );
+  const operations = Object.entries(spec.paths)
+    .filter(([path]) => path.startsWith('/api/v1/'))
+    .flatMap(([, item]) => Object.values(item).map((op) => op.operationId));
 
-  it('maps every operation of openapi/public-v1.json to a client method', () => {
+  it('keeps third-party compatibility adapters separate from the native client', () => {
+    const compatibility = Object.entries(spec.paths)
+      .filter(([path]) => !path.startsWith('/api/v1/'))
+      .flatMap(([, item]) => Object.values(item).map((op) => op.operationId));
+    expect(compatibility.sort()).toEqual(['DictionaryApiController_v1', 'DictionaryApiController_v2']);
+  });
+
+  it('maps every native operation of openapi/public-v1.json to a client method', () => {
     expect(operations.sort()).toEqual(Object.keys(METHOD_BY_OPERATION).sort());
     const client = new VocabBloomClient({
       baseUrl: 'http://localhost',

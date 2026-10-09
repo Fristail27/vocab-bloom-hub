@@ -123,7 +123,7 @@ yarn workspace @vocab-bloom-hub/client pack:check      # publint + arethetypeswr
 
 The package ships ESM and CommonJS with a declaration file for each (`dist/index.d.ts`, `dist/index.d.cts`); the `exports` map hands every consumer the pair its resolution asks for.
 
-`src/generated/openapi.ts` is produced by `openapi-typescript` from the committed public spec and committed itself: a contract change on the server shows up as a diff here, and `test/contract.spec.ts` fails until every operation of the spec has a client method.
+`src/generated/openapi.ts` is produced by `openapi-typescript` from the committed public spec and committed itself: a contract change on the server shows up as a diff here, and `test/contract.spec.ts` fails until every native `/api/v1` operation of the spec has a client method. Compatibility adapters have generated types but no wrapper methods: they are intended for third-party clients replacing their base URL.
 
 ## License
 

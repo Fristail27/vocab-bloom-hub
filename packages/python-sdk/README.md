@@ -155,7 +155,7 @@ uv run ruff check . && uv run ruff format --check . && uv run mypy
 uv run pytest                                     # unit tests + the client against the real server
 ```
 
-`src/vocab_bloom_hub/_generated/models.py` is produced by `datamodel-code-generator` from the committed public spec and committed itself: a contract change on the server shows up as a diff here, and `tests/test_contract.py` fails until every operation of the spec has a client method. The live tests start the server through `yarn workspace server fixture:public-api` (Node.js and the monorepo's dependencies installed), on an in-memory SQLite database.
+`src/vocab_bloom_hub/_generated/models.py` is produced by `datamodel-code-generator` from the committed public spec and committed itself: a contract change on the server shows up as a diff here, and `tests/test_contract.py` fails until every native `/api/v1` operation of the spec has a client method. Compatibility adapters have generated models but no wrapper methods: they are intended for third-party clients replacing their base URL. The live tests start the server through `yarn workspace server fixture:public-api` (Node.js and the monorepo's dependencies installed), on an in-memory SQLite database.
 
 ## License
 

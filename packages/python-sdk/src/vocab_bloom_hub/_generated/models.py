@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 from typing import Any
 
 
@@ -406,6 +406,40 @@ class PublicApiErrorT(BaseModel):
     error: bool
 
 
+class DictionaryApiErrorT(BaseModel):
+    title: str
+    message: str
+    resolution: str
+
+
+class DictionaryApiDefinitionT(BaseModel):
+    definition: str
+    example: str | None = None
+    synonyms: list[str]
+    antonyms: list[str]
+
+
+class VocabBloom1(BaseModel):
+    """
+    Lossless recording terms; the upstream singular license cannot express all of these.
+    """
+
+    attribution: str | None = Field(...)
+    licenses: list[OriginLicenseT]
+
+
+class DictionaryApiLicenseT(BaseModel):
+    name: str
+    url: str
+
+
+class DictionaryApiMeaningT(BaseModel):
+    partOfSpeech: str
+    definitions: list[DictionaryApiDefinitionT]
+    synonyms: list[str]
+    antonyms: list[str]
+
+
 class OriginT(BaseModel):
     id: str
     name: str
@@ -603,6 +637,47 @@ class PublicMetaV1ResT(BaseModel):
     data: PublicMetaV1T
 
 
+class VocabBloom(BaseModel):
+    """
+    Complete terms and modification indication, additive to the upstream shape.
+    """
+
+    dataset: str
+    source: str
+    modified: bool
+    origins: list[OriginT]
+    contributions: list[OriginT]
+    licenses: list[WordLicenseT]
+
+
+class DictionaryApiPhoneticT(BaseModel):
+    text: str | None = None
+    audio: str
+    sourceUrl: str | None = None
+    license: DictionaryApiLicenseT | None = None
+    vocabBloom: VocabBloom1 | None = Field(
+        None,
+        description="Lossless recording terms; the upstream singular license cannot express all of these.",
+    )
+
+
+class DictionaryApiV2ResTItem(BaseModel):
+    meanings: list[DictionaryApiMeaningT]
+    word: str
+    phonetic: str | None = None
+    phonetics: list[DictionaryApiPhoneticT]
+    origin: str | None = None
+    license: DictionaryApiLicenseT | None = None
+    sourceUrls: list[str]
+    vocabBloom: VocabBloom = Field(
+        ..., description="Complete terms and modification indication, additive to the upstream shape."
+    )
+
+
+class DictionaryApiV2ResT(RootModel[list[DictionaryApiV2ResTItem]]):
+    root: list[DictionaryApiV2ResTItem]
+
+
 class PublicSearchWordV1T(BaseModel):
     alternatives: list[str] | None = Field(
         None, description="Alternative spellings of this headword, shared by all its parts of speech."
@@ -693,6 +768,23 @@ class PublicChangeV1T(BaseModel):
 class PublicHeadwordHistoryV1ResT(BaseModel):
     data: list[PublicChangeV1T]
     meta: PublicHeadwordHistoryV1MetaT
+
+
+class DictionaryApiV1ResTItem(BaseModel):
+    meaning: dict[str, list[DictionaryApiDefinitionT]]
+    word: str
+    phonetic: str | None = None
+    phonetics: list[DictionaryApiPhoneticT]
+    origin: str | None = None
+    license: DictionaryApiLicenseT | None = None
+    sourceUrls: list[str]
+    vocabBloom: VocabBloom = Field(
+        ..., description="Complete terms and modification indication, additive to the upstream shape."
+    )
+
+
+class DictionaryApiV1ResT(RootModel[list[DictionaryApiV1ResTItem]]):
+    root: list[DictionaryApiV1ResTItem]
 
 
 class PublicSearchV1ResT(BaseModel):

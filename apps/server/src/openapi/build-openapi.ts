@@ -103,11 +103,11 @@ const responsesOf = (operation: OperationT, spec: PublicResponseSpecT, schemas: 
   for (const status of spec.errors) {
     responses[String(status)] = {
       description: PUBLIC_ERROR_DESCRIPTIONS[status] ?? 'Error',
-      content: { 'application/json': { schema: schemaRef(PUBLIC_ERROR_SCHEMA) } },
+      content: { 'application/json': { schema: schemaRef(spec.errorType ?? PUBLIC_ERROR_SCHEMA) } },
     };
   }
-  if (!schemas[PUBLIC_ERROR_SCHEMA])
-    throw new Error(`Schema "${PUBLIC_ERROR_SCHEMA}" is missing from the generated schemas`);
+  const errorType = spec.errorType ?? PUBLIC_ERROR_SCHEMA;
+  if (!schemas[errorType]) throw new Error(`Schema "${errorType}" is missing from the generated schemas`);
   return responses;
 };
 
@@ -173,6 +173,7 @@ export const buildPublicDocument = (
       `Read-only dictionary API under ${PUBLIC_API_PREFIX} (contract version ${PUBLIC_API_VERSION}): ` +
         'no authentication, every answer in a { data, meta } envelope, errors as ' +
         '{ statusCode, message, error: true }, X-API-Version on every response. ' +
+        'The /api/compat/dictionaryapi routes use dictionaryapi.dev v1/v2 arrays and errors, with additive vocabBloom provenance. ' +
         'Successful GET answers carry ETag, Last-Modified and Cache-Control. ' +
         `Documentation: ${projectWebsitePage('en', '/docs/api')}.`,
     )

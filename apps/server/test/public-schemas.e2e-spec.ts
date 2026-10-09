@@ -215,6 +215,24 @@ describe('public API responses match their OpenAPI schemas (e2e, issue #305)', (
     }
   });
 
+  it('dictionaryapi v1/v2 successes and errors', async () => {
+    for (const version of ['v1', 'v2']) {
+      const operation = `DictionaryApiController_${version}`;
+      const success = await request(server())
+        .get(`/api/compat/dictionaryapi/${version}/entries/en/run`)
+        .expect(200);
+      validate(operation, 200, success.body);
+      const missing = await request(server())
+        .get(`/api/compat/dictionaryapi/${version}/entries/en/no-such-word`)
+        .expect(404);
+      validate(operation, 404, missing.body);
+      const bad = await request(server())
+        .get(`/api/compat/dictionaryapi/${version}/entries/en/${'x'.repeat(129)}`)
+        .expect(400);
+      validate(operation, 400, bad.body);
+    }
+  });
+
   it('search and detailed search', async () => {
     const flat = await request(server()).get('/api/v1/search?search=run').expect(200);
     validate('PublicSearchController_searchGet', 200, flat.body);

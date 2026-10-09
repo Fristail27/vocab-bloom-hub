@@ -2340,5 +2340,314 @@
       "message",
       "statusCode"
     ]
+  },
+  "DictionaryApiErrorT": {
+    "type": "object",
+    "properties": {
+      "title": {
+        "type": "string"
+      },
+      "message": {
+        "type": "string"
+      },
+      "resolution": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "title",
+      "message",
+      "resolution"
+    ]
+  },
+  "DictionaryApiV1ResT": {
+    "type": "array",
+    "items": {
+      "type": "object",
+      "properties": {
+        "meaning": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DictionaryApiDefinitionT"
+            }
+          }
+        },
+        "word": {
+          "type": "string"
+        },
+        "phonetic": {
+          "type": "string"
+        },
+        "phonetics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/DictionaryApiPhoneticT"
+          }
+        },
+        "origin": {
+          "type": "string"
+        },
+        "license": {
+          "$ref": "#/components/schemas/DictionaryApiLicenseT"
+        },
+        "sourceUrls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "vocabBloom": {
+          "type": "object",
+          "properties": {
+            "dataset": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "modified": {
+              "type": "boolean"
+            },
+            "origins": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/OriginT"
+              }
+            },
+            "contributions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/OriginT"
+              }
+            },
+            "licenses": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/WordLicenseT"
+              }
+            }
+          },
+          "required": [
+            "dataset",
+            "source",
+            "modified",
+            "origins",
+            "contributions",
+            "licenses"
+          ],
+          "description": "Complete terms and modification indication, additive to the upstream shape."
+        }
+      },
+      "required": [
+        "meaning",
+        "phonetics",
+        "sourceUrls",
+        "vocabBloom",
+        "word"
+      ]
+    }
+  },
+  "DictionaryApiDefinitionT": {
+    "type": "object",
+    "properties": {
+      "definition": {
+        "type": "string"
+      },
+      "example": {
+        "type": "string"
+      },
+      "synonyms": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "antonyms": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "definition",
+      "synonyms",
+      "antonyms"
+    ]
+  },
+  "DictionaryApiPhoneticT": {
+    "type": "object",
+    "properties": {
+      "text": {
+        "type": "string"
+      },
+      "audio": {
+        "type": "string"
+      },
+      "sourceUrl": {
+        "type": "string"
+      },
+      "license": {
+        "$ref": "#/components/schemas/DictionaryApiLicenseT"
+      },
+      "vocabBloom": {
+        "type": "object",
+        "properties": {
+          "attribution": {
+            "type": "string",
+            "nullable": true
+          },
+          "licenses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OriginLicenseT"
+            }
+          }
+        },
+        "required": [
+          "attribution",
+          "licenses"
+        ],
+        "description": "Lossless recording terms; the upstream singular license cannot express all of these."
+      }
+    },
+    "required": [
+      "audio"
+    ]
+  },
+  "DictionaryApiLicenseT": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string"
+      },
+      "url": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "name",
+      "url"
+    ]
+  },
+  "DictionaryApiV2ResT": {
+    "type": "array",
+    "items": {
+      "type": "object",
+      "properties": {
+        "meanings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/DictionaryApiMeaningT"
+          }
+        },
+        "word": {
+          "type": "string"
+        },
+        "phonetic": {
+          "type": "string"
+        },
+        "phonetics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/DictionaryApiPhoneticT"
+          }
+        },
+        "origin": {
+          "type": "string"
+        },
+        "license": {
+          "$ref": "#/components/schemas/DictionaryApiLicenseT"
+        },
+        "sourceUrls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "vocabBloom": {
+          "type": "object",
+          "properties": {
+            "dataset": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "modified": {
+              "type": "boolean"
+            },
+            "origins": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/OriginT"
+              }
+            },
+            "contributions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/OriginT"
+              }
+            },
+            "licenses": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/WordLicenseT"
+              }
+            }
+          },
+          "required": [
+            "dataset",
+            "source",
+            "modified",
+            "origins",
+            "contributions",
+            "licenses"
+          ],
+          "description": "Complete terms and modification indication, additive to the upstream shape."
+        }
+      },
+      "required": [
+        "meanings",
+        "phonetics",
+        "sourceUrls",
+        "vocabBloom",
+        "word"
+      ]
+    }
+  },
+  "DictionaryApiMeaningT": {
+    "type": "object",
+    "properties": {
+      "partOfSpeech": {
+        "type": "string"
+      },
+      "definitions": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/DictionaryApiDefinitionT"
+        }
+      },
+      "synonyms": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "antonyms": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "partOfSpeech",
+      "definitions",
+      "synonyms",
+      "antonyms"
+    ]
   }
 }

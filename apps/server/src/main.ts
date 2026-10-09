@@ -1,3 +1,4 @@
+import { apiCorsOptions } from './core/utils/api-cors';
 import { config } from 'dotenv';
 import path from 'path';
 import { parseDatabaseUrl, resolveEnvFile } from '../configuration';
@@ -130,10 +131,7 @@ async function bootstrap() {
   app.get(PublicOpenApiService).attach(app);
 
   const corsOrigins = getCorsOrigins();
-  app.enableCors({
-    origin: corsOrigins,
-    credentials: true,
-  });
+  app.enableCors(apiCorsOptions(corsOrigins));
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true, // удаляет лишние поля

@@ -480,3 +480,5 @@ export type PublicApiErrorT = ErrorResT & {
   /** @asType integer */
   statusCode: number;
 };
+
+export type { DictionaryApiErrorT, DictionaryApiV1ResT, DictionaryApiV2ResT } from '../dictionaryapi';

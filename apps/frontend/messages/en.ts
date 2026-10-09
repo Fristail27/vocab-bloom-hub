@@ -868,8 +868,14 @@ export default {
     empty_short_translations: 'Short translations with empty description',
   },
   documentation: {
+    endpoint_dictionaryapi_v1: 'dictionaryapi.dev v1',
+    desc_dictionaryapi_v1:
+      'English lookup in the active dataset. Returns an array in dictionaryapi.dev v1 format, with complete sources and licenses in vocabBloom. Uses the shared public rate limit.',
+    endpoint_dictionaryapi_v2: 'dictionaryapi.dev v2',
+    desc_dictionaryapi_v2:
+      'English lookup in the active dataset. Returns an array in dictionaryapi.dev v2 format, with complete sources and licenses in vocabBloom. Uses the shared public rate limit.',
     intro:
-      "The public read-only API under /api/v1: no authorization, every response in a '{ data, meta }' envelope, errors as '{ statusCode, message, error: true }', every response carries X-API-Version. Every page describes the request filters and lets you run a real request against the current database.",
+      "The public read-only API under /api/v1: no authorization, every response in a '{ data, meta }' envelope, errors as '{ statusCode, message, error: true }', every response carries X-API-Version. Every page describes the request filters and lets you run a real request against the current database. Compatibility routes under /api/compat/dictionaryapi return v1/v2 arrays instead of the native envelope.",
     public_endpoints: 'Public endpoints',
     endpoint_search_get: 'Basic search',
     endpoint_search_detailed_get: 'Detailed search',
@@ -940,7 +946,8 @@ export default {
     param_desc_category: 'Words tagged with any of the categories',
     param_desc_area_variant: 'Regional labels to keep',
     param_desc_form_of_word: 'Word forms to list; base forms only by default',
-    param_desc_language: 'Translation languages; no value means all of them',
+    param_desc_language:
+      'Language codes: translation filter on native routes; en (or en_US / en_GB) on dictionaryapi.dev routes.',
     param_desc_search:
       'Search term; on the list and the random entry a case-insensitive headword prefix (ru — run, rung, runner, …)',
     param_desc_is_obsolete: 'true: obsolete entries only, false: current ones only',

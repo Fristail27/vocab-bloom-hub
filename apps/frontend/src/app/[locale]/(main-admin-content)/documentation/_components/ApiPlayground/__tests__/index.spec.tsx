@@ -45,6 +45,18 @@ describe('ApiPlayground (issue #245)', () => {
     jest.clearAllMocks();
   });
 
+  it('runs the compatibility route with English selected and shows the raw array', async () => {
+    (EnApi.publicGet as jest.Mock).mockResolvedValue([
+      { word: 'take flight', phonetics: [], meaning: { verb: [] } },
+    ]);
+    const endpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.dictionaryapi_v1)!;
+    render(<ApiPlayground endpoint={endpoint} />);
+    typeSearch('take flight');
+    await send();
+    expect(EnApi.publicGet).toHaveBeenCalledWith('/compat/dictionaryapi/v1/entries/en/take%20flight', {});
+    expect(screen.getByText(/"meaning":/)).toBeInTheDocument();
+  });
+
   it('не даёт отправить запрос без обязательного параметра', () => {
     render(<ApiPlayground endpoint={searchEndpoint} />);
 

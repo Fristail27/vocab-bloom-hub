@@ -835,8 +835,14 @@ export default {
     empty_short_translations: '描述为空的简短翻译',
   },
   documentation: {
+    endpoint_dictionaryapi_v1: 'dictionaryapi.dev v1',
+    desc_dictionaryapi_v1:
+      '在当前数据集中查询英语单词。返回 dictionaryapi.dev v1 格式的数组，vocabBloom 包含完整来源和许可。与公共 API 共用请求限额。',
+    endpoint_dictionaryapi_v2: 'dictionaryapi.dev v2',
+    desc_dictionaryapi_v2:
+      '在当前数据集中查询英语单词。返回 dictionaryapi.dev v2 格式的数组，vocabBloom 包含完整来源和许可。与公共 API 共用请求限额。',
     intro:
-      "/api/v1 下的公共只读 API：无需授权，每个响应都封装在 '{ data, meta }' 中，错误以 '{ statusCode, message, error: true }' 返回，每个响应都带有 X-API-Version。每个页面都描述了请求的筛选参数，并允许您对当前数据库发起真实请求。",
+      "/api/v1 下的公共只读 API：无需授权，每个响应都封装在 '{ data, meta }' 中，错误以 '{ statusCode, message, error: true }' 返回，每个响应都带有 X-API-Version。每个页面都描述了请求的筛选参数，并允许您对当前数据库发起真实请求。 /api/compat/dictionaryapi 兼容接口返回 v1/v2 数组，而非原生响应封装。",
     public_endpoints: '公共端点',
     endpoint_search_get: '基本搜索',
     endpoint_search_detailed_get: '详细搜索',
@@ -904,7 +910,7 @@ export default {
     param_desc_category: '标记了任一类别的单词',
     param_desc_area_variant: '要保留的地区标签',
     param_desc_form_of_word: '要列出的词形；默认只列出基础形式',
-    param_desc_language: '翻译语言；不传值表示全部',
+    param_desc_language: '语言代码：原生接口用于筛选翻译；dictionaryapi.dev 接口使用 en（或 en_US / en_GB）。',
     param_desc_search: '搜索词；在列表和随机词条中为不区分大小写的词目前缀（ru — run、rung、runner……）',
     param_desc_is_obsolete: 'true：仅过时的词条，false：仅现行的词条',
     param_desc_type: '将搜索限定为一种词条类型',

@@ -870,8 +870,14 @@ export default {
     empty_short_translations: 'Короткие переводы с пустым описанием',
   },
   documentation: {
+    endpoint_dictionaryapi_v1: 'dictionaryapi.dev v1',
+    desc_dictionaryapi_v1:
+      'Поиск английского слова в активном датасете. Возвращает массив в формате dictionaryapi.dev v1; полные источники и лицензии — в vocabBloom. Использует общий лимит публичного API.',
+    endpoint_dictionaryapi_v2: 'dictionaryapi.dev v2',
+    desc_dictionaryapi_v2:
+      'Поиск английского слова в активном датасете. Возвращает массив в формате dictionaryapi.dev v2; полные источники и лицензии — в vocabBloom. Использует общий лимит публичного API.',
     intro:
-      "Публичный read-only API под префиксом /api/v1: без авторизации, каждый ответ в конверте '{ data, meta }', ошибки в виде '{ statusCode, message, error: true }', в каждом ответе заголовок X-API-Version. На каждой странице описаны фильтры запроса и можно выполнить реальный запрос к текущей базе данных.",
+      "Публичный read-only API под префиксом /api/v1: без авторизации, каждый ответ в конверте '{ data, meta }', ошибки в виде '{ statusCode, message, error: true }', в каждом ответе заголовок X-API-Version. На каждой странице описаны фильтры запроса и можно выполнить реальный запрос к текущей базе данных. Маршруты совместимости /api/compat/dictionaryapi возвращают массивы v1/v2 вместо обёртки основного API.",
     public_endpoints: 'Публичные методы',
     endpoint_search_get: 'Базовый поиск',
     endpoint_search_detailed_get: 'Детальный поиск',
@@ -942,7 +948,8 @@ export default {
     param_desc_category: 'Слова, отмеченные любой из категорий',
     param_desc_area_variant: 'Региональные пометы, которые нужно оставить',
     param_desc_form_of_word: 'Какие словоформы перечислять; по умолчанию только базовые',
-    param_desc_language: 'Языки переводов; без значения — все',
+    param_desc_language:
+      'Коды языков: фильтр переводов на основных маршрутах; en (или en_US / en_GB) на маршрутах dictionaryapi.dev.',
     param_desc_search:
       'Поисковый запрос; для списка и случайной записи — префикс заголовочного слова без учёта регистра (ru — run, rung, runner, …)',
     param_desc_is_obsolete: 'true: только устаревшие записи, false: только актуальные',
