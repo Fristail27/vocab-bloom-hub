@@ -1,5 +1,5 @@
-import type { PronunciationT } from './pronunciations';
-export type { PronunciationT } from './pronunciations';
+import type { AdminPronunciationT } from './pronunciations';
+export type { AdminPronunciationT, PronunciationAudioT, PronunciationT } from './pronunciations';
 import type { MeaningQuoteT } from './quotes';
 export type { MeaningQuoteT } from './quotes';
 import { EnWord } from '../../../src/modules/EnModule/entities/en_word.entity';
@@ -90,7 +90,7 @@ export type EnShortTranslationT = Omit<EnShortTranslation, 'updateAt' | 'created
 // other and schema generators (openapi:generate, #305) cannot follow a
 // circular Pick<Omit<…>>. The shape is the same as before
 export type EnWordFormT = Pick<EnWord, 'id' | 'transcription' | 'form_of_word' | 'is_obsolete'> & {
-  pronunciations?: (PronunciationT & { id?: number })[];
+  pronunciations?: AdminPronunciationT[];
   word: string;
   alternatives?: string[];
   // required on the write path (AddWordReqFormDTO), so never null on a form
@@ -112,7 +112,7 @@ export type EnWordT = Omit<
   | 'phrasal_variants'
 > & {
   word: string;
-  pronunciations?: (PronunciationT & { id?: number })[];
+  pronunciations?: AdminPronunciationT[];
   etymologies?: { id?: number; number: number; text: string }[];
   meanings: EnMeaningT[];
   short_translations: EnShortTranslationT[];

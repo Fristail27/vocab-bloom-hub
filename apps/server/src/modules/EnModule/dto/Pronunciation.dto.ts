@@ -1,3 +1,4 @@
+import { PronunciationAudioDTO } from './PronunciationAudio.dto';
 import { ApiProperty } from '@nestjs/swagger';
 import {
   ArrayMaxSize,
@@ -17,6 +18,18 @@ import { Type } from 'class-transformer';
 import { EnAreaVariantsE } from '../../../../types';
 
 export class PronunciationDTO {
+  @ApiProperty({
+    type: [PronunciationAudioDTO],
+    required: false,
+    description: 'Omit on an existing ID to preserve recordings; [] clears them.',
+  })
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(1000)
+  @ValidateNested({ each: true })
+  @Type(() => PronunciationAudioDTO)
+  audio?: PronunciationAudioDTO[];
+
   @ApiProperty({ required: false, description: 'Existing ID on edit; ignored on copy/import.' })
   @IsOptional()
   @IsInt()
@@ -27,7 +40,12 @@ export class PronunciationDTO {
   @IsIn(['ipa', 'enpr'])
   type!: 'ipa' | 'enpr';
 
-  @ApiProperty({ type: String, description: 'Nonempty text; audio-only records are not supported yet.' })
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Nonblank transcription, or null for a pronunciation with audio.',
+  })
+  @ValidateIf((_object, value: unknown) => value !== null)
   @IsString()
   @Matches(/\S/)
   text!: string | null;

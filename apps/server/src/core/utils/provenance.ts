@@ -3,7 +3,7 @@ import { registerDecorator } from 'class-validator';
 import { ErrorCodes } from '../../../core/constants/error_codes';
 import { findStandardLicense } from '../../../core/constants/data_licenses';
 import { incompatibleShareAlike } from '../../../core/utils/provenance';
-import type { OriginAcquisitionT, OriginT } from '../../../types';
+import type { OriginAcquisitionT, OriginT, OriginLicenseT } from '../../../types';
 
 const string = (value: unknown, max = 2000): value is string =>
   typeof value === 'string' && value.trim().length > 0 && value.length <= max;
@@ -19,6 +19,19 @@ const optional = (value: unknown, check: (value: unknown) => boolean): boolean =
   value === undefined || check(value);
 const timestamp = (value: unknown): boolean =>
   value === null || (string(value, 40) && Number.isFinite(Date.parse(value)));
+
+/** Same license shape and custom-license text rule for word origins and recordings. */
+export const validOriginLicense = (value: unknown): value is OriginLicenseT => {
+  if (!value || typeof value !== 'object') return false;
+  const license = value as OriginLicenseT;
+  return (
+    string(license.name, 200) &&
+    url(license.url) &&
+    optional(license.spdx, (id) => string(id, 100)) &&
+    optional(license.text, (text) => string(text, 100_000)) &&
+    (Boolean(license.spdx && findStandardLicense(license.spdx)) || string(license.text, 100_000))
+  );
+};
 
 /** Also used before importing JSON; DTO validation alone cannot protect imports. */
 export const validOrigins = (value: unknown): value is OriginT[] => {
@@ -36,15 +49,7 @@ export const validOrigins = (value: unknown): value is OriginT[] => {
       Array.isArray(origin.licenses) &&
       origin.licenses.length > 0 &&
       origin.licenses.length <= 30 &&
-      origin.licenses.every(
-        (license) =>
-          license &&
-          string(license.name, 200) &&
-          url(license.url) &&
-          optional(license.spdx, (id) => string(id, 100)) &&
-          optional(license.text, (text) => string(text, 100_000)) &&
-          (Boolean(license.spdx && findStandardLicense(license.spdx)) || string(license.text, 100_000)),
-      ) &&
+      origin.licenses.every(validOriginLicense) &&
       ['all', 'any'].includes(origin.license_relation) &&
       string(origin.attribution, 10_000) &&
       Array.isArray(origin.notices) &&

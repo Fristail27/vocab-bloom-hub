@@ -198,7 +198,7 @@ const addForm = async (em: EntityManager, word: EnWord, values: SnapshotT): Prom
   await restorePronunciations(em, saved.id, values);
   return em.findOneOrFail(EnWord, {
     where: { id: saved.id },
-    relations: { word: { alternatives: true }, pronunciations: true },
+    relations: { word: { alternatives: true }, pronunciations: { audio: true } },
   });
 };
 
@@ -385,7 +385,7 @@ const revertForm = async (
   await restorePronunciations(em, form.id, values);
   const after = await em.getRepository(EnWord).findOneOrFail({
     where: { id: form.id },
-    relations: { word: { alternatives: true }, pronunciations: true },
+    relations: { word: { alternatives: true }, pronunciations: { audio: true } },
   });
   return updated(record, before, formSnapshot(after));
 };

@@ -1,3 +1,4 @@
+import { EnPronunciationAudio } from './entities/en_pronunciation_audio.entity';
 import { EnPronunciation } from './entities/en_pronunciation.entity';
 import { EnEtymology } from './entities/en_etymology.entity';
 import { Injectable } from '@nestjs/common';
@@ -316,6 +317,7 @@ export class WordRowsService {
   /** All requested owners, including forms and their base, share one indexed query. */
   private async loadPronunciations(rows: PlainT[], relations: unknown): Promise<void> {
     const owners: PlainT[] = [];
+    const withAudio = new Set<PlainT>();
     const visit = (value: unknown, options: unknown): void => {
       if (!value || !options || typeof options !== 'object') return;
       if (Array.isArray(value)) {
@@ -325,7 +327,11 @@ export class WordRowsService {
       if (typeof value !== 'object') return;
       const row = value as PlainT;
       const wanted = options as PlainT;
-      if (wanted.pronunciations) owners.push(row);
+      if (wanted.pronunciations) {
+        owners.push(row);
+        if (typeof wanted.pronunciations === 'object' && (wanted.pronunciations as PlainT).audio)
+          withAudio.add(row);
+      }
       for (const [key, child] of Object.entries(wanted)) if (key !== 'pronunciations') visit(row[key], child);
     };
     visit(rows, relations);
@@ -342,6 +348,22 @@ export class WordRowsService {
     const groups = this.groupBy(raw, (row) => row.owner);
     for (const row of owners)
       row.pronunciations = (groups.get(row.id) ?? []).map((value) => this.hydrate(meta, value, 'p'));
+    const pronunciations = owners
+      .filter((row) => withAudio.has(row))
+      .flatMap((row) => row.pronunciations as PlainT[]);
+    if (!pronunciations.length) return;
+    const audioMeta = this.dataSource.getMetadata(EnPronunciationAudio);
+    const aq = this.dataSource.createQueryBuilder(EnPronunciationAudio, 'a').select([]);
+    this.selectScalars(aq, audioMeta, 'a');
+    const audio = await aq
+      .addSelect('a.pronunciation', 'owner')
+      .where('a.pronunciation IN (:...ids)', { ids: [...new Set(pronunciations.map((row) => row.id))] })
+      .orderBy('a.sort_order', 'ASC')
+      .addOrderBy('a.id', 'ASC')
+      .getRawMany<PlainT>();
+    const audioGroups = this.groupBy(audio, (row) => row.owner);
+    for (const row of pronunciations)
+      row.audio = (audioGroups.get(row.id) ?? []).map((value) => this.hydrate(audioMeta, value, 'a'));
   }
 
   /** Collect requested headword relations across forms and words; one query per batch. */

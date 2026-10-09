@@ -1,4 +1,14 @@
-import { Check, Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { EnPronunciationAudio } from './en_pronunciation_audio.entity';
+import {
+  Check,
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { EnAreaVariantsE } from '../../../../types';
 import { EnWord } from './en_word.entity';
 
@@ -8,6 +18,9 @@ import { EnWord } from './en_word.entity';
 @Check('CHK_EN_PRONUNCIATION_AREA', `"area_variant" IN ('common', 'british', 'american', 'australian')`)
 @Check('CHK_EN_PRONUNCIATION_ORDER', '"sort_order" >= 0')
 export class EnPronunciation {
+  @OneToMany(() => EnPronunciationAudio, (audio) => audio.pronunciation)
+  audio?: EnPronunciationAudio[];
+
   @PrimaryGeneratedColumn()
   id!: number;
 

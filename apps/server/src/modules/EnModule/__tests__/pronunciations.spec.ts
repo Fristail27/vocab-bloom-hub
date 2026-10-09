@@ -1,3 +1,6 @@
+import { EnPronunciationAudio } from '../entities/en_pronunciation_audio.entity';
+import { storedPronunciations } from '../utils/pronunciations';
+import type { PronunciationAudioT } from '../../../../types';
 import './helpers/clearDatabaseUrl';
 import { FULL_WORD_RELATIONS, RELATION_LOAD_STRATEGY } from '../utils/wordRelations';
 import { prepareWordFromDB } from '../utils/prepareWordFromDB';
@@ -249,10 +252,136 @@ describe('word pronunciations (#578)', () => {
       { ...sounds[0], area_variant: 'moon' },
     ]) {
       const dto = plainToInstance(EditCommonInfoOfWordReqDTO, { pronunciations: [value] });
-      expect((await validate(dto)).length).toBeGreaterThan(0);
+      if (value.text !== null) expect((await validate(dto)).length).toBeGreaterThan(0);
       await expect(words.editWord(id, dto)).rejects.toThrow('Invalid pronunciation');
     }
     expect((await readWord('lamp'))!.pronunciations).toHaveLength(4);
+    expect(await history()).toEqual([]);
+  });
+  const recordings: PronunciationAudioT[] = [
+    { url: 'https://example.org/second.ogg', source_url: null, attribution: null, licenses: [], sort_order: 1 },
+    {
+      url: 'https://example.org/first.ogg',
+      source_url: 'https://example.org/recording',
+      attribution: 'Invented speaker',
+      licenses: [{ spdx: 'CC0-1.0', name: 'CC0', url: 'https://creativecommons.org/publicdomain/zero/1.0/' }],
+      sort_order: 0,
+    },
+  ];
+  const withAudio = async () => {
+    const id = await create();
+    await words.editWord(id, {
+      pronunciations: [
+        { ...sounds[0], audio: recordings },
+        { ...sounds[1], text: null, audio: [recordings[0]] },
+      ],
+    });
+    const form = (await readWord('lamp'))!.forms[0];
+    await words.editWordForm({
+      id: form.id,
+      pronunciations: [
+        { ...formSounds[0], text: null, audio: [{ ...recordings[0], url: 'https://example.org/form.ogg' }] },
+      ],
+    });
+    await ds.getRepository(EnChange).clear();
+    return id;
+  };
+
+  it('loads text/audio and audio-only pronunciations with separate licenses in one batched audio query (#579)', async () => {
+    const id = await withAudio();
+    const loader = new WordRowsService(ds);
+    const [raw] = await loader.load([id], FULL_WORD_RELATIONS);
+    const entity = await ds.manager.findOneOrFail(EnWord, {
+      where: { id },
+      relations: FULL_WORD_RELATIONS,
+      relationLoadStrategy: RELATION_LOAD_STRATEGY,
+    });
+    expect(storedPronunciations(raw)).toEqual(storedPronunciations(entity));
+    expect(storedPronunciations(raw.forms[0])).toEqual(storedPronunciations(entity.forms[0]));
+    const projected = toPublicWord(raw);
+    expect(projected.pronunciations![0].audio).toEqual([...recordings].reverse());
+    expect(projected.pronunciations![1].text).toBeNull();
+    expect(projected.pronunciations![1].audio![0].licenses).toEqual([]);
+    expect(projected.forms[0].pronunciations![0].text).toBeNull();
+    expect(projected.forms[0].pronunciations![0].audio![0].url).toBe('https://example.org/form.ogg');
+    expect(projected.pronunciations![0].audio![0]).not.toHaveProperty('id');
+    const tied = recordings.map((audio) => ({ ...sounds[0], text: null, audio: [audio] }));
+    expect(orderedPronunciations(tied)).toEqual(orderedPronunciations([...tied].reverse()));
+    expect(prepareWordFromDB(raw).pronunciations![0].audio![0].id).toEqual(expect.any(Number));
+    const queries = jest.spyOn(ds.logger, 'logQuery');
+    await loader.load([id, raw.forms[0].id], FULL_WORD_RELATIONS);
+    expect(queries.mock.calls.filter(([sql]) => sql.includes('FROM "en_pronunciation_audio"'))).toHaveLength(1);
+    queries.mockRestore();
+    expect(await history()).toEqual([]);
+  });
+
+  it('preserves omitted audio on existing IDs, edits recording metadata and reverts clears and cascade deletion', async () => {
+    const id = await withAudio();
+    let word = (await readWord('lamp'))!;
+    const before = fullWordSnapshot(word);
+    const values = prepareWordFromDB(word).pronunciations!;
+    await words.editWord(id, {
+      pronunciations: values.map(({ audio: _audio, ...value }) => value),
+      transcription: word.transcription,
+    });
+    expect(await history()).toEqual([]);
+    expect(await ds.manager.count(EnPronunciationAudio)).toBe(4);
+    const audioId = values[0].audio![0].id;
+    values[0].audio![0].attribution = 'Corrected speaker';
+    await words.editWord(id, { pronunciations: values });
+    word = (await readWord('lamp'))!;
+    expect(word.pronunciations![0].audio!.find((audio) => audio.id === audioId)?.attribution).toBe(
+      'Corrected speaker',
+    );
+    await changes.revert((await last()).id);
+    expect(fullWordSnapshot((await readWord('lamp'))!)).toEqual(before);
+    word = (await readWord('lamp'))!;
+    const clear = prepareWordFromDB(word).pronunciations!;
+    clear[0].audio = [];
+    await words.editWord(id, { pronunciations: clear });
+    await changes.revert((await last()).id);
+    expect(fullWordSnapshot((await readWord('lamp'))!)).toEqual(before);
+    await words.deleteWord(word.forms[0].id);
+    expect(await ds.manager.count(EnPronunciationAudio)).toBe(3);
+    await changes.revert((await last()).id);
+    expect(fullWordSnapshot((await readWord('lamp'))!)).toEqual(before);
+    await words.editWord(id, { pronunciations: [] });
+    expect(await ds.manager.count(EnPronunciationAudio)).toBe(1);
+    await changes.revert((await last()).id);
+    expect(fullWordSnapshot((await readWord('lamp'))!)).toEqual(before);
+    await words.deleteWord(id);
+    expect(await ds.manager.count(EnPronunciationAudio)).toBe(0);
+    await changes.revert((await last()).id);
+    expect(fullWordSnapshot((await readWord('lamp'))!)).toEqual(before);
+  });
+
+  it('rejects mismatched audio IDs, unusable audio-only records and unsafe or malformed portable metadata', async () => {
+    const id = await withAudio();
+    const word = (await readWord('lamp'))!;
+    const before = fullWordSnapshot(word);
+    const values = prepareWordFromDB(word).pronunciations!;
+    const foreign = word.forms[0].pronunciations![0].audio![0];
+    const badIds = [{ ...values[0], audio: [{ ...recordings[0], id: foreign.id }] }];
+    await expect(words.editWord(id, { pronunciations: badIds })).rejects.toThrow('does not belong');
+    await expect(words.editWord(id, { pronunciations: [{ ...values[1], audio: [] }] })).rejects.toThrow(
+      'Invalid pronunciation',
+    );
+    for (const value of [
+      { ...recordings[0], url: 'javascript:alert(1)' },
+      { ...recordings[0], source_url: 'file:///tmp/a' },
+      { ...recordings[0], sort_order: -1 },
+      {
+        ...recordings[0],
+        licenses: [{ name: 'Incomplete custom license', url: 'https://example.org/license' }],
+      },
+    ]) {
+      const dto = plainToInstance(EditCommonInfoOfWordReqDTO, {
+        pronunciations: [{ ...sounds[0], audio: [value] }],
+      });
+      expect((await validate(dto)).length).toBeGreaterThan(0);
+      await expect(words.editWord(id, dto)).rejects.toThrow('Invalid pronunciation audio');
+    }
+    expect(fullWordSnapshot((await readWord('lamp'))!)).toEqual(before);
     expect(await history()).toEqual([]);
   });
 });

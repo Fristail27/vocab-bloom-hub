@@ -494,6 +494,13 @@
   "PronunciationT": {
     "type": "object",
     "properties": {
+      "audio": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/PronunciationAudioT"
+        },
+        "description": "Recordings carry their own terms, independent of the word's text."
+      },
       "type": {
         "type": "string",
         "enum": [
@@ -519,6 +526,37 @@
       "sort_order"
     ],
     "description": "Portable pronunciation; database IDs never travel in datasets or public responses."
+  },
+  "PronunciationAudioT": {
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string"
+      },
+      "source_url": {
+        "type": "string",
+        "nullable": true
+      },
+      "attribution": {
+        "type": "string",
+        "nullable": true
+      },
+      "licenses": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/OriginLicenseT"
+        }
+      },
+      "sort_order": {
+        "type": "integer"
+      }
+    },
+    "required": [
+      "url",
+      "licenses",
+      "sort_order"
+    ],
+    "description": "External recordings only; missing license metadata is an empty list, never the text license."
   },
   "EnVerbTransitivityE": {
     "type": "string",

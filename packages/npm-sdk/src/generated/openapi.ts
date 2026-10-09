@@ -541,10 +541,20 @@ export interface components {
     LanguageRegisterE: 'formal' | 'informal' | 'slang';
     /** @description Portable pronunciation; database IDs never travel in datasets or public responses. */
     PronunciationT: {
+      /** @description Recordings carry their own terms, independent of the word's text. */
+      audio?: components['schemas']['PronunciationAudioT'][];
       /** @enum {string} */
       type: 'ipa' | 'enpr';
       text: string | null;
       area_variant: components['schemas']['EnAreaVariantsE'];
+      sort_order: number;
+    };
+    /** @description External recordings only; missing license metadata is an empty list, never the text license. */
+    PronunciationAudioT: {
+      url: string;
+      source_url?: string | null;
+      attribution?: string | null;
+      licenses: components['schemas']['OriginLicenseT'][];
       sort_order: number;
     };
     /** @enum {string} */

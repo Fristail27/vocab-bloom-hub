@@ -382,7 +382,8 @@ Word, phrase, grammar-pattern and nested form lines may carry
 are preserved. Export and history contain no pronunciation IDs. Import and copy
 allocate new IDs; forks preserve their snapshot's IDs within the new dataset.
 
-Lists are presented by `sort_order`, then type, region and text for ties.
+Lists are presented by `sort_order`, then type, region, text and portable audio
+content for ties.
 The primary IPA is the first American variant, otherwise the first British
 variant, otherwise the first IPA in this order. EnPR is never put in
 `transcription`. Conversion writes the primary IPA into this legacy field.
@@ -405,7 +406,54 @@ the list on edit preserves it; `[]` clears it. Replacing a list also updates
 supplies `transcription`. Clearing `transcription` alone leaves the list intact.
 All content edits and deletions can be reverted through the portable history.
 
-The storage column `text` is nullable for future audio-only pronunciations, but
-current writes require nonblank text and public responses omit unusable records.
-Audio is a separate feature. Use an importer supporting pronunciation lists to
+The storage column `text` is nullable for audio-only pronunciations, described
+below. Text-only writes require nonblank text; public responses omit unusable records. Use an importer supporting pronunciation lists to
 preserve them: older versions can retain only the legacy transcription.
+
+### Pronunciation audio
+
+A pronunciation may carry an optional `audio` list. Each recording has `url`,
+`sort_order`, `licenses` (the existing `OriginLicenseT` format: `name`, `url`,
+optional `spdx` and `text`), optional nullable `source_url` and `attribution`.
+For custom licenses, retain their full `text`, as with word origins. Unknown
+recording terms are `licenses: []`; no text or dataset license is copied into
+that list. No audio file is downloaded, proxied or hosted by the server.
+
+```json
+{
+  "type": "ipa",
+  "text": null,
+  "area_variant": "common",
+  "sort_order": 0,
+  "audio": [
+    {
+      "url": "https://example.org/word.ogg",
+      "source_url": "https://example.org/recording",
+      "attribution": null,
+      "licenses": [],
+      "sort_order": 0
+    }
+  ]
+}
+```
+
+`text: null` is accepted when at least one recording is present. Non-null text
+must be nonblank; a record with neither text nor audio is rejected. Audio-only
+records do not invent an IPA or change the primary-IPA selection rule. A form's
+own audio-only pronunciation takes precedence over the base word's data.
+
+Recordings sort by `sort_order`, with their portable content breaking ties.
+Their IDs are internal: admin responses include them for editing, while public
+responses, export and history omit them. Copy/import allocate new IDs; forks
+preserve the snapshot in a separate dataset. Recording metadata and order survive
+edits, export/import and history/revert. Removing a pronunciation or word deletes
+its recordings through foreign-key cascades.
+
+When editing a pronunciation by its existing ID, omit `audio` to preserve the
+recordings (including when using an older client), or send `[]` to clear them.
+Clearing the last recording of an audio-only pronunciation requires also supplying
+text or removing that pronunciation. Existing recording IDs must belong to that
+pronunciation; otherwise the entire edit is rejected. Without a pronunciation ID,
+the list item is a replacement/new record. Old files without `audio` continue to
+import, and no empty `audio` property is required in public responses. Use an
+importer supporting this addition to preserve recordings.

@@ -35,6 +35,7 @@ const DICTIONARY_TABLES = [
   'en_words',
   'en_etymologies',
   'en_pronunciations',
+  'en_pronunciation_audio',
   'en_meanings',
   'en_meanings_translations',
   'en_short_translations',
@@ -251,10 +252,61 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
       );
       await runner.query('DELETE FROM en_words WHERE id = $1', [word.id]);
       expect(await runner.query('SELECT * FROM en_pronunciations WHERE word = $1', [word.id])).toEqual([]);
+      const { AddPronunciationAudio1791800000000 } =
+        await import('../src/db/dataset-migrations/1791800000000-AddPronunciationAudio');
+      const audioMigration = new AddPronunciationAudio1791800000000();
+      await audioMigration.down(runner);
       const migration = new AddWordPronunciations1791700000000();
       await migration.down(runner);
       await migration.up(runner);
       expect(await runner.query('SELECT * FROM en_pronunciations')).toEqual([]);
+      await audioMigration.up(runner);
+    } finally {
+      await runner.rollbackTransaction();
+      await runner.release();
+    }
+  });
+
+  it('isolates audio and its license snapshots, cascades cleanup and rolls the audio migration down/up', async () => {
+    const { AddPronunciationAudio1791800000000 } =
+      await import('../src/db/dataset-migrations/1791800000000-AddPronunciationAudio');
+    const runner = dataSource.createQueryRunner();
+    await runner.connect();
+    await runner.startTransaction();
+    try {
+      await runner.query(`SET LOCAL search_path TO "${SCHEMA}", public`);
+      await runner.query(`INSERT INTO en_entries (word) VALUES ('audio-test')`);
+      const [word] = await runner.query(
+        `INSERT INTO en_words (word, part_of_speech, form_of_word) VALUES ('audio-test', 'noun', 'base_form') RETURNING id`,
+      );
+      const [pronunciation] = await runner.query(
+        `INSERT INTO en_pronunciations (word, type, text, area_variant, sort_order) VALUES ($1, 'ipa', NULL, 'common', 0) RETURNING id`,
+        [word.id],
+      );
+      await runner.query(
+        `INSERT INTO en_pronunciation_audio (pronunciation, url, sort_order) VALUES ($1, 'https://example.org/audio-test.ogg', 0)`,
+        [pronunciation.id],
+      );
+      expect(
+        await runner.query(
+          `SELECT * FROM public.en_pronunciation_audio WHERE url = 'https://example.org/audio-test.ogg'`,
+        ),
+      ).toEqual([]);
+      expect(
+        (
+          await runner.query('SELECT licenses FROM en_pronunciation_audio WHERE pronunciation = $1', [
+            pronunciation.id,
+          ])
+        )[0].licenses,
+      ).toBe('[]');
+      await runner.query('DELETE FROM en_words WHERE id = $1', [word.id]);
+      expect(
+        await runner.query('SELECT * FROM en_pronunciation_audio WHERE pronunciation = $1', [pronunciation.id]),
+      ).toEqual([]);
+      const migration = new AddPronunciationAudio1791800000000();
+      await migration.down(runner);
+      await migration.up(runner);
+      expect(await runner.query('SELECT * FROM en_pronunciation_audio')).toEqual([]);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

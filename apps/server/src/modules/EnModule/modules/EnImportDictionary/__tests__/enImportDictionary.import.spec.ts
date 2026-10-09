@@ -243,6 +243,15 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
 
   it('replaces imported pronunciation lists, preserves protected entries and retains legacy-only forms', async () => {
     const sound = (text: string) => ({
+      audio: [
+        {
+          url: `https://example.org/${encodeURIComponent(text)}.ogg`,
+          source_url: null,
+          attribution: null,
+          licenses: [],
+          sort_order: 0,
+        },
+      ],
       type: 'ipa' as const,
       text,
       area_variant: EnAreaVariantsE.american,
