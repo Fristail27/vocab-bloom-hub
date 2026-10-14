@@ -38,7 +38,7 @@ export class PublicWordDatasetsService {
 
   async getByHeadword(raw: string): Promise<PublicWordDatasetsV1ResT> {
     const word = raw.trim();
-    const installed = await this.datasets.installed();
+    const installed = await this.datasets.publiclyReadable();
     const data = await Promise.all(installed.map((dataset) => this.groupOf(dataset, word)));
     const found = data.filter((group) => group.count > 0).length;
     if (found === 0) {
@@ -49,7 +49,7 @@ export class PublicWordDatasetsService {
 
   /** What was changed in the entries of a headword in one dataset: the history read of that dataset */
   async getHistory(raw: string, name: string): Promise<PublicHeadwordHistoryV1ResT> {
-    const dataset = (await this.datasets.installed()).find((installed) => installed.name === name);
+    const dataset = (await this.datasets.publiclyReadable()).find((installed) => installed.name === name);
     if (!dataset) {
       throw new NotFoundException(ErrorCodes.dataset_not_found);
     }

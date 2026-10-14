@@ -327,6 +327,7 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
       title: titleOf(dataset),
       own: isOwnDataset(dataset),
       installed: true,
+      is_public: dataset.is_public,
       source: dataset.source,
       language: dataset.language,
       version: dataset.version,
@@ -349,6 +350,7 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
       name: entry.name,
       own: false,
       installed: false,
+      is_public: false,
       ...registryTerms(entry),
       title: entry.title,
       version: null,
@@ -398,6 +400,7 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
       dataset.createdAt,
       dataset.activated_at,
       dataset.terms_updated_at,
+      dataset.visibility_updated_at,
     ]);
     if (removed) instants.push(new Date(removed.value));
     return instants.reduce<Date | null>((newest, instant) => {
@@ -405,6 +408,36 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
       if (!date || Number.isNaN(date.getTime())) return newest;
       return !newest || date > newest ? date : newest;
     }, null);
+  }
+
+  /** Public transports share this selection; admin readers keep using installed()/find(). */
+  async publiclyReadable(): Promise<Dataset[]> {
+    return this.datasetsRep.find({ where: { is_public: true }, order: { id: 'ASC' } });
+  }
+
+  async setVisibility(name: string, isPublic: boolean): Promise<DatasetT> {
+    this.requireSupported();
+    return this.exclusive(async () => {
+      const dataset = await this.find(name);
+      if (!isPublic && dataset.name === this.active.name) {
+        throw new ConflictException(ErrorCodes.dataset_active_must_be_public);
+      }
+      if (dataset.is_public === isPublic) return this.toT(dataset);
+      const before = dataset.is_public;
+      const changed = new Date();
+      await this.datasetsRep.update(dataset.id, { is_public: isPublic, visibility_updated_at: changed });
+      dataset.is_public = isPublic;
+      dataset.visibility_updated_at = changed;
+      this.notifyRegistry();
+      await this.auditService?.record({
+        action: AuditActionE.update,
+        entityType: AuditEntityTypeE.dataset,
+        entityId: dataset.id,
+        headword: dataset.name,
+        diff: { is_public: { before, after: isPublic } },
+      });
+      return this.toT(dataset);
+    });
   }
 
   async find(name: string): Promise<Dataset> {
@@ -461,6 +494,7 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
           name,
           schema,
           own: false,
+          is_public: false,
           ...registryTerms(entry),
           version: null,
           imported_at: null,
@@ -508,6 +542,7 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
           name,
           schema,
           own: true,
+          is_public: false,
           source: name,
           language: 'en',
           title: request.title.trim(),
@@ -571,6 +606,7 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
         name: request.name,
         schema: datasetSchemaOf(request.name),
         own: true,
+        is_public: false,
         source: request.name,
         language: source.language,
         title: request.title.trim(),
@@ -624,6 +660,10 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
   }
 
   async updateTerms(name: string, request: UpdateDatasetReqT): Promise<DatasetT> {
+    return this.exclusive(() => this.updateTermsUnlocked(name, request));
+  }
+
+  private async updateTermsUnlocked(name: string, request: UpdateDatasetReqT): Promise<DatasetT> {
     this.requireSupported();
     const dataset = await this.find(name);
     if (!isOwnDataset(dataset)) throw new ConflictException(ErrorCodes.dataset_terms_fixed);
@@ -860,6 +900,7 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
     this.requireSupported();
     return this.exclusive(async () => {
       const dataset = await this.find(name);
+      if (!dataset.is_public) throw new ConflictException(ErrorCodes.dataset_is_closed);
       const previous = this.active;
       if (dataset.name === previous.name) return this.toT(dataset);
 

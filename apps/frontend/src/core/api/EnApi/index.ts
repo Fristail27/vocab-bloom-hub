@@ -478,6 +478,12 @@ export class EnApi extends AbstractBaseApi {
     return this.patch<DatasetResT>(`${this.baseURL}/en/datasets/${encodeURIComponent(name)}`, body);
   }
 
+  static async setDatasetVisibility(name: string, is_public: boolean): Promise<DatasetResT> {
+    return this.patch<DatasetResT>(`${this.baseURL}/en/datasets/${encodeURIComponent(name)}/visibility`, {
+      is_public,
+    });
+  }
+
   static async activateDataset(name: string): Promise<DatasetResT> {
     return this.post<DatasetResT>(`${this.baseURL}/en/datasets/${encodeURIComponent(name)}/activate`, {});
   }

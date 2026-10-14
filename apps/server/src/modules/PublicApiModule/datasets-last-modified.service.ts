@@ -17,6 +17,7 @@ import {
  */
 @Injectable()
 export class DatasetsLastModifiedService {
+  private revision = 0;
   private cache: { value: Date | null; fetchedAt: number } | null = null;
 
   constructor(private readonly datasets: DatasetsService) {
@@ -28,18 +29,21 @@ export class DatasetsLastModifiedService {
     if (this.cache && Date.now() - this.cache.fetchedAt < LAST_MODIFIED_TTL_MS) {
       return this.cache.value;
     }
-    const installed = await this.datasets.installed();
+    const revision = this.revision;
+    const installed = await this.datasets.publiclyReadable();
     const dates = await Promise.all([
       this.datasets.changedAt(),
       ...installed.map(async (dataset) => newestChangeOn(await this.datasets.reader(dataset))),
     ]);
     const value = toHttpInstant(newestOf(dates));
+    if (revision !== this.revision) return this.getLastModified();
     this.cache = { value, fetchedAt: Date.now() };
     return value;
   }
 
   /** Forgets the cached instant; the next read looks it up again */
   reset(): void {
+    this.revision++;
     this.cache = null;
   }
 }

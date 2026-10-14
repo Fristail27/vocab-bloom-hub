@@ -31,7 +31,7 @@ export class DictReaderService {
     }
   }
   async databases(): Promise<Dataset[]> {
-    const installed = await this.datasets.installed();
+    const installed = await this.datasets.publiclyReadable();
     return installed.sort((a, b) =>
       a.name === 'default' ? -1 : b.name === 'default' ? 1 : a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
     );

@@ -25,6 +25,7 @@ const { Paragraph, Text } = Typography;
 /** What a card asks of the page: the dialogs and the calls live there, one of each for every card */
 export type DatasetActionsT = {
   fork?: (dataset: DatasetT) => void;
+  visibility: (dataset: DatasetT) => void;
   activate: (dataset: DatasetT) => void;
   edit: (dataset: DatasetT) => void;
   import: (dataset: DatasetT) => void;
@@ -176,6 +177,11 @@ export const DatasetCard: React.FC<DatasetCardP> = ({ entry, dataset, update, su
           <div className={styles.tags}>
             {own && <Tag color="purple">{t('status_own')}</Tag>}
             {active && <Tag color="green">{t('status_active')}</Tag>}
+            {installed && (
+              <Tag color={dataset?.is_public ? 'cyan' : 'default'}>
+                {t(dataset?.is_public ? 'status_public' : 'status_closed')}
+              </Tag>
+            )}
             {installed && !active && <Tag color="blue">{t('status_installed')}</Tag>}
             {!installed && <Tag>{t('status_not_installed')}</Tag>}
           </div>
@@ -251,13 +257,42 @@ export const DatasetCard: React.FC<DatasetCardP> = ({ entry, dataset, update, su
         />
       )}
 
+      {installed && (
+        <Paragraph type="secondary">
+          {t(
+            active
+              ? 'visibility_active_hint'
+              : dataset?.is_public
+                ? 'visibility_hint'
+                : 'visibility_closed_hint',
+          )}
+        </Paragraph>
+      )}
       <div className={styles.actions}>
+        {installed && dataset && (
+          <Popconfirm
+            title={t(dataset.is_public ? 'close_confirm' : 'open_confirm', { name: title })}
+            description={t('visibility_hint')}
+            okText={t(dataset.is_public ? 'visibility_close' : 'visibility_open')}
+            cancelText={t('cancel')}
+            disabled={!supported || active || !!busy}
+            onConfirm={() => actions.visibility(dataset)}
+          >
+            <Button
+              disabled={!supported || active || !!busy}
+              loading={busy === `visibility ${name}`}
+              data-testid={`dataset-visibility-${name}`}
+            >
+              {t(dataset.is_public ? 'visibility_close' : 'visibility_open')}
+            </Button>
+          </Popconfirm>
+        )}
         {installed && dataset && actions.fork && (
           <Button disabled={!supported || !!busy} onClick={() => actions.fork?.(dataset)}>
             {p('fork_button')}
           </Button>
         )}
-        {supported && installed && !active && dataset && (
+        {supported && installed && !active && dataset?.is_public && (
           <Popconfirm
             title={t('activate_confirm', { name: title })}
             okText={t('activate')}

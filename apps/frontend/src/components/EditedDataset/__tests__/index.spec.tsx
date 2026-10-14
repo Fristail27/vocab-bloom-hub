@@ -25,6 +25,7 @@ const dataset = (over: Partial<DatasetT>): DatasetT => ({
   name: 'default',
   title: 'Vocab Bloom Hub English dataset',
   own: false,
+  is_public: true,
   installed: true,
   source: 'vocab-bloom-hub',
   language: 'en',

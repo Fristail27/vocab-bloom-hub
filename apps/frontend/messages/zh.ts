@@ -104,6 +104,8 @@ export default {
     [ErrorCodes.change_doesnt_found]: '未找到该修改',
     [ErrorCodes.change_not_revertible]: '此修改无法撤回：它已不再体现在所提供的数据中，或者从未记录过具体的值',
     [ErrorCodes.change_outdated]: '在此修改之后该记录又被编辑过，或已不存在：请先撤回之后的修改',
+    [ErrorCodes.dataset_is_closed]: '请先开放数据集，再启用',
+    [ErrorCodes.dataset_active_must_be_public]: '当前启用的数据集必须公开，请先启用另一个开放的数据集',
     [ErrorCodes.dataset_is_active]: '无法删除当前启用的数据集——请先启用另一个',
     [ErrorCodes.dataset_is_default]: '无法删除默认数据集',
     [ErrorCodes.datasets_busy]: '另一项数据集操作正在进行——请稍后重试',
@@ -315,10 +317,21 @@ export default {
   },
   // the datasets of the instance (issue #527): the catalog, the terms and the instruction
   datasets: {
+    status_public: '公开',
+    status_closed: '已关闭',
+    visibility_open: '开放数据集',
+    visibility_close: '关闭数据集',
+    open_confirm: '向公众开放“{name}”？',
+    close_confirm: '关闭“{name}”的公开访问？',
+    opened: '“{name}”现已公开',
+    closed: '“{name}”现已关闭',
+    visibility_hint: '关闭后，公众将无法访问该数据集。管理员仍可访问其数据。',
+    visibility_active_hint: '当前启用的数据集必须保持公开。请先启用另一个开放的数据集，再关闭此数据集。',
+    visibility_closed_hint: '此数据集已关闭。请先开放，再启用。',
+
     intro:
       '此实例可以容纳的词典数据集。每个数据集有自己的词条，并沿用其来源的许可；同一时间只启用一个——API 和网站提供的就是它。数据集从不混合。',
-    public_note:
-      '已安装的数据集无论是否启用都是公开的：{method} 会返回实例中每个数据集里的词目，各自适用其许可，并附带其修改历史。请在数据可以被读取时再安装数据集。',
+    public_note: '只有开放的数据集可公开访问：{method} 按各自许可证读取数据。新数据集和分支默认关闭。',
     not_supported:
       '此实例运行在没有模式的 SQLite 上：只有默认数据集。安装、启用和删除数据集需要 Postgres 数据库。',
     status_active: '已启用',

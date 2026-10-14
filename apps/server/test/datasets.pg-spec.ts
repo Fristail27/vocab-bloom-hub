@@ -165,6 +165,8 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
 
   it('installs a dataset as a schema with the dictionary tables and a migration journal of its own', async () => {
     const created = await app.get(DatasetsService).install(NAME);
+    expect(created.is_public).toBe(false);
+    await app.get(DatasetsService).setVisibility(NAME, true);
     expect(created).toEqual(
       expect.objectContaining({ name: NAME, schema: SCHEMA, source: 'princeton-wordnet', version: null }),
     );
@@ -195,6 +197,30 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
     expect((await app.get(DatasetsService).install(NAME)).id).toBe(created.id);
     await expect(app.get(DatasetsService).install('wiktionary_en')).rejects.toThrow('dataset_name_invalid');
     await expect(app.get(DatasetsService).install('default')).rejects.toThrow('dataset_name_invalid');
+  });
+
+  it('preserves existing public datasets when applying the visibility migration', async () => {
+    const { AddDatasetVisibility1792000000000 } =
+      await import('../src/db/migrations/1792000000000-AddDatasetVisibility');
+    const runner = dataSource.createQueryRunner();
+    await runner.connect();
+    await runner.startTransaction();
+    try {
+      const migration = new AddDatasetVisibility1792000000000();
+      await migration.down(runner);
+      await migration.up(runner);
+      const rows = await runner.query('SELECT is_public, visibility_updated_at FROM public.datasets');
+      expect(rows.length).toBeGreaterThan(0);
+      expect(
+        rows.every(
+          (row: { is_public: boolean; visibility_updated_at: Date | null }) =>
+            row.is_public && row.visibility_updated_at === null,
+        ),
+      ).toBe(true);
+    } finally {
+      await runner.rollbackTransaction();
+      await runner.release();
+    }
   });
 
   it('builds the same tables as `public` has: columns, indexes and foreign keys', async () => {
@@ -935,6 +961,12 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
         await dataSource.query(`SELECT "value" FROM "public"."settings" WHERE "field" = 'en_dataset_version'`),
       ).toEqual(versionBefore);
 
+      expect((await list()).datasets.find((dataset) => dataset.name === other)?.is_public).toBe(false);
+      await request(server())
+        .patch(`/api/en/datasets/${other}/visibility`)
+        .set(auth)
+        .send({ is_public: true })
+        .expect(200);
       // served once it is the active one
       await request(server()).post(`/api/en/datasets/${other}/activate`).set(auth).expect(200);
       const found = await request(server()).get(`/api/v1/words/${word}`).expect(200);

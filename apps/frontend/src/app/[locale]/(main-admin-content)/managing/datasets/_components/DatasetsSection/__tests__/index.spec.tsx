@@ -34,6 +34,7 @@ jest.mock('@/core/api/EnApi', () => ({
     installDataset: jest.fn(),
     downloadDataset: jest.fn(),
     activateDataset: jest.fn(),
+    setDatasetVisibility: jest.fn(),
     deleteDataset: jest.fn(),
     createDataset: jest.fn(),
     updateDataset: jest.fn(),
@@ -55,6 +56,7 @@ const listOf = (over: Record<string, Partial<DatasetT>> = {}, supported = true):
     title: entry.title,
     own: false,
     installed: entry.name === 'default',
+    is_public: entry.name === 'default',
     source: entry.source,
     language: entry.language,
     version: null,
@@ -73,7 +75,12 @@ const listOf = (over: Record<string, Partial<DatasetT>> = {}, supported = true):
   return { supported, active: datasets.find((dataset) => dataset.active)?.name ?? 'default', datasets };
 };
 
-const INSTALLED = { installed: true, version: '2026.09.27', imported_at: '2026-09-27T10:05:00.000Z' };
+const INSTALLED = {
+  installed: true,
+  is_public: true,
+  version: '2026.09.27',
+  imported_at: '2026-09-27T10:05:00.000Z',
+};
 
 const renderSection = (list: DatasetsListT) =>
   render(
@@ -489,6 +496,27 @@ describe('DatasetsSection', () => {
     expect(done).toHaveTextContent('"kept":3');
   });
 
+  it.each([true, false])('changes visibility from %s and reloads the cards', async (is_public) => {
+    const dataset = { ...INSTALLED, is_public };
+    (EnApi.setDatasetVisibility as jest.Mock).mockResolvedValue({ name: 'wiktionary', is_public: !is_public });
+    (EnApi.getDatasets as jest.Mock).mockResolvedValue(
+      listOf({ wiktionary: { ...dataset, is_public: !is_public } }),
+    );
+    renderSection(listOf({ wiktionary: dataset }));
+    expect(cardOf('default').getByTestId('dataset-visibility-default')).toBeDisabled();
+    expect(cardOf('wiktionary').getByRole('button', { name: 'edit_words' })).toBeEnabled();
+    expect(cardOf('wiktionary').getByRole('button', { name: 'export' })).toBeEnabled();
+    if (!is_public)
+      expect(cardOf('wiktionary').queryByRole('button', { name: 'activate' })).not.toBeInTheDocument();
+    const action = is_public ? 'visibility_close' : 'visibility_open';
+    fireEvent.click(cardOf('wiktionary').getByRole('button', { name: action }));
+    fireEvent.click((await screen.findAllByRole('button', { name: action })).at(-1) as HTMLElement);
+    await waitFor(() => expect(EnApi.setDatasetVisibility).toHaveBeenCalledWith('wiktionary', !is_public));
+    await waitFor(() =>
+      expect(cardOf('wiktionary').getByText(is_public ? 'status_closed' : 'status_public')).toBeInTheDocument(),
+    );
+  });
+
   it('activates an installed dataset and deletes one that is not active', async () => {
     (EnApi.activateDataset as jest.Mock).mockResolvedValue({ name: 'wiktionary' });
     (EnApi.deleteDataset as jest.Mock).mockResolvedValue({ success: true });
@@ -732,6 +760,7 @@ describe('DatasetsSection', () => {
       title: 'My words',
       own: true,
       installed: true,
+      is_public: true,
       source: 'my_words',
       language: 'en',
       version: null,

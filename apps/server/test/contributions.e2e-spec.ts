@@ -1,3 +1,4 @@
+import { DatasetsService } from '../src/modules/DatasetsModule/datasets.service';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -24,12 +25,16 @@ postgres('licenses of contributions to a fork', () => {
   const history = async (dataset: string): Promise<ChangeT[]> =>
     (await api().get('/api/en/changes').query({ dataset, headword: 'make' }).set(auth).expect(200)).body
       .items as ChangeT[];
-  const create = (name: string, license = 'ODbL-1.0') =>
-    api()
+  const create = async (name: string, license = 'ODbL-1.0') => {
+    const created = await api()
       .post('/api/en/datasets')
       .set(auth)
       .send({ name, title: name, license: { spdx: license }, attribution: 'Local editors' })
       .expect(201);
+    expect(created.body.is_public).toBe(false);
+    await api().patch(`/api/en/datasets/${name}/visibility`).set(auth).send({ is_public: true }).expect(200);
+    return created;
+  };
   const fork = async (parent: string, name: string, license = 'ODbL-1.0', version?: string) => {
     await api()
       .post(`/api/en/datasets/${parent}/fork`)
@@ -39,7 +44,15 @@ postgres('licenses of contributions to a fork', () => {
     for (let i = 0; i < 200; i++) {
       const status = (await api().get(`/api/en/datasets/${name}/fork-status`).set(auth).expect(200))
         .body as ForkProgressT;
-      if (status.state === 'completed') return;
+      if (status.state === 'completed') {
+        expect((await app.get(DatasetsService).find(name)).is_public).toBe(false);
+        await api()
+          .patch(`/api/en/datasets/${name}/visibility`)
+          .set(auth)
+          .send({ is_public: true })
+          .expect(200);
+        return;
+      }
       if (status.state === 'failed') throw new Error(status.failure);
       await new Promise((resolve) => setTimeout(resolve, 25));
     }
@@ -152,6 +165,11 @@ postgres('licenses of contributions to a fork', () => {
       })
       .expect(201);
     expect(created.body.version).toBe(version);
+    await api()
+      .patch('/api/en/datasets/versioned_words/visibility')
+      .set(auth)
+      .send({ is_public: true })
+      .expect(200);
     await api().post('/api/en/datasets/versioned_words/activate').set(auth).expect(200);
     expect((await api().get('/api/v1/meta').expect(200)).body.data.dataset_version).toBe(version);
     const updated = await api()

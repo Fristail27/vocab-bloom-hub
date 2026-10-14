@@ -1,7 +1,13 @@
 jest.mock('server-only', () => ({}));
 jest.mock('../apiBase', () => ({ serverApiBase: () => 'http://api.test/api' }));
 
-import { fetchHeadword } from '../dictionary';
+import {
+  fetchHeadword,
+  fetchHeadwordDatasets,
+  fetchDatasetHistory,
+  fetchHeadwordHistory,
+  fetchDatasetTerms,
+} from '../dictionary';
 
 describe('word page API diagnostics', () => {
   const fetchMock = jest.fn();
@@ -63,5 +69,18 @@ describe('word page API diagnostics', () => {
       error: 'TypeError',
       code: 'ECONNREFUSED',
     });
+  });
+  it('rechecks visibility on every server render, including history and terms', async () => {
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify({ data: [] })));
+    await fetchHeadword('look');
+    await fetchHeadwordDatasets('look');
+    await fetchDatasetHistory('look', 'wordnet');
+    await fetchHeadwordHistory('look');
+    await fetchDatasetTerms();
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    for (const [, options] of fetchMock.mock.calls) {
+      expect(options.cache).toBe('no-store');
+      expect(options.next).toBeUndefined();
+    }
   });
 });

@@ -42,10 +42,16 @@ describe('portable provenance format compatibility', () => {
   it('round-trips its version and resolves only known physical names', () => {
     const injected = {
       ...manifest,
-      provenance: { ...(manifest as { provenance: object }).provenance, schema: 'public', own: true },
+      provenance: {
+        ...(manifest as { provenance: object }).provenance,
+        schema: 'public',
+        own: true,
+        is_public: true,
+      },
     };
     expect(parseManifest(injected)?.provenance).not.toHaveProperty('schema');
     expect(parseManifest(injected)?.provenance).not.toHaveProperty('own');
+    expect(parseManifest(injected)?.provenance).not.toHaveProperty('is_public');
     expect(parseManifest(manifest)).toMatchObject({ version: '2.0', file_names: { [legacy]: physical } });
     // The version-string check in released parsers refuses the envelope.
     expect(typeof (manifest as { version: unknown }).version).not.toBe('string');

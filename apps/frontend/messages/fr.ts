@@ -117,6 +117,9 @@ export default {
       'Cette modification ne peut pas être annulée : elle n’est plus visible dans ce qui est servi, ou ses valeurs n’ont jamais été enregistrées',
     [ErrorCodes.change_outdated]:
       'L’enregistrement a été modifié de nouveau après cette modification, ou n’existe plus : annulez d’abord les modifications ultérieures',
+    [ErrorCodes.dataset_is_closed]: 'Ouvrez le dataset avant de l’activer',
+    [ErrorCodes.dataset_active_must_be_public]:
+      'Le dataset actif doit rester public : activez d’abord un autre dataset ouvert',
     [ErrorCodes.dataset_is_active]:
       'Le jeu de données actif ne peut pas être supprimé : activez-en un autre d’abord',
     [ErrorCodes.dataset_is_default]: 'Le jeu de données par défaut ne peut pas être supprimé',
@@ -331,10 +334,24 @@ export default {
   },
   // the datasets of the instance (issue #527): the catalog, the terms and the instruction
   datasets: {
+    status_public: 'Public',
+    status_closed: 'Fermé',
+    visibility_open: 'Ouvrir le dataset',
+    visibility_close: 'Fermer le dataset',
+    open_confirm: 'Rendre « {name} » public ?',
+    close_confirm: 'Fermer « {name} » au public ?',
+    opened: '« {name} » est maintenant public',
+    closed: '« {name} » est maintenant fermé',
+    visibility_hint:
+      'La fermeture masque le dataset au public. Ses données restent accessibles à l’administrateur.',
+    visibility_active_hint:
+      'Le dataset actif doit rester public. Activez un autre dataset ouvert avant de le fermer.',
+    visibility_closed_hint: 'Ce dataset est fermé. Ouvrez-le avant de l’activer.',
+
     intro:
       'Les jeux de données de dictionnaire que cette instance peut contenir. Chacun a ses propres entrées et la licence de sa source ; un seul est actif — celui que servent l’API et le site. Les jeux de données ne sont jamais mélangés.',
     public_note:
-      'Un jeu de données installé est public, qu’il soit actif ou non : {method} répond par une entrée de chaque jeu de données de l’instance, chacun sous sa propre licence, avec l’historique de ses modifications. Installez un jeu de données lorsque ses données peuvent être lues.',
+      'Seuls les datasets ouverts sont publics : {method} lit chacun sous sa propre licence. Les nouveaux datasets et forks sont fermés par défaut.',
     not_supported:
       'Cette instance fonctionne avec SQLite, qui n’a pas de schémas : elle ne contient que le jeu de données par défaut. Installer, activer et supprimer des jeux de données nécessite une base Postgres.',
     status_active: 'actif',

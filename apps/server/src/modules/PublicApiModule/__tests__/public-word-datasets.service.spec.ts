@@ -46,6 +46,7 @@ describe('a headword read from every dataset', () => {
     if (!entry) throw new Error(`no dataset "${name}" in the catalog`);
     return Object.assign(new Dataset(), {
       name,
+      is_public: true,
       schema: name === 'default' ? 'public' : `ds_${name}`,
       source: entry.source,
       version,
@@ -76,7 +77,7 @@ describe('a headword read from every dataset', () => {
     wordnet = await connect();
 
     const registry = {
-      installed: async () => datasets,
+      publiclyReadable: async () => datasets.filter((dataset) => dataset.is_public),
       getActive: () => datasets[0],
       reader: async (dataset: Dataset) => (dataset.name === 'default' ? own : wordnet),
       changedAt: async () => changedAt,
@@ -227,5 +228,19 @@ describe('a headword read from every dataset', () => {
     for (const name of ['', 'Wiktionary', 'ds wiktionary', 'public"; DROP', 'a'.repeat(41)]) {
       expect(() => pipe.transform(name)).toThrow(BadRequestException);
     }
+  });
+  it('omits closed datasets, their counts and history, and restores them on reopening', async () => {
+    datasets[1].is_public = false;
+    listeners.forEach((listener) => listener());
+    try {
+      expect((await service.getByHeadword('lamp')).meta).toEqual({ word: 'lamp', datasets: 1, found: 1 });
+      await expect(service.getByHeadword('wick')).rejects.toThrow(ErrorCodes.word_doesnt_found);
+      await expect(service.getHistory('lamp', datasets[1].name)).rejects.toThrow(ErrorCodes.dataset_not_found);
+    } finally {
+      datasets[1].is_public = true;
+      listeners.forEach((listener) => listener());
+    }
+    expect((await service.getByHeadword('wick')).meta.found).toBe(1);
+    expect((await service.getHistory('lamp', datasets[1].name)).data).toHaveLength(1);
   });
 });

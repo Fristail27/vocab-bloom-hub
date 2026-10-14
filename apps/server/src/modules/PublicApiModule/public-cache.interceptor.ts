@@ -22,6 +22,14 @@ abstract class CacheHeadersInterceptor implements NestInterceptor {
   /** When what the route answers from last changed */
   protected abstract lastModified(): Promise<Date | null>;
 
+  protected cacheControl(): string {
+    return publicCacheControl(getPublicApiCacheMaxAge());
+  }
+
+  protected canValidateByDate(): boolean {
+    return true;
+  }
+
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const http = context.switchToHttp();
     const req = http.getRequest<Request>();
@@ -29,10 +37,11 @@ abstract class CacheHeadersInterceptor implements NestInterceptor {
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       return next.handle();
     }
+    if (!this.canValidateByDate()) delete req.headers['if-modified-since'];
     return next.handle().pipe(
       mergeMap(async (body: unknown) => {
         const lastModified = await this.lastModified();
-        res.setHeader('Cache-Control', publicCacheControl(getPublicApiCacheMaxAge()));
+        res.setHeader('Cache-Control', this.cacheControl());
         // The bytes Express sends: JSON by default, or an already serialized compatibility response.
         res.setHeader('ETag', weakEtagOf(typeof body === 'string' ? body : JSON.stringify(body)));
         if (lastModified) {
@@ -62,6 +71,18 @@ export class PublicCacheInterceptor extends CacheHeadersInterceptor {
  */
 @Injectable()
 export class PublicDatasetsCacheInterceptor extends CacheHeadersInterceptor {
+  protected canValidateByDate(): boolean {
+    // HTTP dates cannot distinguish visibility changes within one second,
+    // or a close that removes the dataset with the newest content date.
+    // Keep Last-Modified as metadata; only ETag can validate these responses.
+    return false;
+  }
+
+  protected cacheControl(): string {
+    // A cached dataset group must be revalidated before it can be shown again.
+    return 'public, no-cache, must-revalidate';
+  }
+
   constructor(private readonly lastModifiedService: DatasetsLastModifiedService) {
     super();
   }

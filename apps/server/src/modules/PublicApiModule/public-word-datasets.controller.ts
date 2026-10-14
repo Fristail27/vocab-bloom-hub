@@ -32,9 +32,9 @@ export class PublicWordDatasetsController {
   constructor(private readonly publicWordDatasetsService: PublicWordDatasetsService) {}
 
   @ApiOperation({
-    summary: 'A headword as every dataset of the instance has it, grouped by dataset',
+    summary: 'A headword as every open dataset of the instance has it, grouped by dataset',
     description:
-      'One group per dataset, never merged: the terms of the dataset (`license`, `attribution`, `license_text`, …) ' +
+      'One group per open dataset, never merged: the terms of the dataset (`license`, `attribution`, `license_text`, …) ' +
       'and the entries `GET /words/{word}` would answer if that dataset were the served one. The spelling is ' +
       'matched inside each dataset, so a group has its own `word` and `variants`; a dataset without the headword ' +
       'answers an empty `entries`, and the request fails with 404 when no dataset holds it. ' +
@@ -50,7 +50,7 @@ export class PublicWordDatasetsController {
     summary: 'What was changed or added on the instance in the entries of a headword, in one dataset',
     description:
       'The answer of `GET /words/{word}/history` for a dataset named by its `dataset`: the edits behind ' +
-      '`modified: true` of the entries of that group. 404 for a dataset the instance does not hold.',
+      '`modified: true` of the entries of that group. 404 for a closed dataset or a dataset the instance does not hold.',
   })
   @ApiParam(HEADWORD_PARAM)
   @ApiParam(DATASET_PARAM)

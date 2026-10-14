@@ -82,6 +82,11 @@ describe('compatibility responses from every dataset', () => {
         .expect(201);
       await add('glimmer', INACTIVE, 'A definition from another dataset.');
       await add('inactiveonly', INACTIVE);
+      await request(server())
+        .patch(`/api/en/datasets/${INACTIVE}/visibility`)
+        .set(auth)
+        .send({ is_public: true })
+        .expect(200);
     }
   });
 
@@ -217,6 +222,78 @@ describe('compatibility responses from every dataset', () => {
       )!;
       expect(inactive.response.entries[0].senses[0].definition).toBe('A definition from another dataset.');
       expect(inactive.response.vocabBloom.active).toBe(false);
+    },
+  );
+
+  (checkIsPostgres() ? it : it.skip)(
+    'closes every public surface without hiding admin data, then reopens it',
+    async () => {
+      const paths = [
+        '/api/v1/words/glimmer/datasets',
+        `${dictionary}/glimmer/datasets`,
+        `${dictionary.replace('/v2/', '/v1/')}/glimmer/datasets`,
+        `${free}/glimmer/datasets`,
+      ];
+      const registry = app.get(DatasetsService);
+      // Reset the artificial future content date from the preceding cache test.
+      const dataset = await registry.find(INACTIVE);
+      const db = await registry.reader(dataset);
+      await db.getRepository(EnWord).createQueryBuilder().update().set({ updateAt: new Date() }).execute();
+      registry.contentChanged(dataset);
+      const before = await Promise.all(paths.map((path) => request(server()).get(path).expect(200)));
+      process.env.INTERNAL_API_TOKEN = 'visibility-test-internal-token';
+      try {
+        const closed = await request(server())
+          .patch(`/api/en/datasets/${INACTIVE}/visibility`)
+          .set(auth)
+          .send({ is_public: false })
+          .expect(200);
+        expect(closed.body.is_public).toBe(false);
+        for (const [i, path] of paths.entries()) {
+          const response = await request(server())
+            .get(path)
+            .set('If-None-Match', before[i].headers.etag)
+            .set('X-Internal-Token', process.env.INTERNAL_API_TOKEN)
+            .expect(200);
+          expect(response.body.data.map((group: { dataset: string }) => group.dataset)).not.toContain(INACTIVE);
+          expect(response.body.meta.datasets).toBe(before[i].body.meta.datasets - 1);
+          expect(response.headers['cache-control']).toBe('public, no-cache, must-revalidate');
+          await request(server())
+            .get(path)
+            .set('If-Modified-Since', before[i].headers['last-modified'])
+            .expect(200);
+        }
+        await request(server())
+          .get(`/api/v1/words/glimmer/datasets/${INACTIVE}/history`)
+          .set('X-Internal-Token', process.env.INTERNAL_API_TOKEN)
+          .expect(404);
+        await request(server()).get('/api/v1/words/inactiveonly/datasets').expect(404);
+        await request(server())
+          .get('/api/en/search')
+          .query({ dataset: INACTIVE, search: 'inactiveonly' })
+          .set(auth)
+          .expect(200);
+        expect((await registry.find(INACTIVE)).is_public).toBe(false);
+        const activate = await request(server())
+          .post(`/api/en/datasets/${INACTIVE}/activate`)
+          .set(auth)
+          .expect(409);
+        expect(activate.body.message).toBe('dataset_is_closed');
+        const active = await request(server())
+          .patch('/api/en/datasets/default/visibility')
+          .set(auth)
+          .send({ is_public: false })
+          .expect(409);
+        expect(active.body.message).toBe('dataset_active_must_be_public');
+      } finally {
+        await request(server())
+          .patch(`/api/en/datasets/${INACTIVE}/visibility`)
+          .set(auth)
+          .send({ is_public: true })
+          .expect(200);
+      }
+      await request(server()).get('/api/v1/words/inactiveonly/datasets').expect(200);
+      await request(server()).get(`/api/v1/words/glimmer/datasets/${INACTIVE}/history`).expect(200);
     },
   );
 

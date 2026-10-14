@@ -146,7 +146,7 @@
             }
           }
         },
-        "summary": "dictionaryapi.dev v2 responses from every installed dataset",
+        "summary": "dictionaryapi.dev v2 responses from every open dataset",
         "tags": [
           "CompatibilityDatasets",
           "dictionaryapi.dev compatibility"
@@ -225,7 +225,7 @@
             }
           }
         },
-        "summary": "dictionaryapi.dev v1 responses from every installed dataset",
+        "summary": "dictionaryapi.dev v1 responses from every open dataset",
         "tags": [
           "CompatibilityDatasets",
           "dictionaryapi.dev compatibility"
@@ -308,7 +308,7 @@
             }
           }
         },
-        "summary": "freedictionaryapi.com responses from every installed dataset",
+        "summary": "freedictionaryapi.com responses from every open dataset",
         "tags": [
           "CompatibilityDatasets",
           "freedictionaryapi.com compatibility"
@@ -823,7 +823,7 @@
     },
     "/api/v1/words/{word}/datasets": {
       "get": {
-        "description": "One group per dataset, never merged: the terms of the dataset (`license`, `attribution`, `license_text`, …) and the entries `GET /words/{word}` would answer if that dataset were the served one. The spelling is matched inside each dataset, so a group has its own `word` and `variants`; a dataset without the headword answers an empty `entries`, and the request fails with 404 when no dataset holds it. Entries taken from several groups are bound by the terms of each. One request against the rate limit.",
+        "description": "One group per open dataset, never merged: the terms of the dataset (`license`, `attribution`, `license_text`, …) and the entries `GET /words/{word}` would answer if that dataset were the served one. The spelling is matched inside each dataset, so a group has its own `word` and `variants`; a dataset without the headword answers an empty `entries`, and the request fails with 404 when no dataset holds it. Entries taken from several groups are bound by the terms of each. One request against the rate limit.",
         "operationId": "PublicWordDatasetsController_byHeadword",
         "parameters": [
           {
@@ -880,7 +880,7 @@
             }
           }
         },
-        "summary": "A headword as every dataset of the instance has it, grouped by dataset",
+        "summary": "A headword as every open dataset of the instance has it, grouped by dataset",
         "tags": [
           "Public API v1"
         ]
@@ -888,7 +888,7 @@
     },
     "/api/v1/words/{word}/datasets/{dataset}/history": {
       "get": {
-        "description": "The answer of `GET /words/{word}/history` for a dataset named by its `dataset`: the edits behind `modified: true` of the entries of that group. 404 for a dataset the instance does not hold.",
+        "description": "The answer of `GET /words/{word}/history` for a dataset named by its `dataset`: the edits behind `modified: true` of the entries of that group. 404 for a closed dataset or a dataset the instance does not hold.",
         "operationId": "PublicWordDatasetsController_history",
         "parameters": [
           {

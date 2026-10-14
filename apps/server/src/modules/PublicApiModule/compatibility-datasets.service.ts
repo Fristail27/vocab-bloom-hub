@@ -27,7 +27,7 @@ export class CompatibilityDatasetsService {
     baseUrl: string,
     project: (entries: PublicWordV1T[], dataset: string, baseUrl: string) => T,
   ) {
-    const installed = await this.datasets.installed();
+    const installed = await this.datasets.publiclyReadable();
     const data = await Promise.all(
       installed.map(async (dataset) => {
         const terms = await this.meta.termsOf(dataset);
@@ -59,7 +59,7 @@ export class CompatibilityDatasetsService {
     translations: boolean,
     baseUrl: string,
   ): Promise<FreeDictionaryDatasetsResT> {
-    const installed = await this.datasets.installed();
+    const installed = await this.datasets.publiclyReadable();
     // /meta describes only the active dataset. Empty responses instead link to their own group here.
     const emptySourceUrl = `${baseUrl}/api/compat/freedictionaryapi/v1/entries/${encodeURIComponent(language)}/${encodeURIComponent(word)}/datasets`;
     const data = await Promise.all(

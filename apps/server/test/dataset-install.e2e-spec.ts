@@ -216,6 +216,11 @@ describe('installing a dataset from its source (e2e, issue #527)', () => {
   });
 
   it('serves it under the terms of Wiktionary once it is activated', async () => {
+    await request(server())
+      .patch('/api/en/datasets/wiktionary/visibility')
+      .set(auth)
+      .send({ is_public: true })
+      .expect(200);
     await request(server()).post('/api/en/datasets/wiktionary/activate').set(auth).expect(200);
 
     // the version of the file is what the instance reports, here and in the read of every dataset
@@ -389,6 +394,11 @@ describe('installing a dataset from its source (e2e, issue #527)', () => {
       ['opengloss', false, 'CC-BY-4.0'],
     ]);
 
+    await request(server())
+      .patch('/api/en/datasets/wordnet/visibility')
+      .set(auth)
+      .send({ is_public: true })
+      .expect(200);
     await request(server()).post('/api/en/datasets/wordnet/activate').set(auth).expect(200);
     const run = await request(server()).get('/api/v1/words/run').expect(200);
     expect(run.body.data[0]).toEqual(
@@ -408,6 +418,11 @@ describe('installing a dataset from its source (e2e, issue #527)', () => {
     await request(server()).get('/api/v1/words/better%20late%20than%20never').expect(404);
 
     // the same release without the pronunciations: the entries, no transcription
+    await request(server())
+      .patch('/api/en/datasets/wordnet_princeton/visibility')
+      .set(auth)
+      .send({ is_public: true })
+      .expect(200);
     await request(server()).post('/api/en/datasets/wordnet_princeton/activate').set(auth).expect(200);
     const plain = await request(server()).get('/api/v1/words/run').expect(200);
     expect(plain.body.data[0]).toEqual(
@@ -601,6 +616,12 @@ describe('installing a dataset from its source (e2e, issue #527)', () => {
     expect(derived.generated).toBe(true);
     expect(derived.generated_by_model).toBe('fixture-model');
     expect(original.meanings[0].synonyms).toEqual(['Northstar']);
+    expect((await datasetOf('opengloss'))?.is_public).toBe(false);
+    await request(server())
+      .patch('/api/en/datasets/opengloss/visibility')
+      .set(auth)
+      .send({ is_public: true })
+      .expect(200);
     const publicOriginal = await request(server()).get('/api/v1/words/glimmer/datasets').expect(200);
     expect(publicOriginal.text).toContain('"synonyms":["Northstar"]');
     // The fix is stored in the dataset, not hidden by the public projection.
@@ -798,6 +819,13 @@ describe('installing a dataset from its source (e2e, issue #527)', () => {
         expect(chunks.at(-1)).toMatchObject({ stage: COMPLETED });
         expect(asked).toEqual(files.map((file) => file.url));
         await released();
+        await request(server()).get('/api/v1/words/Northstar/datasets').expect(404);
+        const opened = await request(server())
+          .patch('/api/en/datasets/opengloss/visibility')
+          .set(auth)
+          .send({ is_public: true })
+          .expect(200);
+        expect(opened.body.is_public).toBe(true);
         const groups = await request(server()).get('/api/v1/words/Northstar/datasets').expect(200);
         const group = groups.body.data.find((group: { dataset: string }) => group.dataset === 'opengloss');
         expect(JSON.stringify(group)).toContain('WordNet 3.0 Copyright 2006');

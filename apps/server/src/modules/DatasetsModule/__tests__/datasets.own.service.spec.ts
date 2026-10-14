@@ -331,4 +331,54 @@ describe('DatasetsService: the datasets of the instance’s own', () => {
     await expect(again.install('wiktionary')).rejects.toThrow(ErrorCodes.dataset_already_exists);
     expect(createDatasetSchema).not.toHaveBeenCalled();
   });
+  it('keeps new datasets closed, persists visibility and journals only actual changes', async () => {
+    const created = await service.create(standard);
+    expect(created.is_public).toBe(false);
+    expect((await service.publiclyReadable()).map((dataset) => dataset.name)).toEqual(['default']);
+    expect((await service.installed()).map((dataset) => dataset.name)).toContain(standard.name);
+    const before = await service.changedAt();
+    record.mockClear();
+    const opened = await service.setVisibility(standard.name, true);
+    expect(opened.is_public).toBe(true);
+    const openedAt = await service.changedAt();
+    expect(openedAt!.getTime()).toBeGreaterThanOrEqual(before!.getTime());
+    expect(record).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        diff: { is_public: { before: false, after: true } },
+      }),
+    );
+    await service.setVisibility(standard.name, true);
+    expect(record).toHaveBeenCalledTimes(1);
+    expect(await service.changedAt()).toEqual(openedAt);
+    await service.setVisibility(standard.name, false);
+    expect((await service.changedAt())!.getTime()).toBeGreaterThanOrEqual(openedAt!.getTime());
+    const restarted = await boot();
+    expect((await restarted.find(standard.name)).is_public).toBe(false);
+    await restarted.updateTerms(standard.name, { title: 'Still private' });
+    await restarted.recordImport(standard.name, { version: '2' });
+    expect((await restarted.find(standard.name)).is_public).toBe(false);
+    expect(restarted.getActive().name).toBe('default');
+  });
+
+  it('keeps the active dataset open and refuses to activate a closed dataset', async () => {
+    await service.create(standard);
+    await expect(service.setVisibility('default', false)).rejects.toThrow(
+      ErrorCodes.dataset_active_must_be_public,
+    );
+    await expect(service.activate(standard.name)).rejects.toThrow(ErrorCodes.dataset_is_closed);
+    await expect(service.setVisibility('missing', false)).rejects.toThrow(ErrorCodes.dataset_not_found);
+    expect((await service.find('default')).is_public).toBe(true);
+  });
+
+  it('changes catalog visibility independently of its fixed terms and keeps it across reinstalls', async () => {
+    const installed = await service.install('wordnet');
+    expect(installed.is_public).toBe(false);
+    await service.setVisibility('wordnet', true);
+    expect((await service.install('wordnet')).is_public).toBe(true);
+    await service.setVisibility('wordnet', false);
+    await expect(service.updateTerms('wordnet', { title: 'Changed' })).rejects.toThrow(
+      ErrorCodes.dataset_terms_fixed,
+    );
+    expect((await service.install('wordnet')).is_public).toBe(false);
+  });
 });

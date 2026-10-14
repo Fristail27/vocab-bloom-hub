@@ -137,6 +137,12 @@ export const DatasetsSection: React.FC<DatasetsSectionP> = ({ initial }) => {
 
   const actions: DatasetActionsT = {
     fork: (parent) => setTerms({ parent }),
+    visibility: (dataset) =>
+      void run(
+        `visibility ${dataset.name}`,
+        () => EnApi.setDatasetVisibility(dataset.name, !dataset.is_public),
+        t(dataset.is_public ? 'closed' : 'opened', { name: dataset.title }),
+      ),
     activate: (dataset) =>
       void run(
         `activate ${dataset.name}`,

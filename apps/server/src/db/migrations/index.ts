@@ -1,3 +1,4 @@
+import { AddDatasetVisibility1792000000000 } from './1792000000000-AddDatasetVisibility';
 import { AddDatasetOrigins1790200000000 } from './1790200000000-AddDatasetOrigins';
 import { AddDatasetTermsUpdatedAt1790200002000 } from './1790200002000-AddDatasetTermsUpdatedAt';
 import { Baseline1786903614082 } from './1786903614082-Baseline';
@@ -50,4 +51,5 @@ export const migrations = [
   AddOwnDatasetMark1790100000000,
   AddDatasetOrigins1790200000000,
   AddDatasetTermsUpdatedAt1790200002000,
+  AddDatasetVisibility1792000000000,
 ];

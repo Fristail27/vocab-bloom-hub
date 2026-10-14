@@ -119,6 +119,9 @@ export default {
       'Diese Änderung kann nicht zurückgenommen werden: Sie ist im Ausgelieferten nicht mehr sichtbar oder ihre Werte wurden nie aufgezeichnet',
     [ErrorCodes.change_outdated]:
       'Der Datensatz wurde nach dieser Änderung erneut bearbeitet oder existiert nicht mehr: Nehmen Sie zuerst die späteren Änderungen zurück',
+    [ErrorCodes.dataset_is_closed]: 'Öffnen Sie das Dataset vor der Aktivierung',
+    [ErrorCodes.dataset_active_must_be_public]:
+      'Das aktive Dataset muss öffentlich bleiben: Aktivieren Sie zuerst ein anderes offenes Dataset',
     [ErrorCodes.dataset_is_active]:
       'Der aktive Datensatz kann nicht gelöscht werden – aktivieren Sie zuerst einen anderen',
     [ErrorCodes.dataset_is_default]: 'Der Standarddatensatz kann nicht gelöscht werden',
@@ -332,10 +335,24 @@ export default {
   },
   // the datasets of the instance (issue #527): the catalog, the terms and the instruction
   datasets: {
+    status_public: 'Öffentlich',
+    status_closed: 'Geschlossen',
+    visibility_open: 'Dataset öffnen',
+    visibility_close: 'Dataset schließen',
+    open_confirm: '„{name}“ öffentlich zugänglich machen?',
+    close_confirm: '„{name}“ für die Öffentlichkeit schließen?',
+    opened: '„{name}“ ist jetzt öffentlich',
+    closed: '„{name}“ ist jetzt geschlossen',
+    visibility_hint:
+      'Das Schließen verbirgt das Dataset vor öffentlichen Lesern. Die Daten bleiben für den Administrator verfügbar.',
+    visibility_active_hint:
+      'Das aktive Dataset muss öffentlich bleiben. Aktivieren Sie zuerst ein anderes offenes Dataset.',
+    visibility_closed_hint: 'Dieses Dataset ist geschlossen. Öffnen Sie es vor der Aktivierung.',
+
     intro:
       'Die Wörterbuch-Datensätze, die diese Instanz halten kann. Jeder hat seine eigenen Einträge und steht unter der Lizenz seiner Quelle; genau einer ist aktiv – ihn liefern die API und die Website aus. Datensätze werden nie gemischt.',
     public_note:
-      'Ein installierter Datensatz ist öffentlich, ob aktiv oder nicht: {method} liefert ein Stichwort aus jedem Datensatz der Instanz, jeweils unter dessen eigener Lizenz, samt dem Verlauf seiner Änderungen. Installieren Sie einen Datensatz, wenn seine Daten gelesen werden dürfen.',
+      'Nur offene Datasets sind öffentlich: {method} liest jedes unter seiner eigenen Lizenz. Neue Datasets und Forks sind zunächst geschlossen.',
     not_supported:
       'Diese Instanz läuft auf SQLite, das keine Schemas kennt: Sie enthält nur den Standarddatensatz. Zum Installieren, Aktivieren und Löschen von Datensätzen ist eine Postgres-Datenbank nötig.',
     status_active: 'aktiv',

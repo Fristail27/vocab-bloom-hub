@@ -45,6 +45,12 @@ describe('Datasets (e2e, issue #527)', () => {
   it('is an admin route', async () => {
     await request(server()).get('/api/en/datasets').expect(401);
     await request(server()).post('/api/en/datasets/default/activate').expect(401);
+    await request(server()).patch('/api/en/datasets/default/visibility').send({ is_public: false }).expect(401);
+    await request(server())
+      .patch('/api/en/datasets/default/visibility')
+      .set(auth)
+      .send({ is_public: 'false' })
+      .expect(400);
     await request(server()).delete('/api/en/datasets/default').expect(401);
   });
 

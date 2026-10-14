@@ -70,6 +70,7 @@ describe('DatasetsService on SQLite', () => {
       title: 'English Wiktionary',
       own: false,
       installed: false,
+      is_public: false,
       source: 'wiktionary',
       language: 'en',
       license: 'CC-BY-SA-4.0',
@@ -110,6 +111,8 @@ describe('DatasetsService on SQLite', () => {
   });
 
   it('refuses to install, activate or delete: the driver has no schemas', async () => {
+    expect(service.getActive().is_public).toBe(true);
+    await expect(service.setVisibility('default', false)).rejects.toThrow(ErrorCodes.datasets_not_supported);
     await expect(service.install('wiktionary')).rejects.toThrow(ErrorCodes.datasets_not_supported);
     await expect(service.activate('default')).rejects.toThrow(ErrorCodes.datasets_not_supported);
     await expect(service.remove('default')).rejects.toThrow(ErrorCodes.datasets_not_supported);
