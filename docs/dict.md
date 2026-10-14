@@ -72,7 +72,7 @@ connection failure. Use `SHOW DB` (or `dict -D`) to discover installed database 
 This is plain TCP, not an HTTP route. HTTP reverse-proxy locations and TLS certificates do
 not automatically apply. For remote access, expose the TCP port deliberately or use an SSH
 port forward/TCP tunnel. The listener has no authentication, SASL, TLS or PROXY-protocol
-support. Every installed dataset is public through it, as through the native dataset reads.
+support. Every open dataset is public through it, as through the native dataset reads.
 Limits use the actual peer IP, not HTTP headers or a proxy-supplied address.
 
 ## Databases and definitions

@@ -209,6 +209,11 @@ describe('dictionaryapi compatibility HTTP contract (#580)', () => {
         })
         .expect(201);
       const before = await request(server()).get(`${base}/v2/entries/en/glimmer`).expect(200);
+      await request(server())
+        .patch('/api/en/datasets/compat_fixture/visibility')
+        .set(auth)
+        .send({ is_public: true })
+        .expect(200);
       await request(server()).post('/api/en/datasets/compat_fixture/activate').set(auth).expect(200);
       try {
         await request(server()).get(`${base}/v2/entries/en/glimmer`).expect(404);

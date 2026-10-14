@@ -12,7 +12,7 @@ The native public contract lives under `/api/v1`; the separate
 [freedictionaryapi.com adapter](#freedictionaryapicom-compatibility) use upstream response shapes.
 Start with the [dictionaryapi.dev migration guide](./migrate-dictionaryapi.md) or the
 [freedictionaryapi.com migration guide](./migrate-freedictionaryapi.md) for URL changes and
-reading every installed dataset in an adapter's response format.
+reading every open dataset in an adapter's response format.
 Compatibility reads require no login. The public contract is also served as an [OpenAPI document](#openapi-document);
 Swagger UI, the website's reference and the other ways to read the API are compared in
 [api-tools.md](./api-tools.md).
@@ -299,7 +299,7 @@ latest. How the history is kept and undone:
 #### A headword in every dataset
 
 An instance may hold several datasets and serves one of them. `GET /api/v1/words/{word}/datasets`
-reads the headword from **every dataset the instance holds**, for a consumer that compares what
+reads the headword from **every open dataset the instance holds**, for a consumer that compares what
 the sources say — the entry of the project's dataset next to the one of Wiktionary or WordNet —
 without the owner switching anything. The answer is one group per dataset, in the order the
 datasets were installed, and the groups are **never merged**:
@@ -829,9 +829,17 @@ booleans, translations and pretty output. Automated tests use original fixtures 
 upstream availability. No database migration, import/export format change or RFC 2229 server
 is part of this adapter.
 
+Dataset-group and dataset-history responses always use `Cache-Control: public, no-cache,
+must-revalidate`: clients must revalidate before reuse, even when `PUBLIC_API_CACHE_MAX_AGE`
+is nonzero. Closing or opening a dataset invalidates their validators. Responses are
+revalidated using ETag; date-only conditional requests receive a fresh response because HTTP
+dates have only second precision. Closed datasets are
+omitted from counts and groups, and their history returns 404, including requests with the
+website's internal token. See [dataset visibility](./datasets.md#opening-and-closing-a-dataset).
+
 ## Compatibility responses from every dataset
 
-Add `/datasets` to an adapter lookup to read every installed dataset without switching the
+Add `/datasets` to an adapter lookup to read every open dataset without switching the
 active one. These routes are Vocab Bloom Hub extensions for comparison and integration tools:
 the ordinary adapter routes retain their upstream-shaped responses and active-dataset behavior.
 

@@ -13,6 +13,13 @@ const timestamp = (): 'timestamptz' | 'datetime' => (checkIsPostgres() ? 'timest
  */
 @Entity('datasets')
 export class Dataset {
+  // Existing installations stay public; creation paths explicitly close new datasets.
+  @Column({ type: 'boolean', default: true })
+  is_public!: boolean;
+
+  @Column({ type: timestamp(), nullable: true })
+  visibility_updated_at!: Date | null;
+
   @Column({ type: timestamp(), nullable: true })
   terms_updated_at!: Date | null;
 

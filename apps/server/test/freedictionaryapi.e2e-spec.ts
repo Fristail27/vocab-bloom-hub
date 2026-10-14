@@ -318,6 +318,11 @@ describe('freedictionaryapi.com HTTP contract (#581)', () => {
           attribution: 'Test author',
         })
         .expect(201);
+      await request(server())
+        .patch('/api/en/datasets/free_fixture/visibility')
+        .set(auth)
+        .send({ is_public: true })
+        .expect(200);
       await request(server()).post('/api/en/datasets/free_fixture/activate').set(auth).expect(200);
       try {
         const empty = await request(server()).get(`${base}/entries/en/glimmer`).expect(200);

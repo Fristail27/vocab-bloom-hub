@@ -115,6 +115,9 @@ export default {
       'This change cannot be taken back: it no longer shows in what is served, or its values were never recorded',
     [ErrorCodes.change_outdated]:
       'The record was edited again after this change, or is gone: take the later changes back first',
+    [ErrorCodes.dataset_is_closed]: 'Open the dataset before activating it',
+    [ErrorCodes.dataset_active_must_be_public]:
+      'The active dataset must stay public — activate another open dataset first',
     [ErrorCodes.dataset_is_active]: 'The active dataset cannot be deleted — activate another one first',
     [ErrorCodes.dataset_is_default]: 'The default dataset cannot be deleted',
     [ErrorCodes.datasets_busy]: 'Another dataset operation is running — try again in a moment',
@@ -327,10 +330,23 @@ export default {
   },
   // the datasets of the instance (issue #527): the catalog, the terms and the instruction
   datasets: {
+    status_public: 'Public',
+    status_closed: 'Closed',
+    visibility_open: 'Open dataset',
+    visibility_close: 'Close dataset',
+    open_confirm: 'Open “{name}” to public readers?',
+    close_confirm: 'Close “{name}” to public readers?',
+    opened: '“{name}” is now public',
+    closed: '“{name}” is now closed',
+    visibility_hint: 'Closing hides the dataset from public readers. Its data stays available to the admin.',
+    visibility_active_hint:
+      'The active dataset must stay public. Activate another open dataset before closing it.',
+    visibility_closed_hint: 'This dataset is closed. Open it before activating it.',
+
     intro:
       'The dictionary datasets this instance can hold. Each one keeps its own entries and comes under the license of its source; exactly one is active — the one the API and the website serve. Datasets are never mixed.',
     public_note:
-      'An installed dataset is public, active or not: {method} answers a headword from every dataset the instance holds, each under its own license, and the history of its edits with it. Install a dataset when its data may be read.',
+      'Only open datasets are public: {method} reads each under its own license. New datasets and forks start closed.',
     not_supported:
       'This instance runs on SQLite, which has no schemas: it holds the default dataset only. Installing, activating and deleting datasets needs a Postgres database.',
     status_active: 'active',

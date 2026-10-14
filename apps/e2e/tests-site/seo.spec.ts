@@ -199,15 +199,20 @@ test.describe('seo', () => {
     );
   });
 
-  test('word and browse pages are regenerated on demand and cacheable, the random redirect is not', async ({
+  test('word pages stay fresh while browse pages are cached, and random redirects are not cached', async ({
     request,
   }) => {
     const cacheable = 's-maxage=3600, stale-while-revalidate=86400';
-    expect((await request.get('/en/word/run')).headers()['cache-control']).toBe(cacheable);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const word = await request.get('/en/word/run');
+      expect(word.status()).toBe(200);
+      expect(word.headers()['cache-control']).toContain('no-store');
+      expect(word.headers()['x-nextjs-cache']).not.toBe('HIT');
+    }
     expect((await request.get('/en/word/browse')).headers()['cache-control']).toBe(cacheable);
     expect((await request.get('/en/word/browse/r')).headers()['cache-control']).toBe(cacheable);
-    // the second request is served from the cache
-    expect((await request.get('/en/word/run')).headers()['x-nextjs-cache']).toBe('HIT');
+    // The browse index still uses ISR; word pages must reflect dataset visibility immediately.
+    expect((await request.get('/en/word/browse')).headers()['x-nextjs-cache']).toBe('HIT');
     expect((await request.get('/en/word/random', { maxRedirects: 0 })).headers()['cache-control']).toBe(
       'no-store',
     );

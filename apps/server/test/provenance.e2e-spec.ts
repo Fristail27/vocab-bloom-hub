@@ -606,6 +606,11 @@ describe('word provenance and independent forks (#556)', () => {
         .attach('manifest', Buffer.from(JSON.stringify(manifest)), 'manifest.json')
         .attach('provenance', Buffer.from('{"format":1}'), 'dataset-format.json')
         .expect(201);
+      await api()
+        .patch('/api/en/datasets/detailed_terms/visibility')
+        .set(auth)
+        .send({ is_public: true })
+        .expect(200);
       const specific = await api().get('/api/v1/words/specific/datasets').expect(200);
       expect(
         specific.body.data.find((group: { dataset: string }) => group.dataset === 'detailed_terms').entries[0]

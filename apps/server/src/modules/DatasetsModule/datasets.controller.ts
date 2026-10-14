@@ -4,6 +4,7 @@ import { DatasetT, DatasetUpdatesT, DatasetsListT } from '../../../types';
 import { AdminGuard } from '../AuthModule/guards/admin.guard';
 import { DatasetsService } from './datasets.service';
 import { DatasetUpdatesService } from './dataset-updates.service';
+import { DatasetVisibilityReqDTO } from './dto/DatasetVisibilityReq.dto';
 import { CreateDatasetReqDTO, UpdateDatasetReqDTO } from './dto/DatasetTermsReq.dto';
 
 /**
@@ -65,6 +66,12 @@ export class DatasetsController {
   @UseGuards(AdminGuard)
   forkStatus(@Param('name') name: string) {
     return this.datasetsService.forkProgress(name);
+  }
+
+  @Patch(':name/visibility')
+  @UseGuards(AdminGuard)
+  async visibility(@Param('name') name: string, @Body() body: DatasetVisibilityReqDTO): Promise<DatasetT> {
+    return this.datasetsService.setVisibility(name, body.is_public);
   }
 
   @Post(':name/activate')

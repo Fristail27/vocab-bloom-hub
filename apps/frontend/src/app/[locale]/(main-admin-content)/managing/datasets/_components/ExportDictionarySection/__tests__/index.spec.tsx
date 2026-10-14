@@ -37,6 +37,7 @@ const WIKTIONARY: DatasetT = {
   title: 'English Wiktionary',
   own: false,
   installed: true,
+  is_public: true,
   source: 'wiktionary',
   language: 'en',
   version: '2026.09.27',

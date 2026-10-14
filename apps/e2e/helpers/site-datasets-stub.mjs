@@ -64,6 +64,8 @@ const entryOfSecondDataset = (template, word, id) => {
 // a headword is matched without regard to case, as the API matches it
 const headwordOf = (segment) => decodeURIComponent(segment).toLowerCase();
 
+let secondDatasetPublic = true;
+
 const datasetsOf = async (word) => {
   // the entry the groups are shaped after: the verb "run" of the fixture
   const template = (await json('/v1/words/run')).body.data[0];
@@ -85,7 +87,11 @@ const datasetsOf = async (word) => {
     },
   ];
 
-  return { data, meta: { word, datasets: data.length, found: data.filter((group) => group.count > 0).length } };
+  const visible = data.filter((group) => secondDatasetPublic || group.dataset !== SECOND_DATASET.dataset);
+  return {
+    data: visible,
+    meta: { word, datasets: visible.length, found: visible.filter((group) => group.count > 0).length },
+  };
 };
 
 const bodyOf = async (req) => {
@@ -126,6 +132,12 @@ http
   .createServer(async (req, res) => {
     try {
       const path = new URL(req.url, 'http://stub').pathname;
+      if (path === '/api/__test__/dataset-visibility' && req.method === 'POST') {
+        secondDatasetPublic = JSON.parse(await bodyOf(req));
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end('{}');
+        return;
+      }
       const control = /^\/api\/__test__\/word-failure\/([^/]+)$/.exec(path)?.[1];
       if (control) {
         if (req.method === 'POST') {

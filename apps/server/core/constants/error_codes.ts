@@ -1,4 +1,6 @@
 export enum ErrorCodes {
+  dataset_is_closed = 'dataset_is_closed',
+  dataset_active_must_be_public = 'dataset_active_must_be_public',
   provenance_invalid = 'provenance_invalid',
   provenance_inherited = 'provenance_inherited',
   provenance_license_conflict = 'provenance_license_conflict',

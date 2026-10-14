@@ -173,7 +173,13 @@ describe('datasets of the instance’s own (Postgres, issue #540)', () => {
       expect(reserved.body.message).toBe('dataset_name_reserved');
     }
 
-    // an installed dataset is public before it is activated (issue #528), under the terms its owner stated
+    // A newly created dataset stays closed until explicitly opened.
+    expect(res.body.is_public).toBe(false);
+    await request(server())
+      .patch(`/api/en/datasets/${MINE}/visibility`)
+      .set(auth)
+      .send({ is_public: true })
+      .expect(200);
     await dataSource.query(`INSERT INTO "ds_${MINE}"."en_entries" ("word") VALUES ($1)`, [HEADWORD]);
     await dataSource.query(
       `INSERT INTO "ds_${MINE}"."en_words" ("word", "part_of_speech", "form_of_word", "description", "generated")
@@ -214,6 +220,12 @@ describe('datasets of the instance’s own (Postgres, issue #540)', () => {
         attribution: 'The house',
       })
       .expect(201);
+
+    await request(server())
+      .patch(`/api/en/datasets/${HOUSE}/visibility`)
+      .set(auth)
+      .send({ is_public: true })
+      .expect(200);
 
     const { data } = (await request(server()).get(`/api/v1/words/${HEADWORD}/datasets`).expect(200))
       .body as PublicWordDatasetsV1ResT;

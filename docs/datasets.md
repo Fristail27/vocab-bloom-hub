@@ -359,11 +359,49 @@ What follows from a dataset of one's own:
 - **"Modified"** means what it means for every dataset: an entry with edits in the history. For a
   dataset of one's own every entry is the owner's; the history still tells what changed when.
 
+## Opening and closing a dataset
+
+On an installed dataset's card, **Open dataset** makes it public and **Close dataset**
+hides it from public readers. Closing keeps its words, terms and edit history intact.
+The admin can still edit, import, export, copy and fork it. Visibility is an instance setting,
+not a term of the source's license; it is not transferred in exports or imports.
+
+Existing datasets remain open on upgrade. New non-active installations, own datasets and
+forks start closed, independently of their parent's visibility. Imports and updates preserve
+the target's visibility. The default active dataset is open on first start.
+
+The active dataset must stay open: activate another open dataset before closing it.
+Open a closed dataset before activating it. On SQLite the only dataset stays open;
+visibility mutations return `409 datasets_not_supported`, like other dataset operations.
+
+`PATCH /api/en/datasets/{name}/visibility` accepts `{ "is_public": true }` or
+`{ "is_public": false }` with admin authentication. The admin list reports `is_public`.
+Closing the active dataset returns `409 dataset_active_must_be_public`; activating a
+closed one returns `409 dataset_is_closed`. Changes are recorded in the instance audit journal.
+
+All public transports use the same open-dataset selection: native multi-dataset reads,
+compatibility responses and DICT lists, wildcard lookups and named databases. Closed history
+returns 404; DICT named access returns 550. The website's internal rate-limit token does not
+bypass visibility. Independent copies in other open datasets keep their sources and attribution.
+
+Visibility changes invalidate dataset-set validators. Multi-dataset HTTP responses use
+`Cache-Control: public, no-cache, must-revalidate` regardless of `PUBLIC_API_CACHE_MAX_AGE`;
+clients revalidate before reuse using ETag. Date-only conditional requests receive a fresh
+response, since HTTP dates cannot distinguish two visibility changes within one second.
+Word pages, their dataset tabs, history and terms fetch the
+API without the Next.js data cache and word pages render on each request. Ordinary active-dataset
+HTTP reads retain their configured max-age and stale-while-revalidate lifetimes: a previously
+served dataset's cached answers may remain until those expire after switching and closing it.
+The browse/sitemap headword index refreshes every 24 hours and retains the previous index if
+refreshing fails; old word links can remain there, but their word pages fetch current public data.
+Already downloaded pages, in-flight reads and independent copies cannot be recalled. On upgrade,
+purge any reverse-proxy copies stored under the former cache policy.
+
 ## What a switch changes
 
 - **Every read of the public API** goes to the tables of the new active dataset: the words, the
   search, the list, the suggestions of the readers. The one exception is the read of a headword
-  from every dataset ([below](#reading-every-dataset-at-once)), which answers from all of them
+  from every dataset ([below](#reading-every-dataset-at-once)), which answers from all open datasets
   whichever is active. The admin UI works on
   [the dataset that is edited](#the-dataset-that-is-edited) — the active one, unless its switch
   names another.
@@ -419,7 +457,7 @@ public search serves the active dataset only. A name that is no dataset answers
 
 - An edit leaves its row in `en_changes` **of the dataset it was made in**. Content edits are
   not duplicated in the audit journal; dataset operations such as changing terms are recorded there.
-- **An edit of a dataset that is not served is public at once** on the tab of that dataset of a
+- **An edit of an open dataset that is not served is public at once** on the tab of that dataset of a
   word page (`GET /api/v1/words/{word}/datasets`), and counts into the `Last-Modified` of the
   reads of every dataset; nothing the active dataset serves changes.
 - "Report a mistake" is offered on the tab of the served dataset only: a report is filed in the
@@ -429,11 +467,11 @@ public search serves the active dataset only. A name that is no dataset answers
 
 For the response formats of dictionaryapi.dev and freedictionaryapi.com, append `/datasets`
 to their compatibility lookup routes. Each group carries its dataset terms, status and the
-complete adapter response. This reads installed datasets without activation, with the spelling
+complete adapter response. This reads open datasets without activation, with the spelling
 rules of the chosen adapter: [compatibility responses from every dataset](./api.md#compatibility-responses-from-every-dataset).
 
-The public API serves the active dataset. One read answers from all of them:
-`GET /api/v1/words/{word}/datasets` gives the headword as every dataset of the instance has it,
+The public API serves the active dataset. One read answers from all open datasets:
+`GET /api/v1/words/{word}/datasets` gives the headword as every open dataset of the instance has it,
 **a group per dataset** with the terms of that dataset, and
 `GET /api/v1/words/{word}/datasets/{dataset}/history` gives what was changed in one of them
 ([`api.md`](./api.md#a-headword-in-every-dataset)). Nothing is activated for it and nothing is
@@ -450,11 +488,11 @@ merged: an entry stays in the group of its dataset, under the license of its sou
   report is filed in the active dataset, and the ids of an entry of another group mean nothing
   there.
 - **A word page of the website has a tab per dataset.** The page of a headword shows this read
-  as tabs, one for every dataset that holds the word — the dataset of the project first,
+  as tabs, one for every open dataset that holds the word — the dataset of the project first,
   Wiktionary second, the others in the order of the instance; a headword one dataset holds has
   no tabs. A tab is a dataset on its own: the terms it comes under, its spelling, its entries
   and the history of its edits. The page that is sent holds the first tab only, whichever
-  dataset is the active one: that is what the server renders, what is cached and what a search
+  dataset is the active one: that is what the server renders on each request and what a search
   engine reads. The dataset of another tab is read by the browser from this route when the tab
   is pressed; the choice is no part of the URL. The sitemap and the index of words are the
   headwords of the active dataset, and a headword the active dataset does not hold is a page
@@ -473,11 +511,9 @@ merged: an entry stays in the group of its dataset, under the license of its sou
   The view is bounded to 12 meanings per word, 24 direct neighbors and 150 nodes and says when
   it omits data; the full entries remain below. Neighbor reads start only on selection, use
   the public API rate limit, and can be retried after a failure.
-- **An installed dataset is public.** Before this read existed a dataset was seen by nobody
-  until it was activated; now its entries, the history of its edits and the names credited in
-  it are read from the moment it is installed — half imported, if the import is still running.
-  The datasets page of the admin says so. A dataset that must not be read yet is one that is
-  not installed yet.
+- **Only open datasets are public.** New installations and forks stay closed while the admin
+  prepares their data. Open them explicitly when ready for readers; closing hides their entries
+  and history without removing them. See [opening and closing](#opening-and-closing-a-dataset).
 - **A connection that is not on its schema is refused.** A connection pooler that drops the
   `search_path` startup option would leave the connection of a dataset on `public`, and the
   default dataset would be answered under the terms of another. The server checks

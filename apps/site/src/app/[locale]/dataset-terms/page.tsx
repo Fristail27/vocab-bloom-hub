@@ -15,7 +15,7 @@ import styles from './terms.module.scss';
 // The terms follow the dataset the instance serves, so the page is rendered on
 // a request: a build has no instance to ask — or asks another one — and would
 // bake the terms of the wrong dataset into the page. The read of the terms
-// itself is cached (fetchDatasetTerms).
+// itself rechecks the active dataset (fetchDatasetTerms).
 export const dynamic = 'force-dynamic';
 
 // the read of the public API that says what was changed in the entries of a headword

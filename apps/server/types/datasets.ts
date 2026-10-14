@@ -28,6 +28,8 @@ export type DatasetT = {
   own: boolean;
   /** Whether the instance holds it: a schema with its tables exists */
   installed: boolean;
+  /** Public readers can access this installed dataset. Independent of activation. */
+  is_public: boolean;
   /** What the data is: `vocab-bloom-hub`, `wiktionary`, `wordnet`, … */
   source: string;
   /** The language of the headwords */

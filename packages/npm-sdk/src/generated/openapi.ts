@@ -32,7 +32,7 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * dictionaryapi.dev v2 responses from every installed dataset
+     * dictionaryapi.dev v2 responses from every open dataset
      * @description One group per installed dataset with its terms, status and response in the adapter format. Missing words have status 404 and the adapter error in response. The outer request returns 200 even when no dataset matches. English only; the usual headword and inflection rules apply in each dataset. No query parameters. Does not activate any dataset. One public rate-limit unit; cached across all datasets.
      */
     get: operations['CompatibilityDatasetsController_dictionaryApiV2'];
@@ -52,7 +52,7 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * dictionaryapi.dev v1 responses from every installed dataset
+     * dictionaryapi.dev v1 responses from every open dataset
      * @description One group per installed dataset with its terms, status and response in the adapter format. Missing words have status 404 and the adapter error in response. The outer request returns 200 even when no dataset matches. English only; the usual headword and inflection rules apply in each dataset. No query parameters. Does not activate any dataset. One public rate-limit unit; cached across all datasets.
      */
     get: operations['CompatibilityDatasetsController_dictionaryApiV1'];
@@ -72,7 +72,7 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * freedictionaryapi.com responses from every installed dataset
+     * freedictionaryapi.com responses from every open dataset
      * @description One group per installed dataset with its terms, status 200 and the adapter object in response. Exact spelling; en and all read English. Missing words and other languages have empty response.entries. The outer request returns 200 even when no dataset matches. Does not activate any dataset. One public rate-limit unit; cached across all datasets. Empty source links point here rather than active-only /meta.
      */
     get: operations['CompatibilityDatasetsController_freeDictionaryApi'];
@@ -212,8 +212,8 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * A headword as every dataset of the instance has it, grouped by dataset
-     * @description One group per dataset, never merged: the terms of the dataset (`license`, `attribution`, `license_text`, …) and the entries `GET /words/{word}` would answer if that dataset were the served one. The spelling is matched inside each dataset, so a group has its own `word` and `variants`; a dataset without the headword answers an empty `entries`, and the request fails with 404 when no dataset holds it. Entries taken from several groups are bound by the terms of each. One request against the rate limit.
+     * A headword as every open dataset of the instance has it, grouped by dataset
+     * @description One group per open dataset, never merged: the terms of the dataset (`license`, `attribution`, `license_text`, …) and the entries `GET /words/{word}` would answer if that dataset were the served one. The spelling is matched inside each dataset, so a group has its own `word` and `variants`; a dataset without the headword answers an empty `entries`, and the request fails with 404 when no dataset holds it. Entries taken from several groups are bound by the terms of each. One request against the rate limit.
      */
     get: operations['PublicWordDatasetsController_byHeadword'];
     put?: never;
@@ -233,7 +233,7 @@ export interface paths {
     };
     /**
      * What was changed or added on the instance in the entries of a headword, in one dataset
-     * @description The answer of `GET /words/{word}/history` for a dataset named by its `dataset`: the edits behind `modified: true` of the entries of that group. 404 for a dataset the instance does not hold.
+     * @description The answer of `GET /words/{word}/history` for a dataset named by its `dataset`: the edits behind `modified: true` of the entries of that group. 404 for a closed dataset or a dataset the instance does not hold.
      */
     get: operations['PublicWordDatasetsController_history'];
     put?: never;

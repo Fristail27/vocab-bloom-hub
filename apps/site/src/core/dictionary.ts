@@ -14,11 +14,8 @@ import { serverApiBase } from './apiBase';
 import { DatasetTermsT, OWN_DATASET_TERMS } from './datasetTerms';
 import { getWithOneRetry, internalApiHeaders } from './internalApi';
 
-// The word pages are rendered on the server from the instance's public API
-// and cached for an hour: the dictionary changes rarely, a page is asked
-// for often once it is indexed
-const REVALIDATE_SECONDS = 3600;
-
+// Recheck the API on every render: a dataset can be closed or the active
+// dataset switched. ISR/data-cache copies must not keep serving old tabs.
 // Keep enough detail to correlate a failed render with the API request log,
 // without logging the internal token, response body or connection URL.
 const logHeadwordFailure = (path: string, details: Record<string, unknown>): void => {
@@ -57,7 +54,7 @@ export const fetchHeadword = async (word: string): Promise<HeadwordResultT> => {
     const res = await getWithOneRetry((signal) =>
       fetch(`${serverApiBase()}${path}`, {
         headers: internalApiHeaders(),
-        next: { revalidate: REVALIDATE_SECONDS },
+        cache: 'no-store',
         signal,
       }),
     );
@@ -92,7 +89,7 @@ export const fetchHeadwordHistory = async (word: string): Promise<PublicChangeV1
     const res = await getWithOneRetry((signal) =>
       fetch(`${serverApiBase()}/v1/words/${encodeURIComponent(word)}/history`, {
         headers: internalApiHeaders(),
-        next: { revalidate: REVALIDATE_SECONDS },
+        cache: 'no-store',
         signal,
       }),
     );
@@ -115,7 +112,7 @@ export const fetchHeadwordDatasets = async (word: string): Promise<PublicWordDat
     const res = await getWithOneRetry((signal) =>
       fetch(`${serverApiBase()}/v1/words/${encodeURIComponent(word)}/datasets`, {
         headers: internalApiHeaders(),
-        next: { revalidate: REVALIDATE_SECONDS },
+        cache: 'no-store',
         signal,
       }),
     );
@@ -133,7 +130,7 @@ export const fetchDatasetHistory = async (word: string, dataset: string): Promis
     const res = await getWithOneRetry((signal) =>
       fetch(
         `${serverApiBase()}/v1/words/${encodeURIComponent(word)}/datasets/${encodeURIComponent(dataset)}/history`,
-        { headers: internalApiHeaders(), next: { revalidate: REVALIDATE_SECONDS }, signal },
+        { headers: internalApiHeaders(), cache: 'no-store', signal },
       ),
     );
     if (!res.ok) return [];
@@ -165,7 +162,7 @@ export const fetchDatasetTerms = async (): Promise<DatasetTermsT> => {
     const res = await getWithOneRetry((signal) =>
       fetch(`${serverApiBase()}/v1/meta`, {
         headers: internalApiHeaders(),
-        next: { revalidate: REVALIDATE_SECONDS },
+        cache: 'no-store',
         signal,
       }),
     );

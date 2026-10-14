@@ -144,6 +144,16 @@ describe('RFC 2229 TCP against the dictionary', () => {
           form_of_word: 'base_form',
         })
         .expect(201);
+      expect(await client.command('SHOW DB')).not.toContain('dict_fixture');
+      expect(await client.command('DEFINE dict_fixture fixture')).toMatch(/^550/);
+      expect(await client.command('MATCH dict_fixture exact fixture')).toMatch(/^550/);
+      expect(await client.command('SHOW INFO dict_fixture')).toMatch(/^550/);
+      expect(await client.command('DEFINE * fixture')).toContain('150 1 definitions retrieved');
+      await request(http)
+        .patch('/api/en/datasets/dict_fixture/visibility')
+        .set(auth)
+        .send({ is_public: true })
+        .expect(200);
       const databases = await client.command('SHOW DB');
       expect(databases.indexOf('default ')).toBeLessThan(databases.indexOf('dict_fixture '));
       expect(await client.command('DEFINE * fixture')).toContain('150 2 definitions retrieved');
@@ -153,6 +163,19 @@ describe('RFC 2229 TCP against the dictionary', () => {
       expect(second).toContain('Second author');
       expect(second).toContain('CC0-1.0');
       expect(await client.command('MATCH * exact fixture')).toContain('152 2 matches found');
+      await request(http)
+        .patch('/api/en/datasets/dict_fixture/visibility')
+        .set(auth)
+        .send({ is_public: false })
+        .expect(200);
+      expect(await client.command('MATCH * exact fixture')).toContain('152 1 matches found');
+      expect(await client.command('DEFINE ! fixture')).toContain('150 1 definitions retrieved');
+      expect(await client.command('SHOW DB')).not.toContain('dict_fixture');
+      await request(http)
+        .patch('/api/en/datasets/dict_fixture/visibility')
+        .set(auth)
+        .send({ is_public: true })
+        .expect(200);
       await request(http).post('/api/en/datasets/dict_fixture/activate').set(auth).expect(200);
       try {
         expect(await client.command('DEFINE default fixture')).toContain('Original meaning');

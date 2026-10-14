@@ -4,7 +4,7 @@ import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
-/** How long a regenerated page (a word page, a browse page) is fresh, in seconds */
+/** How long a regenerated page (a browse page) is fresh, in seconds */
 export const PAGE_REVALIDATE_SECONDS = 3600;
 /** …and for how long after that a stale copy may still be served while it regenerates */
 export const PAGE_STALE_SECONDS = 24 * 3600;
@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
   // traced from the monorepo root
   output: 'standalone',
   outputFileTracingRoot: path.join(__dirname, '../../'),
-  // The word and browse pages are regenerated on demand (ISR, issue #480):
+  // The browse pages are regenerated on demand (ISR, issue #480):
   // rendered once from the API, kept for an hour, then regenerated in the
   // background while the stale copy is served — and announced as such to a
   // CDN or the reverse proxy: `Cache-Control: s-maxage=3600,

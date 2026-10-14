@@ -118,6 +118,9 @@ export default {
       'Este cambio no se puede revertir: ya no se ve en lo que se sirve o sus valores nunca se registraron',
     [ErrorCodes.change_outdated]:
       'El registro se editó de nuevo después de este cambio, o ya no existe: revierta primero los cambios posteriores',
+    [ErrorCodes.dataset_is_closed]: 'Abre el dataset antes de activarlo',
+    [ErrorCodes.dataset_active_must_be_public]:
+      'El dataset activo debe ser público: activa primero otro dataset abierto',
     [ErrorCodes.dataset_is_active]: 'No se puede eliminar el conjunto de datos activo: active otro primero',
     [ErrorCodes.dataset_is_default]: 'El conjunto de datos predeterminado no se puede eliminar',
     [ErrorCodes.datasets_busy]:
@@ -331,10 +334,23 @@ export default {
   },
   // the datasets of the instance (issue #527): the catalog, the terms and the instruction
   datasets: {
+    status_public: 'Público',
+    status_closed: 'Cerrado',
+    visibility_open: 'Abrir dataset',
+    visibility_close: 'Cerrar dataset',
+    open_confirm: '¿Abrir «{name}» al público?',
+    close_confirm: '¿Cerrar «{name}» al público?',
+    opened: '«{name}» ahora es público',
+    closed: '«{name}» ahora está cerrado',
+    visibility_hint: 'Cerrar oculta el dataset al público. Sus datos siguen disponibles para el administrador.',
+    visibility_active_hint:
+      'El dataset activo debe seguir siendo público. Activa otro dataset abierto antes de cerrarlo.',
+    visibility_closed_hint: 'Este dataset está cerrado. Ábrelo antes de activarlo.',
+
     intro:
       'Los conjuntos de datos de diccionario que esta instancia puede contener. Cada uno tiene sus propias entradas y la licencia de su fuente; solo uno está activo: el que sirven la API y el sitio web. Los conjuntos de datos nunca se mezclan.',
     public_note:
-      'Un conjunto de datos instalado es público, esté activo o no: {method} responde con un lema de cada conjunto de datos de la instancia, cada uno bajo su propia licencia, junto con el historial de sus ediciones. Instale un conjunto de datos cuando sus datos puedan leerse.',
+      'Solo los datasets abiertos son públicos: {method} lee cada uno bajo su licencia. Los nuevos datasets y forks empiezan cerrados.',
     not_supported:
       'Esta instancia funciona con SQLite, que no tiene esquemas: solo contiene el conjunto de datos predeterminado. Instalar, activar y eliminar conjuntos de datos requiere una base de datos Postgres.',
     status_active: 'activo',

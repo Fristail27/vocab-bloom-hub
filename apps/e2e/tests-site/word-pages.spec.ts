@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { SITE_API_URL } from '../config';
+import { SITE_API_URL, SITE_STUB_URL } from '../config';
 
 // Server-rendered word pages over the public API (issue #330); the data is
 // the fixture dictionary seeded in site.setup.ts
@@ -340,7 +340,27 @@ test.describe('word pages', () => {
     await expect(originals.getByRole('link', { name: 'CC-BY-4.0' })).toBeVisible();
   });
 
-  test('the page that is sent is the first tab, rendered by the server and cacheable', async ({ request }) => {
+  test('fresh server renders drop a closed dataset tab and restore it on reopening', async ({ request }) => {
+    const control = `${SITE_STUB_URL}/__test__/dataset-visibility`;
+    const render = async () => {
+      const response = await request.get('/en/word/run');
+      expect(response.status()).toBe(200);
+      expect(response.headers()['cache-control']).toContain('no-store');
+      return response.text();
+    };
+    expect(await render()).toContain('Open English WordNet');
+    try {
+      await request.post(control, { data: false });
+      expect(await render()).not.toContain('Open English WordNet');
+    } finally {
+      await request.post(control, { data: true });
+    }
+    expect(await render()).toContain('Open English WordNet');
+  });
+
+  test('the page that is sent is the first tab, rendered by the server without caching closed datasets', async ({
+    request,
+  }) => {
     const response = await request.get('/en/word/run');
 
     expect(response.status()).toBe(200);
@@ -349,7 +369,7 @@ test.describe('word pages', () => {
     expect(html).toContain('Open English WordNet');
     // the dataset of the other tab is named, not sent
     expect(html).not.toContain('definition of a race run on foot');
-    expect(response.headers()['cache-control']).toBe('s-maxage=3600, stale-while-revalidate=86400');
+    expect(response.headers()['cache-control']).toContain('no-store');
     // a dataset is no part of the URL: a query changes nothing
     const asked = await request.get('/en/word/run?dataset=wordnet');
     expect(await asked.text()).not.toContain('definition of a race run on foot');

@@ -28,11 +28,8 @@ import { Panel } from './_components/Panel';
 
 type WordPageP = LocaleParamsP<{ word: string }>;
 
-// Rendered on the first request from the instance's API and regenerated
-// after an hour (ISR, next.config.ts): no headword is known at build time,
-// so nothing is prerendered. The API being down throws — a render that
-// failed is not kept, the stale copy is served when there is one
-export const revalidate = 3600;
+// Check dataset visibility on every request, including previously rendered URLs.
+export const dynamic = 'force-dynamic';
 export const generateStaticParams = () => [];
 
 const headwordOf = async (params: WordPageP['params']) => {
@@ -144,7 +141,7 @@ export default async function WordPage({ params }: WordPageP) {
   const termsNames = await getTranslations('terms');
   const resolved = await resolve(locale, word);
 
-  // the page is cacheable (next.config.ts); one the API failed to render must not be
+  // A page the API failed to render must not be
   if (resolved.kind === 'unavailable') throw new DictionaryUnavailableError();
   if (resolved.kind === 'not_found') notFound();
 

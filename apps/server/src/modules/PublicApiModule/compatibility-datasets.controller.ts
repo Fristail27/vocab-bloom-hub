@@ -33,7 +33,7 @@ export class CompatibilityDatasetsController {
   @Get('dictionaryapi/v2/entries/:language/:word/datasets')
   @ApiTags('dictionaryapi.dev compatibility')
   @ApiOperation({
-    summary: 'dictionaryapi.dev v2 responses from every installed dataset',
+    summary: 'dictionaryapi.dev v2 responses from every open dataset',
     description: DICTIONARY_DESCRIPTION,
   })
   @ApiParam({ name: 'language', enum: ['en', 'en_US', 'en_GB'] })
@@ -51,7 +51,7 @@ export class CompatibilityDatasetsController {
   @Get('dictionaryapi/v1/entries/:language/:word/datasets')
   @ApiTags('dictionaryapi.dev compatibility')
   @ApiOperation({
-    summary: 'dictionaryapi.dev v1 responses from every installed dataset',
+    summary: 'dictionaryapi.dev v1 responses from every open dataset',
     description: DICTIONARY_DESCRIPTION,
   })
   @ApiParam({ name: 'language', enum: ['en', 'en_US', 'en_GB'] })
@@ -69,7 +69,7 @@ export class CompatibilityDatasetsController {
   @Get('freedictionaryapi/v1/entries/:language/:word/datasets')
   @ApiTags('freedictionaryapi.com compatibility')
   @ApiOperation({
-    summary: 'freedictionaryapi.com responses from every installed dataset',
+    summary: 'freedictionaryapi.com responses from every open dataset',
     description:
       'One group per installed dataset with its terms, status 200 and the adapter object in response. ' +
       'Exact spelling; en and all read English. Missing words and other languages have empty response.entries. ' +

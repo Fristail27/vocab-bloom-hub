@@ -128,7 +128,7 @@ INTERNAL_API_TOKEN=<openssl rand -hex 32>          # the site's own API traffic,
 admin UI stays on another hostname or off (`ADMIN_API_ENABLED=false`). Like the admin UI, the
 site calls the API under its own origin (`NEXT_PUBLIC_BASE_API_URL=/api`) and forwards `/api/*`
 to `API_INTERNAL_URL` itself when no proxy does. The site of a given tag documents that tag;
-the word pages are rendered on request and cached for an hour.
+the word pages are rendered on every request so closed datasets disappear from their tabs.
 
 Compose waits for the server's `/api/ready` probe before starting the site, including
 migrations and the automatic first-start import. The admin UI can start earlier, so the
