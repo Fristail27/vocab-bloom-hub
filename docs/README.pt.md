@@ -1,8 +1,10 @@
 <p align="center">
-  <img src="../.github/assets/main-readme-logo.svg" alt="Логотип Vocab Bloom Hub" />
+  <img src="../.github/assets/main-readme-logo.svg" alt="Logótipo do Vocab Bloom Hub" />
 </p>
 
 <h1 align="center">Vocab Bloom Hub</h1>
+
+<!-- reviewed: pt · @Enard52 · 2026-10-14 · 7cadc933e92c8b416a8674aa7960c1b15e2bc78e · scope: installation -->
 
 <p align="center">
   Uma plataforma auto-hospedada de dicionários de inglês, com API pública, administração e SDKs. O dataset próprio do projeto contém 300 000 verbetes. Instale datasets existentes, crie os seus ou faça forks, preservando as fontes, licenças e o histórico de cada palavra.
@@ -117,13 +119,13 @@ inicialização, sondas de saúde, métricas Prometheus, logs JSON.
 
 ## ⚡ Primeiros passos
 
-Três caminhos, do mais rápido ao mais flexível. Todos terminam com o painel de administração,
-a API e o dicionário carregado: com Docker em <http://localhost:3241> e
-<http://localhost:3240>, sem ele em <http://localhost:3000> e <http://localhost:3010>.
+Três opções para começar, da mais rápida à mais flexível. Todas terminam com o painel de administração,
+a API e o dicionário carregados: com Docker em <http://localhost:3241> e
+<http://localhost:3240>, ou sem ele em <http://localhost:3000> e <http://localhost:3010>.
 
-### 1. Rodar as imagens publicadas
+### 1. Executar as imagens publicadas
 
-Sem clonar nada — uma pasta, dois arquivos, Docker:
+Sem necessidade de clonar o repositório — uma pasta, dois ficheiros, Docker:
 
 ```bash
 mkdir vocab-bloom-hub && cd vocab-bloom-hub
@@ -131,64 +133,64 @@ curl -fsSLO https://raw.githubusercontent.com/Fristail27/vocab-bloom-hub/main/do
 curl -fsSL  https://raw.githubusercontent.com/Fristail27/vocab-bloom-hub/main/.env.example -o .env
 ```
 
-Abra o `.env` e defina duas senhas: `ADMIN_PASSWORD` (o login de administração) e
-`POSTGRES_PASSWORD` (o banco incluído). Depois:
+Abra o ficheiro `.env` e defina duas palavras-passe: `ADMIN_PASSWORD` (o acesso de administração) e
+`POSTGRES_PASSWORD` (a base de dados incluída). A seguir:
 
 ```bash
 docker compose up -d
 ```
 
-A primeira inicialização baixa o dicionário e o importa — alguns minutos. `GET /api/ready`
-responde `503` enquanto isso e `200` ao terminar; então entre com `ADMIN_USERNAME` /
-`ADMIN_PASSWORD` do `.env`.
+A primeira inicialização descarrega o dicionário e importa-o — demora alguns minutos. `GET /api/ready`
+responde `503` enquanto a importação decorre e `200` ao terminar; depois inicie sessão com
+`ADMIN_USERNAME` / `ADMIN_PASSWORD` definidos no `.env`.
 
 ```bash
 curl -s localhost:3240/api/ready            # {"status":"ok"}
 curl -s localhost:3240/api/v1/words/run     # o dicionário responde
 
-# busca: os verbetes correspondentes, o melhor primeiro
+# busca: os verbetes correspondentes a um termo, a melhor correspondência primeiro
 curl -s 'localhost:3240/api/v1/search?search=run&limit=5'
 # o mesmo com significados, exemplos e traduções
 curl -s 'localhost:3240/api/v1/search/detailed?search=run&with_meanings=true'
 ```
 
 > [!TIP]
-> Para fixar uma versão em vez da build `main`, defina `VBH_TAG=1.2.0` no `.env`. Para
+> Para fixar uma versão específica em vez da build de desenvolvimento `main`, defina `VBH_TAG=1.2.0` no `.env`. Para
 > adicionar o site (documentação, referência da API, playground, páginas de palavras) em
 > <http://localhost:3242>, defina `COMPOSE_PROFILES=db,site`.
 
-### 2. Rodar a partir do repositório
+### 2. Executar a partir do repositório
 
-O mesmo arquivo compose, construído a partir das fontes — para um fork ou uma alteração não
+O mesmo ficheiro compose, compilado diretamente a partir do código-fonte — para um fork ou uma alteração não
 publicada:
 
 ```bash
 git clone https://github.com/Fristail27/vocab-bloom-hub.git
 cd vocab-bloom-hub
-cp .env.example .env                           # as mesmas duas senhas
+cp .env.example .env                           # defina as mesmas duas palavras-passe
 docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 ```
 
-### 3. Rodar sem Docker
+### 3. Executar sem Docker
 
-Uma execução de produção na própria máquina: Node.js 22.13+, Yarn 4 (`corepack enable`) e um
-Postgres acessível ([`docs/database.md`](database.md)).
+Uma execução em produção diretamente na própria máquina: Node.js 22.13+, Yarn 4 (`corepack enable`) e um
+PostgreSQL acessível ([`docs/database.md`](database.md)).
 
 ```bash
 git clone https://github.com/Fristail27/vocab-bloom-hub.git
 cd vocab-bloom-hub
 yarn install
 printf 'NODE_ENV=production\nDATABASE_URL=postgres://user:password@localhost:5432/vocab_bloom\nADMIN_USERNAME=admin\nADMIN_PASSWORD=change-me\nNEXT_PUBLIC_BASE_API_URL=http://localhost:3010/api\nDICTIONARY_AUTO_IMPORT=true\n' > .env
-yarn build && yarn start                       # API :3010, administração :3000; o dicionário carrega sozinho no primeiro arranque
-yarn site:build && yarn start:site             # o site :3020, opcional, em outro terminal
+yarn build && yarn start                       # API :3010, administração :3000; o dicionário carrega sozinho na primeira inicialização
+yarn site:build && yarn start:site             # o site :3020, opcional, noutro terminal
 ```
 
-Atrás de um domínio e TLS, com systemd ou PM2: [`docs/deployment/`](deployment/README.md).
+Para implementar atrás de um domínio e TLS, com systemd ou PM2: [`docs/deployment/`](deployment/README.md).
 
 ### Para desenvolvimento
 
-Não precisa de banco de dados: sem `DATABASE_URL` o servidor usa um arquivo SQLite local, e cada
-aplicação reinicia ao mudar.
+Não é necessária base de dados: sem `DATABASE_URL`, o servidor usa um ficheiro SQLite local, e cada
+aplicação reinicia automaticamente ao ser alterada.
 
 ```bash
 printf 'NODE_ENV=development\nADMIN_USERNAME=admin\nADMIN_PASSWORD=change-me\nNEXT_PUBLIC_BASE_API_URL=http://localhost:3010/api\n' > .env
@@ -198,7 +200,7 @@ yarn dev                                       # API :3010, administração :300
 > [!IMPORTANT]
 > Carregue o dicionário com _Managing → Datasets → Import_ no painel de administração.
 
-Todo o resto para contribuidores: [`CONTRIBUTING.md`](../CONTRIBUTING.md).
+Tudo o resto para contribuidores: [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
 ### A seguir
 
