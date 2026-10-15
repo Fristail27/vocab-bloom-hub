@@ -55,7 +55,16 @@ export type ChangeShortTranslationRecordT = { language: string; description: str
 export type ChangeRecordT =
   ChangeFormRecordT | ChangeMeaningRecordT | ChangeTranslationRecordT | ChangeShortTranslationRecordT;
 
+export type ChangeOperationT = {
+  id: string;
+  kind: string;
+  source: string;
+  revision: string;
+  upstream_operation?: { id: string; kind: string; source: string; revision: string };
+};
+
 export type ChangeT = {
+  operation?: ChangeOperationT | null;
   /** Immutable terms of the dataset where this edit was made. */
   contribution?: import('./provenance').OriginT | null;
   inherited_from?: import('./provenance').OriginT | null;

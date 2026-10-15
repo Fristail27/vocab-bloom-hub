@@ -1,4 +1,12 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { ReconciliationStore } from '../EnReconciliation/store';
+import { persistentLineage, datasetSnapshotMetadata, dictionaryRecords } from '../EnReconciliation/snapshot';
+import { syncIdentity } from '../../utils/syncIdentity';
 import { savePronunciations, primaryIPA } from '../../utils/pronunciations';
+import { ReconciliationService } from '../EnReconciliation/reconciliation.service';
+import { stageDictionary } from '../EnReconciliation/staging';
+import { exportSynchronization, importSynchronization } from '../EnReconciliation/archive';
+import { ReconciliationRevision, ReconciliationBaseline } from '../EnReconciliation/entities';
 import type { PronunciationT } from '../../../../../types';
 import { normalizeQuotes } from '../../utils/quotes';
 import { saveEtymologies, resolveEtymology, validateEtymologies } from '../../utils/etymologies';
@@ -240,6 +248,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     @Optional() private readonly importStatus?: ImportStatusService,
     // the datasets of the instance (issue #527); absent in the unit tests
     @Optional() private readonly datasets?: DatasetsService,
+    @Optional() private readonly reconciliation?: ReconciliationService,
   ) {}
 
   // the dataset the request works on (issue #540): the active one, or the
@@ -252,12 +261,17 @@ export class EnImportDictionaryService implements OnModuleDestroy {
   // through the application's connection, another one through a connection
   // on its schema. One import runs at a time, so one field is enough.
   private target: DatasetConnectionT | null = null;
+  private readonly exporting = new AsyncLocalStorage<EntityManager>();
   private importingOrigins: OriginT[] = [];
   private provenanceFormat = false;
+  private preparingReconciliation = false;
+  private incomingComplete = false;
+  private incomingAdapter: { adapter: string; revision: number } | null = null;
+  private incomingFiles: DatasetManifestT['files'] = {};
 
   /** Where the import and the export read and write: the import's target, else the active dataset */
   private get db(): EntityManager {
-    return this.target?.manager ?? this.enWordsRep.manager;
+    return this.exporting.getStore() ?? this.target?.manager ?? this.enWordsRep.manager;
   }
 
   /**
@@ -326,6 +340,8 @@ export class EnImportDictionaryService implements OnModuleDestroy {
   ): Promise<void> {
     const { path: filePath, temporary } = await source.acquireFile(fileName, progress);
     if (!filePath) {
+      if (this.preparingReconciliation && this.incomingFiles[fileName]?.lines > 0)
+        throw new BadRequestException('reconciliation_input_incomplete');
       this.logger.warn(`Dataset file "${fileName}" is absent from the source, stage "${stage}" skipped`);
       return;
     }
@@ -340,6 +356,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       });
 
       let lineNo = 0;
+      let recordsRead = 0;
       let chunk: T[] = [];
 
       const flush = async () => {
@@ -355,10 +372,28 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       for await (const l of rl) {
         lineNo++;
         if (!l.trim()) continue;
-        chunk.push(JSON.parse(l) as T);
+        recordsRead++;
+        const parsed = JSON.parse(l) as T;
+        const identities = (value: unknown): void => {
+          if (!value || typeof value !== 'object') return;
+          if (Array.isArray(value)) {
+            value.forEach(identities);
+            return;
+          }
+          syncIdentity(value);
+          for (const nested of Object.values(value)) identities(nested);
+        };
+        identities(parsed);
+        chunk.push(parsed);
         if (chunk.length >= IMPORT_CHUNK_SIZE) await flush();
       }
       await flush();
+      if (
+        this.preparingReconciliation &&
+        this.incomingFiles[fileName] &&
+        this.incomingFiles[fileName].lines !== recordsRead
+      )
+        throw new BadRequestException('reconciliation_input_incomplete');
 
       this.logger.log(
         `Import stage "${stage}" finished: ${lineNo} lines from "${fileName}" in ${Date.now() - startedAt}ms`,
@@ -502,6 +537,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       for (const line of lines) {
         const key = wordKey(line.word, line.part_of_speech, line.form_of_word);
         if (seen.has(key)) {
+          this.incomingComplete = false;
           skipped++;
           continue;
         }
@@ -509,6 +545,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         toInsert.push(line);
       }
       if (skipped > 0) {
+        this.incomingComplete = false;
         this.logger.log(`Skipped ${skipped} duplicate dataset lines in this chunk`);
       }
       if (toInsert.length === 0) return;
@@ -905,6 +942,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
           for (const name of p.words) {
             const headword = resolved.get(name);
             if (headword === undefined) {
+              this.incomingComplete = false;
               skipped++;
               this.logger.debug(
                 `${LINK_LABELS[kind]} "${name}" of "${p.headword}" is missing in the dictionary, skipping`,
@@ -915,6 +953,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
             const key = linkKey(p.meaningId, headword);
             if (headword === p.headword || seen.has(key)) continue;
             if (taken.has(key)) {
+              this.incomingComplete = false;
               skipped++;
               this.logger.warn(
                 `"${headword}" is already a synonym of "${p.headword}", skipping it as an antonym`,
@@ -933,6 +972,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       await onBatchDone?.(batch.reduce((n, p) => n + p.words.length, 0));
     }
     if (skipped > 0) {
+      this.incomingComplete = false;
       this.logger.warn(
         `Skipped ${skipped} ${LINK_LABELS[kind].toLowerCase()} that name words missing in the dictionary or already linked`,
       );
@@ -1181,6 +1221,16 @@ export class EnImportDictionaryService implements OnModuleDestroy {
 
   private async bulkSaveChanges(lines: DataSetChangeT[]): Promise<void> {
     for (const line of lines) {
+      if (
+        line.operation &&
+        (typeof line.operation !== 'object' ||
+          ['id', 'kind', 'source', 'revision'].some(
+            (key) =>
+              typeof line.operation![key as keyof typeof line.operation] !== 'string' ||
+              String(line.operation![key as keyof typeof line.operation]).length > 200,
+          ))
+      )
+        throw new BadRequestException(ErrorCodes.provenance_invalid);
       if (line.inherited_from) assertOrigins([line.inherited_from]);
       if (line.contribution != null) {
         assertOrigins([line.contribution]);
@@ -1260,6 +1310,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
               inherited_from: line.inherited_from ?? null,
               contribution: line.contribution ?? null,
               reason: line.reason ?? null,
+              operation: line.operation ?? null,
               suggestion_id: null,
               author: typeof line.author === 'string' ? line.author.slice(0, 128) : null,
               superseded_at: line.superseded_at
@@ -1360,11 +1411,15 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       let skipped = 0;
       for (const line of lines) {
         const wordId = idByKey.get(wordKey(line.word, line.part_of_speech, EnWordFormsE.base_form));
-        if (wordId === undefined) continue;
+        if (wordId === undefined) {
+          this.incomingComplete = false;
+          continue;
+        }
         const { word: _word, part_of_speech: _pos, ...meaningLine } = line;
         const meaning = mapMeaningFromSetToDB(meaningLine);
         const key = meaningKey(wordId, meaning.sort_order, meaning.title);
         if (seen.has(key)) {
+          this.incomingComplete = false;
           skipped++;
           continue;
         }
@@ -1424,19 +1479,25 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       let unknown = 0;
       for (const line of lines) {
         const wordId = idByKey.get(wordKey(line.word, line.part_of_speech, EnWordFormsE.base_form));
-        if (wordId === undefined) continue;
+        if (wordId === undefined) {
+          this.incomingComplete = false;
+          continue;
+        }
         const meaningId = meaningIdByKey.get(meaningKey(wordId, line.meaning_sort_order, line.meaning_title));
         if (meaningId === undefined) {
+          this.incomingComplete = false;
           unknown++;
           continue;
         }
         const key = `${meaningId}\u0000${line.language}\u0000${line.title}`;
         if (seen.has(key)) {
+          this.incomingComplete = false;
           skipped++;
           continue;
         }
         seen.add(key);
         toInsert.push({
+          sync_id: syncIdentity(line),
           language: line.language as AvailableTranslationLanguagesE,
           title: line.title,
           definition: line.definition,
@@ -1484,14 +1545,19 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       let skipped = 0;
       for (const line of lines) {
         const wordId = idByKey.get(wordKey(line.word, line.part_of_speech, EnWordFormsE.base_form));
-        if (wordId === undefined) continue;
+        if (wordId === undefined) {
+          this.incomingComplete = false;
+          continue;
+        }
         const key = `${wordId}\u0000${line.language}\u0000${line.description}`;
         if (seen.has(key)) {
+          this.incomingComplete = false;
           skipped++;
           continue;
         }
         seen.add(key);
         toInsert.push({
+          sync_id: syncIdentity(line),
           language: line.language as AvailableTranslationLanguagesE,
           description: line.description,
           variants_of_words: line.variants_of_words ?? [],
@@ -1609,31 +1675,73 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       ? { replaced: new Set(), added: new Set(), kept: new Set() }
       : undefined;
     let outcome: Parameters<ImportStatusService['end']>[0] = {};
+    let preparedPlan: string | undefined;
     try {
       // the dataset the import names is created on first use — a schema of
       // its own — and filled through a connection of its own (issue #527)
       const dataset = await this.datasets?.resolveTarget(options?.dataset);
       this.target = dataset && this.datasets ? await this.datasets.connect(dataset) : null;
+      const empty =
+        (await this.db.count(EnEntry)) === 0 &&
+        (!this.reconciliation ||
+          ((await this.db.count(EnChange)) === 0 && (await this.db.count(ReconciliationBaseline)) === 0));
+      this.preparingReconciliation = Boolean(this.reconciliation && dataset && !empty);
+      if (this.preparingReconciliation && this.target) {
+        const original = this.target;
+        const stage = await stageDictionary(original.manager.connection);
+        this.target = {
+          ...stage,
+          dataset: original.dataset,
+          close: async () => {
+            try {
+              await stage.close();
+            } finally {
+              await original.close();
+            }
+          },
+        };
+      }
       this.hasEdits = null;
-      const datasetVersion = await this.runImport(source, label, tracked, updateCtx);
-      outcome = { dataset_version: datasetVersion };
-      await this.auditService?.record({
-        trigger: AuditTriggerE.import,
-        action: AuditActionE.import,
-        entityType: AuditEntityTypeE.dictionary,
-        diff: {
-          source: { before: null, after: label },
-          ...(dataset ? { dataset: { before: null, after: dataset.name } } : {}),
-          ...(datasetVersion ? { dataset_version: { before: null, after: datasetVersion } } : {}),
-          ...(updateCtx
-            ? {
-                updated_entries: { before: null, after: updateCtx.replaced.size },
-                added_entries: { before: null, after: updateCtx.added.size },
-                kept_user_modified: { before: null, after: updateCtx.kept.size },
-              }
-            : {}),
-        },
-      });
+      const datasetVersion = await this.runImport(
+        source,
+        label,
+        tracked,
+        this.preparingReconciliation ? undefined : updateCtx,
+      );
+      if (this.preparingReconciliation && dataset && this.reconciliation) {
+        tracked.write({ stage: EnDictionaryImportPhasesE.preparing_update, percent: 0 });
+        preparedPlan = (
+          await this.reconciliation.prepareSource(
+            dataset.name,
+            this.db,
+            datasetVersion,
+            this.incomingComplete,
+            this.incomingAdapter,
+          )
+        ).id;
+      } else {
+        outcome = { dataset_version: datasetVersion };
+        if (empty && dataset && this.reconciliation)
+          await this.reconciliation.rememberSource(dataset.name, this.incomingAdapter);
+      }
+      if (!preparedPlan)
+        await this.auditService?.record({
+          trigger: AuditTriggerE.import,
+          action: AuditActionE.import,
+          entityType: AuditEntityTypeE.dictionary,
+          diff: {
+            source: { before: null, after: label },
+            ...(dataset ? { dataset: { before: null, after: dataset.name } } : {}),
+            ...(datasetVersion ? { dataset_version: { before: null, after: datasetVersion } } : {}),
+            ...(updateCtx
+              ? {
+                  updated_entries: { before: null, after: updateCtx.replaced.size },
+                  added_entries: { before: null, after: updateCtx.added.size },
+                  kept_user_modified: { before: null, after: updateCtx.kept.size },
+                }
+              : {}),
+          },
+        });
     } catch (error) {
       const message =
         error instanceof HttpException
@@ -1646,6 +1754,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     } finally {
       const target = this.target;
       this.target = null;
+      this.preparingReconciliation = false;
       await target?.close().catch(() => undefined);
       // Keep the slot through the audit and cleanup: otherwise a new import
       // can set this.target while the previous run still has to clear it.
@@ -1659,11 +1768,13 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       percent: 100,
       stage: EnDictionaryImportPhasesE.completed,
       ...(outcome.dataset_version && { datasetVersion: outcome.dataset_version }),
-      ...(updateCtx && {
-        updated_entries: updateCtx.replaced.size,
-        added_entries: updateCtx.added.size,
-        kept_user_modified: updateCtx.kept.size,
-      }),
+      ...(preparedPlan && { reconciliation_plan: preparedPlan }),
+      ...(updateCtx &&
+        !preparedPlan && {
+          updated_entries: updateCtx.replaced.size,
+          added_entries: updateCtx.added.size,
+          kept_user_modified: updateCtx.kept.size,
+        }),
     });
     this.metrics?.transferFinished('import', 'success');
     progress.end();
@@ -1687,6 +1798,14 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       // the manifest is read before the stream opens: a local source has
       // already validated it, HuggingFace may be unreachable
       manifest = await source.readManifest();
+      this.incomingComplete =
+        manifest?.snapshot?.complete === true &&
+        manifest.snapshot.skipped === 0 &&
+        manifest.snapshot.revision === 1;
+      this.incomingFiles = manifest?.files ?? {};
+      this.incomingAdapter = manifest?.snapshot
+        ? { adapter: manifest.snapshot.adapter, revision: manifest.snapshot.revision }
+        : null;
       this.assertSameSource(manifest, source);
       this.provenanceFormat = manifest?.provenance_format === 1;
       const target = this.target?.dataset ?? this.datasets?.getActive();
@@ -1769,6 +1888,15 @@ export class EnImportDictionaryService implements OnModuleDestroy {
           count += n;
         },
       );
+      if (manifest?.files[DATASET_FILE_NAMES.synchronization]) {
+        const archive = await source.acquireFile(DATASET_FILE_NAMES.synchronization, progress);
+        if (!archive.path) throw new BadRequestException('reconciliation_archive_missing');
+        try {
+          await this.db.transaction((em) => importSynchronization(em, archive.path!));
+        } finally {
+          if (archive.temporary) await unlink(archive.path).catch(() => undefined);
+        }
+      }
     } catch (error) {
       this.metrics?.transferFinished('import', 'failure');
       throw error;
@@ -1785,7 +1913,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     // version — before the last chunk, so a client that reads the registry
     // on it finds it
     const filled = this.target?.dataset;
-    if (filled && this.datasets) {
+    if (filled && this.datasets && !this.preparingReconciliation) {
       await this.datasets.recordImport(filled.name, {
         version: this.provenanceFormat ? (datasetVersion ?? null) : datasetVersion,
         provenance: manifest?.provenance,
@@ -1793,7 +1921,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     }
 
     const intoActive = !filled || !this.datasets || filled.name === this.datasets.getActive().name;
-    if (datasetVersion && intoActive) {
+    if (datasetVersion && intoActive && !this.preparingReconciliation) {
       // Remember which dataset version the served dictionary now holds (the
       // registry keeps it for every dataset); a failure here must not fail
       // an already completed import
@@ -1827,7 +1955,8 @@ export class EnImportDictionaryService implements OnModuleDestroy {
    * #247). Loaded once per export as plain rows; every stage walks a subset.
    */
   private async loadExportKeys(): Promise<ExportLineKeyT[]> {
-    const keys = await this.enWordsRep
+    const keys = await this.db
+      .getRepository(EnWord)
       .createQueryBuilder('w')
       .innerJoin('w.word', 'entry')
       .select('w.id', 'id')
@@ -1868,7 +1997,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     try {
       for (let offset = 0; offset < stage.keys.length; offset += EXPORT_BATCH_SIZE) {
         const chunk = stage.keys.slice(offset, offset + EXPORT_BATCH_SIZE);
-        const rows = await this.wordRows.load(
+        const rows = await (this.exporting.getStore() ? WordRowsService.on(this.db) : this.wordRows).load(
           chunk.map((k) => k.id),
           stage.relations,
         );
@@ -2015,6 +2144,29 @@ export class EnImportDictionaryService implements OnModuleDestroy {
    * is a separate GET on /export/download/:exportId.
    */
   async exportDictionary(res: Response, options: ExportOptionsT = {}): Promise<void> {
+    const manager = this.enWordsRep.manager;
+    if (!this.datasets || !manager.connection.hasMetadata(ReconciliationRevision))
+      return this.writeExport(res, options);
+    const scope = currentDatasetScope();
+    const dataset = scope ? await this.datasets.find(scope.dataset.name) : this.datasets.getActive();
+    await manager.transaction(
+      manager.connection.options.type === 'postgres' ? 'REPEATABLE READ' : 'SERIALIZABLE',
+      async (em) => {
+        await this.exporting.run(em, async () => {
+          // Assign portable identities before serializing content, in one consistent snapshot.
+          await new ReconciliationStore(em).capture(
+            await persistentLineage(em, dataset),
+            datasetSnapshotMetadata(dataset),
+            true,
+            dictionaryRecords(em, dataset),
+          );
+          await this.writeExport(res, options);
+        });
+      },
+    );
+  }
+
+  private async writeExport(res: Response, options: ExportOptionsT): Promise<void> {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Transfer-Encoding', 'chunked');
     res.setHeader('X-Accel-Buffering', 'no');
@@ -2074,7 +2226,17 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       const changesPath = path.join(runDir, DATASET_FILE_NAMES.changes);
       const changeLines = await this.exportChanges(changesPath);
       if (changeLines > 0) files[DATASET_FILE_NAMES.changes] = { lines: changeLines };
+      if (
+        this.db.connection.hasMetadata(ReconciliationRevision) &&
+        (await this.db.count(ReconciliationRevision)) > 0
+      ) {
+        const synchronization = path.join(runDir, DATASET_FILE_NAMES.synchronization);
+        files[DATASET_FILE_NAMES.synchronization] = {
+          lines: await this.db.transaction((em) => exportSynchronization(em, synchronization)),
+        };
+      }
       const manifest: DatasetManifestT = {
+        snapshot: { complete: true, adapter: 'native', revision: 1, skipped: 0 },
         provenance_format: 1,
         provenance: {
           attribution: exported?.attribution ?? DATA_LICENSE.attribution,
@@ -2151,6 +2313,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         unlink(path.join(runDir, DATASET_FORMAT_FILE_NAME)),
         unlink(licensePath),
         unlink(path.join(runDir, DATASET_FILE_NAMES.changes)),
+        unlink(path.join(runDir, DATASET_FILE_NAMES.synchronization)),
       ]);
       res.end();
     }
@@ -2185,6 +2348,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
             inherited_from: row.inherited_from ?? null,
             contribution: row.contribution ?? null,
             reason: row.reason ?? null,
+            ...(row.operation && { operation: row.operation }),
             author: row.author,
             superseded_at: row.superseded_at ? new Date(row.superseded_at).toISOString() : null,
           };

@@ -223,10 +223,11 @@ unreachable).
 ## Notes
 
 > [!IMPORTANT]
-> Importing does not wipe the database first: records that already exist (same word, part of
-> speech and form) are skipped, the same way the HuggingFace import behaves. To replace existing
-> entries with the dataset content (keeping the entries you edited), run the import in update
-> mode — see [operations.md](./operations.md#dataset-updates-vs-code-updates).
+> Importing into an existing dataset prepares a saved update review. The completion stream
+> returns `reconciliation_plan`; content, version and edit history change only after the admin
+> resolves conflicts and applies that plan under **Updates and merges** on the dataset card.
+> This also applies to a dataset whose words were all deleted locally. A first import into a
+> new dataset is immediate. See [the review workflow](./datasets.md#updating-and-merging-datasets-656).
 
 > [!TIP]
 > With Docker Compose, mount the folder into the server container and set the variable to the
@@ -310,10 +311,31 @@ so file/chunk/POS order does not affect the result. Links are reciprocal and use
 spellings, never local IDs or part-of-speech qualifiers. Missing targets are skipped.
 
 An omitted field in an older file preserves existing links. An explicitly empty list
-can clear an imported headword's unprotected links in update mode, unless the reciprocal
+can propose clearing an imported headword's links during review, unless the reciprocal
 endpoint explicitly requests the pair. Links involving a user-modified headword remain
 protected. Export with a version that understands this field to preserve it on round-trip;
 older importers may discard it. Alternative-only Wiktionary words retain the source gloss.
+
+## Update review and synchronization metadata
+
+A complete native export declares `snapshot: { complete: true, adapter: "native", revision: 1, skipped: 0 }`.
+Only verified complete input can propose deletions for absent records. A separate-file upload,
+a legacy archive without this marker, or a conversion with skipped records is partial: absent
+words and nested records are retained, including in the baseline used by the next update.
+A missing common baseline requires explicit manual comparison; version labels are not ancestry.
+
+`vocab-bloom-hub-en-synchronization.jsonl` format 2 preserves dataset identity, causal links
+between immutable snapshots, integration baselines and applied operations with their decisions.
+Format 1 is still readable, but lacks causal links and cannot establish an unambiguous common
+ancestor for sibling merges. Pending reviews belong to their instance. Keep the full archive;
+upgrade older importers before transferring it. Imported summary counters are recalculated.
+
+Decisions are saved independently of publication. Resume a review from its dataset card, or
+cancel it without changing the dictionary. A failed apply rolls back content, history, baseline
+and operation status together; retry the same plan. If local content changed during review,
+prepare a fresh plan. Applied updates and merges appear in edit history and the audit journal;
+selecting source text keeps its original contribution terms, while newly authored fields receive
+the destination's current contribution terms.
 
 ## Etymologies and flat meanings
 
@@ -325,9 +347,9 @@ in these files. Imports rebuild the references after creating each word's groups
 an export can be installed in a database with different IDs. Unknown references and
 repeated group numbers are rejected. Old files without these fields remain valid.
 
-An update replaces the imported word's groups along with its meanings; user-modified
-words retain both under the usual update protection. Export and history retain the
-local numbers and associations. Use an importer that understands these optional fields
+Updates compare groups and meanings with their previous source state and local edits.
+Conflicting edits, deletions and ambiguous identities require review; independent changes
+can be combined. Export and history retain the local numbers and associations. Use an importer that understands these optional fields
 to preserve them on round-trip.
 
 The admin word response includes group IDs. When replacing `etymologies` through the

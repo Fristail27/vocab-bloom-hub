@@ -8,7 +8,7 @@ import { prepareMeaningFromDB } from './prepareMeaningFromDB';
 import { prepareShortTranslationFromDB } from './prepareTranslationsFromDB';
 
 export const prepareWordFromDB = (row: EnWord): EnWordT => {
-  const { createdAt: _createdAt, updateAt: _updateAt, short_translations, ...other } = row;
+  const { sync_id: _syncId, createdAt: _createdAt, updateAt: _updateAt, short_translations, ...other } = row;
   return {
     ...other,
     pronunciations: adminPronunciations(row),

@@ -5,6 +5,7 @@ import { EntityManager } from 'typeorm';
 import { EnAreaVariantsE, PronunciationT } from '../../../../types';
 import { EnPronunciation } from '../entities/en_pronunciation.entity';
 import { EnWord } from '../entities/en_word.entity';
+import { syncIdentity } from './syncIdentity';
 
 export type PronunciationInputT = AdminPronunciationT;
 
@@ -130,7 +131,8 @@ export async function savePronunciations(
   if (removed.length) await repo.delete(removed.map((row) => row.id));
   const rows = await repo.save(
     repo.create(
-      values.map(({ type, text, area_variant, sort_order, id }) => ({
+      values.map(({ type, text, area_variant, sort_order, id }, index) => ({
+        ...(!editing && { sync_id: syncIdentity(values[index]) }),
         ...(editing && id !== undefined && { id }),
         word: { id: wordId },
         type,

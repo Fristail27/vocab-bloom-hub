@@ -1,3 +1,4 @@
+import { syncIdentity } from './syncIdentity';
 import { BadRequestException } from '@nestjs/common';
 import { registerDecorator } from 'class-validator';
 import { EntityManager } from 'typeorm';
@@ -88,6 +89,7 @@ export async function saveAudio(
     repo.create(
       values.map((value) => ({
         ...portableAudio(value),
+        ...(!editing && { sync_id: syncIdentity(value) }),
         ...(editing && value.id !== undefined && { id: value.id }),
         pronunciation: { id: pronunciationId },
       })),

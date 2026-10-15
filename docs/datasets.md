@@ -136,9 +136,9 @@ page of the list — answer in under 10 ms, as they do on the project's dataset:
 has the same indexes.
 
 **Updating.** A source publishes newer files; installation still requires the admin to start it. On the card of
-an installed dataset _Update from a newer file_ opens the same instruction: the entries are
-replaced with the ones of the newer file, the entries you edited are kept, entries that are
-gone from the source are not deleted. When the source has a file that is worth installing, the
+an installed dataset _Update from a newer file_ opens the same instruction: the file is staged and compared with the last integrated source snapshot and your local edits.
+Review the proposed changes and resolve conflicts before applying the update. Deletions are
+inferred only from a verified complete snapshot; partial inputs preserve absent content. When the source has a file that is worth installing, the
 card says so ([below](#versions-and-newer-files-of-a-source)). Server downloads use the catalog’s
 links, which may pin a release; use manual upload for a newer release not yet linked in the catalog.
 
@@ -682,8 +682,8 @@ backed up and what a connection pooler has to pass through:
   the dataset that is edited).
 - _Report a mistake_ on the tab of a dataset that is not served: a report is filed in the active
   dataset.
-- Automatic updates of forks from their parents, merging words and a separate comparison
-  with the original version. A fork already has its own contribution license and edit history.
+- Scheduled unattended synchronization of forks. Parent updates and related-dataset merges
+  are available through the explicit review workflow below.
 - Datasets of other headword languages: the registry records the language of a dataset, the
   tables are the English ones.
 
@@ -777,8 +777,8 @@ Progress is held in memory; after a server restart, consult the dataset list for
 fork. An interrupted, uncommitted fork leaves no registered dataset or partial schema.
 
 A fork states its immediate parent and retains earlier origins. Parent updates, renames, and
-deletion do not alter the saved chain. A fork is not synchronized with its parent: updating,
-rebasing, merging words, and a separate original/current comparison screen are future work.
+deletion do not alter the saved chain. A fork can be updated from its parent through the comparison workflow below; synchronization
+is explicit and never runs automatically.
 SQLite still supports word attribution, but cannot hold a second dataset or create a fork.
 
 The editor of a catalog dataset, including the project's published dataset, recommends a fork.
@@ -799,6 +799,137 @@ All mutation routes require admin authentication:
 
 See [the portable format](./offline-import.md#provenance-export-format) before moving these
 records to another instance or publishing them on Hugging Face.
+
+## Updating and merging datasets (#656)
+
+Open **Updates and merges** on an installed dataset's card. Installing a newer source file,
+including importing a native archive into a nonempty dataset, now prepares a comparison.
+It does not immediately replace the live dictionary. Empty installations still import directly.
+
+A new fork retains the parent's immutable snapshot. Its comparison dialog offers an update
+from that parent. An own dataset can also select another installed dataset for merging: the
+server follows causal links between snapshots to find a unique nearest shared immutable ancestor and maintains a separate integration baseline
+for each source. Names and editable version labels are never evidence of ancestry. When an
+old fork has no baseline, or several incomparable common ancestors exist, enable **Review manually without a common baseline**; every differing
+value then needs a decision. A deleted and recreated parent is a different identity.
+
+### Review and publication
+
+Preparing a parent update or a merge runs in the background. The dialog shows the
+current stage, elapsed time and the number of processed records. A percentage is
+shown for stages with a known total; it describes that stage, not the whole job.
+Closing the dialog or reloading the page does not stop preparation. Reopening
+**Updates and merges** retrieves its status and opens the review when ready.
+Transient connection failures are retried; preparation errors are displayed and
+release the import slot. Live progress belongs to the running server process:
+after a server restart, an unfinished preparation must be started again. Completed
+plans and saved conflict decisions remain in the database.
+
+**Apply update** also runs in the background. Its progress shows waiting for current
+requests, checking the current snapshot, validating the result, applying content and
+links, saving history and versions, and committing. Completion is reported only after
+the transaction commits and readers resume. Closing or reopening the dialog does not
+restart the operation; temporary connection failures retry only the status read. After
+a server restart, check the saved plan status before retrying Apply: the transaction
+either committed or rolled back. An already applied plan is safe to submit again.
+
+Conflict counts describe the decisions that needed review, not the amount of work on
+Apply. Publication also includes automatic changes, history and version metadata, and
+checks the complete current dataset for edits made since preparation. Unchanged content
+is not rewritten; provenance and version checks use batch reads, without loading every
+word's full relations separately.
+
+The dialog opens on conflicts, with search, pagination, and category filters. Each conflict
+shows the baseline, local, incoming, and chosen result. Keep the local value, accept the
+incoming value, or edit a structured result. Additions and deletions are explicit. Save decisions
+before changing the selected article or applying. Unsaved decisions can be discarded; saved
+ones survive browser and server restarts. Cancel is available until publication.
+
+Independent changes combine automatically. Identical changes do not conflict.
+Comparisons ignore source acquisition bookkeeping (internal origin IDs, copy/fork events,
+timestamps, database snapshot revisions and inheritance flags). These facts remain intact
+in stored provenance and synchronization snapshots; they are not shown as editorial fields.
+Actual source terms, including source versions, licenses, attribution and notices, still
+participate in comparison. Uniquely identical nested records in older forks are matched even
+when their synchronization IDs differ; ambiguous matches still require review.
+
+Edit/delete cases and ambiguous nested record matching require review. Nested records use portable UUIDs,
+never database IDs, array positions, or editable titles. An external source without IDs can
+match only uniquely unchanged records; replacing unidentified records requires a collection
+comparison. The whole-result editor also allows repair of dependent fields.
+
+The summary counts headword articles once each: **Added**, **Deleted**, **Changed**, and
+**Conflicts**. Conflicts take precedence over the other categories. Forms are part of their base
+article unless they have an independent entry. Initial counts stay stable during review;
+resolved articles, remaining conflicts, and proposed additions/deletions/changes update after
+saving decisions. After application the summary retains the actual totals. Unchanged and
+local-only articles remain inspectable through **All**.
+
+Application validates the complete result, including source terms, generated-content rules,
+etymologies, pronunciation/audio, synonyms, antonyms, reciprocal alternatives, forms, and
+phrasal bases. Deletion/reference conflicts are shown during preparation; validation runs again
+when applying custom decisions. Invalid or dangling results cannot be published.
+
+The destination remains editable during review. Applying rejects a stale destination, changed
+terms, or a baseline advanced by another operation. Prepare a fresh comparison in that case.
+A later edit of the parent cannot change an already prepared incoming snapshot. Publication
+uses one transaction for content, history, baseline, version and audit summary; failure rolls
+all of them back. Retrying an applied operation is idempotent. A merge does not activate or
+open the destination. A fork keeps its own dataset version label.
+
+### History, completeness and portability
+
+Every applied operation has an ID, source and pinned revision. Actual edits carry that ID and
+before/after values in the dictionary history. Source history retains original authorship and
+license snapshots, including history of deleted words; transferred operation references point
+to the receiving merge and retain their upstream reference. Accepting source content creates
+no receiving-dataset contribution and does not by itself mark a clean word as manually modified.
+Custom edits do. The journal retains source replacement records even when they no longer
+contribute to the current word. Keep-local decisions that change nothing live in the operation
+review, accessible from word history, without invented content edits. The instance's audit
+journal stores a separate operation summary.
+
+Native exports declare snapshot completeness and include
+`vocab-bloom-hub-en-synchronization.jsonl` (format 2; format 1 remains readable): dataset identity, immutable revisions,
+per-source baselines, deletion history, and applied operations with decisions. Content files
+retain portable record IDs. Export reads a consistent transaction snapshot. Removing an author name also redacts retained snapshot histories on the instance. Pending reviews
+belong to their instance and are not transferred. Forks retain ancestral revisions and applied
+operation history. Older exports without this metadata require manual reconciliation; upgrade
+importers before transferring the extended format.
+
+Missing records in partial files, limited conversions or conversions with skipped records do
+not imply deletion, including absent nested meanings/translations. A complete declaration is
+accepted only with zero conversion skips; missing declared files and mismatched line counts
+abort preparation. A changed adapter revision disables deletion inference. Unknown legacy
+completeness is treated as partial. Conversion warnings remain separate from conflict counts.
+
+### Storage and operation
+
+Synchronization tables are per dataset and managed by a dataset migration. Preparation stores
+serialized baseline/local/incoming records and a plan, walking articles in batches. Plan pages
+contain 25 articles. Snapshot reads, identity assignment, snapshot copies and comparison writes
+use batches of 100, rather than separate database round trips per article. Reference validation
+indexes headwords, forms and phrasal links once; it retains only the endpoint metadata in memory.
+Preparation still reads the complete datasets and their reachable snapshot history, so its time
+depends on their size and database performance. Provision additional space for incoming conversion files, a staging
+schema/database, retained snapshots, the result transaction, and PostgreSQL WAL. Snapshots and
+saved operation decisions are retained conservatively; they are not expired automatically.
+
+On PostgreSQL, source files import into an uncommitted private schema that is rolled back
+when preparation finishes or fails. Apply drains this instance's requests through `SwitchGate`
+and takes database write locks before checking the current revision. Keep the existing
+single-serving-process deployment rule for coherent multi-query reads. SQLite uses a temporary
+database file for source updates. Parent updates and cross-dataset merges require PostgreSQL.
+
+Admin routes are under `/api/en/datasets/{name}/reconciliation`: list operations (`GET`),
+prepare a parent/related comparison (`POST /parent`, `{source, allow_two_way?}`), inspect summary
+and paged items (`GET /{id}` and `GET /{id}/items`), save conflict decisions (`POST /{id}/decisions`),
+replace an article result (`POST /{id}/result`), apply or cancel (`POST /{id}/apply`, `/cancel`).
+The admin dialog uses `POST /{id}/apply/start` (202) and `GET /application` for background
+publication. The status read is authenticated and reads only in-memory progress, so it
+remains available while publication holds the dictionary request gate. Background
+preparation uses `POST /parent/start` (202) and `GET /preparation`.
+All require admin authentication; decisions include the article version to reject stale tabs.
 
 ## Alternative spellings
 

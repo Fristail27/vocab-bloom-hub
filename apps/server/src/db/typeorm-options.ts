@@ -10,8 +10,16 @@ import { DEFAULT_DATASET_SCHEMA } from '../../core/constants/datasets';
 import { getDbPoolConfig } from '../core/utils/db-pool';
 import { migrations } from './migrations';
 import { searchPathExtra } from './datasets';
+import { RECONCILIATION_ENTITIES } from '../modules/EnModule/modules/EnReconciliation/entities';
 
-export const DB_ENTITIES = [...DICTIONARY_ENTITIES, Settings, AuditLog, Suggestion, Dataset];
+export const DB_ENTITIES = [
+  ...DICTIONARY_ENTITIES,
+  ...RECONCILIATION_ENTITIES,
+  Settings,
+  AuditLog,
+  Suggestion,
+  Dataset,
+];
 
 // checkIsPostgres() is locked at the first call (entity import), so the
 // DataSource driver can never diverge from the entity column types.

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Reconciliation } from '@/components/Reconciliation';
 import { Origins } from '@/components/Origins';
 import { Alert, Button, Card, Collapse, Popconfirm, Tag, Typography } from 'antd';
 import {
@@ -48,6 +49,7 @@ type DatasetCardP = {
   /** The action under way, as the page names it: `activate <name>`, `delete <name>` */
   busy: string | null;
   actions: DatasetActionsT;
+  onApplied?: () => void;
 };
 
 /**
@@ -56,7 +58,15 @@ type DatasetCardP = {
  * import and the export, its terms. A line says what it is; what it holds
  * and the terms in full open under _Details_.
  */
-export const DatasetCard: React.FC<DatasetCardP> = ({ entry, dataset, update, supported, busy, actions }) => {
+export const DatasetCard: React.FC<DatasetCardP> = ({
+  entry,
+  dataset,
+  update,
+  supported,
+  busy,
+  actions,
+  onApplied,
+}) => {
   const locale = useLocale();
   const t = useTranslations('datasets');
   const p = useTranslations('provenance');
@@ -286,6 +296,9 @@ export const DatasetCard: React.FC<DatasetCardP> = ({ entry, dataset, update, su
               {t(dataset.is_public ? 'visibility_close' : 'visibility_open')}
             </Button>
           </Popconfirm>
+        )}
+        {installed && dataset && (
+          <Reconciliation dataset={dataset.name} disabled={!!busy} onApplied={onApplied} />
         )}
         {installed && dataset && actions.fork && (
           <Button disabled={!supported || !!busy} onClick={() => actions.fork?.(dataset)}>
