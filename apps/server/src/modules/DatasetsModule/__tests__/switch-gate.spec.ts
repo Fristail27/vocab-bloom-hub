@@ -89,11 +89,11 @@ describe('SwitchGate', () => {
 });
 
 describe('switchGateMiddleware', () => {
-  const call = (gate: SwitchGate, path: string) => {
+  const call = (gate: SwitchGate, path: string, method = 'GET') => {
     const res = new EventEmitter();
     const next = jest.fn();
     switchGateMiddleware(gate)(
-      { originalUrl: path, url: path, path } as Request,
+      { originalUrl: path, url: path, path, method } as Request,
       res as unknown as Response,
       next,
     );
@@ -128,6 +128,28 @@ describe('switchGateMiddleware', () => {
     await held;
     await tick();
     expect(other.next).toHaveBeenCalledTimes(1);
+  });
+
+  it('releases a completed keep-alive response once, without waiting for its close', async () => {
+    const gate = new SwitchGate();
+    const first = call(gate, '/api/en/datasets');
+    const second = call(gate, '/api/v1/meta');
+    await tick();
+    expect(gate.busy).toBe(2);
+    first.res.emit('finish');
+    expect(gate.busy).toBe(1);
+    first.res.emit('close');
+    expect(gate.busy).toBe(1);
+    second.res.emit('finish');
+    expect(gate.busy).toBe(0);
+  });
+
+  it('does not count the publication request itself', async () => {
+    const gate = new SwitchGate();
+    const apply = call(gate, '/api/en/datasets/default/reconciliation/plan/apply', 'POST');
+    await tick();
+    expect(apply.next).toHaveBeenCalledTimes(1);
+    expect(gate.busy).toBe(0);
   });
 
   it('forgets a client that gave up while it waited', async () => {

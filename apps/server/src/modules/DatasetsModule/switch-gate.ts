@@ -86,10 +86,13 @@ export const switchGateMiddleware =
     let entered = false;
     let closed = false;
     // a client that gave up while waiting never entered and must not leave
-    res.once('close', () => {
+    const finished = () => {
+      if (closed) return;
       closed = true;
       if (entered) gate.leave();
-    });
+    };
+    res.once('finish', finished);
+    res.once('close', finished);
     void gate.enter().then(() => {
       if (closed) return gate.leave();
       entered = true;

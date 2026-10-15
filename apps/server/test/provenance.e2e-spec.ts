@@ -2,6 +2,10 @@ import type { ReconciliationItemT, ReconciliationSummaryT } from '../types/recon
 import type { AdminPronunciationT } from '../types';
 import { AuditService } from '../src/modules/AuditModule/audit.service';
 import { DatasetsService } from '../src/modules/DatasetsModule/datasets.service';
+import {
+  ReconciliationIdentity,
+  ReconciliationRevision,
+} from '../src/modules/EnModule/modules/EnReconciliation/entities';
 import { runDatasetMigrations } from '../src/db/datasets';
 import { DataSource } from 'typeorm';
 import { DATASET_FILE_NAMES } from '../src/modules/EnModule/modules/EnImportDictionary/constants';
@@ -943,6 +947,19 @@ describe('word provenance and independent forks (#556)', () => {
         await fork('default', parent);
         await fork(parent, left);
         await fork(parent, right);
+        for (const name of [parent, left, right]) {
+          const datasets = app.get(DatasetsService);
+          const connection = await datasets.reader(await datasets.find(name));
+          const revisions = await connection.manager.find(ReconciliationRevision);
+          const ids = new Set(revisions.map((row) => row.id));
+          const identity = await connection.manager.findOneByOrFail(ReconciliationIdentity, { key: 'self' });
+          expect({
+            dataset: name,
+            missing: [...identity.heads, ...revisions.flatMap((row) => row.parents)].filter(
+              (id) => !ids.has(id),
+            ),
+          }).toEqual({ dataset: name, missing: [] });
+        }
         await api()
           .patch(`/api/en/common-info/${cedar.id}`)
           .query({ dataset: parent })

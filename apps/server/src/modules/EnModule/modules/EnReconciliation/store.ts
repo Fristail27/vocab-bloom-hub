@@ -92,7 +92,7 @@ export class ReconciliationStore {
 
   async revision(id: string): Promise<ReconciliationRevision> {
     const row = await this.em.findOneBy(ReconciliationRevision, { id, sealed: true });
-    if (!row) throw new Error('reconciliation_revision_missing');
+    if (!row) throw new Error(`reconciliation_revision_missing: ${id}`);
     return row;
   }
 
