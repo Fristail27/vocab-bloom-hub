@@ -114,6 +114,22 @@ test.describe('UI-driven word edit and delete', () => {
       },
     });
     expect(imported.ok()).toBe(true);
+    const completed = JSON.parse((await imported.text()).trim().split('\n').at(-1)!);
+    const plan = completed.reconciliation_plan;
+    expect(plan).toBeTruthy();
+    const review = await request.get(
+      `${API_URL}/en/datasets/default/reconciliation/${plan}/items?search=ambler`,
+    );
+    expect(review.ok()).toBe(true);
+    for (const item of (await review.json()).items) {
+      const decision = await request.post(`${API_URL}/en/datasets/default/reconciliation/${plan}/result`, {
+        data: { headword: item.headword, version: item.version, result: item.incoming },
+      });
+      expect(decision.ok()).toBe(true);
+    }
+    const applied = await request.post(`${API_URL}/en/datasets/default/reconciliation/${plan}/apply`);
+    expect(applied.ok(), await applied.text()).toBe(true);
+    const initialHistory = await (await request.get(`${API_URL}/en/changes?headword=ambler`)).json();
     const check = await request.get(`${API_URL}/en/check-word/ambler?partOfSpeech=noun`);
     const { id } = (await check.json()) as { id: number };
     const before = await getWord(request, id);
@@ -140,7 +156,7 @@ test.describe('UI-driven word edit and delete', () => {
 
     expect(await getWord(request, id)).toEqual(before);
     const history = await request.get(`${API_URL}/en/changes?headword=ambler`);
-    expect(((await history.json()) as { total: number }).total).toBe(0);
+    expect(await history.json()).toEqual(initialHistory);
     await expect(page.getByText('Modified by you')).toHaveCount(0);
   });
 

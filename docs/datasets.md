@@ -682,8 +682,8 @@ backed up and what a connection pooler has to pass through:
   the dataset that is edited).
 - _Report a mistake_ on the tab of a dataset that is not served: a report is filed in the active
   dataset.
-- Automatic updates of forks from their parents, merging words and a separate comparison
-  with the original version. A fork already has its own contribution license and edit history.
+- Scheduled unattended synchronization of forks. Parent updates and related-dataset merges
+  are available through the explicit review workflow below.
 - Datasets of other headword languages: the registry records the language of a dataset, the
   tables are the English ones.
 
@@ -808,9 +808,9 @@ It does not immediately replace the live dictionary. Empty installations still i
 
 A new fork retains the parent's immutable snapshot. Its comparison dialog offers an update
 from that parent. An own dataset can also select another installed dataset for merging: the
-server looks for a shared immutable ancestor and maintains a separate integration baseline
+server follows causal links between snapshots to find a unique nearest shared immutable ancestor and maintains a separate integration baseline
 for each source. Names and editable version labels are never evidence of ancestry. When an
-old fork has no baseline, enable **Review manually without a common baseline**; every differing
+old fork has no baseline, or several incomparable common ancestors exist, enable **Review manually without a common baseline**; every differing
 value then needs a decision. A deleted and recreated parent is a different identity.
 
 ### Review and publication
@@ -859,7 +859,7 @@ review, accessible from word history, without invented content edits. The instan
 journal stores a separate operation summary.
 
 Native exports declare snapshot completeness and include
-`vocab-bloom-hub-en-synchronization.jsonl` (format 1): dataset identity, immutable revisions,
+`vocab-bloom-hub-en-synchronization.jsonl` (format 2; format 1 remains readable): dataset identity, immutable revisions,
 per-source baselines, deletion history, and applied operations with decisions. Content files
 retain portable record IDs. Export reads a consistent transaction snapshot. Removing an author name also redacts retained snapshot histories on the instance. Pending reviews
 belong to their instance and are not transferred. Forks retain ancestral revisions and applied

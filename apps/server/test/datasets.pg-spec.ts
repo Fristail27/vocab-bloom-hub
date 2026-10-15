@@ -46,6 +46,12 @@ const DICTIONARY_TABLES = [
   'suggestions',
   // the history of edits (issue #531)
   'en_changes',
+  'reconciliation_identity',
+  'reconciliation_revisions',
+  'reconciliation_records',
+  'reconciliation_baselines',
+  'reconciliation_plans',
+  'reconciliation_items',
 ];
 
 describe('datasets in schemas (Postgres, issue #527)', () => {
@@ -422,8 +428,92 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
     }
   });
 
+  it('backfills reconciliation counts without inventing causal ancestry for older snapshots', async () => {
+    const { RefineReconciliation1792100001000 } =
+      await import('../src/db/dataset-migrations/1792100001000-RefineReconciliation');
+    const runner = dataSource.createQueryRunner();
+    await runner.connect();
+    await runner.startTransaction();
+    try {
+      await runner.query(`SET LOCAL search_path TO "${SCHEMA}", public`);
+      const migration = new RefineReconciliation1792100001000();
+      await migration.down(runner);
+      await runner.query(`INSERT INTO reconciliation_identity (key, lineage) VALUES ('self', 'legacy')`);
+      await runner.query(`INSERT INTO reconciliation_revisions (id, lineage, metadata, complete, sealed)
+        VALUES ('count-test-local', 'legacy', '{}', true, true)`);
+      await runner.query(`INSERT INTO reconciliation_plans (id, kind, status, lineage, local, incoming, created_at)
+        VALUES ('count-test', 'source', 'review', 'legacy', 'count-test-local', 'count-test-local', '2026-10-01')`);
+      const cases = [
+        {
+          headword: 'same',
+          local: { a: 1, b: 2 },
+          result: { present: true, value: { b: 2, a: 1 } },
+          effect: null,
+        },
+        { headword: 'changed', local: { a: 1 }, result: { present: true, value: { a: 2 } }, effect: 'changed' },
+        { headword: 'deleted', local: { a: 1 }, result: { present: false }, effect: 'deleted' },
+        { headword: 'added', result: { present: true, value: { a: 1 } }, effect: 'added' },
+        { headword: 'tombstone', local: null, result: { present: true, value: { a: 1 } }, effect: 'added' },
+        { headword: 'absent', result: { present: false }, effect: null },
+      ];
+      for (const row of cases) {
+        if ('local' in row)
+          await runner.query(
+            `INSERT INTO reconciliation_records (revision, headword, content, hash)
+            VALUES ('count-test-local', $1, $2, 'fixture')`,
+            [row.headword, JSON.stringify(row.local)],
+          );
+        await runner.query(
+          `INSERT INTO reconciliation_items (plan, headword, category, comparison, decisions, result, remaining)
+          VALUES ('count-test', $1, 'unchanged', '{}', '[]', $2, 0)`,
+          [row.headword, JSON.stringify(row.result)],
+        );
+      }
+      await migration.up(runner);
+      expect(
+        await runner.query(
+          `SELECT headword, effect FROM reconciliation_items WHERE plan = 'count-test' ORDER BY headword`,
+        ),
+      ).toEqual(
+        cases
+          .map(({ headword, effect }) => ({ headword, effect }))
+          .sort((a, b) => a.headword.localeCompare(b.headword)),
+      );
+      expect(await runner.query(`SELECT heads FROM reconciliation_identity WHERE key = 'self'`)).toEqual([
+        { heads: '[]' },
+      ]);
+      expect(
+        await runner.query(`SELECT parents FROM reconciliation_revisions WHERE id = 'count-test-local'`),
+      ).toEqual([{ parents: '[]' }]);
+    } finally {
+      await runner.rollbackTransaction();
+      await runner.release();
+    }
+  });
+
   it('starts the history empty: an entry edited before is not guessed to differ from its source (issue #531)', async () => {
     // the schema as the version before the history left it: no table, two entries, one of them edited
+    const { AddReconciliation1792100000000 } =
+      await import('../src/db/dataset-migrations/1792100000000-AddReconciliation');
+    const { RefineReconciliation1792100001000 } =
+      await import('../src/db/dataset-migrations/1792100001000-RefineReconciliation');
+    const rollback = dataSource.createQueryRunner();
+    await rollback.connect();
+    await rollback.startTransaction();
+    try {
+      await rollback.query(`SET LOCAL search_path TO "${SCHEMA}", public`);
+      await new RefineReconciliation1792100001000().down(rollback);
+      await new AddReconciliation1792100000000().down(rollback);
+      await rollback.query(
+        `DELETE FROM dataset_migrations WHERE name IN ('AddReconciliation1792100000000', 'RefineReconciliation1792100001000')`,
+      );
+      await rollback.commitTransaction();
+    } catch (error) {
+      await rollback.rollbackTransaction();
+      throw error;
+    } finally {
+      await rollback.release();
+    }
     await dataSource.query(`DROP TABLE "${SCHEMA}"."en_changes"`);
     await dataSource.query(`ALTER TABLE "${SCHEMA}"."en_words" DROP COLUMN "origins"`);
     await dataSource.query(
@@ -441,6 +531,8 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
         'AddWordOrigins1790200000000',
         'NormalizeWordOrigins1790200001000',
         'AddChangeContribution1790200003000',
+        'AddReconciliation1792100000000',
+        'RefineReconciliation1792100001000',
       ]);
       expect(await dataSource.query(`SELECT count(*)::int AS n FROM "${SCHEMA}"."en_changes"`)).toEqual([
         { n: 0 },

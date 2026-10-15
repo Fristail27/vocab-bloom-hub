@@ -7,7 +7,7 @@ import {
   CustomVersionDictionaryOfWord,
 } from '../../../../../types';
 import { EnWord } from '../../entities/en_word.entity';
-import { wordKeyOf, recordChange } from './recordChange';
+import { wordKeyOf, recordChange, NewChangeT } from './recordChange';
 import {
   changedFields,
   createdFields,
@@ -30,6 +30,7 @@ export const recordCopiedEdits = async (
   original: EnWord,
   saved: EnWord,
   reconciliation = false,
+  writeChange: (em: EntityManager, change: NewChangeT, path: string[]) => Promise<void> = recordChange,
 ): Promise<void> => {
   const word = wordKeyOf(saved);
   let edited = false;
@@ -38,6 +39,7 @@ export const recordCopiedEdits = async (
     key: ChangeRecordT | null,
     before?: SnapshotT,
     after?: SnapshotT,
+    path: string[] = ['common'],
   ) => {
     // Shared spelling links are recorded under their own headword, without a POS.
     // Keep them in creation/deletion/rename snapshots only, for restoration.
@@ -51,13 +53,17 @@ export const recordCopiedEdits = async (
       before && after ? changedFields(before, after) : before ? deletedFields(before) : createdFields(after!);
     if (!diff) return;
     edited = true;
-    await recordChange(em, {
-      ...word,
-      entity,
-      record: key,
-      diff,
-      action: before && after ? ChangeActionE.update : before ? ChangeActionE.delete : ChangeActionE.create,
-    });
+    await writeChange(
+      em,
+      {
+        ...word,
+        entity,
+        record: key,
+        diff,
+        action: before && after ? ChangeActionE.update : before ? ChangeActionE.delete : ChangeActionE.create,
+      },
+      path,
+    );
   };
   // The automatic acquisition is provenance, not a content edit.
   const before = wordSnapshot(original);
@@ -101,6 +107,7 @@ export const recordCopiedEdits = async (
         formRecord(old ?? next!),
         old ? formSnapshot(old) : undefined,
         next ? formSnapshot(next) : undefined,
+        ['forms', (next ?? old)!.sync_id ?? ''],
       ),
   );
   await collection(
@@ -114,6 +121,7 @@ export const recordCopiedEdits = async (
         shortTranslationRecord(old ?? next!),
         old ? shortTranslationSnapshot(old) : undefined,
         next ? shortTranslationSnapshot(next) : undefined,
+        ['short_translations', (next ?? old)!.sync_id ?? ''],
       ),
   );
   await collection(
@@ -127,6 +135,7 @@ export const recordCopiedEdits = async (
         meaningRecord(old ?? next!),
         old ? meaningSnapshot(old, !next) : undefined,
         next ? meaningSnapshot(next, !old) : undefined,
+        ['meanings', (next ?? old)!.sync_id ?? ''],
       );
       if (!old || !next) return;
       await collection(
@@ -140,6 +149,7 @@ export const recordCopiedEdits = async (
             translationRecord(a ?? b!, next),
             a ? translationSnapshot(a) : undefined,
             b ? translationSnapshot(b) : undefined,
+            ['meanings', next.sync_id ?? '', 'translations', (b ?? a)!.sync_id ?? ''],
           ),
       );
     },

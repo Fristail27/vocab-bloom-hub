@@ -220,4 +220,23 @@ describe('durable reconciliation plans', () => {
     ]);
     expect((await store.list(plan.id, 1, undefined, '%')).total).toBe(0);
   });
+  it('aggregates counts without loading article JSON, independently of dictionary size', async () => {
+    const { plan } = await setup();
+    const query = jest.spyOn(db.logger, 'logQuery').mockImplementation(() => {});
+    try {
+      const store = new ReconciliationStore(db.manager);
+      const summary = await store.summary(plan.id);
+      expect(summary.proposed).toEqual({ added: 1, deleted: 1, changed: 1 });
+      expect(query.mock.calls.length).toBeLessThanOrEqual(3);
+      expect(query.mock.calls.every(([sql]) => !sql.includes('reconciliation_records'))).toBe(true);
+      await db.transaction((em) =>
+        new ReconciliationStore(em).decide(plan.id, 'conflict', 0, [
+          { path: ['definition'], choice: 'incoming' },
+        ]),
+      );
+      expect((await store.summary(plan.id)).proposed.changed).toBe(2);
+    } finally {
+      query.mockRestore();
+    }
+  });
 });

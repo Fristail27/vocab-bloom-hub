@@ -8,8 +8,10 @@ import type {
   ReconciliationSummaryT,
   ReconciliationValueT,
 } from '../../../../../types/reconciliation';
+import { overlayPartial } from './compare';
 import { compare, contentHash, equalSides, missing, present, resolve } from './compare';
 import {
+  ReconciliationIdentity,
   ReconciliationBaseline,
   ReconciliationItem,
   ReconciliationPlan,
@@ -18,6 +20,11 @@ import {
 } from './entities';
 
 const PAGE = 100;
+export const effectOf = (
+  local: ReconciliationSideT,
+  result: ReconciliationSideT,
+): ReconciliationItem['effect'] =>
+  equalSides(local, result) ? null : !local.present ? 'added' : !result.present ? 'deleted' : 'changed';
 export type SnapshotRecordT = {
   headword: string;
   content: ReconciliationValueT;
@@ -42,10 +49,12 @@ export class ReconciliationStore {
     metadata: Record<string, ReconciliationValueT>,
     complete: boolean,
     records: AsyncIterable<SnapshotRecordT>,
+    parents: string[] = [],
   ): Promise<ReconciliationRevision> {
     this.transaction();
     const revision = this.em.create(ReconciliationRevision, {
       id: randomUUID(),
+      parents: [...new Set(parents)],
       lineage,
       metadata,
       complete,
@@ -97,14 +106,14 @@ export class ReconciliationStore {
     await this.em.insert(ReconciliationBaseline, { lineage, revision });
   }
 
-  private record(revision: string, headword: string): Promise<ReconciliationRecord | null> {
+  record(revision: string, headword: string): Promise<ReconciliationRecord | null> {
     return this.em
       .createQueryBuilder(ReconciliationRecord, 'record')
       .where('record.revision = :revision AND record.headword = :headword', { revision, headword })
       .getOne();
   }
 
-  private async side(revision: string | null, headword: string): Promise<ReconciliationSideT> {
+  async side(revision: string | null, headword: string): Promise<ReconciliationSideT> {
     if (!revision) return missing;
     const row = await this.record(revision, headword);
     return row && row.content !== null ? present(row.content) : missing;
@@ -155,9 +164,10 @@ export class ReconciliationStore {
     for (const revision of [local, incoming, ...(plan.baseline ? [plan.baseline] : [])]) {
       for await (const row of this.records(revision)) {
         if (await this.em.existsBy(ReconciliationItem, { plan: plan.id, headword: row.headword })) continue;
+        const localSide = await this.side(local, row.headword);
         const comparison = compare(
           await this.side(plan.baseline, row.headword),
-          await this.side(local, row.headword),
+          localSide,
           await this.side(incoming, row.headword),
           { baselineKnown: Boolean(baseline), complete: source.complete },
         );
@@ -165,6 +175,7 @@ export class ReconciliationStore {
           plan: plan.id,
           headword: row.headword,
           category: comparison.category,
+          effect: effectOf(localSide, comparison.result),
           comparison,
           decisions: [],
           result: comparison.result,
@@ -192,7 +203,7 @@ export class ReconciliationStore {
     version: number,
     decisions: ReconciliationDecisionT[],
   ): Promise<ReconciliationItem> {
-    await this.lockReview(id);
+    const plan = await this.lockReview(id);
     const item = await this.em.findOneByOrFail(ReconciliationItem, { plan: id, headword });
     if (item.version !== version) throw new Error('reconciliation_decision_outdated');
     const resolved = resolve(item.comparison, decisions);
@@ -202,6 +213,7 @@ export class ReconciliationStore {
       {
         decisions,
         result: resolved.result,
+        effect: effectOf(await this.side(plan.local, headword), resolved.result),
         remaining: resolved.remaining,
         version: version + 1,
       },
@@ -248,7 +260,14 @@ export class ReconciliationStore {
     await this.em.update(
       ReconciliationItem,
       { plan: id, headword },
-      { comparison, decisions, result: resolved.result, remaining: 0, version: version + 1 },
+      {
+        comparison,
+        decisions,
+        result: resolved.result,
+        effect: effectOf(conflict.local, resolved.result),
+        remaining: 0,
+        version: version + 1,
+      },
     );
     return this.em.findOneByOrFail(ReconciliationItem, { plan: id, headword });
   }
@@ -309,14 +328,28 @@ export class ReconciliationStore {
       remaining_conflicts: 0,
       proposed: { added: 0, deleted: 0, changed: 0 },
     };
-    for await (const item of this.items(id)) {
-      summary.counts[item.category]++;
-      summary.remaining_conflicts += item.remaining;
-      if (item.category === 'conflicts' && item.remaining === 0) summary.resolved_articles++;
-      const local = await this.side(plan.local, item.headword);
-      if (!equalSides(local, item.result)) {
-        summary.proposed[!local.present ? 'added' : !item.result.present ? 'deleted' : 'changed']++;
-      }
+    const groups = await this.em
+      .createQueryBuilder(ReconciliationItem, 'item')
+      .select('item.category', 'category')
+      .addSelect('item.effect', 'effect')
+      .addSelect('COUNT(*)', 'count')
+      .addSelect('SUM(item.remaining)', 'remaining')
+      .addSelect('SUM(CASE WHEN item.remaining = 0 THEN 1 ELSE 0 END)', 'resolved')
+      .where('item.plan = :id', { id })
+      .groupBy('item.category')
+      .addGroupBy('item.effect')
+      .getRawMany<{
+        category: ReconciliationCategoryT;
+        effect: ReconciliationItem['effect'];
+        count: string;
+        remaining: string;
+        resolved: string;
+      }>();
+    for (const group of groups) {
+      summary.counts[group.category] += Number(group.count);
+      summary.remaining_conflicts += Number(group.remaining);
+      if (group.category === 'conflicts') summary.resolved_articles += Number(group.resolved);
+      if (group.effect) summary.proposed[group.effect] += Number(group.count);
     }
     if (plan.outcome) summary.proposed = plan.outcome;
     return summary;
@@ -355,7 +388,22 @@ export class ReconciliationStore {
         for await (const record of records(plan.baseline!)) {
           if (!(await lookup(plan.incoming, record.headword))) yield record;
         }
-        yield* records(plan.incoming);
+        for await (const record of records(plan.incoming)) {
+          const previous = await lookup(plan.baseline!, record.headword);
+          yield {
+            ...record,
+            content:
+              record.content === null
+                ? (previous?.content ?? null)
+                : overlayPartial(previous?.content ?? null, record.content),
+            history: [
+              ...new Map(
+                [...(previous?.history ?? []), ...record.history].map((line) => [JSON.stringify(line), line]),
+              ).values(),
+            ],
+            versions: { ...previous?.versions, ...record.versions },
+          };
+        }
       }
       integrated = (await this.capture(source.lineage, source.metadata, false, combined())).id;
     }
@@ -369,6 +417,7 @@ export class ReconciliationStore {
         outcome: summary.proposed,
       },
     );
+    await this.em.update(ReconciliationIdentity, { key: 'self' }, { heads: [plan.local, plan.incoming] });
     return { ...summary, status: 'applied' };
   }
 

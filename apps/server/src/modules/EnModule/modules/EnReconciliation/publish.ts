@@ -1,3 +1,5 @@
+import { EnEntry } from '../../entities/en_entry.entity';
+import { resolutionRecorder } from './resolution-history';
 import { EnChange } from '../../entities/en_change.entity';
 import { EntityManager } from 'typeorm';
 import {
@@ -23,7 +25,7 @@ import { withChangeSource } from '../../utils/changes/context';
 import { replaceAlternatives } from '../../utils/entryAlternatives';
 import { ReconciliationItem, ReconciliationPlan } from './entities';
 import { ReconciliationStore } from './store';
-import { equalSides, missing, present, isSelection } from './compare';
+import { equalSides, missing, present } from './compare';
 import { collection, CONTENT_FIELDS, DocumentObjectT, fields, object, strings } from './document';
 import { inheritHistory, retireReplacedHistory } from './history';
 import type { OriginT } from '../../../../../types';
@@ -157,39 +159,27 @@ export async function publishPlan(em: EntityManager, plan: ReconciliationPlan, l
   }
   for await (const item of store.items(plan.id)) {
     if (!(await changed(item))) continue;
-    // Custom text is an admin contribution; selecting upstream/local values is not.
-    const custom = item.decisions.some((decision) => {
-      if (decision.choice !== 'custom' || !decision.result) return false;
-      const conflict = item.comparison.conflicts.find(
-        (row) => JSON.stringify(row.path) === JSON.stringify(decision.path),
-      );
-      return (
-        !conflict ||
-        (!equalSides(decision.result, conflict.local) && !equalSides(decision.result, conflict.incoming))
-      );
-    });
-    const authored = item.decisions.some((decision) => {
-      if (decision.choice !== 'custom' || !decision.result) return false;
-      const conflict = item.comparison.conflicts.find(
-        (row) => JSON.stringify(row.path) === JSON.stringify(decision.path),
-      );
-      return !conflict || !isSelection(decision.result, [conflict.baseline, conflict.local, conflict.incoming]);
-    });
+    const side = async (revision: string | null) => {
+      const row = revision ? await store.record(revision, item.headword) : null;
+      return row?.content != null ? present(row.content) : missing;
+    };
+    const sources = {
+      baseline: await side(plan.baseline),
+      local: await side(plan.local),
+      incoming: await side(plan.incoming),
+      result: item.result,
+    };
     await withChangeSource(
-      {
-        origin: ChangeOriginE.admin,
-        operation,
-        ...(!authored && { contribution: null }),
-        ...(!custom && { superseded: true }),
-      },
+      { origin: ChangeOriginE.admin, operation, contribution: null, superseded: true },
       async () => {
         const parts = item.result.present ? object(object(item.result.value).parts) : {};
         for (const part of Object.values(EnPartOfSpeechE)) {
+          const recordResolution = resolutionRecorder(sources, operation, part);
           const before = await findWord(em, item.headword, part);
           const proposed = parts[part];
           if (!before && !proposed) continue;
           if (!proposed) {
-            await recordChange(em, {
+            await recordResolution(em, {
               headword: item.headword,
               part_of_speech: part,
               entity: ChangeEntityE.word,
@@ -209,9 +199,9 @@ export async function publishPlan(em: EntityManager, plan: ReconciliationPlan, l
             });
           await writeWord(em, item.headword, part, object(proposed), plan.kind !== 'source');
           const after = (await findWord(em, item.headword, part))!;
-          if (before) await recordCopiedEdits(em, before, after, true);
+          if (before) await recordCopiedEdits(em, before, after, true, recordResolution);
           else
-            await recordChange(em, {
+            await recordResolution(em, {
               headword: item.headword,
               part_of_speech: part,
               entity: ChangeEntityE.word,
@@ -313,31 +303,42 @@ export async function publishPlan(em: EntityManager, plan: ReconciliationPlan, l
   for await (const record of store.records(plan.incoming)) {
     await inheritHistory(em, record, revision.metadata.terms as unknown as OriginT, operation, license);
   }
+  // New unchanged source words are not manual edits. The journal above still records their acquisition.
+  for await (const item of store.items(plan.id)) {
+    if (item.effect !== 'added') continue;
+    const active = await em
+      .createQueryBuilder(EnChange, 'change')
+      .where('change.headword = :word AND change.superseded_at IS NULL', { word: item.headword })
+      .getCount();
+    await em.update(EnEntry, { word: item.headword }, { user_modified: active > 0 });
+  }
   // Entry versions are metadata, excluded from conflict counts, but must travel too.
-  for await (const record of store.records(plan.incoming)) {
-    if (!record.content) continue;
-    const item = await em.findOneByOrFail(ReconciliationItem, { plan: plan.id, headword: record.headword });
-    if (!item.result.present) continue;
+  for await (const item of store.items(plan.id)) {
+    const record = await store.record(plan.incoming, item.headword);
+    if (!item.result.present || (!record && item.effect === null)) continue;
     for (const [part, raw] of Object.entries(object(object(item.result.value).parts))) {
-      const incoming = object(object(record.content).parts)[part];
-      if (!incoming || !equalSides(present(raw), present(incoming)) || !record.versions[part]) continue;
-      const word = await findWord(em, record.headword, part);
+      const incoming = record?.content ? object(object(record.content).parts)[part] : undefined;
+      const word = await findWord(em, item.headword, part);
       if (!word) continue;
       const active = await em
         .createQueryBuilder(EnChange, 'change')
         .where(
           'change.headword = :headword AND (change.part_of_speech = :part OR change.part_of_speech IS NULL) AND change.superseded_at IS NULL',
-          { headword: record.headword, part },
+          { headword: item.headword, part },
         )
         .getCount();
-      const version = active ? CustomVersionDictionaryOfWord : record.versions[part];
+      const version = active
+        ? CustomVersionDictionaryOfWord
+        : incoming && equalSides(present(raw), present(incoming)) && record?.versions[part]
+          ? record.versions[part]
+          : word.version;
       if (version === word.version) continue;
       await em.update(EnWord, word.id, { version });
       await withChangeSource(
         { origin: ChangeOriginE.admin, operation, contribution: null, superseded: true },
         () =>
           recordChange(em, {
-            headword: record.headword,
+            headword: item.headword,
             part_of_speech: part,
             entity: ChangeEntityE.word,
             action: ChangeActionE.update,

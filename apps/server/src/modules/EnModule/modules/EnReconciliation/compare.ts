@@ -210,3 +210,21 @@ export function isSelection(result: ReconciliationSideT, sources: Reconciliation
     );
   return false;
 }
+
+/** Overlay a partial record on its previous source state, retaining omitted nested keys. */
+export function overlayPartial(
+  previous: ReconciliationValueT,
+  incoming: ReconciliationValueT,
+): ReconciliationValueT {
+  const before = objectOf(present(previous));
+  const next = objectOf(present(incoming));
+  if (!before || !next) return incoming;
+  const result: Record<string, ReconciliationValueT> = Object.create(null);
+  for (const key of new Set([...Object.keys(before), ...Object.keys(next)]))
+    result[key] = Object.hasOwn(next, key)
+      ? Object.hasOwn(before, key)
+        ? overlayPartial(before[key], next[key])
+        : next[key]
+      : before[key];
+  return result;
+}

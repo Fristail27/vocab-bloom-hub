@@ -4,7 +4,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DataSource } from 'typeorm';
 import { exportSynchronization, importSynchronization } from '../archive';
-import { RECONCILIATION_ENTITIES, ReconciliationIdentity, ReconciliationPlan } from '../entities';
+import {
+  RECONCILIATION_ENTITIES,
+  ReconciliationIdentity,
+  ReconciliationPlan,
+  ReconciliationRevision,
+} from '../entities';
 import { ReconciliationStore, SnapshotRecordT } from '../store';
 
 async function* records(value: string): AsyncGenerator<SnapshotRecordT> {
@@ -43,8 +48,10 @@ describe('portable synchronization archive', () => {
       await em.insert(ReconciliationIdentity, { key: 'self', lineage: 'portable-dataset' });
       const base = await store.capture('parent', { source: 'parent' }, true, records('base'));
       await store.establish('parent', base.id);
-      const local = await store.capture('local', { source: 'local' }, true, records('local'));
-      const incoming = await store.capture('parent', { source: 'parent' }, true, records('incoming'));
+      const local = await store.capture('local', { source: 'local' }, true, records('local'), [base.id]);
+      const incoming = await store.capture('parent', { source: 'parent' }, true, records('incoming'), [
+        base.id,
+      ]);
       const plan = await store.prepare('parent', local.id, incoming.id);
       await store.decide(plan.id, 'word', 0, [{ path: ['definition'], choice: 'local' }]);
       await store.apply(
@@ -121,5 +128,48 @@ describe('portable synchronization archive', () => {
     await source.transaction((em) => exportSynchronization(em, file));
     expect(await readFile(file, 'utf8')).not.toContain('Ada');
     await target.transaction((em) => importSynchronization(em, file));
+  });
+  it('rejects missing causal parents and cycles transactionally', async () => {
+    await prepare();
+    const file = join(dir, 'graph.jsonl');
+    await source.transaction((em) => exportSynchronization(em, file));
+    const original = (await readFile(file, 'utf8'))
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line));
+    for (const bad of ['missing', 'cycle']) {
+      const lines = structuredClone(original);
+      const revision = lines.find((row) => row.kind === 'revision');
+      revision.data.parents = [bad === 'cycle' ? revision.data.id : 'unknown'];
+      await writeFile(file, lines.map((row) => JSON.stringify(row)).join('\n'));
+      await expect(target.transaction((em) => importSynchronization(em, file))).rejects.toThrow(
+        'archive_invalid',
+      );
+      expect(await target.manager.count(ReconciliationRevision)).toBe(0);
+    }
+  });
+
+  it('reads legacy archives without inventing ancestry and recomputes their effects', async () => {
+    const plan = await prepare();
+    const file = join(dir, 'legacy.jsonl');
+    await source.transaction((em) => exportSynchronization(em, file));
+    const lines = (await readFile(file, 'utf8'))
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line));
+    for (const row of lines) {
+      row.format = 1;
+      delete row.data.parents;
+      delete row.data.heads;
+      delete row.data.effect;
+    }
+    await writeFile(file, lines.map((row) => JSON.stringify(row)).join('\n'));
+    await target.transaction((em) => importSynchronization(em, file));
+    expect((await target.manager.findOneByOrFail(ReconciliationIdentity, { key: 'self' })).heads).toEqual([]);
+    expect((await new ReconciliationStore(target.manager).summary(plan.id)).proposed).toEqual({
+      added: 0,
+      deleted: 0,
+      changed: 0,
+    });
   });
 });

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { datasetOrigin } from '../../../../../../core/utils/provenance';
 import { EnMeaning } from '../../../entities/en_meaning.entity';
 import { EnMeaningTranslation } from '../../../entities/en_meaning_translation.entity';
 import { ReconciliationStore } from '../store';
@@ -11,7 +12,7 @@ import {
   ChangeOriginE,
   AvailableTranslationLanguagesE,
 } from '../../../../../../types';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { DB_ENTITIES } from '../../../../../db/typeorm-options';
 import { Dataset } from '../../../../DatasetsModule/entities/dataset.entity';
 import { DatasetsService } from '../../../../DatasetsModule/datasets.service';
@@ -22,7 +23,8 @@ import { EnEntry } from '../../../entities/en_entry.entity';
 import { EnWord } from '../../../entities/en_word.entity';
 import { EnChange } from '../../../entities/en_change.entity';
 import { EnPartOfSpeechE, EnWordFormsE } from '../../../../../../types';
-import { ReconciliationPlan } from '../entities';
+import { ReconciliationPlan, ReconciliationRevision, ReconciliationIdentity } from '../entities';
+import { dictionaryRecords, datasetSnapshotMetadata, persistentLineage } from '../snapshot';
 
 describe('reconciliation publishes dictionary changes', () => {
   let db: DataSource;
@@ -313,5 +315,225 @@ describe('reconciliation publishes dictionary changes', () => {
       'origins_immutable',
     );
     expect((await service.items('default', plan.id, 1)).items[0].version).toBe(item.version);
+  });
+  it('a complete update after a partial one still deletes an omitted nested meaning', async () => {
+    const local = await word(db, 'word', 'base');
+    const incoming = await word(source, 'word', 'base');
+    const kept = randomUUID();
+    const removed = randomUUID();
+    for (const [connection, parent] of [
+      [db, local],
+      [source, incoming],
+    ] as const) {
+      await connection.manager.save(EnMeaning, {
+        word: parent,
+        sync_id: kept,
+        title: 'kept',
+        definition: 'kept',
+        sort_order: 1,
+      });
+    }
+    await db.manager.save(EnMeaning, {
+      word: local,
+      sync_id: removed,
+      title: 'removed later',
+      definition: 'old',
+      sort_order: 2,
+    });
+    await service.rememberSource('default');
+    const partial = await service.prepareSource('default', source.manager, '1', false);
+    await service.apply('default', partial.id);
+    expect(await db.manager.count(EnMeaning)).toBe(2);
+    const complete = await service.prepareSource('default', source.manager, '1', true);
+    await service.apply('default', complete.id);
+    expect(await db.manager.count(EnMeaning)).toBe(1);
+  });
+
+  it.each(['CC0-1.0', 'CC-BY-SA-4.0'])(
+    'rechecks %s terms when accepting a previously declined edit',
+    async (license) => {
+      const local = await word(db, 'word', 'base');
+      await service.rememberSource('default');
+      await db.manager.update(EnWord, local.id, { description: 'local' });
+      await word(source, 'word', 'incoming');
+      await source.transaction((em) =>
+        withChangeSource(
+          {
+            origin: ChangeOriginE.admin,
+            author: 'upstream author',
+            contribution: datasetOrigin({ ...dataset, license }),
+          },
+          () =>
+            recordChange(em, {
+              headword: 'word',
+              part_of_speech: EnPartOfSpeechE.noun,
+              entity: ChangeEntityE.word,
+              action: ChangeActionE.update,
+              diff: { description: { before: 'base', after: 'incoming' } },
+            }),
+        ),
+      );
+      const first = await service.prepareSource('default', source.manager, '1', true);
+      const item = (await service.items('default', first.id, 1)).items[0];
+      await service.decide(
+        'default',
+        first.id,
+        'word',
+        item.version,
+        item.comparison.conflicts.map((conflict) => ({ path: conflict.path, choice: 'local' })),
+      );
+      await service.apply('default', first.id);
+      const inherited = await db.manager.findOneByOrFail(EnChange, { author: 'upstream author' });
+      expect(inherited.superseded_at).not.toBeNull();
+      await db.manager.update(EnChange, inherited.id, { author: null });
+      const second = await service.prepareSource('default', source.manager, '1', true);
+      const next = (await service.items('default', second.id, 1)).items[0];
+      await service.override('default', second.id, 'word', next.version, next.incoming);
+      if (license !== dataset.license) {
+        await expect(service.apply('default', second.id)).rejects.toThrow('provenance_license_conflict');
+        expect((await db.manager.findOneByOrFail(EnWord, { id: local.id })).description).toBe('local');
+        expect((await db.manager.findOneByOrFail(EnChange, { id: inherited.id })).superseded_at).not.toBeNull();
+        expect((await service.summary('default', second.id)).status).toBe('review');
+        return;
+      }
+      await service.apply('default', second.id);
+      expect((await db.manager.findOneByOrFail(EnWord, { id: local.id })).description).toBe('incoming');
+      expect(await db.manager.findOneByOrFail(EnChange, { id: inherited.id })).toMatchObject({
+        superseded_at: null,
+        author: null,
+        contribution: expect.objectContaining({ licenses: [expect.objectContaining({ spdx: license })] }),
+      });
+      expect(await db.manager.countBy(EnChange, { author: 'upstream author' })).toBe(0);
+    },
+  );
+
+  it('a sibling merge must not choose an older shared revision and undo a local revert', async () => {
+    const local = await word(db, 'word', 'old');
+    await word(source, 'word', 'new');
+    const sourceDataset = await source.manager.save(Dataset, {
+      name: 'sibling',
+      schema: 'ds_sibling',
+      source: dataset.source,
+      own: true,
+      language: 'en',
+      title: dataset.title,
+      license: dataset.license,
+      license_url: dataset.license_url,
+      attribution: dataset.attribution,
+      version: dataset.version,
+    });
+    const captureCommon = async (id: string, parents: string[] = []) =>
+      db.transaction(async (em) => {
+        const captured = await new ReconciliationStore(em).capture(
+          'shared-parent',
+          datasetSnapshotMetadata(dataset),
+          true,
+          dictionaryRecords(em, dataset),
+          parents,
+        );
+        await em
+          .createQueryBuilder()
+          .update('reconciliation_records')
+          .set({ revision: id })
+          .where('revision = :revision', { revision: captured.id })
+          .execute();
+        await em.update(ReconciliationRevision, { id: captured.id }, { id });
+        const revision = await em.findOneByOrFail(ReconciliationRevision, { id });
+        await source.manager.insert(ReconciliationRevision, revision);
+        for await (const row of new ReconciliationStore(em).records(id))
+          await source.manager
+            .createQueryBuilder()
+            .insert()
+            .into('reconciliation_records')
+            .values(row)
+            .execute();
+      });
+    await captureCommon('00000000-0000-4000-8000-000000000000');
+    await db.manager.update(EnWord, local.id, { description: 'new' });
+    await captureCommon('ffffffff-ffff-4fff-8fff-ffffffffffff', ['00000000-0000-4000-8000-000000000000']);
+    for (const [connection, target] of [
+      [db, dataset],
+      [source, sourceDataset],
+    ] as const) {
+      await persistentLineage(connection.manager, target);
+      await connection.manager.update(
+        ReconciliationIdentity,
+        { key: 'self' },
+        { heads: ['ffffffff-ffff-4fff-8fff-ffffffffffff'] },
+      );
+    }
+    // The datasets split at "new"; only the destination has since reverted to "old".
+    await db.manager.update(EnWord, local.id, { description: 'old' });
+    const datasets = {
+      find: async (name: string) => (name === 'sibling' ? sourceDataset : dataset),
+      reader: async (target: Dataset) =>
+        target.name === 'sibling'
+          ? {
+              transaction: (_isolation: string, run: (em: EntityManager) => Promise<unknown>) =>
+                source.transaction(run),
+            }
+          : db,
+      gate: new SwitchGate(),
+      supported: true,
+      getActive: () => dataset,
+      reconciliationCommitted: jest.fn(),
+    } as unknown as DatasetsService;
+    const merging = new ReconciliationService(datasets, imports);
+    const plan = await merging.prepareParent('default', 'sibling');
+    const item = (await merging.items('default', plan.id, 1)).items[0];
+    expect(item.remaining).toBe(0);
+    if (!item.result.present) throw new Error('expected content');
+    expect(object(object(object(item.result.value).parts).noun).common).toMatchObject({ description: 'old' });
+  });
+
+  it('a custom description must not license an automatic upstream meaning as a local contribution', async () => {
+    const local = await word(db, 'word', 'base');
+    const incoming = await word(source, 'word', 'incoming');
+    await source.manager.update(EnWord, incoming.id, { transcription: 'upstream transcription' });
+    const meaningId = randomUUID();
+    await db.manager.save(EnMeaning, {
+      word: local,
+      sync_id: meaningId,
+      title: 'sense',
+      definition: 'base definition',
+      sort_order: 1,
+    });
+    await source.manager.save(EnMeaning, {
+      word: incoming,
+      sync_id: meaningId,
+      title: 'sense',
+      definition: 'incoming definition',
+      sort_order: 1,
+    });
+    await service.rememberSource('default');
+    await db.manager.update(EnWord, local.id, { description: 'local' });
+    const plan = await service.prepareSource('default', source.manager, '1', true);
+    const item = (await service.items('default', plan.id, 1)).items[0];
+    await service.decide(
+      'default',
+      plan.id,
+      'word',
+      item.version,
+      item.comparison.conflicts.map((conflict) => ({
+        path: conflict.path,
+        choice: 'custom',
+        result: { present: true, value: 'my hand-written resolution' },
+      })),
+    );
+    await service.apply('default', plan.id);
+    const changes = await db.manager.find(EnChange);
+    const automatic = changes.find(
+      (row) => row.entity === ChangeEntityE.meaning && row.diff.definition?.after === 'incoming definition',
+    );
+    expect(automatic).toBeDefined();
+    expect(automatic!.contribution).toBeNull();
+    const custom = changes.find((row) => row.diff.description?.after === 'my hand-written resolution');
+    expect(custom?.contribution).toBeTruthy();
+    expect(custom?.superseded_at).toBeNull();
+    expect(custom?.diff).not.toHaveProperty('transcription');
+    const transcription = changes.find((row) => row.diff.transcription?.after === 'upstream transcription');
+    expect(transcription).toBeDefined();
+    expect(transcription!.contribution).toBeNull();
+    expect(transcription!.superseded_at).not.toBeNull();
   });
 });

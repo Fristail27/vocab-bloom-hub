@@ -92,17 +92,26 @@ export async function inheritHistory(
   license: string,
 ): Promise<void> {
   if (!record.history.length) return;
-  const existing = new Set((await em.find(EnChange, { where: { headword: record.headword } })).map(identity));
+  const existing = new Map(
+    (await em.find(EnChange, { where: { headword: record.headword } })).map((row) => [identity(row), row]),
+  );
   for (const line of record.history) {
     const key = identity(line);
-    if (existing.has(key)) continue;
+    const previous = existing.get(key);
     const word = line.part_of_speech ? await findWord(em, line.headword, line.part_of_speech) : null;
     const applicable = applies(line, word);
     if (line.contribution) {
       assertOrigins([line.contribution]);
       if (applicable) assertCompatibleOrigins([line.contribution], license);
     }
-    await em.save(EnChange, {
+    if (previous) {
+      // An earlier declined incoming edit may now be selected. Its original terms
+      // must pass compatibility again; a local privacy redaction remains intact.
+      if (applicable && previous.contribution) assertCompatibleOrigins([previous.contribution], license);
+      if (applicable && previous.superseded_at) await em.update(EnChange, previous.id, { superseded_at: null });
+      continue;
+    }
+    const saved = await em.save(EnChange, {
       headword: line.headword,
       part_of_speech: line.part_of_speech,
       created_at: new Date(line.created_at),
@@ -132,7 +141,7 @@ export async function inheritHistory(
           ? null
           : new Date(),
     });
-    existing.add(key);
+    existing.set(key, saved);
   }
 }
 

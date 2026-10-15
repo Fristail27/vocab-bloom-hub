@@ -11,6 +11,10 @@ import type {
 
 @Entity('reconciliation_identity')
 export class ReconciliationIdentity {
+  /** Causal parents of the next local snapshot, never pending incoming revisions. */
+  @Column({ type: 'simple-json', default: '[]' })
+  heads!: string[];
+
   @PrimaryColumn({ type: 'varchar', length: 8 })
   key!: string;
   @Column({ type: 'varchar', length: 64 })
@@ -20,6 +24,9 @@ export class ReconciliationIdentity {
 /** Portable, per-dataset synchronization metadata. No FK to disposable content rows. */
 @Entity('reconciliation_revisions')
 export class ReconciliationRevision {
+  @Column({ type: 'simple-json', default: '[]' })
+  parents!: string[];
+
   @PrimaryColumn({ type: 'varchar', length: 64 })
   id!: string;
 
@@ -103,6 +110,10 @@ export class ReconciliationPlan {
 @Entity('reconciliation_items')
 @Index('IDX_RECONCILIATION_ITEMS_CATEGORY', ['plan', 'category', 'headword'])
 export class ReconciliationItem {
+  /** Change relative to the pinned local content, recalculated with each decision. */
+  @Column({ type: 'varchar', length: 8, nullable: true })
+  effect!: 'added' | 'deleted' | 'changed' | null;
+
   @PrimaryColumn({ type: 'varchar', length: 36 })
   plan!: string;
 

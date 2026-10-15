@@ -9,11 +9,9 @@ import { DICTIONARY_ENTITIES } from '../EnModule/entities/dictionary-entities';
 import { Dataset } from './entities/dataset.entity';
 import type { ForkProgressT, OriginT, OriginAcquisitionT } from '../../../types';
 import { ReconciliationStore } from '../EnModule/modules/EnReconciliation/store';
-import {
-  persistentLineage,
-  datasetSnapshotMetadata,
-  dictionaryRecords,
-} from '../EnModule/modules/EnReconciliation/snapshot';
+import { captureCurrent } from '../EnModule/modules/EnReconciliation/ancestry';
+import { persistentLineage } from '../EnModule/modules/EnReconciliation/snapshot';
+import { ReconciliationIdentity } from '../EnModule/modules/EnReconciliation/entities';
 
 /** DDL and data commit together. A process crash cannot leave a staging schema. */
 export const forkDataset = async (
@@ -46,12 +44,7 @@ export const forkDataset = async (
     // Capture the ancestor while on the parent's schema and in this same snapshot.
     // This assigns nested merge identities before the dictionary rows are copied.
     await runner.query(`SET LOCAL search_path TO ${searchPathOf(source.schema)}`);
-    const ancestor = await new ReconciliationStore(runner.manager).capture(
-      await persistentLineage(runner.manager, parent),
-      datasetSnapshotMetadata(parent),
-      true,
-      dictionaryRecords(runner.manager, parent),
-    );
+    const ancestor = await captureCurrent(runner.manager, parent);
     const [{ revision }] = (await runner.query(`SELECT pg_current_snapshot()::text AS revision`)) as {
       revision: string;
     }[];
@@ -143,6 +136,8 @@ export const forkDataset = async (
       JSON.stringify(inherited.origin),
     ]);
     const saved = await runner.manager.save(Dataset, target);
+    await persistentLineage(runner.manager, saved);
+    await runner.manager.update(ReconciliationIdentity, { key: 'self' }, { heads: [ancestor.id] });
     await runner.commitTransaction();
     return saved;
   } catch (error) {

@@ -24,9 +24,9 @@ export class ReconciliationApi extends AbstractBaseApi {
     });
   }
   static prepare(dataset: string, source: string, allowTwoWay = false) {
-    return this.request<ReconciliationSummaryT>(this.url(dataset, '/parent'), {
-      method: 'POST',
-      body: JSON.stringify({ source, allow_two_way: allowTwoWay }),
+    return this.post<ReconciliationSummaryT>(this.url(dataset, '/parent'), {
+      source,
+      allow_two_way: allowTwoWay,
     });
   }
   static decide(
@@ -36,19 +36,17 @@ export class ReconciliationApi extends AbstractBaseApi {
     version: number,
     decisions: ReconciliationDecisionT[],
   ) {
-    return this.request<ReconciliationItemT>(this.url(dataset, `/${id}/decisions`), {
-      method: 'POST',
-      body: JSON.stringify({ headword, version, decisions }),
+    return this.post<ReconciliationItemT>(this.url(dataset, `/${id}/decisions`), {
+      headword,
+      version,
+      decisions,
     });
   }
   static apply(dataset: string, id: string) {
     return this.request<ReconciliationSummaryT>(this.url(dataset, `/${id}/apply`), { method: 'POST' });
   }
   static override(dataset: string, id: string, headword: string, version: number, result: ReconciliationSideT) {
-    return this.request<ReconciliationItemT>(this.url(dataset, `/${id}/result`), {
-      method: 'POST',
-      body: JSON.stringify({ headword, version, result }),
-    });
+    return this.post<ReconciliationItemT>(this.url(dataset, `/${id}/result`), { headword, version, result });
   }
   static cancel(dataset: string, id: string) {
     return this.request<{ success: boolean }>(this.url(dataset, `/${id}/cancel`), { method: 'POST' });

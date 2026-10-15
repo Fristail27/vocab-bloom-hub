@@ -2,7 +2,8 @@ import { createReadStream } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { EntityManager, EntityTarget, ObjectLiteral } from 'typeorm';
-import { contentHash, equalSides, resolve, validSide } from './compare';
+import { effectOf, ReconciliationStore } from './store';
+import { contentHash, equalSides, resolve, validSide, present, missing } from './compare';
 import {
   ReconciliationIdentity,
   ReconciliationBaseline,
@@ -50,7 +51,7 @@ export async function exportSynchronization(em: EntityManager, path: string): Pr
         const rows = await qb.take(100).getMany();
         if (!rows.length) break;
         for (const row of rows) {
-          await output.write(`${JSON.stringify({ format: 1, kind, data: row })}\n`);
+          await output.write(`${JSON.stringify({ format: 2, kind, data: row })}\n`);
           count++;
         }
         last = rows[rows.length - 1];
@@ -73,7 +74,7 @@ export async function importSynchronization(em: EntityManager, path: string): Pr
       if (!line.trim()) continue;
       const envelope = JSON.parse(line) as { format: unknown; kind: keyof typeof TABLES; data: ObjectLiteral };
       if (
-        envelope.format !== 1 ||
+        (envelope.format !== 1 && envelope.format !== 2) ||
         !Object.hasOwn(TABLES, envelope.kind) ||
         !envelope.data ||
         typeof envelope.data !== 'object' ||
@@ -96,6 +97,16 @@ export async function importSynchronization(em: EntityManager, path: string): Pr
             contentHash({ content: row.content, history: row.history ?? [], versions: row.versions ?? {} }))
       )
         throw new Error('reconciliation_archive_invalid');
+      if (envelope.kind === 'identity' || envelope.kind === 'revision') {
+        const field = envelope.kind === 'identity' ? 'heads' : 'parents';
+        row[field] ??= [];
+        if (
+          !Array.isArray(row[field]) ||
+          row[field].some((id: unknown) => typeof id !== 'string') ||
+          new Set(row[field]).size !== row[field].length
+        )
+          throw new Error('reconciliation_archive_invalid');
+      }
       if (envelope.kind === 'revision' && row.sealed !== true)
         throw new Error('reconciliation_archive_invalid');
       if (envelope.kind === 'operation' && row.status !== 'applied')
@@ -147,4 +158,39 @@ export async function importSynchronization(em: EntityManager, path: string): Pr
       .leftJoin(ReconciliationRevision, 'baseline', 'baseline.id = plan.baseline')
       .where('local.id IS NULL OR incoming.id IS NULL OR (plan.baseline IS NOT NULL AND baseline.id IS NULL)'),
   );
+  // An imported graph may neither refer to a missing revision nor contain cycles.
+  const revisions = await em.find(ReconciliationRevision);
+  const remaining = new Map(revisions.map((row) => [row.id, new Set(row.parents)]));
+  const children = new Map<string, string[]>();
+  for (const row of revisions)
+    for (const parent of row.parents) {
+      if (!remaining.has(parent)) throw new Error('reconciliation_archive_invalid');
+      children.set(parent, [...(children.get(parent) ?? []), row.id]);
+    }
+  const ready = [...remaining].filter(([, parents]) => parents.size === 0).map(([id]) => id);
+  let visited = 0;
+  while (ready.length) {
+    const id = ready.pop()!;
+    visited++;
+    for (const child of children.get(id) ?? []) {
+      remaining.get(child)!.delete(id);
+      if (!remaining.get(child)!.size) ready.push(child);
+    }
+  }
+  if (visited !== revisions.length) throw new Error('reconciliation_archive_invalid');
+  for (const identity of await em.find(ReconciliationIdentity))
+    if (identity.heads.some((id) => !remaining.has(id))) throw new Error('reconciliation_archive_invalid');
+  // Derived counters are not trusted input, and old archives have no effect column.
+  for (const plan of await em.find(ReconciliationPlan)) {
+    for await (const item of new ReconciliationStore(em).items(plan.id)) {
+      const local = await new ReconciliationStore(em).record(plan.local, item.headword);
+      await em.update(
+        ReconciliationItem,
+        { plan: plan.id, headword: item.headword },
+        {
+          effect: effectOf(local?.content != null ? present(local.content) : missing, item.result),
+        },
+      );
+    }
+  }
 }

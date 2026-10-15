@@ -1,3 +1,4 @@
+import { captureCurrent, commonAncestor, copyRevisionGraph } from './ancestry';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager, EntityNotFoundError, QueryFailedError } from 'typeorm';
 import { DatasetsService } from '../../../DatasetsModule/datasets.service';
@@ -182,12 +183,7 @@ export class ReconciliationService {
         complete,
         aligned(),
       );
-      const local = await store.capture(
-        await persistentLineage(em, dataset),
-        datasetSnapshotMetadata(dataset),
-        true,
-        dictionaryRecords(em, dataset),
-      );
+      const local = await captureCurrent(em, dataset);
       // Legacy imports receive an explicit two-way review: every differing value
       // is a conflict and no fabricated ancestor enables automatic replacement.
       const plan = await store.prepare('source', local.id, incoming.id, !baseline);
@@ -215,58 +211,22 @@ export class ReconciliationService {
           if (lineage === (await persistentLineage(em, dataset)))
             throw new ConflictException('reconciliation_same_dataset');
           const direct = await em.existsBy(ReconciliationBaseline, { lineage });
+          const local = await captureCurrent(em, dataset);
+          const incoming = await captureCurrent(sourceManager, source);
+          await copyRevisionGraph(sourceManager, em, incoming.id);
           if (!direct) {
-            // A copied immutable revision is evidence of ancestry; names/versions are not.
-            const sourceStore = new ReconciliationStore(sourceManager);
-            let cursor: string | undefined;
-            let common: ReconciliationRevision | null = null;
-            for (;;) {
-              const query = em
-                .createQueryBuilder(ReconciliationRevision, 'revision')
-                .where('revision.sealed = true');
-              if (cursor) query.andWhere('revision.id > :cursor', { cursor });
-              const page = await query.orderBy('revision.id', 'ASC').take(100).getMany();
-              if (!page.length) break;
-              for (const revision of page) {
-                const other = await sourceManager.findOneBy(ReconciliationRevision, {
-                  id: revision.id,
-                  lineage: revision.lineage,
-                  sealed: true,
-                });
-                if (
-                  other &&
-                  contentHash(other.metadata) === contentHash(revision.metadata) &&
-                  (await store.sameRecords(revision.id, sourceStore, other.id))
-                ) {
-                  common = revision;
-                  break;
-                }
-              }
-              if (common) break;
-              cursor = page[page.length - 1].id;
-            }
+            const common = await commonAncestor(store, local.id, incoming.id);
             if (common) {
               const ancestor = await store.capture(
                 lineage,
                 { ...common.metadata, source: source.name },
                 true,
                 store.records(common.id),
+                [common.id],
               );
               await store.establish(lineage, ancestor.id);
             } else if (!allowTwoWay) throw new ConflictException('reconciliation_baseline_required');
           }
-          const incoming = await store.capture(
-            lineage,
-            datasetSnapshotMetadata(source),
-            true,
-            dictionaryRecords(sourceManager, source),
-          );
-          const local = await store.capture(
-            await persistentLineage(em, dataset),
-            datasetSnapshotMetadata(dataset),
-            true,
-            dictionaryRecords(em, dataset),
-          );
           const plan = await store.prepare(direct ? 'parent' : 'merge', local.id, incoming.id, allowTwoWay);
           await this.dependencies(store, em, plan.id);
           return store.summary(plan.id);

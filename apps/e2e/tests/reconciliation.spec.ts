@@ -6,7 +6,7 @@ test('reviews an update, resumes saved decisions and publishes the accepted resu
   page,
   request,
 }, testInfo) => {
-  const word = 'e2ereconciliation';
+  const word = `e2ereconciliation${testInfo.retry}`;
   const id = await seedWord(request, word, {
     description: 'Local text',
     forms: [],
