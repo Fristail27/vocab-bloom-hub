@@ -137,19 +137,19 @@ export const recordCopiedEdits = async (
         next ? meaningSnapshot(next, !old) : undefined,
         ['meanings', (next ?? old)!.sync_id ?? ''],
       );
-      if (!old || !next) return;
+      if ((!old || !next) && !reconciliation) return;
       await collection(
-        old.translations ?? [],
-        next.translations ?? [],
+        old?.translations ?? [],
+        next?.translations ?? [],
         (row) => `${row.language}:${row.title}`,
         (row) => row.language,
         (a, b) =>
           record(
             ChangeEntityE.meaning_translation,
-            translationRecord(a ?? b!, next),
+            translationRecord(a ?? b!, (next ?? old)!),
             a ? translationSnapshot(a) : undefined,
             b ? translationSnapshot(b) : undefined,
-            ['meanings', next.sync_id ?? '', 'translations', (b ?? a)!.sync_id ?? ''],
+            ['meanings', (next ?? old)!.sync_id ?? '', 'translations', (b ?? a)!.sync_id ?? ''],
           ),
       );
     },

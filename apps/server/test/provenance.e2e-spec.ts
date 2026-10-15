@@ -911,6 +911,10 @@ describe('word provenance and independent forks (#556)', () => {
             .post(`/api/en/datasets/${target}/reconciliation/parent`)
             .set(auth)
             .send({ source })
+            .expect((response) => {
+              if (response.status !== 201)
+                throw new Error(`Prepare ${source} → ${target}: ${JSON.stringify(response.body)}`);
+            })
             .expect(201)
         ).body;
       const apply = async (target: string, id: string) => {

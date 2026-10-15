@@ -197,17 +197,23 @@ export async function publishPlan(em: EntityManager, plan: ReconciliationPlan, l
               form_of_word: EnWordFormsE.base_form,
               generated: false,
             });
+          const empty = before ? null : (await findWord(em, item.headword, part))!;
           await writeWord(em, item.headword, part, object(proposed), plan.kind !== 'source');
           const after = (await findWord(em, item.headword, part))!;
           if (before) await recordCopiedEdits(em, before, after, true, recordResolution);
-          else
-            await recordResolution(em, {
+          else {
+            const fromSource = sources.incoming.present && object(object(sources.incoming.value).parts)[part];
+            await (fromSource ? recordChange : recordResolution)(em, {
               headword: item.headword,
               part_of_speech: part,
               entity: ChangeEntityE.word,
               action: ChangeActionE.create,
               diff: createdFields(fullWordSnapshot(after)),
             });
+            // Resolve the new word's common fields and nested records separately:
+            // a custom definition must not claim all imported meanings or translations.
+            if (fromSource) await recordCopiedEdits(em, empty!, after, true, recordResolution);
+          }
         }
       },
     );

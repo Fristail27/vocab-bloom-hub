@@ -6,6 +6,7 @@ import { ReconciliationStore } from '../store';
 import { object } from '../document';
 import { withChangeSource } from '../../../utils/changes/context';
 import { recordChange } from '../../../utils/changes/recordChange';
+import { revertChange } from '../../../utils/changes/revertChange';
 import {
   ChangeActionE,
   ChangeEntityE,
@@ -484,6 +485,56 @@ describe('reconciliation publishes dictionary changes', () => {
     expect(item.remaining).toBe(0);
     if (!item.result.present) throw new Error('expected content');
     expect(object(object(object(item.result.value).parts).noun).common).toMatchObject({ description: 'old' });
+  });
+
+  it('records custom fields in newly imported meanings and translations separately, with reversible incoming values', async () => {
+    await service.rememberSource('default');
+    const incoming = await word(source, 'new-word', 'upstream description');
+    const meaning = await source.manager.save(EnMeaning, {
+      word: incoming,
+      sync_id: randomUUID(),
+      title: 'sense',
+      definition: 'upstream definition',
+      sort_order: 1,
+    });
+    const translation = await source.manager.save(EnMeaningTranslation, {
+      meaning,
+      sync_id: randomUUID(),
+      language: AvailableTranslationLanguagesE.ru,
+      title: 'перевод',
+      definition: 'upstream translation',
+      variants_of_words: [],
+    });
+    const plan = await service.prepareSource('default', source.manager, '2', true);
+    const item = (await service.items('default', plan.id, 1)).items[0];
+    const result = structuredClone(item.incoming);
+    if (!result.present) throw new Error('expected incoming word');
+    const changed = object(object(object(object(result.value).parts).noun).meanings)[meaning.sync_id!];
+    object(changed).definition = 'custom definition';
+    object(object(object(changed).translations)[translation.sync_id!]).definition = 'custom translation';
+    await service.override('default', plan.id, 'new-word', item.version, result);
+    await service.apply('default', plan.id);
+    const active = (await db.manager.find(EnChange)).filter((row) => !row.superseded_at);
+    expect(active.map((row) => row.entity).sort()).toEqual(
+      [ChangeEntityE.meaning, ChangeEntityE.meaning_translation].sort(),
+    );
+    for (const change of active) {
+      expect(change.contribution).toBeTruthy();
+      expect(Object.keys(change.diff)).toEqual(['definition']);
+      expect(change.diff.definition.before).toBe(
+        change.entity === ChangeEntityE.meaning ? 'upstream definition' : 'upstream translation',
+      );
+      await db.transaction((em) =>
+        withChangeSource({ origin: ChangeOriginE.revert, superseded: true }, () => revertChange(em, change)),
+      );
+    }
+    expect((await db.manager.findOneByOrFail(EnMeaning, { sync_id: meaning.sync_id })).definition).toBe(
+      'upstream definition',
+    );
+    expect(
+      (await db.manager.findOneByOrFail(EnMeaningTranslation, { sync_id: translation.sync_id })).definition,
+    ).toBe('upstream translation');
+    expect(await db.manager.count(EnWord)).toBe(1);
   });
 
   it('a custom description must not license an automatic upstream meaning as a local contribution', async () => {

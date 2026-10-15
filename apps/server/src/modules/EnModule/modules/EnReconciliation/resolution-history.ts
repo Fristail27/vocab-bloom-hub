@@ -1,5 +1,5 @@
 import { EntityManager } from 'typeorm';
-import { ChangeActionE, ChangeDiffT, ChangeOriginE } from '../../../../../types';
+import { ChangeActionE, ChangeDiffT, ChangeEntityE, ChangeOriginE } from '../../../../../types';
 import { NewChangeT, recordChange } from '../../utils/changes/recordChange';
 import { withChangeSource } from '../../utils/changes/context';
 import { ReconciliationSideT } from '../../../../../types/reconciliation';
@@ -33,12 +33,21 @@ export function resolutionRecorder(
 ) {
   return async (em: EntityManager, change: NewChangeT, path: string[] = ['common']) => {
     if (!change.diff) return;
+    if (
+      change.entity === ChangeEntityE.meaning_translation &&
+      !at(sources.local, ['parts', part, ...path.slice(0, 2)]).present &&
+      !at(sources.incoming, ['parts', part, ...path.slice(0, 2)]).present
+    )
+      return;
     const groups: Record<'upstream' | 'selection' | 'authored', ChangeDiffT> = {
       upstream: {},
       selection: {},
       authored: {},
     };
     for (const [field, value] of Object.entries(change.diff)) {
+      // Creation/deletion snapshots include translations for restoration; their
+      // individual records are classified by the caller as well.
+      if (field === 'translations' && change.entity === ChangeEntityE.meaning) continue;
       const fieldPath = ['parts', part, ...path, field];
       // Full word snapshots keep collections alongside common fields.
       if (
@@ -56,7 +65,13 @@ export function resolutionRecorder(
           : isSelection(result, [baseline, local, incoming])
             ? 'selection'
             : 'authored';
-      groups[kind][field] = value;
+      groups[kind][field] =
+        change.action === ChangeActionE.create &&
+        kind !== 'upstream' &&
+        incoming.present &&
+        (incoming.value === null || typeof incoming.value !== 'object')
+          ? { ...value, before: incoming.value }
+          : value;
     }
     const write = (kind: keyof typeof groups, diff: ChangeDiffT, action = change.action) =>
       withChangeSource(
@@ -68,7 +83,21 @@ export function resolutionRecorder(
         },
         () => recordChange(em, { ...change, action, diff }),
       );
-    if (change.action !== ChangeActionE.update) {
+    if (change.action === ChangeActionE.delete) {
+      await write(Object.keys(groups.selection).length ? 'selection' : 'upstream', change.diff);
+    } else if (
+      change.action === ChangeActionE.create &&
+      !at(sources.incoming, ['parts', part, ...path]).present
+    ) {
+      await write(
+        Object.keys(groups.authored).length
+          ? 'authored'
+          : Object.keys(groups.selection).length
+            ? 'selection'
+            : 'upstream',
+        change.diff,
+      );
+    } else if (change.action === ChangeActionE.create) {
       // Keep complete creation/deletion snapshots. Applicable custom fields have their
       // own row, so replacing them later retires only their contribution terms.
       await write('upstream', change.diff);
