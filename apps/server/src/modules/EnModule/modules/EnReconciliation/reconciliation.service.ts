@@ -446,7 +446,7 @@ export class ReconciliationService {
               entity_id: dataset.id,
               dataset: name,
               request_id: `reconciliation:${id}`,
-              headword: null,
+              headword: name,
               diff: { reconciliation: { before: null, after: { id, ...outcome.proposed } } },
             });
           return outcome;

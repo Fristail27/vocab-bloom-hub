@@ -77,7 +77,15 @@ export async function copyRevisionGraph(
       )
         throw new Error('reconciliation_revision_mismatch');
     } else {
-      await target.insert(ReconciliationRevision, revision);
+      // Postgres RETURNING exposes simple-json defaults as text. Do not let the
+      // insert replace this hydrated parents array before traversing it.
+      await target
+        .createQueryBuilder()
+        .insert()
+        .into(ReconciliationRevision)
+        .values(revision)
+        .updateEntity(false)
+        .execute();
       for await (const record of from.records(id))
         await target.createQueryBuilder().insert().into('reconciliation_records').values(record).execute();
     }

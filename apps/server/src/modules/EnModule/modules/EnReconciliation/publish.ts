@@ -309,15 +309,6 @@ export async function publishPlan(em: EntityManager, plan: ReconciliationPlan, l
   for await (const record of store.records(plan.incoming)) {
     await inheritHistory(em, record, revision.metadata.terms as unknown as OriginT, operation, license);
   }
-  // New unchanged source words are not manual edits. The journal above still records their acquisition.
-  for await (const item of store.items(plan.id)) {
-    if (item.effect !== 'added') continue;
-    const active = await em
-      .createQueryBuilder(EnChange, 'change')
-      .where('change.headword = :word AND change.superseded_at IS NULL', { word: item.headword })
-      .getCount();
-    await em.update(EnEntry, { word: item.headword }, { user_modified: active > 0 });
-  }
   // Entry versions are metadata, excluded from conflict counts, but must travel too.
   for await (const item of store.items(plan.id)) {
     const record = await store.record(plan.incoming, item.headword);
@@ -352,5 +343,14 @@ export async function publishPlan(em: EntityManager, plan: ReconciliationPlan, l
           }),
       );
     }
+  }
+  // New unchanged source words are not manual edits. The journal above still records their acquisition.
+  for await (const item of store.items(plan.id)) {
+    if (item.effect !== 'added') continue;
+    const active = await em
+      .createQueryBuilder(EnChange, 'change')
+      .where('change.headword = :word AND change.superseded_at IS NULL', { word: item.headword })
+      .getCount();
+    await em.update(EnEntry, { word: item.headword }, { user_modified: active > 0 });
   }
 }

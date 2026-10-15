@@ -17,6 +17,7 @@ import { DataSource, EntityManager } from 'typeorm';
 import { DB_ENTITIES } from '../../../../../db/typeorm-options';
 import { Dataset } from '../../../../DatasetsModule/entities/dataset.entity';
 import { DatasetsService } from '../../../../DatasetsModule/datasets.service';
+import { AuditLog } from '../../../../AuditModule/entities/audit_log.entity';
 import { SwitchGate } from '../../../../DatasetsModule/switch-gate';
 import { ImportStatusService } from '../../EnImportDictionary/importStatus.service';
 import { ReconciliationService } from '../reconciliation.service';
@@ -90,7 +91,8 @@ describe('reconciliation publishes dictionary changes', () => {
     await word(db, 'deleted', 'gone');
     await service.rememberSource('default');
     await word(source, 'kept', 'after');
-    await word(source, 'added', 'new');
+    const added = await word(source, 'added', 'new');
+    await source.manager.update(EnWord, added.id, { version: '2.0.0' });
     const plan = await service.prepareSource('default', source.manager, '2', true);
     expect(plan.counts).toMatchObject({ added: 1, deleted: 1, changed: 1, conflicts: 0 });
     expect((await db.manager.findOneByOrFail(EnWord, { id: original.id })).description).toBe('before');
@@ -99,6 +101,10 @@ describe('reconciliation publishes dictionary changes', () => {
     expect((await db.manager.findOneByOrFail(EnWord, { id: original.id })).description).toBe('after');
     expect(await db.manager.existsBy(EnEntry, { word: 'deleted' })).toBe(false);
     expect(await db.manager.existsBy(EnEntry, { word: 'added' })).toBe(true);
+    expect((await db.manager.findOneByOrFail(EnEntry, { word: 'added' })).user_modified).toBe(false);
+    expect(
+      (await db.manager.findOneByOrFail(AuditLog, { request_id: `reconciliation:${plan.id}` })).headword,
+    ).toBe('default');
     const changes = await db.manager.find(EnChange);
     expect(changes.length).toBeGreaterThanOrEqual(3);
     expect(changes.every((change) => change.operation?.id === plan.id && change.contribution === null)).toBe(

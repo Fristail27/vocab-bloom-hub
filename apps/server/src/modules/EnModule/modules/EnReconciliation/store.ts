@@ -60,7 +60,13 @@ export class ReconciliationStore {
       complete,
       sealed: false,
     });
-    await this.em.insert(ReconciliationRevision, revision);
+    await this.em
+      .createQueryBuilder()
+      .insert()
+      .into(ReconciliationRevision)
+      .values(revision)
+      .updateEntity(false)
+      .execute();
     for await (const row of records) {
       // Duplicate headwords fail the primary key, rather than silently overwriting input.
       await this.em
