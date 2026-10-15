@@ -1,6 +1,11 @@
+import type { ReconciliationItemT, ReconciliationSummaryT } from '../types/reconciliation';
 import type { AdminPronunciationT } from '../types';
 import { AuditService } from '../src/modules/AuditModule/audit.service';
 import { DatasetsService } from '../src/modules/DatasetsModule/datasets.service';
+import {
+  ReconciliationIdentity,
+  ReconciliationRevision,
+} from '../src/modules/EnModule/modules/EnReconciliation/entities';
 import { runDatasetMigrations } from '../src/db/datasets';
 import { DataSource } from 'typeorm';
 import { DATASET_FILE_NAMES } from '../src/modules/EnModule/modules/EnImportDictionary/constants';
@@ -898,4 +903,103 @@ describe('word provenance and independent forks (#556)', () => {
       auditSpy.mockRestore();
     }
   });
+  pg(
+    'updates a fork and merges siblings from their shared immutable ancestor without activating them',
+    async () => {
+      const parent = 'reconcile_parent';
+      const left = 'reconcile_left';
+      const right = 'reconcile_right';
+      const prepare = async (target: string, source: string): Promise<ReconciliationSummaryT> =>
+        (
+          await api()
+            .post(`/api/en/datasets/${target}/reconciliation/parent`)
+            .set(auth)
+            .send({ source })
+            .expect((response) => {
+              if (response.status !== 201)
+                throw new Error(`Prepare ${source} → ${target}: ${JSON.stringify(response.body)}`);
+            })
+            .expect(201)
+        ).body;
+      const apply = async (target: string, id: string) => {
+        const list = await api()
+          .get(`/api/en/datasets/${target}/reconciliation/${id}/items`)
+          .set(auth)
+          .expect(200);
+        for (const item of list.body.items as ReconciliationItemT[])
+          if (item.remaining) {
+            await api()
+              .post(`/api/en/datasets/${target}/reconciliation/${id}/decisions`)
+              .set(auth)
+              .send({
+                headword: item.headword,
+                version: item.version,
+                decisions: item.comparison.conflicts.map((conflict) => ({
+                  path: conflict.path,
+                  choice: conflict.path.includes('origins') ? 'local' : 'incoming',
+                })),
+              })
+              .expect(200);
+          }
+        await api().post(`/api/en/datasets/${target}/reconciliation/${id}/apply`).set(auth).expect(200);
+      };
+      try {
+        await fork('default', parent);
+        await fork(parent, left);
+        await fork(parent, right);
+        for (const name of [parent, left, right]) {
+          const datasets = app.get(DatasetsService);
+          const connection = await datasets.reader(await datasets.find(name));
+          const revisions = await connection.manager.find(ReconciliationRevision);
+          const ids = new Set(revisions.map((row) => row.id));
+          const identity = await connection.manager.findOneByOrFail(ReconciliationIdentity, { key: 'self' });
+          expect({
+            dataset: name,
+            missing: [...identity.heads, ...revisions.flatMap((row) => row.parents)].filter(
+              (id) => !ids.has(id),
+            ),
+          }).toEqual({ dataset: name, missing: [] });
+        }
+        await api()
+          .patch(`/api/en/common-info/${cedar.id}`)
+          .query({ dataset: parent })
+          .set(auth)
+          .send({ description: 'Parent update' })
+          .expect(200);
+        const plan = await prepare(left, parent);
+        expect(plan.kind).toBe('parent');
+        expect((await read(left, cedar.id)).description).not.toBe('Parent update');
+        await apply(left, plan.id);
+        expect((await read(left, cedar.id)).description).toBe('Parent update');
+        const repeated = await prepare(left, parent);
+        expect(repeated.remaining_conflicts).toBe(0);
+        expect(repeated.proposed).toEqual({ added: 0, deleted: 0, changed: 0 });
+        await api()
+          .patch(`/api/en/common-info/${cedar.id}`)
+          .query({ dataset: left })
+          .set(auth)
+          .send({ description: 'Sibling update' })
+          .expect(200);
+        const merge = await prepare(right, left);
+        expect(merge.kind).toBe('merge');
+        await apply(right, merge.id);
+        expect((await read(right, cedar.id)).description).toBe('Sibling update');
+        expect((await read(parent, cedar.id)).description).toBe('Parent update');
+        const history = await api()
+          .get('/api/en/changes')
+          .query({ dataset: right, headword: 'cedar' })
+          .set(auth)
+          .expect(200);
+        expect(history.body.items.some((row: ChangeT) => row.operation?.id === merge.id)).toBe(true);
+        const datasets = await api().get('/api/en/datasets').set(auth).expect(200);
+        for (const name of [left, right])
+          expect(datasets.body.datasets.find((row: { name: string }) => row.name === name)).toMatchObject({
+            active: false,
+            is_public: false,
+          });
+      } finally {
+        for (const name of [right, left, parent]) await api().delete(`/api/en/datasets/${name}`).set(auth);
+      }
+    },
+  );
 });

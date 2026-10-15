@@ -3,6 +3,7 @@ import { EntityManager } from 'typeorm';
 import { EnEtymology } from '../entities/en_etymology.entity';
 import { EnWord } from '../entities/en_word.entity';
 import { EnMeaning } from '../entities/en_meaning.entity';
+import { syncIdentity } from './syncIdentity';
 
 export type EtymologyValueT = { number: number; text: string };
 export type EtymologyInputT = EtymologyValueT & { id?: number };
@@ -55,6 +56,7 @@ export async function saveEtymologies(
       word: { id: wordId },
       number: item.number,
       text: item.text,
+      ...(!editing && { sync_id: syncIdentity(item) }),
     });
 }
 

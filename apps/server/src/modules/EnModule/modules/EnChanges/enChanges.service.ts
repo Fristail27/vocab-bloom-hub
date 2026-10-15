@@ -1,3 +1,4 @@
+import { redactSnapshotAuthor } from '../EnReconciliation/history';
 import { ConflictException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, IsNull, QueryFailedError } from 'typeorm';
@@ -27,6 +28,7 @@ const BATCH = 500;
 export const PUBLIC_HISTORY_LIMIT = 200;
 
 export const toChange = (row: EnChange): ChangeT => ({
+  operation: row.operation ?? null,
   id: row.id,
   created_at: new Date(row.created_at).toISOString(),
   inherited_from: row.inherited_from ?? null,
@@ -164,6 +166,8 @@ export class EnChangesService {
     const inSuggestions = await em
       .getRepository(Suggestion)
       .update({ author_name: author }, { author_name: null });
+
+    await redactSnapshotAuthor(em, author);
 
     // what a reader is shown of these entries changed: their pages are read again
     const headwords = named.map((row) => row.headword);

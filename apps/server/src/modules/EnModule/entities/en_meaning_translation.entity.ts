@@ -17,6 +17,10 @@ import { checkIsPostgres } from '../../../../configuration';
 @Index('IDX_EN_MEANING_TRANSLATION_MEANING', ['meaning'])
 @Index('IDX_EN_MEANING_TRANSLATION_LANGUAGE', ['language'])
 export class EnMeaningTranslation {
+  /** Portable merge identity, assigned on first snapshot; never inferred from the row ID. */
+  @Column({ type: 'varchar', length: 36, nullable: true })
+  sync_id?: string | null;
+
   /** @asType integer */
   @PrimaryGeneratedColumn()
   @IsNumber()

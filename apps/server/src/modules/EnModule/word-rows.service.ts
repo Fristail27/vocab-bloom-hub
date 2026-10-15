@@ -3,7 +3,7 @@ import { EnPronunciation } from './entities/en_pronunciation.entity';
 import { EnEtymology } from './entities/en_etymology.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource, EntityMetadata, FindOptionsRelations, SelectQueryBuilder } from 'typeorm';
+import { DataSource, EntityManager, EntityMetadata, FindOptionsRelations, SelectQueryBuilder } from 'typeorm';
 import { EnWord } from './entities/en_word.entity';
 import { EnChange } from './entities/en_change.entity';
 import { EnEntry } from './entities/en_entry.entity';
@@ -39,6 +39,19 @@ const wordKey = (headword: string, partOfSpeech: string | null): string =>
 
 @Injectable()
 export class WordRowsService {
+  private transactionManager?: EntityManager;
+
+  /** All relation reads share the export/import transaction's snapshot. */
+  static on(manager: EntityManager): WordRowsService {
+    const reader = new WordRowsService(manager.connection);
+    reader.transactionManager = manager;
+    return reader;
+  }
+
+  private get manager(): EntityManager {
+    return this.transactionManager ?? this.dataSource.manager;
+  }
+
   constructor(
     @InjectDataSource()
     private readonly activeDataSource: DataSource,
@@ -49,7 +62,7 @@ export class WordRowsService {
   // of its own — the public reads of every dataset — serves requests that
   // name no dataset, and stays on its connection
   private get dataSource(): DataSource {
-    return scopedDataSource(this.activeDataSource);
+    return this.transactionManager?.connection ?? scopedDataSource(this.activeDataSource);
   }
 
   private get escape(): (name: string) => string {
@@ -142,7 +155,7 @@ export class WordRowsService {
     const headwords = [...new Set(rows.map((row) => row.word?.word).filter(Boolean))];
     const found = new Set<string>();
     if (headwords.length > 0) {
-      const edits = await this.dataSource
+      const edits = await this.manager
         .getRepository(EnChange)
         .createQueryBuilder('c')
         .select(['c.headword AS headword', 'c.part_of_speech AS part_of_speech'])
@@ -170,7 +183,7 @@ export class WordRowsService {
     const basePhrasalFk = this.fk(words, 'base_phrasal');
 
     // ---- the entries themselves, with the headword row and the phrasal base
-    const qb = this.dataSource.createQueryBuilder(EnWord, 'w').select([]);
+    const qb = this.manager.createQueryBuilder(EnWord, 'w').select([]);
     this.selectScalars(qb, words, 'w');
     qb.leftJoin('w.base_form', 'origin_base').addSelect('origin_base.origins', 'base_origins');
     qb.addSelect('origin_base.word', 'origin_headword').addSelect('origin_base.part_of_speech', 'origin_pos');
@@ -298,7 +311,7 @@ export class WordRowsService {
 
     if (relations.etymologies) {
       const meta = this.dataSource.getMetadata(EnEtymology);
-      const eq = this.dataSource.createQueryBuilder(EnEtymology, 'e').select([]);
+      const eq = this.manager.createQueryBuilder(EnEtymology, 'e').select([]);
       this.selectScalars(eq, meta, 'e');
       const rows = await eq
         .addSelect('e.word', 'owner')
@@ -337,7 +350,7 @@ export class WordRowsService {
     visit(rows, relations);
     if (!owners.length) return;
     const meta = this.dataSource.getMetadata(EnPronunciation);
-    const qb = this.dataSource.createQueryBuilder(EnPronunciation, 'p').select([]);
+    const qb = this.manager.createQueryBuilder(EnPronunciation, 'p').select([]);
     this.selectScalars(qb, meta, 'p');
     const raw = await qb
       .addSelect('p.word', 'owner')
@@ -353,7 +366,7 @@ export class WordRowsService {
       .flatMap((row) => row.pronunciations as PlainT[]);
     if (!pronunciations.length) return;
     const audioMeta = this.dataSource.getMetadata(EnPronunciationAudio);
-    const aq = this.dataSource.createQueryBuilder(EnPronunciationAudio, 'a').select([]);
+    const aq = this.manager.createQueryBuilder(EnPronunciationAudio, 'a').select([]);
     this.selectScalars(aq, audioMeta, 'a');
     const audio = await aq
       .addSelect('a.pronunciation', 'owner')
@@ -386,7 +399,7 @@ export class WordRowsService {
     const names = [...new Set(entries.map((entry) => entry.word as string))];
     const meta = this.dataSource.getMetadata(EnEntry);
     const { table, owner, inverse } = this.junction(meta, 'alternatives');
-    const qb = this.dataSource
+    const qb = this.manager
       .createQueryBuilder()
       .select(this.column('j', owner), 'owner')
       .from(table, 'j')
@@ -403,7 +416,7 @@ export class WordRowsService {
 
   /** One indexed query per batch, including edits inherited from earlier forks. */
   private async loadContributions(headwords: string[]): Promise<Map<string, OriginT[]>> {
-    const edits = await this.dataSource
+    const edits = await this.manager
       .getRepository(EnChange)
       .createQueryBuilder('c')
       .select([
@@ -436,7 +449,7 @@ export class WordRowsService {
     baseFormFk: string,
     withEntry: boolean,
   ): Promise<Map<unknown, PlainT[]>> {
-    const fq = this.dataSource.createQueryBuilder(EnWord, 'f').select([]);
+    const fq = this.manager.createQueryBuilder(EnWord, 'f').select([]);
     this.selectScalars(fq, words, 'f');
     this.selectKey(fq, 'f', wordFk);
     this.selectKey(fq, 'f', baseFormFk);
@@ -466,7 +479,7 @@ export class WordRowsService {
     withEtymology: boolean,
   ): Promise<Array<PlainT & { owner: unknown }>> {
     const meaningFk = this.fk(meanings, 'word');
-    const mq = this.dataSource.createQueryBuilder(EnMeaning, 'm').select([]);
+    const mq = this.manager.createQueryBuilder(EnMeaning, 'm').select([]);
     this.selectScalars(mq, meanings, 'm');
     this.selectKey(mq, 'm', meaningFk);
     const etymologies = this.dataSource.getMetadata(EnEtymology);
@@ -491,7 +504,7 @@ export class WordRowsService {
     meaningIds: number[],
   ): Promise<Map<unknown, PlainT[]>> {
     const translationFk = this.fk(translations, 'meaning');
-    const tq = this.dataSource.createQueryBuilder(EnMeaningTranslation, 't').select([]);
+    const tq = this.manager.createQueryBuilder(EnMeaningTranslation, 't').select([]);
     this.selectScalars(tq, translations, 't');
     this.selectKey(tq, 't', translationFk);
     const raw = (await tq
@@ -518,7 +531,7 @@ export class WordRowsService {
     withEntries: boolean,
   ): Promise<Map<unknown, PlainT[]>> {
     const { table, owner, inverse } = this.junction(meanings, kind);
-    const lq = this.dataSource
+    const lq = this.manager
       .createQueryBuilder()
       .select(this.column('j', owner), 'owner')
       .from(table, 'j')
@@ -533,7 +546,7 @@ export class WordRowsService {
     if (withEntries && linked.length > 0) {
       const wordFk = this.fk(words, 'word');
       const names = [...new Set(linked.map((l) => l.entry.word as string))];
-      const bq = this.dataSource.createQueryBuilder(EnWord, 'lw').select([]);
+      const bq = this.manager.createQueryBuilder(EnWord, 'lw').select([]);
       this.selectScalars(bq, words, 'lw');
       this.selectKey(bq, 'lw', wordFk);
       const baseRows = (await bq
@@ -556,7 +569,7 @@ export class WordRowsService {
 
   private async loadShortTranslations(shorts: EntityMetadata, ids: number[]): Promise<Map<unknown, PlainT[]>> {
     const shortFk = this.fk(shorts, 'word');
-    const sq = this.dataSource.createQueryBuilder(EnShortTranslation, 's').select([]);
+    const sq = this.manager.createQueryBuilder(EnShortTranslation, 's').select([]);
     this.selectScalars(sq, shorts, 's');
     this.selectKey(sq, 's', shortFk);
     const raw = (await sq
@@ -580,7 +593,7 @@ export class WordRowsService {
     basePhrasalFk: string,
     withEntry: boolean,
   ): Promise<Map<unknown, PlainT[]>> {
-    const vq = this.dataSource.createQueryBuilder(EnWord, 'v').select([]);
+    const vq = this.manager.createQueryBuilder(EnWord, 'v').select([]);
     this.selectScalars(vq, words, 'v');
     this.selectKey(vq, 'v', wordFk);
     this.selectKey(vq, 'v', basePhrasalFk);

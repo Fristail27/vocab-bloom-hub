@@ -55,7 +55,12 @@ export const recordChange = async (em: EntityManager, change: NewChangeT): Promi
       action: change.action,
       record: change.record ?? null,
       diff: change.diff,
-      contribution: source.superseded ? null : await captureContribution(em, change.diff),
+      contribution: source.superseded
+        ? null
+        : 'contribution' in source
+          ? source.contribution
+          : await captureContribution(em, change.diff),
+      operation: source.operation ?? null,
       reason: change.reason ?? null,
       origin: source.origin,
       suggestion_id: source.suggestion_id ?? null,

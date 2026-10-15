@@ -1,5 +1,5 @@
-import { storedPronunciations } from '../../../utils/pronunciations';
-import { etymologiesOf } from '../../../utils/etymologies';
+import { soundsForDS } from './prepareWordForDataSet';
+import { etymologiesForDS } from './prepareWordForDataSet';
 import { alternativeSpellings } from '../../../utils/entryAlternatives';
 import { DataSetPhraseT } from '../../../../../../types/dictionaries/en/EnDataSetTypes';
 import { EnWord } from '../../../entities/en_word.entity';
@@ -9,8 +9,8 @@ export const preparePhraseForDataSet = (word: EnWord): DataSetPhraseT => {
   const { pattern: _p, form_of_word: _f, ...w } = word;
   return {
     alternatives: alternativeSpellings(word.word),
-    etymologies: etymologiesOf(word),
-    pronunciations: storedPronunciations(word),
+    etymologies: etymologiesForDS(word),
+    pronunciations: soundsForDS(word),
     origins: word.origins?.length ? word.origins : undefined,
     categories: sortStrings(w.categories),
     generated: Boolean(w.generated),

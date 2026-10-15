@@ -81,6 +81,18 @@ describe('installing a dataset from its source (e2e, issue #527)', () => {
     throw new Error('the import slot was not released');
   };
 
+  const applyUpdate = async (name: string, text: string) => {
+    const completed = chunksOf(text).at(-1);
+    expect(completed).toMatchObject({ stage: COMPLETED, reconciliation_plan: expect.any(String) });
+    await released();
+    const endpoint = `/api/en/datasets/${name}/reconciliation/${completed!.reconciliation_plan}`;
+    const preview = await request(server()).get(endpoint).set(auth).expect(200);
+    expect(preview.body.remaining_conflicts).toBe(0);
+    const applied = await request(server()).post(`${endpoint}/apply`).set(auth).expect(200);
+    expect(applied.body.status).toBe('applied');
+    return applied.body;
+  };
+
   beforeAll(async () => {
     process.env.ADMIN_USERNAME = E2E_USERNAME;
     process.env.ADMIN_PASSWORD = E2E_PASSWORD;
@@ -332,22 +344,12 @@ describe('installing a dataset from its source (e2e, issue #527)', () => {
     const before = (await request(server()).get('/api/v1/meta').expect(200)).body.data.counts;
 
     const res = await install('wiktionary', sources.wiktionaryNewer).expect(201);
-    const last = chunksOf(res.text).at(-1);
-    await released();
-
-    expect(last).toEqual(
-      expect.objectContaining({
-        stage: COMPLETED,
-        added_entries: 0,
-        kept_user_modified: 0,
-        // the newer file says its own day
-        datasetVersion: '2026.09.27',
-      }),
-    );
+    expect((await datasetOf('wiktionary'))?.version).toBe('2026.09.25');
+    const applied = await applyUpdate('wiktionary', res.text);
+    expect(applied.proposed).toMatchObject({ added: 0, deleted: 0 });
     expect(await datasetOf('wiktionary')).toEqual(expect.objectContaining({ version: '2026.09.27' }));
     const meta = await request(server()).get('/api/v1/meta').expect(200);
     expect(meta.body.data.dataset_version).toBe('2026.09.27');
-    expect(last?.updated_entries).toBeGreaterThan(0);
     const lamp = await request(server()).get('/api/v1/words/lamp').expect(200);
     expect(lamp.body.meta).toEqual({ word: 'lamp', count: 3, variants: [] });
     // the counts of /meta are cached for a minute: the rows are what is compared
@@ -356,12 +358,11 @@ describe('installing a dataset from its source (e2e, issue #527)', () => {
 
   it('records the day of the installation for a file that does not say when it was made (issue #530)', async () => {
     const res = await install('wiktionary', sources.wiktionaryUndated).expect(201);
-    await released();
+    await applyUpdate('wiktionary', res.text);
 
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
     const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10).replace(/-/g, '.');
     // the suite may run over midnight
-    expect([today, yesterday]).toContain(chunksOf(res.text).at(-1)?.datasetVersion);
     expect([today, yesterday]).toContain((await datasetOf('wiktionary'))?.version);
   });
 
@@ -857,10 +858,7 @@ describe('installing a dataset from its source (e2e, issue #527)', () => {
         expect(fetchMock).toHaveBeenCalledTimes(2);
         fetchMock.mockClear();
         const retried = await endpoint('wordnet').send({}).expect(201);
-        expect(chunksOf(retried.text).at(-1)).toMatchObject({
-          stage: COMPLETED,
-          updated_entries: expect.any(Number),
-        });
+        await applyUpdate('wordnet', retried.text);
         expect(fetchMock).toHaveBeenCalledTimes(1);
         await released();
         await noTemporarySources();

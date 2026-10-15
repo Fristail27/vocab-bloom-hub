@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Reconciliation } from '@/components/Reconciliation';
 import { Alert, Button, Checkbox, Collapse, Modal, Progress, Radio, Typography, Upload } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { useLocale, useTranslations } from 'next-intl';
@@ -54,6 +55,8 @@ export const InstallDataset: React.FC<InstallDatasetP> = ({
 }) => {
   const locale = useLocale();
   const t = useTranslations('datasets');
+  const tr = useTranslations('reconciliation');
+  const [plan, setPlan] = React.useState<string>();
   const tImport = useTranslations('import_dictionary');
   const tErr = useTranslations('errors');
 
@@ -81,6 +84,7 @@ export const InstallDataset: React.FC<InstallDatasetP> = ({
     setStage('');
     setError('');
     setSummary(null);
+    setPlan(undefined);
     // only a change of the dataset re-reads `installedNow`: its state when the dialog opens, not after
   }, [entry?.name]);
 
@@ -111,6 +115,7 @@ export const InstallDataset: React.FC<InstallDatasetP> = ({
     setStage('');
     setError('');
     setSummary(null);
+    setPlan(undefined);
     let completed = false;
     let failed = false;
 
@@ -118,6 +123,7 @@ export const InstallDataset: React.FC<InstallDatasetP> = ({
       const value = Math.min(100, Math.max(0, chunk.percent ?? 0));
       if (chunk.stage === EnDictionaryImportPhasesE.completed) {
         completed = true;
+        if (chunk.reconciliation_plan) setPlan(chunk.reconciliation_plan);
         setPercent(100);
         if (chunk.updated_entries !== undefined) {
           setSummary({
@@ -229,6 +235,7 @@ export const InstallDataset: React.FC<InstallDatasetP> = ({
             setStatus(InstallStatusE.idle);
             setError('');
             setSummary(null);
+            setPlan(undefined);
           }}
           options={[
             { value: 'download', label: t('source_download') },
@@ -370,8 +377,14 @@ export const InstallDataset: React.FC<InstallDatasetP> = ({
               <Alert
                 type="success"
                 showIcon
-                title={t(installed ? 'done_update' : 'done')}
-                description={summary ? t('done_summary', summary) : undefined}
+                title={plan ? tr('review') : t(installed ? 'done_update' : 'done')}
+                description={
+                  plan ? (
+                    <Reconciliation dataset={entry.name} initialPlan={plan} onApplied={onFinished} />
+                  ) : summary ? (
+                    t('done_summary', summary)
+                  ) : undefined
+                }
                 data-testid="install-done"
               />
             )}

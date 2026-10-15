@@ -20,6 +20,7 @@ export enum EnDictionaryImportPhasesE {
   converting_source,
   // the history of the edits of the dataset (issue #531)
   saving_changes,
+  preparing_update,
 }
 
 export const SYSTEM_FIELDS = ['id', 'createdAt', 'updateAt', 'updatedAt'];
@@ -48,6 +49,7 @@ export const DATASET_FILE_NAMES = {
   // what was changed or added where the dataset was edited (issue #531): a
   // line per edit, with its values. Absent in a dataset nobody edited
   changes: 'vocab-bloom-hub-en-changes.jsonl',
+  synchronization: 'vocab-bloom-hub-en-synchronization.jsonl',
 } as const;
 
 export type TranslationFileKindT = 'meaningTranslations' | 'shortTranslations';

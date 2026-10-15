@@ -8,6 +8,9 @@ import { ChangeOriginE } from '../../../../../types';
  * through every signature.
  */
 export type ChangeSourceT = {
+  operation?: { id: string; kind: string; source: string; revision: string };
+  /** An unchanged upstream copy introduces no receiving-dataset contribution. */
+  contribution?: import('../../../../../types').OriginT | null;
   origin: ChangeOriginE;
   suggestion_id?: number | null;
   author?: string | null;

@@ -68,6 +68,16 @@ export const parseManifest = (raw: unknown): DatasetManifestT | null => {
     (manifest.modified_entries === undefined || isCount(manifest.modified_entries)) &&
     MANIFEST_PROVENANCE_FIELDS.every((field) => isOptionalString(manifest[field]));
   if (!isValid) return null;
+  if (
+    manifest.snapshot &&
+    (typeof manifest.snapshot.complete !== 'boolean' ||
+      typeof manifest.snapshot.adapter !== 'string' ||
+      manifest.snapshot.revision !== 1 ||
+      !Number.isSafeInteger(manifest.snapshot.skipped) ||
+      manifest.snapshot.skipped < 0 ||
+      (manifest.snapshot.complete && manifest.snapshot.skipped !== 0))
+  )
+    return null;
   if (manifest.provenance) {
     const snapshot = manifest.provenance;
     const limited = (value: unknown, max: number) =>

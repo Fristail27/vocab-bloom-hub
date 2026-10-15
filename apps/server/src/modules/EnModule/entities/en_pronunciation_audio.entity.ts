@@ -6,6 +6,10 @@ import { EnPronunciation } from './en_pronunciation.entity';
 @Index('IDX_EN_AUDIO_PRONUNCIATION_ORDER', ['pronunciation', 'sort_order'])
 @Check('CHK_EN_AUDIO_ORDER', '"sort_order" >= 0')
 export class EnPronunciationAudio {
+  /** Portable merge identity, assigned on first snapshot; never inferred from the row ID. */
+  @Column({ type: 'varchar', length: 36, nullable: true })
+  sync_id?: string | null;
+
   @PrimaryGeneratedColumn()
   id!: number;
 
