@@ -171,6 +171,7 @@ export const DatasetsSection: React.FC<DatasetsSectionP> = ({ initial }) => {
       supported={supported}
       busy={busy}
       actions={actions}
+      onApplied={() => void reload()}
     />
   );
 

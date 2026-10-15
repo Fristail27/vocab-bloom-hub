@@ -177,6 +177,8 @@ export type ImportDictionaryReqT = ImportDictionaryReq;
 // text fields of the multipart upload (the files go in their own fields)
 export type UploadDictionaryReqT = Partial<UploadDictionaryReqDTO>;
 export type ImportDictionaryChunkT = {
+  /** A prepared update awaiting review; no live content has been changed. */
+  reconciliation_plan?: string;
   percent: number;
   stage?: EnDictionaryImportPhasesE | undefined;
   downloaded?: number | undefined;
@@ -224,6 +226,7 @@ export type ImportStatusT = {
 // the export writes it into the archive, the import reads it for progress
 // totals and the dataset version
 export type DatasetManifestT = {
+  snapshot?: { complete: boolean; adapter: string; revision: number; skipped: number };
   provenance_format?: 1;
   /** Logical names mapped to versioned physical filenames by the manifest reader. */
   file_names?: Record<string, string>;

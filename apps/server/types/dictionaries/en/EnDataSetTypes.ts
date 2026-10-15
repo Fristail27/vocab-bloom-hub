@@ -144,6 +144,7 @@ export type DataSetGrammarPatternT = DataSetPhraseT & { pattern: string[] };
  * instance knows — the id of the row, the id of the suggestion it came from
  */
 export type DataSetChangeT = {
+  operation?: import('../../changes').ChangeOperationT | null;
   inherited_from?: import('../../provenance').OriginT | null;
   contribution?: import('../../provenance').OriginT | null;
   reason?: string | null;

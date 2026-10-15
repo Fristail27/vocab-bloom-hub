@@ -8,6 +8,12 @@ import { datasetMigrations, DATASET_MIGRATIONS_TABLE } from '../../db/dataset-mi
 import { DICTIONARY_ENTITIES } from '../EnModule/entities/dictionary-entities';
 import { Dataset } from './entities/dataset.entity';
 import type { ForkProgressT, OriginT, OriginAcquisitionT } from '../../../types';
+import { ReconciliationStore } from '../EnModule/modules/EnReconciliation/store';
+import {
+  persistentLineage,
+  datasetSnapshotMetadata,
+  dictionaryRecords,
+} from '../EnModule/modules/EnReconciliation/snapshot';
 
 /** DDL and data commit together. A process crash cannot leave a staging schema. */
 export const forkDataset = async (
@@ -37,6 +43,15 @@ export const forkDataset = async (
       `LOCK TABLE ${copying.map((meta) => `${sourceSchema}.${quote(meta.tableName)}`).join(', ')} IN ACCESS SHARE MODE`,
     );
     const parent = await runner.manager.findOneOrFail(Dataset, { where: { id: source.id } });
+    // Capture the ancestor while on the parent's schema and in this same snapshot.
+    // This assigns nested merge identities before the dictionary rows are copied.
+    await runner.query(`SET LOCAL search_path TO ${searchPathOf(source.schema)}`);
+    const ancestor = await new ReconciliationStore(runner.manager).capture(
+      await persistentLineage(runner.manager, parent),
+      datasetSnapshotMetadata(parent),
+      true,
+      dictionaryRecords(runner.manager, parent),
+    );
     const [{ revision }] = (await runner.query(`SELECT pg_current_snapshot()::text AS revision`)) as {
       revision: string;
     }[];
@@ -96,6 +111,21 @@ export const forkDataset = async (
       }
       progress.completed_tables++;
     }
+    // Retain immutable ancestors for later merges between siblings. Pending review plans
+    // and operation state must never become operations of the new dataset.
+    await runner.query(
+      `INSERT INTO "reconciliation_revisions" SELECT * FROM ${sourceSchema}."reconciliation_revisions" WHERE "sealed" = true`,
+    );
+    await runner.query(
+      `INSERT INTO "reconciliation_records" SELECT * FROM ${sourceSchema}."reconciliation_records" `,
+    );
+    await runner.query(
+      `INSERT INTO "reconciliation_plans" SELECT * FROM ${sourceSchema}."reconciliation_plans" WHERE "status" = 'applied'`,
+    );
+    await runner.query(
+      `INSERT INTO "reconciliation_items" SELECT item.* FROM ${sourceSchema}."reconciliation_items" item JOIN ${sourceSchema}."reconciliation_plans" plan ON item."plan" = plan."id" WHERE plan."status" = 'applied'`,
+    );
+    await new ReconciliationStore(runner.manager).establish(ancestor.lineage, ancestor.id);
     // Only base words own their terms. Forms inherit through baseFormId.
     // Transform each distinct source snapshot once, then update the words in bulk.
     await runner.query(

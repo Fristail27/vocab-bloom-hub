@@ -254,7 +254,7 @@ export class DatasetWriter {
   }
 
   /** Writes what is pending, the link map of the phrasal verbs and the manifest; closes the files */
-  async close(): Promise<WriterSummaryT> {
+  async close(snapshot?: DatasetManifestT['snapshot']): Promise<WriterSummaryT> {
     await this.flush();
     for (const [base, variants] of this.phrasalVariants) {
       // a base verb the source has no entry for cannot carry its variants
@@ -276,6 +276,7 @@ export class DatasetWriter {
     );
 
     const manifest: DatasetManifestT = {
+      ...(snapshot && { snapshot }),
       ...(this.hasOrigins && {
         provenance_format: 1 as const,
         provenance: {

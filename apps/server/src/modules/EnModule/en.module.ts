@@ -1,4 +1,6 @@
 import { WordCopyService } from './word-copy.service';
+import { ReconciliationService } from './modules/EnReconciliation/reconciliation.service';
+import { ReconciliationController } from './modules/EnReconciliation/reconciliation.controller';
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../AuditModule/audit.module';
 import { AuditController } from '../AuditModule/audit.controller';
@@ -49,6 +51,7 @@ import { EnChangesService } from './modules/EnChanges/enChanges.service';
     SettingsModule,
   ],
   controllers: [
+    ReconciliationController,
     // EnStatisticsController and EnAdminListsController must be registered before
     // EnController, otherwise GET /api/en/statistics, /api/en/words, /api/en/meanings
     // and /api/en/meaning-translations are swallowed by the GET /api/en/:id route
@@ -73,6 +76,7 @@ import { EnChangesService } from './modules/EnChanges/enChanges.service';
     EnImportDictionaryController,
   ],
   providers: [
+    ReconciliationService,
     WordCopyService,
     WordRowsService,
     EnService,

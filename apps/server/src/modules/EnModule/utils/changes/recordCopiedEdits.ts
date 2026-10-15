@@ -1,3 +1,4 @@
+import { currentChangeSource } from './context';
 import { EntityManager } from 'typeorm';
 import {
   ChangeActionE,
@@ -24,7 +25,12 @@ import {
 } from './snapshots';
 
 /** Edits made in the prefill form are ordinary field edits, with ordinary reverts. */
-export const recordCopiedEdits = async (em: EntityManager, original: EnWord, saved: EnWord): Promise<void> => {
+export const recordCopiedEdits = async (
+  em: EntityManager,
+  original: EnWord,
+  saved: EnWord,
+  reconciliation = false,
+): Promise<void> => {
   const word = wordKeyOf(saved);
   let edited = false;
   const record = async (
@@ -56,11 +62,13 @@ export const recordCopiedEdits = async (em: EntityManager, original: EnWord, sav
   // The automatic acquisition is provenance, not a content edit.
   const before = wordSnapshot(original);
   const after = wordSnapshot(saved);
-  before.origins = (saved.origins ?? []).filter((origin) => origin.inherited);
-  after.origins = saved.origins ?? [];
+  if (!reconciliation) {
+    before.origins = (saved.origins ?? []).filter((origin) => origin.inherited);
+    after.origins = saved.origins ?? [];
+  }
   await record(ChangeEntityE.word, null, before, after);
 
-  async function collection<T>(
+  async function collection<T extends { sync_id?: string | null }>(
     oldRows: T[],
     newRows: T[],
     key: (row: T) => string,
@@ -69,8 +77,10 @@ export const recordCopiedEdits = async (em: EntityManager, original: EnWord, sav
   ) {
     const remaining = new Set(newRows);
     for (const row of oldRows) {
-      let match = [...remaining].find((next) => key(next) === key(row));
-      if (!match) {
+      let match = [...remaining].find((next) =>
+        reconciliation && row.sync_id ? next.sync_id === row.sync_id : key(next) === key(row),
+      );
+      if (!match && !reconciliation) {
         const candidates = [...remaining].filter((next) => fallback(next) === fallback(row));
         if (candidates.length === 1 && oldRows.filter((old) => fallback(old) === fallback(row)).length === 1)
           match = candidates[0];
@@ -134,7 +144,7 @@ export const recordCopiedEdits = async (em: EntityManager, original: EnWord, sav
       );
     },
   );
-  if (edited) {
+  if (edited && !currentChangeSource().superseded) {
     await em.getRepository(EnWord).update(saved.id, { version: CustomVersionDictionaryOfWord });
     await recordChange(em, {
       ...word,

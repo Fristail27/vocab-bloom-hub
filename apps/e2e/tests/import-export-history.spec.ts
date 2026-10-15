@@ -52,6 +52,7 @@ test.describe('import, export and history', () => {
     page,
     request,
   }) => {
+    await seedWord(request, 'e2ebeforeimport', { forms: [], meanings: [], short_translations: [] });
     // the import is an action of a dataset, on its card (issue #540)
     await page.goto('/en/managing/datasets');
     await page.getByTestId('dataset-import-default').click();
@@ -77,6 +78,20 @@ test.describe('import, export and history', () => {
     // the NDJSON stream drives the bar to 100% and the action row leaves
     await expect(page.getByText('100.00%')).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole('button', { name: 'Start importing' })).toBeHidden();
+
+    // A nonempty dictionary is changed only after reviewing and applying its plan.
+    await page.getByRole('button', { name: 'Review update', exact: true }).click();
+    const review = page.getByRole('dialog').last();
+    const apply = review.getByRole('button', { name: 'Apply update', exact: true });
+    await expect(apply).toBeVisible();
+    if (await apply.isDisabled()) {
+      await review.getByText('e2eimported', { exact: false }).first().click();
+      await review.getByRole('button', { name: 'Accept incoming', exact: true }).last().click();
+      await review.getByRole('button', { name: 'Save decisions', exact: true }).click();
+    }
+    await expect(apply).toBeEnabled();
+    await apply.click();
+    await expect(apply).toBeHidden();
 
     // the word really landed, through the normal read API
     const check = await request.get(`${API_URL}/en/check-word/e2eimported?partOfSpeech=verb`);
@@ -146,9 +161,9 @@ test.describe('import, export and history', () => {
     // what was done on the instance is the other journal: the import of the
     // first test is one summary row, import / dictionary
     await page.getByRole('tab', { name: 'Events of the instance' }).click();
-    const importRow = page.getByRole('row').filter({ hasText: 'dictionary' }).filter({ hasText: 'import' });
+    const importRow = page.getByRole('row').filter({ hasText: 'reconciliation' });
     await expect(importRow.first()).toBeVisible();
-    await expect(importRow.first()).toContainText('source');
+    await expect(importRow.first()).toContainText('default');
     // the word that was added is no event of the instance
     await expect(page.getByRole('row').filter({ hasText: 'chronicle' })).toHaveCount(0);
   });

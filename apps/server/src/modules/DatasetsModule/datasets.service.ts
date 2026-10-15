@@ -310,6 +310,15 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
     if (dataset.name !== this.active.name) this.notifyRegistry();
   }
 
+  /** Refresh in-memory terms only after the reconciliation transaction committed. */
+  reconciliationCommitted(dataset: Dataset): void {
+    if (dataset.name === this.active.name) {
+      this.active = dataset;
+      this.notify();
+    }
+    this.notifyRegistry();
+  }
+
   async onModuleDestroy(): Promise<void> {
     await this.forkWork;
     await Promise.all([...this.readers.keys()].map((name) => this.closeReader(name)));

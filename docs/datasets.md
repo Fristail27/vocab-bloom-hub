@@ -136,9 +136,9 @@ page of the list — answer in under 10 ms, as they do on the project's dataset:
 has the same indexes.
 
 **Updating.** A source publishes newer files; installation still requires the admin to start it. On the card of
-an installed dataset _Update from a newer file_ opens the same instruction: the entries are
-replaced with the ones of the newer file, the entries you edited are kept, entries that are
-gone from the source are not deleted. When the source has a file that is worth installing, the
+an installed dataset _Update from a newer file_ opens the same instruction: the file is staged and compared with the last integrated source snapshot and your local edits.
+Review the proposed changes and resolve conflicts before applying the update. Deletions are
+inferred only from a verified complete snapshot; partial inputs preserve absent content. When the source has a file that is worth installing, the
 card says so ([below](#versions-and-newer-files-of-a-source)). Server downloads use the catalog’s
 links, which may pin a release; use manual upload for a newer release not yet linked in the catalog.
 
@@ -777,8 +777,8 @@ Progress is held in memory; after a server restart, consult the dataset list for
 fork. An interrupted, uncommitted fork leaves no registered dataset or partial schema.
 
 A fork states its immediate parent and retains earlier origins. Parent updates, renames, and
-deletion do not alter the saved chain. A fork is not synchronized with its parent: updating,
-rebasing, merging words, and a separate original/current comparison screen are future work.
+deletion do not alter the saved chain. A fork can be updated from its parent through the comparison workflow below; synchronization
+is explicit and never runs automatically.
 SQLite still supports word attribution, but cannot hold a second dataset or create a fork.
 
 The editor of a catalog dataset, including the project's published dataset, recommends a fork.
@@ -799,6 +799,98 @@ All mutation routes require admin authentication:
 
 See [the portable format](./offline-import.md#provenance-export-format) before moving these
 records to another instance or publishing them on Hugging Face.
+
+## Updating and merging datasets (#656)
+
+Open **Updates and merges** on an installed dataset's card. Installing a newer source file,
+including importing a native archive into a nonempty dataset, now prepares a comparison.
+It does not immediately replace the live dictionary. Empty installations still import directly.
+
+A new fork retains the parent's immutable snapshot. Its comparison dialog offers an update
+from that parent. An own dataset can also select another installed dataset for merging: the
+server looks for a shared immutable ancestor and maintains a separate integration baseline
+for each source. Names and editable version labels are never evidence of ancestry. When an
+old fork has no baseline, enable **Review manually without a common baseline**; every differing
+value then needs a decision. A deleted and recreated parent is a different identity.
+
+### Review and publication
+
+The dialog opens on conflicts, with search, pagination, and category filters. Each conflict
+shows the baseline, local, incoming, and chosen result. Keep the local value, accept the
+incoming value, or edit a structured result. Additions and deletions are explicit. Save decisions
+before changing the selected article or applying. Unsaved decisions can be discarded; saved
+ones survive browser and server restarts. Cancel is available until publication.
+
+Independent changes combine automatically. Identical changes do not conflict. Edit/delete
+cases and ambiguous nested record matching require review. Nested records use portable UUIDs,
+never database IDs, array positions, or editable titles. An external source without IDs can
+match only uniquely unchanged records; replacing unidentified records requires a collection
+comparison. The whole-result editor also allows repair of dependent fields.
+
+The summary counts headword articles once each: **Added**, **Deleted**, **Changed**, and
+**Conflicts**. Conflicts take precedence over the other categories. Forms are part of their base
+article unless they have an independent entry. Initial counts stay stable during review;
+resolved articles, remaining conflicts, and proposed additions/deletions/changes update after
+saving decisions. After application the summary retains the actual totals. Unchanged and
+local-only articles remain inspectable through **All**.
+
+Application validates the complete result, including source terms, generated-content rules,
+etymologies, pronunciation/audio, synonyms, antonyms, reciprocal alternatives, forms, and
+phrasal bases. Deletion/reference conflicts are shown during preparation; validation runs again
+when applying custom decisions. Invalid or dangling results cannot be published.
+
+The destination remains editable during review. Applying rejects a stale destination, changed
+terms, or a baseline advanced by another operation. Prepare a fresh comparison in that case.
+A later edit of the parent cannot change an already prepared incoming snapshot. Publication
+uses one transaction for content, history, baseline, version and audit summary; failure rolls
+all of them back. Retrying an applied operation is idempotent. A merge does not activate or
+open the destination. A fork keeps its own dataset version label.
+
+### History, completeness and portability
+
+Every applied operation has an ID, source and pinned revision. Actual edits carry that ID and
+before/after values in the dictionary history. Source history retains original authorship and
+license snapshots, including history of deleted words; transferred operation references point
+to the receiving merge and retain their upstream reference. Accepting source content creates
+no receiving-dataset contribution and does not by itself mark a clean word as manually modified.
+Custom edits do. The journal retains source replacement records even when they no longer
+contribute to the current word. Keep-local decisions that change nothing live in the operation
+review, accessible from word history, without invented content edits. The instance's audit
+journal stores a separate operation summary.
+
+Native exports declare snapshot completeness and include
+`vocab-bloom-hub-en-synchronization.jsonl` (format 1): dataset identity, immutable revisions,
+per-source baselines, deletion history, and applied operations with decisions. Content files
+retain portable record IDs. Export reads a consistent transaction snapshot. Removing an author name also redacts retained snapshot histories on the instance. Pending reviews
+belong to their instance and are not transferred. Forks retain ancestral revisions and applied
+operation history. Older exports without this metadata require manual reconciliation; upgrade
+importers before transferring the extended format.
+
+Missing records in partial files, limited conversions or conversions with skipped records do
+not imply deletion, including absent nested meanings/translations. A complete declaration is
+accepted only with zero conversion skips; missing declared files and mismatched line counts
+abort preparation. A changed adapter revision disables deletion inference. Unknown legacy
+completeness is treated as partial. Conversion warnings remain separate from conflict counts.
+
+### Storage and operation
+
+Synchronization tables are per dataset and managed by a dataset migration. Preparation stores
+serialized baseline/local/incoming records and a plan, walking articles in batches. Plan pages
+contain 25 articles. Provision additional space for incoming conversion files, a staging
+schema/database, retained snapshots, the result transaction, and PostgreSQL WAL. Snapshots and
+saved operation decisions are retained conservatively; they are not expired automatically.
+
+On PostgreSQL, source files import into an uncommitted private schema that is rolled back
+when preparation finishes or fails. Apply drains this instance's requests through `SwitchGate`
+and takes database write locks before checking the current revision. Keep the existing
+single-serving-process deployment rule for coherent multi-query reads. SQLite uses a temporary
+database file for source updates. Parent updates and cross-dataset merges require PostgreSQL.
+
+Admin routes are under `/api/en/datasets/{name}/reconciliation`: list operations (`GET`),
+prepare a parent/related comparison (`POST /parent`, `{source, allow_two_way?}`), inspect summary
+and paged items (`GET /{id}` and `GET /{id}/items`), save conflict decisions (`POST /{id}/decisions`),
+replace an article result (`POST /{id}/result`), apply or cancel (`POST /{id}/apply`, `/cancel`).
+All require admin authentication; decisions include the article version to reject stale tabs.
 
 ## Alternative spellings
 

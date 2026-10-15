@@ -18,6 +18,10 @@ import { EnWord } from './en_word.entity';
 @Check('CHK_EN_PRONUNCIATION_AREA', `"area_variant" IN ('common', 'british', 'american', 'australian')`)
 @Check('CHK_EN_PRONUNCIATION_ORDER', '"sort_order" >= 0')
 export class EnPronunciation {
+  /** Portable merge identity, assigned on first snapshot; never inferred from the row ID. */
+  @Column({ type: 'varchar', length: 36, nullable: true })
+  sync_id?: string | null;
+
   @OneToMany(() => EnPronunciationAudio, (audio) => audio.pronunciation)
   audio?: EnPronunciationAudio[];
 

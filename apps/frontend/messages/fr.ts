@@ -1,6 +1,66 @@
 import { ErrorCodes } from 'server/core/constants/error_codes';
 
 export default {
+  reconciliation: {
+    legacy_review: 'Sans base commune : vérifiez chaque différence avant de l’appliquer.',
+    partial:
+      'Données partielles : les enregistrements absents sont conservés, leur absence ne signifie pas une suppression.',
+
+    previous: 'Entrée précédente',
+    next: 'Entrée suivante',
+
+    stale: 'Le jeu de données a changé pendant la vérification. Préparez une nouvelle comparaison.',
+    baseline_required:
+      'Aucune base commune trouvée. Activez la vérification manuelle de toutes les différences.',
+    invalid_result:
+      'Le résultat contient des valeurs non valides ou modifie des informations de source protégées.',
+
+    discard: 'Abandonner les modifications non enregistrées',
+    merge_source: 'Jeu de données à fusionner',
+    two_way: 'Vérifier manuellement sans base commune',
+    prepare: 'Préparer la comparaison',
+    dependencies: 'Vérifiez les mots liés : {targets}',
+
+    title: 'Mises à jour et fusions',
+    review: 'Examiner la mise à jour',
+    hint: 'Préparez une mise à jour, vérifiez les différences et résolvez les conflits avant de l’appliquer. Les décisions enregistrées restent disponibles à votre retour.',
+    baseline: 'Original',
+    local: 'Notre version',
+    incoming: 'Version entrante',
+    result: 'Résultat',
+    absent: 'Absent',
+    keep: 'Conserver notre version',
+    accept: 'Accepter la version entrante',
+    edit: 'Modifier le résultat',
+    save: 'Enregistrer les décisions',
+    unsaved: 'Enregistrez les décisions avant de quitter cette entrée.',
+    operations: 'Opérations',
+    parent: 'Mettre à jour depuis {name}',
+    added: 'Ajoutées',
+    deleted: 'Supprimées',
+    changed: 'Modifiées',
+    conflicts: 'Conflits',
+    local_only: 'Modifications locales conservées',
+    unchanged: 'Inchangées',
+    all: 'Toutes',
+    search: 'Chercher un mot',
+    apply: 'Appliquer la mise à jour',
+    cancel: 'Annuler la mise à jour',
+    preparing: 'Préparation',
+    applied: 'Appliquée',
+    cancelled: 'Annulée',
+    failed: 'Échec',
+    yes: 'Oui',
+    no: 'Non',
+    add: 'Ajouter',
+    remove: 'Supprimer',
+    error:
+      'L’opération n’a pas abouti. Rechargez le plan et vérifiez les conflits, les références et les modifications du contenu.',
+    resolved: 'Résolus : {count}/{total} ; conflits restants : {remaining}',
+    proposed: 'Prévu : +{added}, −{deleted}, modifiées : {changed}',
+    actual: 'Appliqué : +{added}, −{deleted}, modifiées : {changed}',
+    review_state: 'Examiner la mise à jour',
+  },
   provenance: {
     dataset_sources: 'Sources du jeu de données',
     contributions: 'Modifications et leurs licences',
@@ -546,6 +606,7 @@ export default {
     en_saving_11: 'Enregistrement des traductions de sens...',
     en_saving_12: 'Enregistrement des traductions courtes...',
     en_saving_13: 'Conversion de la source...',
+    en_saving_15: 'Préparation de la comparaison de la mise à jour...',
     en_saving_14: 'Enregistrement de l’historique des modifications...',
     en_downloading_file: 'Téléchargement du fichier...',
     elapsed_time: 'Temps écoulé',

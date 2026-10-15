@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import { useEditedDataset } from '@/components/EditedDataset';
+import { Reconciliation } from '@/components/Reconciliation';
 import { App, Button, Checkbox, Input, Popconfirm, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useLocale, useTranslations } from 'next-intl';
@@ -65,6 +67,7 @@ export const ChangesHistory: React.FC<ChangesHistoryP> = ({
 }) => {
   // dates in the interface language, not the browser's (issue #479)
   const locale = useLocale();
+  const { edited } = useEditedDataset();
   const t = useTranslations('changes');
   const p = useTranslations('provenance');
   const tErr = useTranslations('errors');
@@ -199,6 +202,7 @@ export const ChangesHistory: React.FC<ChangesHistoryP> = ({
             {row.contribution && <Tag>{p('edited_in', { name: row.contribution.name })}</Tag>}
           </span>
           {row.reason && <p>{row.reason}</p>}
+          {row.operation && edited && <Reconciliation dataset={edited.name} initialPlan={row.operation.id} />}
           {/* an edit of the owner is the rule; what is not is said */}
           {row.origin !== ChangeOriginE.admin && (
             <Tag color={ORIGIN_COLORS[row.origin]}>{t(`origin_${row.origin}`)}</Tag>
@@ -295,6 +299,7 @@ export const ChangesHistory: React.FC<ChangesHistoryP> = ({
           {t('filter_active')}
         </Checkbox>
       </div>
+      {headword && edited && <Reconciliation dataset={edited.name} headword={headword} />}
       <Table<ChangeT>
         rowKey="id"
         size="small"

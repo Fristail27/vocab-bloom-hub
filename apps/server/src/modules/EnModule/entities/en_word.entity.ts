@@ -49,6 +49,10 @@ import { MANUALLY_MANAGED_INDEX } from './manually-managed-index';
 // AddCaseFoldedWordIndexes migration (issue #440)
 @Index('IDX_EN_WORD_LOWER_C', ['word'], MANUALLY_MANAGED_INDEX)
 export class EnWord {
+  /** Portable merge identity, assigned on first snapshot; never inferred from the row ID. */
+  @Column({ type: 'varchar', length: 36, nullable: true })
+  sync_id?: string | null;
+
   @OneToMany(() => EnPronunciation, (pronunciation) => pronunciation.word)
   pronunciations?: EnPronunciation[];
 

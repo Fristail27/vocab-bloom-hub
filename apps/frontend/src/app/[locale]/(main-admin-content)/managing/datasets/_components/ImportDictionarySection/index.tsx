@@ -1,5 +1,6 @@
 'use client';
 
+import { Reconciliation } from '@/components/Reconciliation';
 import React from 'react';
 import { App, Button, Progress, Tabs, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
@@ -42,6 +43,7 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({ da
   const [status, setStatus] = React.useState<ImportStatusE>(ImportStatusE.idle);
   const [statusMessage, setStatusMessage] = React.useState<string>('');
   // summary of an update-mode import (issue #328), from the completed chunk
+  const [plan, setPlan] = React.useState<string>();
   const [updateSummary, setUpdateSummary] = React.useState<{
     updated: number;
     added: number;
@@ -148,8 +150,10 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({ da
     setPercents(0);
     setStatusMessage('');
     setUpdateSummary(null);
+    setPlan(undefined);
 
     let completedSeen = false;
+    let reviewPending = false;
     let seenDatasetVersion: string | undefined;
 
     const handleChunk = (c: ImportDictionaryChunkT) => {
@@ -162,6 +166,8 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({ da
 
       if (c.stage === EnDictionaryImportPhasesE.completed) {
         completedSeen = true;
+        setPlan(c.reconciliation_plan);
+        reviewPending = Boolean(c.reconciliation_plan);
         setPercents(100);
         setStatusMessage('');
         if (c.updated_entries !== undefined) {
@@ -234,7 +240,7 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({ da
       return;
     }
 
-    if (seenDatasetVersion) {
+    if (seenDatasetVersion && !reviewPending) {
       setInstalledVersion(seenDatasetVersion);
     }
     setStatus(ImportStatusE.success);
@@ -351,7 +357,8 @@ export const ImportDictionarySection: React.FC<ImportDictionarySectionP> = ({ da
           </Button>
         </div>
       )}
-      {updateSummary && status === ImportStatusE.success && (
+      {plan && <Reconciliation dataset={dataset.name} initialPlan={plan} onApplied={onFinished} />}
+      {!plan && updateSummary && status === ImportStatusE.success && (
         <Text type="success">
           {t('update_summary', {
             updated: updateSummary.updated,

@@ -54,7 +54,16 @@ export const convert = async (options: ConvertOptionsT): Promise<ConvertSummaryT
       log: options.log ?? (() => undefined),
       progress: options.onProgress,
     });
-    return { ...(await writer.close()), skipped };
+    const damaged = (skipped.malformed ?? 0) + (skipped.no_definition ?? 0);
+    return {
+      ...(await writer.close({
+        complete: options.limit === undefined && damaged === 0,
+        adapter: options.source.name,
+        revision: 1,
+        skipped: damaged,
+      })),
+      skipped,
+    };
   } catch (error) {
     await writer.abort();
     throw error;
