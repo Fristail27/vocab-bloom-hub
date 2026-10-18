@@ -1,3 +1,5 @@
+import { RefineReconciliation1792100001000 } from './1792100001000-RefineReconciliation';
+import { AddReconciliation1792100000000 } from './1792100000000-AddReconciliation';
 import { AddPronunciationAudio1791800000000 } from './1791800000000-AddPronunciationAudio';
 import { AddWordPronunciations1791700000000 } from './1791700000000-AddWordPronunciations';
 import { AddMeaningQuotes1791600000000 } from './1791600000000-AddMeaningQuotes';
@@ -30,6 +32,8 @@ export const datasetMigrations = [
   AddMeaningQuotes1791600000000,
   AddWordPronunciations1791700000000,
   AddPronunciationAudio1791800000000,
+  AddReconciliation1792100000000,
+  RefineReconciliation1792100001000,
 ];
 
 /** The table each dataset schema records its applied migrations in */

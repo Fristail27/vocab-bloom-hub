@@ -25,6 +25,10 @@ import { checkIsPostgres } from '../../../../configuration';
 @Index('IDX_EN_MEANING_WORD', ['word'])
 @Index('IDX_EN_MEANING_WORD_SORT', ['word', 'sort_order'])
 export class EnMeaning {
+  /** Portable merge identity, assigned on first snapshot; never inferred from the row ID. */
+  @Column({ type: 'varchar', length: 36, nullable: true })
+  sync_id?: string | null;
+
   @ManyToOne(() => EnEtymology, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'etymology_id' })
   etymology?: EnEtymology | null;

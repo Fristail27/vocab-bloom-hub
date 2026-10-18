@@ -50,6 +50,8 @@
 
 # production
 /apps/frontend/build
+/apps/frontend/storybook-static/
+/apps/frontend/stories/__screenshots__/
 /apps/server/dist
 /packages/*/dist
 

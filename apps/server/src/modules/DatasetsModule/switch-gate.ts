@@ -72,19 +72,30 @@ export class SwitchGate {
 
 // the request that asks for the switch cannot wait for it, nor be waited for
 const ACTIVATE_ROUTE = /^\/api\/en\/datasets\/[^/]+\/activate\/?$/;
+const RECONCILIATION_APPLY_ROUTE = /^\/api\/en\/datasets\/[^/]+\/reconciliation\/[^/]+\/apply(?:\/start)?\/?$/;
+// This read only inspects in-memory progress, so publication must not block it.
+const RECONCILIATION_PROGRESS_ROUTE = /^\/api\/en\/datasets\/[^/]+\/reconciliation\/application\/?$/;
 
 /** Counts every request in and out of the gate; runs before routing */
 export const switchGateMiddleware =
   (gate: SwitchGate) =>
   (req: Request, res: Response, next: NextFunction): void => {
-    if (ACTIVATE_ROUTE.test(requestPath(req))) return next();
+    if (
+      ACTIVATE_ROUTE.test(requestPath(req)) ||
+      (req.method === 'GET' && RECONCILIATION_PROGRESS_ROUTE.test(requestPath(req))) ||
+      (req.method === 'POST' && RECONCILIATION_APPLY_ROUTE.test(requestPath(req)))
+    )
+      return next();
     let entered = false;
     let closed = false;
     // a client that gave up while waiting never entered and must not leave
-    res.once('close', () => {
+    const finished = () => {
+      if (closed) return;
       closed = true;
       if (entered) gate.leave();
-    });
+    };
+    res.once('finish', finished);
+    res.once('close', finished);
     void gate.enter().then(() => {
       if (closed) return gate.leave();
       entered = true;

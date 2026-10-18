@@ -1,3 +1,4 @@
+import { currentChangeSource } from './context';
 import { EntityManager } from 'typeorm';
 import {
   ChangeActionE,
@@ -6,7 +7,7 @@ import {
   CustomVersionDictionaryOfWord,
 } from '../../../../../types';
 import { EnWord } from '../../entities/en_word.entity';
-import { wordKeyOf, recordChange } from './recordChange';
+import { wordKeyOf, recordChange, NewChangeT } from './recordChange';
 import {
   changedFields,
   createdFields,
@@ -24,7 +25,13 @@ import {
 } from './snapshots';
 
 /** Edits made in the prefill form are ordinary field edits, with ordinary reverts. */
-export const recordCopiedEdits = async (em: EntityManager, original: EnWord, saved: EnWord): Promise<void> => {
+export const recordCopiedEdits = async (
+  em: EntityManager,
+  original: EnWord,
+  saved: EnWord,
+  reconciliation = false,
+  writeChange: (em: EntityManager, change: NewChangeT, path: string[]) => Promise<void> = recordChange,
+): Promise<void> => {
   const word = wordKeyOf(saved);
   let edited = false;
   const record = async (
@@ -32,6 +39,7 @@ export const recordCopiedEdits = async (em: EntityManager, original: EnWord, sav
     key: ChangeRecordT | null,
     before?: SnapshotT,
     after?: SnapshotT,
+    path: string[] = ['common'],
   ) => {
     // Shared spelling links are recorded under their own headword, without a POS.
     // Keep them in creation/deletion/rename snapshots only, for restoration.
@@ -45,22 +53,28 @@ export const recordCopiedEdits = async (em: EntityManager, original: EnWord, sav
       before && after ? changedFields(before, after) : before ? deletedFields(before) : createdFields(after!);
     if (!diff) return;
     edited = true;
-    await recordChange(em, {
-      ...word,
-      entity,
-      record: key,
-      diff,
-      action: before && after ? ChangeActionE.update : before ? ChangeActionE.delete : ChangeActionE.create,
-    });
+    await writeChange(
+      em,
+      {
+        ...word,
+        entity,
+        record: key,
+        diff,
+        action: before && after ? ChangeActionE.update : before ? ChangeActionE.delete : ChangeActionE.create,
+      },
+      path,
+    );
   };
   // The automatic acquisition is provenance, not a content edit.
   const before = wordSnapshot(original);
   const after = wordSnapshot(saved);
-  before.origins = (saved.origins ?? []).filter((origin) => origin.inherited);
-  after.origins = saved.origins ?? [];
+  if (!reconciliation) {
+    before.origins = (saved.origins ?? []).filter((origin) => origin.inherited);
+    after.origins = saved.origins ?? [];
+  }
   await record(ChangeEntityE.word, null, before, after);
 
-  async function collection<T>(
+  async function collection<T extends { sync_id?: string | null }>(
     oldRows: T[],
     newRows: T[],
     key: (row: T) => string,
@@ -69,8 +83,10 @@ export const recordCopiedEdits = async (em: EntityManager, original: EnWord, sav
   ) {
     const remaining = new Set(newRows);
     for (const row of oldRows) {
-      let match = [...remaining].find((next) => key(next) === key(row));
-      if (!match) {
+      let match = [...remaining].find((next) =>
+        reconciliation && row.sync_id ? next.sync_id === row.sync_id : key(next) === key(row),
+      );
+      if (!match && !reconciliation) {
         const candidates = [...remaining].filter((next) => fallback(next) === fallback(row));
         if (candidates.length === 1 && oldRows.filter((old) => fallback(old) === fallback(row)).length === 1)
           match = candidates[0];
@@ -91,6 +107,7 @@ export const recordCopiedEdits = async (em: EntityManager, original: EnWord, sav
         formRecord(old ?? next!),
         old ? formSnapshot(old) : undefined,
         next ? formSnapshot(next) : undefined,
+        ['forms', (next ?? old)!.sync_id ?? ''],
       ),
   );
   await collection(
@@ -104,6 +121,7 @@ export const recordCopiedEdits = async (em: EntityManager, original: EnWord, sav
         shortTranslationRecord(old ?? next!),
         old ? shortTranslationSnapshot(old) : undefined,
         next ? shortTranslationSnapshot(next) : undefined,
+        ['short_translations', (next ?? old)!.sync_id ?? ''],
       ),
   );
   await collection(
@@ -117,24 +135,26 @@ export const recordCopiedEdits = async (em: EntityManager, original: EnWord, sav
         meaningRecord(old ?? next!),
         old ? meaningSnapshot(old, !next) : undefined,
         next ? meaningSnapshot(next, !old) : undefined,
+        ['meanings', (next ?? old)!.sync_id ?? ''],
       );
-      if (!old || !next) return;
+      if ((!old || !next) && !reconciliation) return;
       await collection(
-        old.translations ?? [],
-        next.translations ?? [],
+        old?.translations ?? [],
+        next?.translations ?? [],
         (row) => `${row.language}:${row.title}`,
         (row) => row.language,
         (a, b) =>
           record(
             ChangeEntityE.meaning_translation,
-            translationRecord(a ?? b!, next),
+            translationRecord(a ?? b!, (next ?? old)!),
             a ? translationSnapshot(a) : undefined,
             b ? translationSnapshot(b) : undefined,
+            ['meanings', (next ?? old)!.sync_id ?? '', 'translations', (b ?? a)!.sync_id ?? ''],
           ),
       );
     },
   );
-  if (edited) {
+  if (edited && !currentChangeSource().superseded) {
     await em.getRepository(EnWord).update(saved.id, { version: CustomVersionDictionaryOfWord });
     await recordChange(em, {
       ...word,

@@ -1,3 +1,4 @@
+import type { ReconciliationItemT } from '../types/reconciliation';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -69,11 +70,25 @@ describe('the history of edits (e2e, issue #531)', () => {
     const folder = `update-${Date.now()}`;
     await mkdir(path.join(importDir, folder));
     await writeFile(path.join(importDir, folder, 'vocab-bloom-hub-en-words.jsonl'), lines.join(''));
-    await request(server())
+    const prepared = await request(server())
       .post('/api/en/dictionary/import')
       .set(auth)
       .send({ source: { kind: 'file', path: folder }, update: true })
       .expect(201);
+    const id = JSON.parse(prepared.text.trim().split('\n').at(-1)!).reconciliation_plan as string;
+    const list = await request(server())
+      .get(`/api/en/datasets/default/reconciliation/${id}/items`)
+      .set(auth)
+      .expect(200);
+    for (const item of list.body.items as ReconciliationItemT[]) {
+      if (!item.incoming?.present) continue;
+      await request(server())
+        .post(`/api/en/datasets/default/reconciliation/${id}/result`)
+        .set(auth)
+        .send({ headword: item.headword, version: item.version, result: item.incoming })
+        .expect(200);
+    }
+    await request(server()).post(`/api/en/datasets/default/reconciliation/${id}/apply`).set(auth).expect(200);
   };
 
   const publicWord = async (word: string) =>
@@ -308,19 +323,22 @@ describe('the history of edits (e2e, issue #531)', () => {
 
     await request(server()).get('/api/en/changes').expect(401);
     const past = await request(server()).get('/api/en/changes?headword=lamp').set(auth).expect(200);
-    expect(past.body.items).toEqual([
-      expect.objectContaining({
-        headword: 'lamp',
-        part_of_speech: 'noun',
-        superseded_at: expect.any(String),
-        revertible: false,
-        diff: {
-          description: { before: 'the word lamp', after: 'a device that produces light' },
-          // the admin sees the version the entry had; a reader is not shown the editorial state
-          version: { before: '1.0.0', after: 'custom_version' },
-        },
-      }),
-    ]);
+    expect(past.body.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          headword: 'lamp',
+          part_of_speech: 'noun',
+          superseded_at: expect.any(String),
+          revertible: false,
+          diff: {
+            description: { before: 'the word lamp', after: 'a device that produces light' },
+            // the admin sees the version the entry had; a reader is not shown the editorial state
+            version: { before: '1.0.0', after: 'custom_version' },
+          },
+        }),
+      ]),
+    );
+    expect(past.body.items.some((row: { operation?: unknown }) => row.operation)).toBe(true);
     const active = await request(server()).get('/api/en/changes?active=true&limit=10').set(auth).expect(200);
     expect(active.body).toEqual(expect.objectContaining({ total: 2, page: 1, limit: 10, has_more: false }));
     expect(

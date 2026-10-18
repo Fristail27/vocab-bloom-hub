@@ -35,7 +35,11 @@
   "scripts": {
     "dev": "dotenv -e \"${ENV_FILE:-../../.env}\" -- next dev",
     "build": "NODE_ENV=production dotenv -e \"${ENV_FILE:-../../.env}\" -- next build",
-    "start": "dotenv -e \"${ENV_FILE:-../../.env}\" -- next start"
+    "start": "dotenv -e \"${ENV_FILE:-../../.env}\" -- next start",
+    "storybook": "storybook dev -p 6006 --no-open",
+    "storybook:build": "storybook build",
+    "storybook:test": "vitest run --config vitest.config.ts",
+    "storybook:typecheck": "tsc --noEmit -p tsconfig.storybook.json"
   },
   "dependencies": {
     "@ant-design/cssinjs": "^2.1.2",
@@ -49,13 +53,23 @@
     "sass": "^1.105.1"
   },
   "devDependencies": {
+    "@storybook/addon-docs": "^10.6.2",
+    "@storybook/addon-vitest": "^10.6.2",
+    "@storybook/nextjs-vite": "^10.6.2",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@types/js-cookie": "^3.0.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@vitest/browser-playwright": "^5.0.5",
     "dotenv-cli": "^11.0.0",
-    "typescript": "^6.0.3"
+    "msw": "^3.0.3",
+    "msw-storybook-addon": "^3.0.3",
+    "playwright": "^1.64.1",
+    "storybook": "^10.6.2",
+    "typescript": "^6.0.3",
+    "vite": "^8",
+    "vitest": "^5.0.5"
   }
 }

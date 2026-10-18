@@ -13,6 +13,16 @@ import { EnDictionaryImportPhasesE } from './constants';
 @Injectable()
 export class ImportStatusService {
   private status: ImportStatusT = { running: false };
+  private background?: Promise<void>;
+
+  /** Background reconciliation must settle before dataset reader connections are closed. */
+  trackBackground(work: Promise<void>): void {
+    this.background = work;
+  }
+
+  async waitForBackground(): Promise<void> {
+    await this.background;
+  }
 
   snapshot(): ImportStatusT {
     return { ...this.status };

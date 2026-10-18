@@ -1,5 +1,6 @@
-import { storedPronunciations } from '../../../utils/pronunciations';
-import { etymologiesOf } from '../../../utils/etymologies';
+import { orderedPronunciations } from '../../../utils/pronunciations';
+import { portableAudio, orderedAudio } from '../../../utils/pronunciationAudio';
+
 import { alternativeSpellings } from '../../../utils/entryAlternatives';
 import {
   DataSetWordT,
@@ -24,8 +25,28 @@ import {
   sortWordLinksForDS,
 } from './sortForDataSet';
 
+export const soundsForDS = (word: EnWord) =>
+  orderedPronunciations(word.pronunciations ?? []).map((row) => ({
+    type: row.type,
+    text: row.text,
+    area_variant: row.area_variant,
+    sort_order: row.sort_order,
+    ...(row.sync_id && { sync_id: row.sync_id }),
+    ...(row.audio?.length && {
+      audio: orderedAudio(row.audio).map((audio) => ({
+        ...portableAudio(audio),
+        ...(audio.sync_id && { sync_id: audio.sync_id }),
+      })),
+    }),
+  }));
+export const etymologiesForDS = (word: EnWord) =>
+  [...(word.etymologies ?? [])]
+    .sort((a, b) => a.number - b.number)
+    .map((row) => ({ number: row.number, text: row.text, ...(row.sync_id && { sync_id: row.sync_id }) }));
+
 export const mapMeaningTranslationsForDS = (t: EnMeaningTranslation): EnMeaningTranslationDST => {
   return {
+    ...(t.sync_id && { sync_id: t.sync_id }),
     title: t.title || '',
     variants_of_words: t.variants_of_words || [],
     definition: t.definition || '',
@@ -56,6 +77,7 @@ const mapWordLinksForDS = (entries: EnEntry[] | undefined, partOfSpeech: EnPartO
 
 export const mapMeaningForDS = (m: EnMeaning, partOfSpeech: EnPartOfSpeechE): EnMeaningDST => {
   return {
+    ...(m.sync_id && { sync_id: m.sync_id }),
     etymology_number: m.etymology?.number ?? null,
     title: m.title || '',
     area_variant: m.area_variant || EnAreaVariantsE.common,
@@ -84,16 +106,18 @@ export const mapShortTranslationForDS = (t: EnShortTranslation): EnShortTranslat
   return {
     language: t.language,
     variants_of_words: t.variants_of_words || [],
+    ...(t.sync_id && { sync_id: t.sync_id }),
     description: t.description || '',
   };
 };
 
 export const mapFormsForDS = (f: EnWord): EnWordFormDST => {
   return {
+    ...(f.sync_id && { sync_id: f.sync_id }),
     alternatives: alternativeSpellings(f.word),
     is_obsolete: !!f.is_obsolete,
     transcription: f.transcription || '',
-    pronunciations: storedPronunciations(f),
+    pronunciations: soundsForDS(f),
     word: f.word.word,
     // the column is nullable, the form contract is not: an unmarked form is common
     area_variant: f.area_variant ?? EnAreaVariantsE.common,
@@ -105,8 +129,8 @@ export const prepareWordForDataSet = (word: EnWord): DataSetWordT => {
   const { pattern: _p, form_of_word: _f, ...w } = word;
   return {
     alternatives: alternativeSpellings(word.word),
-    etymologies: etymologiesOf(word),
-    pronunciations: storedPronunciations(word),
+    etymologies: etymologiesForDS(word),
+    pronunciations: soundsForDS(word),
     origins: word.origins?.length ? word.origins : undefined,
     categories: sortStrings(w.categories),
     generated: Boolean(w.generated),

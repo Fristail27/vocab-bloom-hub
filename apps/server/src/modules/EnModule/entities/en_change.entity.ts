@@ -20,6 +20,9 @@ const TIMESTAMP_COLUMN = checkIsPostgres() ? 'timestamptz' : 'datetime';
 @Index('IDX_EN_CHANGES_HEADWORD', ['headword'])
 export class EnChange {
   @Column({ type: 'simple-json', nullable: true })
+  operation?: import('../../../../types/changes').ChangeOperationT | null;
+
+  @Column({ type: 'simple-json', nullable: true })
   contribution!: import('../../../../types/provenance').OriginT | null;
 
   @Column({ type: 'simple-json', nullable: true })

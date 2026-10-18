@@ -125,7 +125,13 @@ source mentioned at dataset level. An unchanged copy/fork adds acquisition event
 receiving dataset's license. Content edits in own datasets capture `contribution` terms in
 `en_changes`; currently applicable history supplies public `contributions[]` and their licenses.
 Settings changes do not rewrite old snapshots. Forks copy a consistent database snapshot and
-become visible only after commit; parent synchronization and merging are not implemented.
+become visible only after commit. `EnReconciliation` prepares source updates and parent/related
+merges as durable per-dataset plans, with portable nested IDs, immutable revisions and saved
+conflict decisions. Publication validates the whole graph and checks staleness under write locks,
+then changes content/history/baselines in one transaction. Source replacements are retained as
+superseded history without a receiving contribution; custom results create ordinary edits.
+Nonempty imports stage into a private schema/temporary SQLite database. Native exports carry
+synchronization metadata and completed operations; see `docs/datasets.md#updating-and-merging-datasets-656`.
 Own datasets and forks have editable versions. Exports retain ordinary JSONL filenames,
 `dataset-format.json`, manifest source metadata and history; keep the full declared history
 when importing, and upgrade older importers first (`docs/offline-import.md`).

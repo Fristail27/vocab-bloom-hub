@@ -10,6 +10,7 @@ import { prepareMeaningTranslationFromDB } from './prepareTranslationsFromDB';
  */
 export const prepareMeaningFromDB = (m: EnMeaning): EnMeaningT => {
   const {
+    sync_id: _syncId,
     createdAt: _createdAt,
     updateAt: _updateAt,
     word: _word,

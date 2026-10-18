@@ -3,6 +3,8 @@ dist
 .next
 coverage
 build
+storybook-static
+apps/frontend/.storybook/public/mockServiceWorker.js
 apps/e2e/playwright-report
 apps/e2e/test-results
 apps/e2e/.tmp
