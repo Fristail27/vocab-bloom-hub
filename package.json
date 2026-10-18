@@ -66,7 +66,11 @@
     "agents:test": "node --test scripts/setup-agents.spec.mjs",
     "check": "node --test scripts/check-next-eslint.mjs && yarn agents:test && yarn lint && yarn format:check && yarn peers:check",
     "prepare": "husky",
-    "jest": "NODE_OPTIONS=--experimental-vm-modules jest"
+    "jest": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "storybook": "yarn workspace frontend storybook",
+    "storybook:build": "yarn workspace frontend storybook:build",
+    "storybook:test": "yarn workspace frontend storybook:test",
+    "storybook:typecheck": "yarn workspace frontend storybook:typecheck"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

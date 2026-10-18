@@ -873,26 +873,29 @@ describe('DatasetsSection', () => {
       (EnApi.updateDataset as jest.Mock).mockResolvedValue(MINE);
       renderSection(editing ? withOwn(MINE) : withOwn());
       fireEvent.click(screen.getByTestId(editing ? 'dataset-edit-my_words' : 'own-dataset-create'));
+      const dataset = within(screen.getByRole('dialog'));
       if (!editing) {
         type('own-dataset-name', 'my_words');
         type('own-dataset-title', 'My words');
         type('own-dataset-attribution', 'The owner');
       }
-      fireEvent.click(screen.getByRole('button', { name: 'add_source' }));
-      const source = within(screen.getByRole('dialog', { name: 'add_source' }));
-      expect(source.queryByRole('textbox', { name: 'record_link' })).not.toBeInTheDocument();
-      expect(source.queryByRole('combobox', { name: 'scope' })).not.toBeInTheDocument();
-      fireEvent.change(source.getByRole('textbox', { name: 'source_name' }), { target: { value: 'Glossary' } });
-      fireEvent.change(source.getByRole('textbox', { name: 'version' }), { target: { value: '2026' } });
-      fireEvent.change(source.getByRole('textbox', { name: 'source_link' }), {
+      fireEvent.click(dataset.getByRole('button', { name: 'add_source' }));
+      const sourceElement = screen.getByRole('dialog', { name: 'add_source' });
+      const source = within(sourceElement);
+      // Label queries avoid repeatedly computing roles/styles for the nested forms in jsdom.
+      expect(source.queryByLabelText('record_link')).not.toBeInTheDocument();
+      expect(source.queryByLabelText('scope')).not.toBeInTheDocument();
+      fireEvent.change(source.getByLabelText('source_name'), { target: { value: 'Glossary' } });
+      fireEvent.change(source.getByLabelText('version'), { target: { value: '2026' } });
+      fireEvent.change(source.getByLabelText('source_link'), {
         target: { value: 'https://example.org/glossary' },
       });
-      fireEvent.change(source.getByRole('textbox', { name: 'attribution' }), {
+      fireEvent.change(source.getByLabelText('attribution'), {
         target: { value: 'Contributors' },
       });
       fireEvent.click(source.getByRole('button', { name: 'save' }));
-      await waitFor(() => expect(screen.queryByRole('dialog', { name: 'add_source' })).not.toBeInTheDocument());
-      fireEvent.click(screen.getByRole('button', { name: editing ? 'own_save' : 'own_create' }));
+      await waitFor(() => expect(sourceElement).not.toBeInTheDocument());
+      fireEvent.click(dataset.getByRole('button', { name: editing ? 'own_save' : 'own_create' }));
       const api = (editing ? EnApi.updateDataset : EnApi.createDataset) as jest.Mock;
       await waitFor(() => expect(api).toHaveBeenCalled());
       const saved = api.mock.calls[0][editing ? 1 : 0].origins;

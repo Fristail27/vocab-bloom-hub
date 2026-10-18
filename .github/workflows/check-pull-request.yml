@@ -127,6 +127,26 @@ jobs:
       - name: Server e2e tests
         run: yarn workspace server test:e2e
 
+  storybook:
+    name: admin component stories
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup workspace
+        uses: ./.github/actions/setup
+        with:
+          node-version: 24
+      - name: Typecheck Storybook
+        run: yarn storybook:typecheck
+      - name: Build Storybook
+        run: yarn storybook:build
+      - name: Install Chromium
+        run: yarn workspace frontend exec playwright install --with-deps chromium
+      - name: Test dataset workflows
+        run: yarn storybook:test
+
   python-sdk:
     name: python-sdk (${{ matrix.python }})
     runs-on: ubuntu-latest
@@ -228,8 +248,11 @@ jobs:
       # The whole e2e suite on the database operators actually run (issue
       # #400): setup-e2e.ts gives every jest worker its own database derived
       # from this URL and resets its schema per spec file
+      # The service's connection limit is shared by those databases. Each
+      # app also opens pools for its datasets, so run one app suite at a time
+      # to stay within the stock Postgres limit of 100 connections.
       - name: Server e2e suite on Postgres
-        run: yarn workspace server test:e2e
+        run: yarn workspace server test:e2e --runInBand
         env:
           E2E_DATABASE_URL: postgresql://vocab:vocab@localhost:5432/vocab_bloom
 

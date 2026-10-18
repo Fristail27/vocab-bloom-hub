@@ -128,6 +128,9 @@ describe('persistent update review', () => {
       processed: 0,
       started_at: new Date().toISOString(),
     });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'apply' })).not.toHaveClass('ant-btn-loading'),
+    );
     fireEvent.click(screen.getByRole('button', { name: 'apply' }));
     await waitFor(() => expect(ReconciliationApi.apply).toHaveBeenCalledWith('fork', 'plan'));
   });

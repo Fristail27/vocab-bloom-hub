@@ -154,7 +154,13 @@ export function ReviewItem({
             >
               {t('discard')}
             </Button>
-            <Button type="primary" loading={busy} disabled={!dirty} onClick={() => void save()}>
+            <Button
+              type="primary"
+              aria-label={t('save')}
+              loading={busy}
+              disabled={busy || !dirty}
+              onClick={() => void save()}
+            >
               {t('save')}
             </Button>
           </Space>

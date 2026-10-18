@@ -21,6 +21,10 @@ test('shows live preparation stages and reconnects after a page reload', async (
       await route.fulfill({ status: 202, json: preparation });
     } else if (path.endsWith('/preparation')) {
       await route.fulfill({ json: { preparation } });
+    } else if (path.endsWith('/application')) {
+      // A real completed apply from an earlier test would select its plan and
+      // collapse the preparation controls. This scenario owns all job status.
+      await route.fulfill({ json: { application: null } });
     } else if (path.endsWith('/reconciliation')) {
       await route.fulfill({
         json: { plans: [], parents: [{ lineage: 'parent', source: 'parent', revision: 'base' }] },

@@ -308,8 +308,9 @@ export function Reconciliation({
                 </Button>
                 <Button
                   type="primary"
+                  aria-label={t('apply')}
                   loading={busy}
-                  disabled={dirty || summary.remaining_conflicts > 0}
+                  disabled={busy || dirty || summary.remaining_conflicts > 0}
                   onClick={() => void finish(true)}
                 >
                   {t('apply')}
@@ -365,6 +366,7 @@ export function Reconciliation({
                     />
                     <Typography.Text>{t('two_way')}</Typography.Text>
                     <Button
+                      aria-label={t('prepare')}
                       loading={startingPreparation}
                       disabled={!mergeSource || dirty || blocked}
                       onClick={() => mergeSource && void prepare(mergeSource, twoWay)}

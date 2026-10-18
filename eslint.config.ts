@@ -9,6 +9,8 @@ export default [
       '**/dist/**',
       '**/coverage/**',
       '**/build/**',
+      '**/storybook-static/**',
+      'apps/frontend/.storybook/public/mockServiceWorker.js',
       // operator-facing example files (PM2 process file), not project code
       'docs/**/examples/**',
       // the Playwright report and traces of a local e2e run (git-ignored)
