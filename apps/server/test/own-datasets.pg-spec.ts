@@ -1,3 +1,6 @@
+import { DatasetsService } from '../src/modules/DatasetsModule/datasets.service';
+import { ImportStatusService } from '../src/modules/EnModule/modules/EnImportDictionary/importStatus.service';
+import { EnDatasetsStatisticsT, ImportTriggerE } from '../types';
 import { parseManifest } from '../src/modules/EnModule/modules/EnImportDictionary/utils/parseManifest';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -28,6 +31,7 @@ import {
  */
 const MINE = 'pgspec_mine';
 const HOUSE = 'pgspec_house';
+const EMPTY = 'pgspec_statistics_empty';
 const HEADWORD = `zzpgown${Date.now().toString(36)}`;
 const HOUSE_TEXT = 'Whoever reads these words may read them aloud, and nothing else.';
 // a word written through the switch of the admin UI into a dataset that is not served
@@ -89,7 +93,7 @@ describe('datasets of the instance’s own (Postgres, issue #540)', () => {
     await app.listen(0, '127.0.0.1');
     dataSource = app.get(DataSource);
 
-    const held = (await list()).datasets.filter((dataset) => [MINE, HOUSE].includes(dataset.name));
+    const held = (await list()).datasets.filter((dataset) => [MINE, HOUSE, EMPTY].includes(dataset.name));
     if (held.length) {
       await app.close();
       throw new Error(
@@ -105,7 +109,7 @@ describe('datasets of the instance’s own (Postgres, issue #540)', () => {
     else process.env.PUBLIC_API_RATE_LIMIT = rateLimit;
     if (!owned) return;
     await request(server()).post('/api/en/datasets/default/activate').set(auth);
-    for (const name of [MINE, HOUSE]) {
+    for (const name of [MINE, HOUSE, EMPTY]) {
       await request(server()).delete(`/api/en/datasets/${name}`).set(auth);
       await dataSource.query(`DROP SCHEMA IF EXISTS "ds_${name}" CASCADE`);
     }
@@ -542,6 +546,77 @@ describe('datasets of the instance’s own (Postgres, issue #540)', () => {
       .set(auth)
       .query({ ...query, dataset: 'does_not_exist' })
       .expect(404);
+  });
+
+  it('compares populated and empty datasets, includes closed ones and isolates a failed reader', async () => {
+    await request(server())
+      .post('/api/en/datasets')
+      .set(auth)
+      .send({
+        name: EMPTY,
+        title: 'Empty statistics fixture',
+        license: { spdx: 'CC0-1.0' },
+        attribution: 'Test',
+      })
+      .expect(201);
+    const activeBefore = (await list()).active;
+    const overview = async (): Promise<EnDatasetsStatisticsT> =>
+      (
+        await request(server())
+          .get('/api/en/statistics/datasets')
+          .query({ dataset: 'does_not_exist' })
+          .set(auth)
+          .expect(200)
+      ).body;
+    const result = await overview();
+    const installed = (await list()).datasets.filter((dataset) => dataset.installed);
+    expect(result.datasets.map((row) => row.dataset.name).sort()).toEqual(
+      installed.map((dataset) => dataset.name).sort(),
+    );
+    for (const row of result.datasets) {
+      const detail = (
+        await request(server())
+          .get('/api/en/statistics')
+          .query({ dataset: row.dataset.name })
+          .set(auth)
+          .expect(200)
+      ).body;
+      expect(row.totals).toEqual(detail.totals);
+      expect(row.error).toBeNull();
+    }
+    expect(result.datasets.find((row) => row.dataset.name === EMPTY)).toMatchObject({
+      dataset: { active: false, is_public: false },
+      totals: { entries: 0, words: 0, meanings: 0 },
+    });
+    expect(result.datasets.find((row) => row.dataset.name === MINE)?.dataset.is_public).toBe(false);
+    const datasets = app.get(DatasetsService);
+    const reader = datasets.reader.bind(datasets);
+    const unavailable = jest.spyOn(datasets, 'reader').mockImplementation(async (dataset) => {
+      if (dataset.name === MINE) throw new Error('reader unavailable');
+      return reader(dataset);
+    });
+    const imports = app.get(ImportStatusService);
+    imports.begin(ImportTriggerE.manual, 'statistics test', HOUSE);
+    try {
+      const partial = await overview();
+      expect(partial.datasets.find((row) => row.dataset.name === MINE)).toMatchObject({
+        totals: null,
+        error: 'statistics_unavailable',
+        updating: false,
+      });
+      expect(partial.datasets.find((row) => row.dataset.name === HOUSE)).toMatchObject({
+        error: null,
+        updating: true,
+      });
+      expect(partial.datasets.find((row) => row.dataset.name === EMPTY)).toMatchObject({
+        error: null,
+        updating: false,
+      });
+    } finally {
+      unavailable.mockRestore();
+      imports.end({});
+    }
+    expect((await list()).active).toBe(activeBefore);
   });
 
   it('deletes a dataset of the owner’s with its schema', async () => {

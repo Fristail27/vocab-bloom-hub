@@ -1,3 +1,6 @@
+import { DatasetsService } from '../src/modules/DatasetsModule/datasets.service';
+import { ImportStatusService } from '../src/modules/EnModule/modules/EnImportDictionary/importStatus.service';
+import { ImportTriggerE } from '../types';
 import { DataSource } from 'typeorm';
 import { EnMeaningTranslation } from '../src/modules/EnModule/entities/en_meaning_translation.entity';
 import { EnShortTranslation } from '../src/modules/EnModule/entities/en_short_translation.entity';
@@ -124,6 +127,63 @@ describe('actionable quality statistics (issue #648)', () => {
     const [short] = await shorts.find();
     await shorts.update(short.id, { description: ' ' });
   });
+  it('lists the installed dataset with the same totals as its details and requires admin access', async () => {
+    await request(server()).get('/api/en/statistics/datasets').expect(401);
+    const detail = (await request(server()).get('/api/en/statistics').set(auth).expect(200)).body;
+    const overview = (await request(server()).get('/api/en/statistics/datasets').set(auth).expect(200)).body;
+    expect(overview.datasets).toHaveLength(1);
+    expect(overview.datasets[0]).toMatchObject({
+      dataset: { name: 'default', active: true },
+      totals: detail.totals,
+      updating: false,
+      error: null,
+    });
+    expect(Number.isNaN(Date.parse(overview.read_at))).toBe(false);
+  });
+
+  it('keeps an unreadable dataset visible without claiming zero counts or exposing internal errors', async () => {
+    const reader = jest
+      .spyOn(app.get(DatasetsService), 'reader')
+      .mockRejectedValueOnce(new Error('secret database details'));
+    try {
+      const { body } = await request(server()).get('/api/en/statistics/datasets').set(auth).expect(200);
+      expect(body.datasets[0]).toMatchObject({
+        dataset: { name: 'default' },
+        totals: null,
+        error: 'statistics_unavailable',
+      });
+      expect(JSON.stringify(body)).not.toContain('secret');
+    } finally {
+      reader.mockRestore();
+    }
+  });
+
+  it('marks counts when an import is running or begins and finishes during the read', async () => {
+    const imports = app.get(ImportStatusService);
+    imports.begin(ImportTriggerE.manual, 'test import', 'default');
+    try {
+      const { body } = await request(server()).get('/api/en/statistics/datasets').set(auth).expect(200);
+      expect(body.datasets[0].updating).toBe(true);
+    } finally {
+      imports.end({});
+    }
+    const datasets = app.get(DatasetsService);
+    const original = datasets.reader.bind(datasets);
+    const reader = jest.spyOn(datasets, 'reader').mockImplementationOnce(async (dataset) => {
+      imports.begin(ImportTriggerE.manual, 'overlapping import', dataset.name);
+      imports.end({});
+      return original(dataset);
+    });
+    try {
+      const { body } = await request(server()).get('/api/en/statistics/datasets').set(auth).expect(200);
+      expect(body.datasets[0].updating).toBe(true);
+    } finally {
+      reader.mockRestore();
+    }
+    const { body } = await request(server()).get('/api/en/statistics/datasets').set(auth).expect(200);
+    expect(body.datasets[0].updating).toBe(false);
+  });
+
   afterAll(async () => {
     await app?.close();
   });

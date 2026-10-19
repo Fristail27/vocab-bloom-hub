@@ -1,3 +1,4 @@
+import { StatisticsLinks } from '../_components/StatisticsLinks';
 import { Suspense } from 'react';
 import { IssuesBrowser } from './IssuesBrowser';
 import { getTranslations } from 'next-intl/server';
@@ -23,6 +24,7 @@ export default async function IssuesStatisticsPage({ params }: CommonPageP) {
       <Title level={2}>{statsT('issues_statistics')}</Title>
       <Breadcrumb items={breadCrumbs} />
       <Suspense fallback={null}>
+        <StatisticsLinks />
         <IssuesBrowser />
       </Suspense>
     </div>

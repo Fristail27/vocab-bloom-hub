@@ -913,6 +913,17 @@ export default {
     add_slot: '添加 SLOT',
   },
   statistics: {
+    all_datasets: '所有数据集',
+    all_datasets_explanation:
+      '分别显示每个已安装数据集的计数，包括未公开的词典。共有词和分支中的词条会在各数据集中分别计数；这些并非去重后的词数。',
+    refresh_statistics: '刷新统计',
+    statistics_read_at: '读取时间：{time}',
+    statistics_loading: '正在加载统计…',
+    statistics_unavailable: '无法读取统计，请尝试刷新。',
+    no_installed_datasets: '没有已安装的数据集',
+    statistics_updating: '读取期间发生了导入。计数可能是中间结果，请在导入完成后刷新。',
+    dataset_navigation: '数据集统计',
+
     issues_explanation: '缺少数据不一定是错误。这些列表可帮助检查记录；来源支持某类数据并不保证其完整性。',
     interpretation_missing: '来源支持此类数据，请检查缺失项。',
     interpretation_source_omission: '预期缺失：来源不提供此字段。',

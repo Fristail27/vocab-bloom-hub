@@ -1,3 +1,4 @@
+import type { DatasetT } from '../../datasets';
 import { ErrorResT } from '../../errors';
 import { EnAreaVariantsE, EnPartOfSpeechE, EnWordT } from '.';
 import type { PublicSearchWordV1T, PublicWordV1T } from '../../public/v1';
@@ -323,6 +324,17 @@ export type EnStatisticsT = {
   by_word_level: EnWordLevelStatT[];
 };
 export type GetEnStatisticsResT = EnStatisticsT | ErrorResT;
+
+/** Per-dataset counts, never a count of unique words across dictionaries. */
+export type EnDatasetStatisticsT = {
+  dataset: Pick<DatasetT, 'name' | 'title' | 'version' | 'active' | 'is_public'>;
+  /** An import overlapped this read; figures may be intermediate. */
+  updating: boolean;
+} & ({ totals: EnStatisticsT['totals']; error: null } | { totals: null; error: 'statistics_unavailable' });
+export type EnDatasetsStatisticsT = {
+  read_at: string;
+  datasets: EnDatasetStatisticsT[];
+};
 
 export type EnTranslationsStatisticsT = {
   totals: {

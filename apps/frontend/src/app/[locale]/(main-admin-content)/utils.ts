@@ -19,6 +19,7 @@ export const getStatisticsButtons = (
   locale: InterfaceLanguageEnum,
 ) => {
   return [
+    { text: t('all_datasets'), href: `/${locale}/statistics/datasets`, type: 'primary' as const },
     { text: t('common_statistics'), href: `/${locale}/statistics/common`, type: 'primary' as const },
     {
       text: t('translations_statistics'),
