@@ -95,6 +95,20 @@ export class SuggestionsService {
 
   /** The public intake (issue #327): validates the target, stores the report */
   async create(body: CreateSuggestionV1ReqDTO): Promise<PublicSuggestionCreatedV1T> {
+    if (this.datasets) {
+      return this.datasets.withPublicDataset(body.dataset, (dataset) =>
+        this.createInDataset(body, dataset.version),
+      );
+    }
+    // Standalone modules without a dataset registry support the legacy intake only.
+    if (body.dataset !== undefined) throw new NotFoundException(ErrorCodes.dataset_not_found);
+    return this.createInDataset(body, await this.getDatasetVersion());
+  }
+
+  private async createInDataset(
+    body: CreateSuggestionV1ReqDTO,
+    version: string | null,
+  ): Promise<PublicSuggestionCreatedV1T> {
     const kind = body.kind ?? SuggestionKindE.report;
     if (kind === SuggestionKindE.report && !body.message) {
       throw new BadRequestException(ErrorCodes.suggestion_invalid);
@@ -107,25 +121,30 @@ export class SuggestionsService {
 
     // the same case-insensitive match the public word reads use; the stored
     // headword is the canonical spelling of the entry
-    const entry = await this.entriesRep
+    const entries = await this.entriesRep
       .createQueryBuilder('e')
       .where('LOWER(e.word) = LOWER(:headword)', { headword: body.headword })
-      .getOne();
+      .orderBy('e.word', 'ASC')
+      .getMany();
+    const exact = entries.find((item) => item.word === body.headword);
+    const entry = exact ?? entries.find((item) => item.word === body.headword.toLowerCase()) ?? entries[0];
     if (!entry) {
       throw new NotFoundException(ErrorCodes.word_doesnt_found);
     }
 
+    // Like the public reader, an unmatched case variant can refer to every spelling.
+    const headwords = new Set((exact ? [exact] : entries).map((item) => item.word));
     let word: EnWord | null = null;
     if (body.word_id !== undefined) {
-      word = await this.wordsRep.findOne({ where: { id: body.word_id } });
-      if (!word) {
+      word = await this.wordsRep.findOne({ where: { id: body.word_id }, relations: { word: true } });
+      if (!word || !headwords.has(word.word.word)) {
         throw new NotFoundException(ErrorCodes.word_doesnt_found);
       }
     }
 
     // the edit flow: for every touched target, check it belongs to the
     // headword, whitelist the fields and snapshot the current values
-    const edits = kind === SuggestionKindE.edit ? await this.buildEdits(entry.word, body.edits ?? []) : null;
+    const edits = kind === SuggestionKindE.edit ? await this.buildEdits(headwords, body.edits ?? []) : null;
 
     const open = await this.suggestionsRep.count({ where: { status: SuggestionStatusE.new } });
     if (open >= MAX_OPEN_SUGGESTIONS) {
@@ -136,10 +155,10 @@ export class SuggestionsService {
 
     const saved = await this.suggestionsRep.save(
       this.suggestionsRep.create({
-        headword: entry.word,
+        headword: word?.word.word ?? entry.word,
         word,
         message: body.message ?? '',
-        dataset_version: await this.getDatasetVersion(),
+        dataset_version: version,
         status: SuggestionStatusE.new,
         kind,
         edits,
@@ -157,12 +176,12 @@ export class SuggestionsService {
    * At least one real change must remain.
    */
   private async buildEdits(
-    headword: string,
+    headwords: ReadonlySet<string>,
     proposed: Array<{ target_type: SuggestionTargetE; target_id: number; changes: Record<string, string> }>,
   ): Promise<SuggestionEditT[]> {
     const edits: SuggestionEditT[] = [];
     for (const edit of proposed) {
-      const changes = await this.buildChanges(headword, edit.target_type, edit.target_id, edit.changes);
+      const changes = await this.buildChanges(headwords, edit.target_type, edit.target_id, edit.changes);
       if (changes) edits.push({ target_type: edit.target_type, target_id: edit.target_id, changes });
     }
     if (edits.length === 0) {
@@ -178,7 +197,7 @@ export class SuggestionsService {
    * null when every proposed value equals the current one.
    */
   private async buildChanges(
-    headword: string,
+    headwords: ReadonlySet<string>,
     targetType: SuggestionTargetE,
     targetId: number,
     proposed: Record<string, string>,
@@ -198,7 +217,7 @@ export class SuggestionsService {
       throw new BadRequestException(ErrorCodes.suggestion_invalid);
     }
 
-    const current = await this.loadTargetValues(headword, targetType, targetId);
+    const current = await this.loadTargetValues(headwords, targetType, targetId);
 
     const changes: SuggestionChangesT = {};
     for (const field of fields) {
@@ -212,14 +231,14 @@ export class SuggestionsService {
 
   /** Current values of the whitelisted fields; throws 404 unless the target belongs to the headword */
   private async loadTargetValues(
-    headword: string,
+    headwords: ReadonlySet<string>,
     targetType: SuggestionTargetE,
     targetId: number,
   ): Promise<Record<string, string | null>> {
     switch (targetType) {
       case SuggestionTargetE.word: {
         const row = await this.wordsRep.findOne({ where: { id: targetId }, relations: { word: true } });
-        if (!row || row.word.word !== headword) throw new NotFoundException(ErrorCodes.word_doesnt_found);
+        if (!row || !headwords.has(row.word.word)) throw new NotFoundException(ErrorCodes.word_doesnt_found);
         return { description: row.description ?? null, transcription: row.transcription ?? null };
       }
       case SuggestionTargetE.meaning: {
@@ -227,7 +246,7 @@ export class SuggestionsService {
           where: { id: targetId },
           relations: { word: { word: true } },
         });
-        if (!row || row.word.word.word !== headword) {
+        if (!row || !headwords.has(row.word.word.word)) {
           throw new NotFoundException(ErrorCodes.word_doesnt_found);
         }
         return { title: row.title ?? null, definition: row.definition ?? null };
@@ -237,7 +256,7 @@ export class SuggestionsService {
           where: { id: targetId },
           relations: { meaning: { word: { word: true } } },
         });
-        if (!row || row.meaning.word.word.word !== headword) {
+        if (!row || !headwords.has(row.meaning.word.word.word)) {
           throw new NotFoundException(ErrorCodes.word_doesnt_found);
         }
         return { title: row.title ?? null, definition: row.definition ?? null };
@@ -247,7 +266,7 @@ export class SuggestionsService {
           where: { id: targetId },
           relations: { word: { word: true } },
         });
-        if (!row || row.word.word.word !== headword) {
+        if (!row || !headwords.has(row.word.word.word)) {
           throw new NotFoundException(ErrorCodes.word_doesnt_found);
         }
         return { description: row.description ?? null };

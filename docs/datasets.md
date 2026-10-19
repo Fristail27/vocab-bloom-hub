@@ -400,7 +400,7 @@ purge any reverse-proxy copies stored under the former cache policy.
 ## What a switch changes
 
 - **Every read of the public API** goes to the tables of the new active dataset: the words, the
-  search, the list, the suggestions of the readers. The one exception is the read of a headword
+  search and the list. Suggestions without an explicit `dataset` target also use the active dataset. The one exception is the read of a headword
   from every dataset ([below](#reading-every-dataset-at-once)), which answers from all open datasets
   whichever is active. The admin UI works on
   [the dataset that is edited](#the-dataset-that-is-edited) — the active one, unless its switch
@@ -460,8 +460,27 @@ public search serves the active dataset only. A name that is no dataset answers
 - **An edit of an open dataset that is not served is public at once** on the tab of that dataset of a
   word page (`GET /api/v1/words/{word}/datasets`), and counts into the `Last-Modified` of the
   reads of every dataset; nothing the active dataset serves changes.
-- "Report a mistake" is offered on the tab of the served dataset only: a report is filed in the
-  active dataset.
+- "Report a mistake" is offered on every public dataset tab and names its target and license.
+  The website sends the panel’s `dataset` explicitly, including on the active tab.
+
+### Reader reports in a viewed dataset (#651)
+
+`POST /api/v1/suggestions` accepts an optional `dataset` name. When omitted, it uses the
+active dataset for compatibility. An explicit target must be installed and publicly open;
+unknown, closed and removed targets answer `404 dataset_not_found`, with no fallback.
+All word, meaning and translation IDs are local to that dataset and must belong to the
+submitted headword. The target connection is pinned through validation, before-value and
+version capture, and insertion into that dataset’s `suggestions` table. A concurrent
+activation cannot redirect a submission. PostgreSQL intake locks the registry row while
+checking the queue cap and inserting, so visibility/terms changes and submissions serialize.
+
+The rate budget remains per client across all targets; the queue cap applies per dataset.
+Closing a dataset preserves its existing reports. The admin selects the original dataset
+and reviews/applies them through the usual scoped services, with its contribution terms and
+edit history. Optional author attribution still requires consent. A form whose target has
+become unavailable asks the reader to reload; it never retries against another dataset.
+If an older server does not identify the dataset of a fallback panel, the site does not offer
+submission from that panel.
 
 ## Reading every dataset at once
 
@@ -504,7 +523,7 @@ merged: an entry stays in the group of its dataset, under the license of its sou
   their titles, descriptions and social metadata describe the visible entry. The sitemap
   and the index of words still list only headwords of the active dataset, and a headword the
   active dataset does not hold remains excluded from the search index, with or without a
-  selector. "Report a mistake" is offered on the tab of the active dataset only.
+  selector. "Report a mistake" is offered on every public tab.
 - **Each tab has its own word graph.** Open **Word connections** and choose a part-of-speech
   tab. Switch to **Translations by meaning** to see meaning-specific
   translations in the language selected by the page’s translation picker: individual translation variants in the same language share a node when their spelling matches
@@ -704,8 +723,6 @@ backed up and what a connection pooler has to pass through:
 - A search across datasets: the headword read answers from every dataset
   ([above](#reading-every-dataset-at-once)), the search from the active one (the admin UI: from
   the dataset that is edited).
-- _Report a mistake_ on the tab of a dataset that is not served: a report is filed in the active
-  dataset.
 - Scheduled unattended synchronization of forks. Parent updates and related-dataset merges
   are available through the explicit review workflow below.
 - Datasets of other headword languages: the registry records the language of a dataset, the

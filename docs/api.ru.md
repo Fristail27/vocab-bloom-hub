@@ -127,7 +127,7 @@ public, max-age=<PUBLIC_API_CACHE_MAX_AGE>, stale-while-revalidate=<то же>`;
 | `GET`  | `/api/v1/words`                                   | фильтры, `cursor?`, `limit?`, `with_meanings?`, `with_translations?`                                   | `{ data: PublicWordV1T[], meta: { limit, has_more, next_cursor } }`                                                 |
 | `GET`  | `/api/v1/random`                                  | фильтры                                                                                                | `{ data: PublicWordV1T }`                                                                                           |
 | `POST` | `/api/v1/words/batch`                             | `{ words: string[] }` (1–50)                                                                           | `{ data: { word, count, entries: PublicWordV1T[] }[], meta: { count, not_found } }`                                 |
-| `POST` | `/api/v1/suggestions`                             | `{ headword, word_id?, message?, kind?, edits?, author_name?, author_consent? }`                       | `201 { data: { id, status } }`                                                                                      |
+| `POST` | `/api/v1/suggestions`                             | `{ headword, dataset?, word_id?, message?, kind?, edits?, author_name?, author_consent? }`             | `201 { data: { id, status } }`                                                                                      |
 
 Те же эндпоинты можно попробовать в плейграунде сайта и на страницах _Documentation_ в админке
 ([api-tools.md](./api-tools.md)); машиночитаемый контракт — [OpenAPI-документ](#openapi-документ).
@@ -424,10 +424,12 @@ curl 'http://localhost:3010/api/v1/random?part_of_speech=verb&word_level=A2'
 - **Читается каждый датасет экземпляра**, в том числе ни разу не активированный: датасет
   публичен с момента установки, вместе с историей его правок и именами читателей, указанных
   в ней.
-- **Сообщение об ошибке относится к отдаваемому датасету.** `POST /api/v1/suggestions` кладёт
-  его в датасет, который отдаёт экземпляр: `word_id` и `target_id` записи из другой группы там
-  ничего не называют или называют другую запись. Сообщайте о том, что ответило чтение слова
-  из отдаваемого датасета.
+- **Сообщение об ошибке указывает просматриваемый датасет.** Передавайте `dataset` группы
+  в `POST /api/v1/suggestions`: все IDs проверяются в этом датасете и для указанного слова.
+  Без `dataset` используется активный словарь. Закрытый, неизвестный или удалённый датасет
+  возвращает `404 dataset_not_found`, без подмены цели. Лимит запросов клиента общий для
+  всех датасетов, ограничение очереди — отдельное для каждого. После закрытия датасета
+  администратор по-прежнему может проверить и применить полученные исправления.
 
 Экземпляр с одним датасетом, то есть любой экземпляр на SQLite, отвечает одной группой.
 

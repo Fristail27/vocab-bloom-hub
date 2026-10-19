@@ -68,7 +68,10 @@ export const wordPanels = ({ headword, terms, groups }: WordPanelsP): WordPanelT
         if (group.entries.length === 0) return [];
         return [panelOfGroup(group, groupTitle(group))];
       })
-    : servedPanel(UNNAMED_DATASET, terms.title || sourceTitle(terms.source));
+    : servedPanel(UNNAMED_DATASET, terms.title || sourceTitle(terms.source)).map((panel) => ({
+        ...panel,
+        unidentified: true,
+      }));
   const place = (panel: WordPanelT): number => {
     const index = TAB_ORDER.indexOf(panel.terms.source);
     return index === -1 ? TAB_ORDER.length : index;

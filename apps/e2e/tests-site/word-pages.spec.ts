@@ -252,8 +252,8 @@ test.describe('word pages', () => {
       'https://en-word.net',
     );
     await expect(terms.getByText('The notice of the second dataset, in full.')).toBeAttached();
-    // a report goes to the queue of the served dataset
-    await expect(page.getByRole('button', { name: 'Report a mistake' })).toBeHidden();
+    // a report targets the viewed dataset, even when it is inactive
+    await expect(page.getByRole('button', { name: 'Report a mistake' })).toBeVisible();
     await expect(panel.getByRole('link', { name: 'footrace' })).toHaveAttribute('href', '/en/word/footrace');
 
     // The tab buttons retain keyboard focus across navigation.
@@ -387,7 +387,7 @@ test.describe('word pages', () => {
     await expect(page.getByText('definition of a race between people who run')).toBeVisible();
     await expect(page.getByTestId('dataset-tabs')).toHaveCount(0);
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
-    await expect(page.getByRole('button', { name: 'Report a mistake' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Report a mistake' })).toBeVisible();
   });
 
   test('the word index offers the search and the examples', async ({ page }) => {

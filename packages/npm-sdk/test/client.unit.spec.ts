@@ -79,6 +79,27 @@ describe('VocabBloomClient without a server (issue #275)', () => {
     expect(batch.meta.not_found).toEqual(['run', 'ran']);
   });
 
+  it('sends suggestions to the named dataset and preserves legacy omission', async () => {
+    const { fetch, calls } = fakeFetch([
+      () => json({ data: { id: 1, status: 'new' } }),
+      () => json({ data: { id: 2, status: 'new' } }),
+    ]);
+    const client = new VocabBloomClient({ baseUrl: 'https://dict.example.com', fetch });
+    const proposal = {
+      dataset: 'reader_words',
+      headword: 'run',
+      kind: 'edit' as const,
+      edits: [{ target_type: 'word' as const, target_id: 1, changes: { description: 'Correction' } }],
+      author_name: 'Reader',
+      author_consent: true,
+    };
+    await client.suggest(proposal);
+    expect(calls[0].url).toBe('https://dict.example.com/api/v1/suggestions');
+    expect(JSON.parse(calls[0].init.body as string)).toEqual(proposal);
+    await client.suggest({ headword: 'run', message: 'Please check this definition.' });
+    expect(JSON.parse(calls[1].init.body as string)).not.toHaveProperty('dataset');
+  });
+
   it('throws typed errors: NotFoundError, RateLimitError with Retry-After, VocabBloomError with the API code', async () => {
     const { fetch } = fakeFetch([
       () => json({ statusCode: 404, message: 'word_doesnt_found', error: true }, { status: 404 }),

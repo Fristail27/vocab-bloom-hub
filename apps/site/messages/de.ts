@@ -375,6 +375,9 @@ export default {
     history_field_word: 'Schreibweise',
     report_license_note:
       'Eine vom Betreiber übernommene Korrektur wird Teil der Wörterbuchdaten, veröffentlicht unter {license}.',
+    report_dataset: 'Datensatz: {dataset}',
+    report_target_unavailable:
+      'Dieser Datensatz oder Eintrag ist nicht mehr für Meldungen verfügbar. Laden Sie die Seite neu, um die Verfügbarkeit zu prüfen.',
     report_button: 'Fehler melden',
     report_hint:
       'Stimmt etwas an „{word}“ nicht — eine Bedeutung, eine Übersetzung, eine Form? Sag es dem Betreiber dieses Wörterbuchs; die Meldung landet in seiner Moderationswarteschlange.',

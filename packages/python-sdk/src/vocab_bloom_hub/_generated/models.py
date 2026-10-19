@@ -31,6 +31,12 @@ class Kind(Enum):
 
 
 class CreateSuggestionV1ReqDTO(BaseModel):
+    dataset: str | None = Field(
+        None,
+        description="Installed, publicly open dataset containing the headword and all supplied IDs. Omit to use the active dataset.",
+        max_length=40,
+        pattern="^(default|[a-z][a-z0-9_]{1,39})$",
+    )
     headword: str = Field(..., description="The headword the report is about; must exist in the dictionary")
     word_id: dict[str, Any] | None = Field(
         None, description="Id of the entry (part of speech) the report points at, from the word answers"

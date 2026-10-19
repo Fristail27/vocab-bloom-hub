@@ -24,8 +24,9 @@ export class PublicSuggestionsController {
     description:
       'Files a report for the instance admin to review: what is wrong with a headword ' +
       '(optionally one specific entry of it) and, ideally, what would be right. The headword must ' +
-      'exist in the dictionary. Strictly rate-limited; once too many reports are waiting for the ' +
-      'admin the endpoint answers 503 until the queue is worked down.',
+      'exist in the selected publicly open dataset. Pass dataset to target a viewed dataset; omitted means ' +
+      'the active dataset. All IDs must belong to that dataset and headword. Closed, unknown or removed ' +
+      'targets answer 404 without fallback. Rate limits are shared across datasets; a full target queue answers 503.',
   })
   @HttpCode(201)
   @Post('/')

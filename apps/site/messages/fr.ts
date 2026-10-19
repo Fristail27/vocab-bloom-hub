@@ -375,6 +375,9 @@ export default {
     history_field_word: 'graphie',
     report_license_note:
       'Une correction acceptée par le propriétaire devient partie des données du dictionnaire, publiées sous {license}.',
+    report_dataset: 'Jeu de données : {dataset}',
+    report_target_unavailable:
+      'Ce jeu de données ou cette entrée ne permet plus les signalements. Actualisez la page pour vérifier sa disponibilité.',
     report_button: 'Signaler une erreur',
     report_hint:
       'Quelque chose cloche dans « {word} » — un sens, une traduction, une forme ? Dites-le au propriétaire de ce dictionnaire ; le signalement rejoint sa file de modération.',

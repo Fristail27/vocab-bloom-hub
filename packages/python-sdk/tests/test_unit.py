@@ -521,3 +521,48 @@ def test_iter_search_detailed_stops_at_the_page_cap() -> None:
     client = VocabBloomClient("http://localhost", transport=transport(handle))
     assert len(list(client.iter_search_detailed("w", limit=1))) == 20
     assert served == 20
+
+
+@pytest.mark.parametrize("dataset", [None, "reader_words"])
+def test_suggestions_target_and_consent(dataset: str | None) -> None:
+    def handle(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        assert body.get("dataset") == dataset
+        assert ("dataset" in body) == (dataset is not None)
+        assert body["author_name"] == "Reader"
+        assert body["author_consent"] is True
+        assert body["edits"][0]["target_id"] == 1
+        return json_response({"data": {"id": 1, "status": "new"}})
+
+    with VocabBloomClient("https://dict.example.com", transport=transport(handle)) as client:
+        result = client.suggest(
+            "run",
+            dataset=dataset,
+            kind="edit",
+            edits=[{"target_type": "word", "target_id": 1, "changes": {"description": "Correction"}}],
+            author_name="Reader",
+            author_consent=True,
+        )
+        assert result.data.id == 1
+
+
+@pytest.mark.parametrize("dataset", [None, "reader_words"])
+async def test_async_suggestions_target_and_consent(dataset: str | None) -> None:
+    def handle(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        assert body.get("dataset") == dataset
+        assert ("dataset" in body) == (dataset is not None)
+        assert body["message"] == "Please check this definition."
+        assert body["author_name"] == "Reader"
+        assert body["author_consent"] is True
+        return json_response({"data": {"id": 1, "status": "new"}})
+
+    async with AsyncVocabBloomClient("https://dict.example.com", transport=transport(handle)) as client:
+        result = await client.suggest(
+            "run",
+            dataset=dataset,
+            message="Please check this definition.",
+            author_name="Reader",
+            author_consent=True,
+        )
+        assert result.data.id == 1

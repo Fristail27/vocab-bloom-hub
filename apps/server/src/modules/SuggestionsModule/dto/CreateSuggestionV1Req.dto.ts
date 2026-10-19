@@ -13,11 +13,13 @@ import {
   IsPositive,
   IsString,
   MaxLength,
+  Matches,
   MinLength,
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { SuggestionKindE, SuggestionTargetE } from '../../../../types';
+import { DATASET_TARGET_PATTERN } from '../../../../core/constants/datasets';
 import {
   MAX_SUGGESTION_EDITS,
   SUGGESTION_AUTHOR_MAX_LENGTH,
@@ -51,6 +53,18 @@ export class SuggestionEditV1DTO {
 // a free-text report (the default kind), and a structured edit whose
 // proposed field values the admin can apply in one click.
 export class CreateSuggestionV1ReqDTO {
+  @ApiPropertyOptional({
+    description:
+      'Installed, publicly open dataset containing the headword and all supplied IDs. Omit to use the active dataset.',
+    pattern: DATASET_TARGET_PATTERN.source,
+    maxLength: 40,
+  })
+  @ValidateIf((o: CreateSuggestionV1ReqDTO) => o.dataset !== undefined)
+  @IsString()
+  @Matches(DATASET_TARGET_PATTERN)
+  @MaxLength(40)
+  dataset?: string;
+
   @ApiProperty({ description: 'The headword the report is about; must exist in the dictionary' })
   @IsString()
   @IsNotEmpty()

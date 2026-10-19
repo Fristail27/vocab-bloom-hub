@@ -365,6 +365,9 @@ export default {
     history_field_antonyms: 'أضداد',
     history_field_word: 'التهجئة',
     report_license_note: 'التصحيح الذي يقبله المالك يصبح جزءًا من بيانات القاموس المنشورة برخصة {license}.',
+    report_dataset: 'مجموعة البيانات: {dataset}',
+    report_target_unavailable:
+      'لم تعد مجموعة البيانات أو هذا المدخل متاحًا لإرسال البلاغات. أعد تحميل الصفحة للتحقق من توفرهما.',
     report_button: 'الإبلاغ عن خطأ',
     report_hint:
       'هل هناك خطأ في "{word}" — معنى أو ترجمة أو صيغة؟ أخبر مالك هذا القاموس؛ يذهب البلاغ إلى قائمة المراجعة لديه.',

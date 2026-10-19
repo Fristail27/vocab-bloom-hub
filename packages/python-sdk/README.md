@@ -92,6 +92,10 @@ See the complete [lookup example](examples/lookup_word.py). Its output includes 
 | `suggest(headword, ...)`                    | `POST /suggestions`                            | `SuggestionCreatedResponse` — files a reader report (or an edit proposal) into the instance's moderation queue |
 | `words_dataframe(**filters, ...)`           | `GET /words`, every page                       | `pandas.DataFrame` (sync and async clients)                                                                    |
 
+For a report from a dataset tab, pass its `dataset` name: `client.suggest("run", dataset="reader_words", message="Please check this definition.")`.
+Omitting it uses the active dataset. Unknown, closed or deleted targets raise `NotFoundError`;
+the client-wide rate limit is shared across targets.
+
 Every response is the `{ data, meta }` envelope the API answers with, as a pydantic model. Filters (`part_of_speech`, `word_level`, `language_register`, `category`, `area_variant`, `form_of_word`) take lists of strings or of the exported enums (`PartOfSpeech`, `WordLevel`, ...); values of one filter are OR-ed, different filters are AND-ed. The contract itself — tiers, filters, cursor pagination, caching — is documented in the server's [`docs/api.md`](https://github.com/Fristail27/vocab-bloom-hub/blob/main/docs/api.md).
 
 ### Options

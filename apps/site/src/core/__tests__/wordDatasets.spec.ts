@@ -130,6 +130,7 @@ describe('wordPanels', () => {
       expect.objectContaining({
         title: 'Vocab Bloom Hub English dataset',
         dataset: UNNAMED_DATASET,
+        unidentified: true,
         active: true,
         word: 'run',
         terms: OWN_DATASET_TERMS,

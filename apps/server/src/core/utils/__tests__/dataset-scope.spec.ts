@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { isDatasetScopedPath } from '../../../modules/DatasetsModule/dataset-scope.middleware';
 import { setActiveDataset } from '../active-dataset';
 import {
@@ -45,6 +45,15 @@ describe('dataset scope', () => {
       expect(scopedManager(application.manager)).toBe('its manager');
     });
     expect(currentDatasetScope()).toBeNull();
+  });
+
+  it('uses the pinned transaction even when the data source has another manager', async () => {
+    const manager = { getRepository: () => 'pinned repository' } as unknown as EntityManager;
+    await withDatasetScope({ ...scope, manager }, async () => {
+      await Promise.resolve();
+      expect(scoped(active)).toBe('pinned repository');
+      expect(scopedManager(application.manager)).toBe(manager);
+    });
   });
 
   it('scopes the routes of the dictionary, not the datasets, the import or the journal', () => {
