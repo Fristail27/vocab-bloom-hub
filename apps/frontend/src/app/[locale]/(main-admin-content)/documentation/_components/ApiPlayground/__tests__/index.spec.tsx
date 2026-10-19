@@ -94,7 +94,7 @@ describe('ApiPlayground (issue #245)', () => {
     (EnApi.publicGet as jest.Mock).mockResolvedValue({ data: [], meta: { count: 0 } });
     render(<ApiPlayground endpoint={searchEndpoint} />);
     typeSearch('run');
-    fireEvent.change(screen.getByRole('textbox', { name: 'dataset', exact: true }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'dataset' }), {
       target: { value: 'reader_words' },
     });
     await send();
@@ -111,7 +111,7 @@ describe('ApiPlayground (issue #245)', () => {
     render(<ApiPlayground endpoint={endpoint} />);
     typeSearch('run');
     expect(screen.getByRole('button', { name: 'send_request' })).toBeDisabled();
-    fireEvent.change(screen.getByRole('textbox', { name: 'datasets', exact: true }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'datasets' }), {
       target: { value: 'default, reader_words' },
     });
     await send();
