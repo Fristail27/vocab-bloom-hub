@@ -7,36 +7,45 @@ import {
   EnIssueRecordsT,
   EnIssuesStatisticsT,
   EnStatisticsT,
+  EnDatasetsStatisticsT,
   EnTranslationsStatisticsT,
 } from '../../../../../types';
 import { ApiDatasetQuery } from '../../../DatasetsModule/api-dataset-query';
 
 @ApiTags('En_Statistics')
-// the dataset the request works on (issue #540)
-@ApiDatasetQuery()
 @Controller('/api/en/statistics')
 export class EnStatisticsController {
   constructor(private readonly enStatisticsService: EnStatisticsService) {}
 
   @UseGuards(AdminGuard)
+  @ApiDatasetQuery()
   @Get('/')
   async getStatistics(): Promise<EnStatisticsT> {
     return this.enStatisticsService.getStatistics();
   }
 
   @UseGuards(AdminGuard)
+  @Get('datasets')
+  async getDatasetsStatistics(): Promise<EnDatasetsStatisticsT> {
+    return this.enStatisticsService.getDatasetsStatistics();
+  }
+
+  @UseGuards(AdminGuard)
+  @ApiDatasetQuery()
   @Get('translations')
   async getTranslationsStatistics(): Promise<EnTranslationsStatisticsT> {
     return this.enStatisticsService.getTranslationsStatistics();
   }
 
   @UseGuards(AdminGuard)
+  @ApiDatasetQuery()
   @Get('issues/records')
   async getIssueRecords(@Query() query: IssueRecordsQueryDto): Promise<EnIssueRecordsT> {
     return this.enStatisticsService.getIssueRecords(query);
   }
 
   @UseGuards(AdminGuard)
+  @ApiDatasetQuery()
   @Get('issues')
   async getIssuesStatistics(): Promise<EnIssuesStatisticsT> {
     return this.enStatisticsService.getIssuesStatistics();

@@ -34,7 +34,7 @@ export const DATASET_QUERY_PARAM = 'dataset';
 
 // the datasets themselves, the import (which names its target in its own
 // request) and the journal of the instance are no part of one dataset
-const OUTSIDE_A_DATASET = /^\/en\/(datasets|dictionary\/import|audit)(\/|$)/;
+const OUTSIDE_A_DATASET = /^\/en\/(datasets|statistics\/datasets|dictionary\/import|audit)(\/|$)/;
 
 /**
  * Whether a route of the API — its path after the `/api` prefix, e.g.

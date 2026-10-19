@@ -970,6 +970,18 @@ export default {
     add_slot: 'Añadir SLOT',
   },
   statistics: {
+    all_datasets: 'Todos los conjuntos de datos',
+    all_datasets_explanation:
+      'Los recuentos se muestran por separado para cada conjunto instalado, incluidos los diccionarios cerrados. Las palabras compartidas y las entradas de bifurcaciones cuentan en cada conjunto; no son totales de palabras únicas.',
+    refresh_statistics: 'Actualizar estadísticas',
+    statistics_read_at: 'Consultado: {time}',
+    statistics_loading: 'Cargando estadísticas…',
+    statistics_unavailable: 'No se pudieron consultar las estadísticas. Intenta actualizar.',
+    no_installed_datasets: 'No hay conjuntos de datos instalados',
+    statistics_updating:
+      'Hubo una importación durante la consulta. Los recuentos pueden ser provisionales; actualízalos al terminar.',
+    dataset_navigation: 'Estadísticas del conjunto de datos',
+
     issues_explanation:
       'La ausencia de datos no implica un error. Estas listas ayudan a revisar registros; las capacidades de la fuente no garantizan que estén completos.',
     interpretation_missing: 'La fuente admite estos datos; revise las ausencias.',

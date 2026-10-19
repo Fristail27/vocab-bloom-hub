@@ -1,3 +1,4 @@
+import type { EnDatasetsStatisticsT } from 'server/types';
 import { EnIssueRecordsQueryT, EnIssueRecordsT } from 'server/types';
 import type { CopyWordSourceT, EnWordT, ForkProgressT, UpdateOriginsReqT } from 'server/types';
 import { AbstractBaseApi, type ApiQueryT, type DownloadedFileT } from '../AbstractBaseApi';
@@ -510,12 +511,19 @@ export class EnApi extends AbstractBaseApi {
     return this.post<ForgetChangeAuthorResT>(`${this.baseURL}/en/changes/forget-author`, body);
   }
 
-  static async getStatistics(): Promise<GetEnStatisticsResT> {
-    return this.get<EnStatisticsT>(`${this.baseURL}/en/statistics`);
+  static async getStatistics(dataset?: string): Promise<GetEnStatisticsResT> {
+    return this.get<EnStatisticsT>(`${this.baseURL}/en/statistics`, { query: { dataset }, cache: 'no-store' });
   }
 
-  static async getTranslationsStatistics(): Promise<GetEnTranslationsStatisticsResT> {
-    return this.get<EnTranslationsStatisticsT>(`${this.baseURL}/en/statistics/translations`);
+  static async getTranslationsStatistics(dataset?: string): Promise<GetEnTranslationsStatisticsResT> {
+    return this.get<EnTranslationsStatisticsT>(`${this.baseURL}/en/statistics/translations`, {
+      query: { dataset },
+      cache: 'no-store',
+    });
+  }
+
+  static async getDatasetsStatistics() {
+    return this.get<EnDatasetsStatisticsT>(`${this.baseURL}/en/statistics/datasets`, { cache: 'no-store' });
   }
 
   static async getIssueRecords(query: EnIssueRecordsQueryT) {

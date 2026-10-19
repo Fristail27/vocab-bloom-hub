@@ -1,3 +1,4 @@
+import { StatisticsLinks } from '../_components/StatisticsLinks';
 import { getTranslations } from 'next-intl/server';
 import { Breadcrumb, Card, Statistic } from 'antd';
 import { EnStatisticsT, WordLevelE } from 'server/types';
@@ -19,11 +20,18 @@ const LEVEL_ORDER: (WordLevelE | null)[] = [
   null,
 ];
 
-export default async function CommonStatisticsPage({ params }: CommonPageP) {
+export default async function CommonStatisticsPage({
+  params,
+  searchParams,
+}: CommonPageP & {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { locale } = await params;
+  const query = await searchParams;
+  const dataset = Array.isArray(query.dataset) ? query.dataset[0] : query.dataset;
   const t = await getTranslations('menu');
   const statsT = await getTranslations('statistics');
-  const stats = await ServerEnApi.getStatistics();
+  const stats = await ServerEnApi.getStatistics(dataset);
 
   const breadCrumbs = [
     { href: `/${locale}`, title: <Icon name="home" size="medium" /> },
@@ -75,6 +83,7 @@ export default async function CommonStatisticsPage({ params }: CommonPageP) {
     <div className={styles.mainPage}>
       <Title level={2}>{statsT('common_statistics')}</Title>
       <Breadcrumb items={breadCrumbs} />
+      <StatisticsLinks />
 
       <div className={styles.cardsGrid}>
         {totalCards.map((c) => (

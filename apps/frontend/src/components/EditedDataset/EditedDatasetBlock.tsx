@@ -1,5 +1,7 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
+
 import React from 'react';
 import { Alert, Tag, Typography } from 'antd';
 import { useLocale, useTranslations } from 'next-intl';
@@ -24,9 +26,10 @@ export const EditedDatasetBlock: React.FC = () => {
   const { datasets, edited } = useEditedDataset();
   const [entries, setEntries] = React.useState<number | null>(null);
   const name = edited?.name;
+  const allDatasets = /\/statistics\/datasets\/?$/.test(usePathname());
 
   React.useEffect(() => {
-    if (!name) return;
+    if (!name || allDatasets) return;
     let current = true;
     setEntries(null);
     // the statistics answer from the dataset the switch names
@@ -36,9 +39,9 @@ export const EditedDatasetBlock: React.FC = () => {
     return () => {
       current = false;
     };
-  }, [name]);
+  }, [name, allDatasets]);
 
-  if (!edited) return null;
+  if (!edited || allDatasets) return null;
   const active = datasets.find((dataset) => dataset.active);
   const standard = findStandardLicense(edited.license);
   const fromSource = isPublicSourceDataset(edited);

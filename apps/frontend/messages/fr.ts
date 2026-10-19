@@ -977,6 +977,18 @@ export default {
     add_slot: 'Ajouter un SLOT',
   },
   statistics: {
+    all_datasets: 'Tous les jeux de données',
+    all_datasets_explanation:
+      'Les nombres sont affichés séparément pour chaque jeu installé, y compris les dictionnaires fermés. Les mots communs et les entrées des forks sont comptés dans chaque jeu ; il ne s’agit pas de totaux de mots uniques.',
+    refresh_statistics: 'Actualiser les statistiques',
+    statistics_read_at: 'Consulté le {time}',
+    statistics_loading: 'Chargement des statistiques…',
+    statistics_unavailable: 'Impossible de lire les statistiques. Essayez de les actualiser.',
+    no_installed_datasets: 'Aucun jeu de données installé',
+    statistics_updating:
+      'Un import était en cours pendant la lecture. Les nombres peuvent être provisoires ; actualisez-les après la fin.',
+    dataset_navigation: 'Statistiques du jeu de données',
+
     issues_explanation:
       'Une donnée absente ne constitue pas forcément une erreur. Ces listes facilitent la vérification ; les capacités de la source ne garantissent pas son exhaustivité.',
     interpretation_missing: 'La source propose ces données ; vérifiez les omissions.',

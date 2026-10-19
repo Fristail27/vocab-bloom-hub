@@ -6,10 +6,11 @@ import { DatasetT, DatasetsListT } from 'server/types';
 const refresh = jest.fn();
 const push = jest.fn();
 let query = new URLSearchParams();
+let pathname = '/en/statistics/issues';
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ refresh, push }),
   useSearchParams: () => query,
-  usePathname: () => '/en/statistics/issues',
+  usePathname: () => pathname,
 }));
 
 jest.mock('next-intl', () => ({
@@ -177,4 +178,15 @@ describe('the switch of the dataset that is edited', () => {
     expect(screen.queryByTestId('dataset-switch')).not.toBeInTheDocument();
     expect(screen.queryByTestId('edited-dataset')).not.toBeInTheDocument();
   });
+});
+
+it('keeps the all-datasets overview independent of the edited dataset block', () => {
+  pathname = '/en/statistics/datasets';
+  try {
+    renderSwitch();
+    expect(screen.queryByTestId('edited-dataset')).not.toBeInTheDocument();
+    expect(EnApi.getStatistics).not.toHaveBeenCalled();
+  } finally {
+    pathname = '/en/statistics/issues';
+  }
 });

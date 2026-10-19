@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { DatasetsService } from '../../../DatasetsModule/datasets.service';
+import { ImportStatusService } from '../EnImportDictionary/importStatus.service';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Not, Repository } from 'typeorm';
 import { EnEntry } from '../../entities/en_entry.entity';
@@ -14,11 +16,12 @@ import {
   EnIssuesStatisticsT,
   EnPartOfSpeechE,
   EnStatisticsT,
+  EnDatasetsStatisticsT,
   EnTranslationsStatisticsT,
   EnWordFormsE,
   WordLevelE,
 } from '../../../../../types';
-import { currentDataset, scoped } from '../../../../core/utils/dataset-scope';
+import { currentDataset, scoped, withDatasetScope } from '../../../../core/utils/dataset-scope';
 
 import { issueQuery } from './issue-query';
 import { issueInterpretation } from '../../../../../core/constants/statistics';
@@ -27,7 +30,10 @@ const NON_WORD_TYPES = [EnPartOfSpeechE.phrase, EnPartOfSpeechE.grammar_pattern]
 
 @Injectable()
 export class EnStatisticsService {
+  private readonly logger = new Logger(EnStatisticsService.name);
   constructor(
+    private readonly datasets: DatasetsService,
+    private readonly imports: ImportStatusService,
     @InjectRepository(EnEntry)
     private readonly activeEnEntriesRep: Repository<EnEntry>,
 
@@ -90,24 +96,9 @@ export class EnStatisticsService {
     return Number(res?.count ?? 0);
   }
 
-  async getStatistics(): Promise<EnStatisticsT> {
-    const [
-      entries,
-      words,
-      phrases,
-      grammarPatterns,
-      wordForms,
-      meanings,
-      meaningTranslations,
-      shortTranslations,
-      generatedWords,
-      obsoleteWords,
-      phrasalVerbs,
-      wordsWithMeanings,
-      wordsWithShortTranslations,
-      byPosRaw,
-      byLevelRaw,
-    ] = await Promise.all([
+  private async getTotals(): Promise<EnStatisticsT['totals']> {
+    // Settle every count before moving to another dataset, including after a query fails.
+    const counts = await Promise.allSettled([
       this.enEntriesRep.count(),
       this.enWordsRep.count({ where: this.baseWordsWhere }),
       this.enWordsRep.count({ where: { part_of_speech: EnPartOfSpeechE.phrase } }),
@@ -116,6 +107,69 @@ export class EnStatisticsService {
       this.enMeaningsRep.count(),
       this.enMeaningTranslationsRep.count(),
       this.enShortTranslationsRep.count(),
+    ]);
+    const [
+      entries,
+      words,
+      phrases,
+      grammar_patterns,
+      word_forms,
+      meanings,
+      meaning_translations,
+      short_translations,
+    ] = counts.map((count) => {
+      if (count.status === 'rejected') throw count.reason;
+      return count.value;
+    });
+    return {
+      entries,
+      words,
+      phrases,
+      grammar_patterns,
+      word_forms,
+      meanings,
+      meaning_translations,
+      short_translations,
+    };
+  }
+
+  async getDatasetsStatistics(): Promise<EnDatasetsStatisticsT> {
+    const rows: EnDatasetsStatisticsT['datasets'] = [];
+    // One dataset at a time: a fixed number of count queries, no dictionary rows loaded.
+    for (const dataset of await this.datasets.installed()) {
+      const { name, title, version, active, is_public } = this.datasets.toT(dataset);
+      const row = { dataset: { name, title, version, active, is_public }, updating: false };
+      const before = this.imports.snapshot();
+      const targets = (status: typeof before) => (status.dataset ?? this.datasets.getActive().name) === name;
+      try {
+        const dataSource = await this.datasets.reader(dataset);
+        const totals = await withDatasetScope({ dataset, dataSource }, () => this.getTotals());
+        rows.push({ ...row, totals, error: null });
+      } catch {
+        this.logger.warn(`Statistics unavailable for dataset ${name}`);
+        rows.push({ ...row, totals: null, error: 'statistics_unavailable' });
+      }
+      const after = this.imports.snapshot();
+      rows[rows.length - 1].updating =
+        (before.running && targets(before)) ||
+        (after.running && targets(after)) ||
+        (after.started_at !== before.started_at && targets(after));
+    }
+    return { read_at: new Date().toISOString(), datasets: rows };
+  }
+
+  async getStatistics(): Promise<EnStatisticsT> {
+    const [
+      totals,
+      generatedWords,
+      obsoleteWords,
+      phrasalVerbs,
+      wordsWithMeanings,
+      wordsWithShortTranslations,
+      byPosRaw,
+      byLevelRaw,
+    ] = await Promise.all([
+      this.getTotals(),
       this.enWordsRep.count({ where: { ...this.baseWordsWhere, generated: true } }),
       this.enWordsRep.count({ where: { ...this.baseWordsWhere, is_obsolete: true } }),
       this.enWordsRep.createQueryBuilder('w').innerJoin('w.base_phrasal', 'bp').getCount(),
@@ -137,16 +191,7 @@ export class EnStatisticsService {
     ]);
 
     return {
-      totals: {
-        entries,
-        words,
-        phrases,
-        grammar_patterns: grammarPatterns,
-        word_forms: wordForms,
-        meanings,
-        meaning_translations: meaningTranslations,
-        short_translations: shortTranslations,
-      },
+      totals,
       coverage: {
         words_with_meanings: wordsWithMeanings,
         words_with_short_translations: wordsWithShortTranslations,

@@ -953,6 +953,18 @@ export default {
     add_slot: 'Add SLOT',
   },
   statistics: {
+    all_datasets: 'All datasets',
+    all_datasets_explanation:
+      'Counts are shown separately for each installed dataset, including closed dictionaries. Shared words and forked entries are counted in each dataset; these are not unique-word totals.',
+    refresh_statistics: 'Refresh statistics',
+    statistics_read_at: 'Read at {time}',
+    statistics_loading: 'Loading statistics…',
+    statistics_unavailable: 'Statistics could not be read. Try refreshing.',
+    no_installed_datasets: 'No installed datasets',
+    statistics_updating:
+      'An import overlapped this read. Counts may be intermediate; refresh after it finishes.',
+    dataset_navigation: 'Dataset statistics',
+
     issues_explanation:
       'Missing data is not necessarily an error. These lists help you inspect records; source capabilities do not guarantee completeness.',
     interpretation_missing: 'Available in this source; inspect missing data.',

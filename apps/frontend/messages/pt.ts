@@ -964,6 +964,18 @@ export default {
     add_slot: 'Adicionar SLOT',
   },
   statistics: {
+    all_datasets: 'Todos os conjuntos de dados',
+    all_datasets_explanation:
+      'As contagens são apresentadas separadamente para cada conjunto instalado, incluindo dicionários fechados. Palavras partilhadas e entradas de forks são contadas em cada conjunto; não são totais de palavras únicas.',
+    refresh_statistics: 'Atualizar estatísticas',
+    statistics_read_at: 'Consultado em {time}',
+    statistics_loading: 'A carregar estatísticas…',
+    statistics_unavailable: 'Não foi possível ler as estatísticas. Tente atualizar.',
+    no_installed_datasets: 'Nenhum conjunto de dados instalado',
+    statistics_updating:
+      'Houve uma importação durante a leitura. As contagens podem ser provisórias; atualize após a conclusão.',
+    dataset_navigation: 'Estatísticas do conjunto de dados',
+
     issues_explanation:
       'A ausência de dados não significa necessariamente um erro. Estas listas ajudam a rever registos; as capacidades da fonte não garantem a sua completude.',
     interpretation_missing: 'A fonte disponibiliza estes dados; reveja as ausências.',

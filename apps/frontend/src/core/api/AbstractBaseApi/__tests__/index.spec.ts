@@ -260,10 +260,23 @@ describe('AbstractBaseApi: the dataset that is edited', () => {
     await AbstractBaseApi.post(`${BASE}/en/dictionary/import`, {});
     await AbstractBaseApi.get(`${BASE}/v1/words/run`);
     await AbstractBaseApi.get(`${BASE}/settings`);
+    await AbstractBaseApi.get(`${BASE}/en/statistics/datasets`);
 
     expect(urlOf(0).searchParams.get('dataset')).toBe('my_words');
     expect(urlOf(0).searchParams.get('page')).toBe('2');
     expect(urlOf(1).searchParams.get('dataset')).toBe('my_words');
-    for (const call of [2, 3, 4, 5, 6]) expect(urlOf(call).searchParams.get('dataset')).toBeNull();
+    for (const call of [2, 3, 4, 5, 6, 7]) expect(urlOf(call).searchParams.get('dataset')).toBeNull();
+  });
+});
+
+describe('statistics dataset selection', () => {
+  afterEach(() => {
+    document.cookie = 'edited_dataset=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    window.history.replaceState({}, '', '/');
+  });
+  it.each(['common', 'translations', 'issues'])('uses the explicit dataset on the %s page', async (page) => {
+    document.cookie = 'edited_dataset=other; path=/';
+    window.history.replaceState({}, '', `/en/statistics/${page}?dataset=mine`);
+    expect(await AbstractBaseApi.getDataset()).toBe('mine');
   });
 });

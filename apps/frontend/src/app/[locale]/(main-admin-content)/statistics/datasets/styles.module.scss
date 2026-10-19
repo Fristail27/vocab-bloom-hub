@@ -1,0 +1,32 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: 16px;
+}
+
+.counts {
+  margin-block: 16px;
+
+  > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding-block: 4px;
+  }
+
+  dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.title {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  padding-block: 8px;
+}
+
+.name {
+  overflow-wrap: anywhere;
+}

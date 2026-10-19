@@ -11,6 +11,28 @@ This page is about **the project's own dataset**, the one an instance is born wi
 can hold datasets of other sources next to it — the English Wiktionary, WordNet, OpenGloss — each under the
 terms of its source: [Datasets from other sources](#datasets-from-other-sources).
 
+## Comparing installed datasets in the admin
+
+**Statistics → All datasets** compares every installed dictionary, including own datasets,
+forks, closed dictionaries and empty datasets. Uninstalled catalog sources are omitted.
+Each card shows its title/name, version, public/closed and active status, and the same counters
+as its detailed statistics: entries, base words, forms, phrases, grammar patterns, meanings
+and both kinds of translation. Shared spellings and copied entries count in each dataset;
+these are not unique-word totals across the instance.
+
+The links open that dataset's common, translation and issue statistics. The `dataset` URL
+parameter takes precedence over the editing cookie and does not activate the dictionary.
+From issue statistics, a record can be opened for correction as described below.
+
+The admin-only `GET /api/en/statistics/datasets` reads installed datasets sequentially through
+their readers and reuses the detailed statistics' count definitions. It ignores dataset
+selection, works with the single default dataset on SQLite, and does not cache results.
+`read_at` records when collection finished; use **Refresh statistics** to read again. Counts
+are live reads, not a cross-dataset snapshot. An import overlapping a dataset's read marks
+it `updating`; the UI warns that figures may be intermediate. Refresh after the import ends.
+An unreadable dataset stays visible with `totals: null` and `statistics_unavailable`, while
+other datasets remain readable. An empty dictionary has actual zero counts instead.
+
 ## Inspecting missing and empty data in the admin
 
 **Statistics → Data issues** opens matching records from each category. The list counts

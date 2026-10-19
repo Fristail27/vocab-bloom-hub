@@ -3,6 +3,29 @@ import { expect, test } from '@playwright/test';
 import { seedWord } from '../helpers/seed';
 
 test.describe('statistics', () => {
+  test('all datasets overview opens details and keeps the dataset through navigation', async ({ page }) => {
+    await page
+      .context()
+      .addCookies([{ name: 'edited_dataset', value: 'does_not_exist', domain: 'localhost', path: '/' }]);
+    await page.goto('/en/statistics/datasets');
+    const dataset = page.getByTestId('statistics-default');
+    await expect(dataset).toBeVisible();
+    await expect(page.getByTestId('edited-dataset')).toHaveCount(0);
+    await expect(dataset.getByText('Dictionary entries', { exact: true })).toBeVisible();
+    await dataset.getByRole('link', { name: 'Common statistics', exact: true }).click();
+    await expect(page).toHaveURL(/statistics\/common\?dataset=default$/);
+    await expect(page.getByText('Dictionary entries', { exact: true })).toBeVisible();
+    const navigation = page.getByRole('navigation', { name: 'Dataset statistics' });
+    await navigation.getByRole('link', { name: 'Meanings & translations', exact: true }).click();
+    await expect(page).toHaveURL(/statistics\/translations\?dataset=default$/);
+    await expect(page.getByText('By translation language', { exact: true })).toBeVisible();
+    await navigation.getByRole('link', { name: 'Data issues', exact: true }).click();
+    await expect(page).toHaveURL(/statistics\/issues\?dataset=default$/);
+    await expect(page.getByText('Incomplete or empty data', { exact: true })).toBeVisible();
+    await navigation.getByRole('link', { name: 'All datasets', exact: true }).click();
+    await expect(dataset).toBeVisible();
+  });
+
   test('common statistics page renders the totals and coverage blocks', async ({ page, request }) => {
     await seedWord(request, 'glimmer');
 

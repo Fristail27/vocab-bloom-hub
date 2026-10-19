@@ -976,6 +976,18 @@ export default {
     add_slot: 'SLOT hinzufügen',
   },
   statistics: {
+    all_datasets: 'Alle Datensätze',
+    all_datasets_explanation:
+      'Die Zahlen werden für jeden installierten Datensatz einzeln angezeigt, auch für geschlossene Wörterbücher. Gemeinsame Wörter und kopierte Einträge zählen in jedem Datensatz; dies sind keine Summen eindeutiger Wörter.',
+    refresh_statistics: 'Statistik aktualisieren',
+    statistics_read_at: 'Abgerufen am {time}',
+    statistics_loading: 'Statistik wird geladen…',
+    statistics_unavailable: 'Die Statistik konnte nicht gelesen werden. Bitte erneut aktualisieren.',
+    no_installed_datasets: 'Keine installierten Datensätze',
+    statistics_updating:
+      'Während des Abrufs lief ein Import. Die Zahlen können Zwischenstände sein; nach Abschluss bitte aktualisieren.',
+    dataset_navigation: 'Datensatzstatistik',
+
     issues_explanation:
       'Fehlende Daten sind nicht zwangsläufig Fehler. Diese Listen helfen bei der Prüfung; die Möglichkeiten einer Quelle garantieren keine Vollständigkeit.',
     interpretation_missing: 'Die Quelle unterstützt diese Daten; prüfen Sie fehlende Angaben.',
