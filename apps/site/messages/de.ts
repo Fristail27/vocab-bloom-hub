@@ -339,6 +339,10 @@ export default {
     antonyms: 'Antonyme',
     phrasal_variants: 'Phrasal-Varianten',
     datasets_label: 'Datensätze',
+    dataset_unavailable_title: 'Datensatzeintrag nicht verfügbar',
+    dataset_unavailable:
+      'Dieser Datensatz ist nicht verfügbar oder enthält dieses Wort nicht. Möglicherweise wurde er geschlossen oder gelöscht.',
+    dataset_default_page: 'Die normale Wortseite öffnen',
     forms: 'Formen',
     more_meanings: 'Weitere Bedeutungen ({count})',
     try_in_playground: 'probier es im Playground',

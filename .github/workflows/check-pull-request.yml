@@ -419,6 +419,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: vocab
+          POSTGRES_PASSWORD: vocab
+          POSTGRES_DB: vocab_site
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vocab"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -449,6 +464,11 @@ jobs:
 
       - name: Run site browser e2e tests
         run: yarn workspace e2e test:site
+
+      - name: Verify dataset links on isolated PostgreSQL
+        run: yarn workspace e2e exec playwright test --config playwright.site-postgres.config.ts dataset-links-postgres.spec.ts
+        env:
+          SITE_E2E_POSTGRES_URL: postgresql://vocab:vocab@localhost:5432/vocab_site
 
       - name: Upload Playwright report
         if: failure()

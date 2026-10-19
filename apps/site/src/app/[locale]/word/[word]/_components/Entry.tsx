@@ -17,7 +17,9 @@ export const ipa = (value: string): string => `/${value.replace(/^[/[]|[/\]]$/g,
 
 export const wordPath = (word: string): string => `/word/${encodeURIComponent(word)}`;
 
-export const WordLink = ({ word }: { word: string }) => <Link href={wordPath(word)}>{word}</Link>;
+export const WordLink = ({ word, dataset }: { word: string; dataset?: string }) => (
+  <Link href={dataset ? { pathname: wordPath(word), query: { dataset } } : wordPath(word)}>{word}</Link>
+);
 
 const humanize = (value: string): string => value.replace(/_/g, ' ');
 

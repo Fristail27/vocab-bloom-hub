@@ -19,6 +19,7 @@ import { breadcrumbJsonLd, definedTermJsonLd } from '@/core/structuredData';
 import { defaultPanel, wordPanels } from '@/core/wordDatasets';
 import { leadDefinition, localeTranslations } from '@/core/wordPage';
 import type { WordPanelT } from '@/core/wordPanel';
+import { Link } from '@/i18n/navigation';
 import { LocaleParamsP } from '@/types/common';
 
 import styles from '../word.module.scss';
@@ -26,7 +27,19 @@ import { DatasetPanels } from './_components/DatasetPanels';
 import { wordPath } from './_components/Entry';
 import { Panel } from './_components/Panel';
 
-type WordPageP = LocaleParamsP<{ word: string }>;
+type WordPageP = LocaleParamsP<{ word: string }> & {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+const queryOf = async (searchParams: WordPageP['searchParams']): Promise<string> => {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(await searchParams)) {
+    for (const item of Array.isArray(value) ? value : value === undefined ? [] : [value]) {
+      query.append(key, item);
+    }
+  }
+  return query.toString();
+};
 
 // Check dataset visibility on every request, including previously rendered URLs.
 export const dynamic = 'force-dynamic';
@@ -41,32 +54,18 @@ const headwordOf = async (params: WordPageP['params']) => {
 type ResolvedT =
   | { kind: 'unavailable' }
   | { kind: 'not_found' }
+  | { kind: 'dataset_unavailable'; fallback: string }
   | {
       kind: 'found';
-      /** The datasets that hold the headword, a panel each, and the one the page renders: the first */
+      /** Only the selected panel is rendered; the rest supply tab names. */
       panels: WordPanelT[];
       lead: WordPanelT;
     };
 
-/**
- * What the page shows (issue #538): the headword in the datasets of the
- * instance, a tab each. The server renders the first tab — the dataset of
- * the project where it holds the word — and names the others, which the
- * browser reads when their tab is pressed. The served dataset has to
- * answer: a page that lost it to a failure must not be cached as the page
- * of the other datasets. A headword only another dataset holds is a page
- * too, the links of its entries lead to it.
- *
- * The one URL of a headword is its normalized spelling (issue #480):
- * /en/word/Bloom answered 200 with a canonical of its own, one indexable
- * page per spelling variant. A 308 folds them. Where a dataset holds "Test"
- * next to "test" they are two words and the API keeps the case of the one
- * that was asked for: a spelling some dataset holds as it is stays a page,
- * so its tab can be opened, and names the page of the first tab as its
- * canonical
- */
-// Share the result (including its retry) between metadata and the page.
-const resolve = cache(async (locale: string, word: string): Promise<ResolvedT> => {
+// Share the public reads and resolution between metadata and the page.
+// Query strings are primitive cache keys; redirects retain all parameters.
+const resolve = cache(async (locale: string, word: string, query: string): Promise<ResolvedT> => {
+  const selectors = new URLSearchParams(query).getAll('dataset');
   const [headword, terms, groups] = await Promise.all([
     fetchHeadword(word),
     fetchDatasetTerms(),
@@ -75,9 +74,24 @@ const resolve = cache(async (locale: string, word: string): Promise<ResolvedT> =
   if (headword.kind === 'unavailable') return { kind: 'unavailable' };
 
   const panels = wordPanels({ headword: headword.kind === 'found' ? headword.result : null, terms, groups });
-  const lead = defaultPanel(panels);
+  const first = defaultPanel(panels);
+  const selector = selectors.length === 1 ? selectors[0] : null;
+  const lead =
+    selectors.length === 0
+      ? first
+      : panels.find(
+          (panel) => panel.dataset === selector && groups.some((group) => group.dataset === panel.dataset),
+        );
+  if (selectors.length > 0 && !lead) {
+    const fallbackQuery = new URLSearchParams(query);
+    fallbackQuery.delete('dataset');
+    const suffix = fallbackQuery.size ? `?${fallbackQuery}` : '';
+    return { kind: 'dataset_unavailable', fallback: `${wordPath(first?.word ?? word)}${suffix}` };
+  }
   if (!lead) return { kind: 'not_found' };
-  if (!panels.some((panel) => panel.word === word)) permanentRedirect(`/${locale}${wordPath(lead.word)}`);
+  if (!panels.some((panel) => panel.word === word)) {
+    permanentRedirect(`/${locale}${wordPath(lead.word)}${query ? `?${query}` : ''}`);
+  }
 
   return { kind: 'found', panels, lead };
 });
@@ -85,13 +99,21 @@ const resolve = cache(async (locale: string, word: string): Promise<ResolvedT> =
 // how many of the locale's translations fit a title
 const TITLE_TRANSLATIONS = 4;
 
-export const generateMetadata = async ({ params }: WordPageP): Promise<Metadata> => {
+export const generateMetadata = async ({ params, searchParams }: WordPageP): Promise<Metadata> => {
   const { locale, word } = await headwordOf(params);
   const t = await getTranslations({ locale, namespace: 'word' });
-  const resolved = await resolve(locale, word);
+  const query = await queryOf(searchParams);
+  const resolved = await resolve(locale, word, query);
   // the API being down must not get thin placeholder pages indexed (issue #399)
   if (resolved.kind === 'unavailable') return { title: word, robots: { index: false } };
   if (resolved.kind === 'not_found') return { title: word };
+  if (resolved.kind === 'dataset_unavailable') {
+    return {
+      title: t('dataset_unavailable_title'),
+      description: t('dataset_unavailable'),
+      robots: { index: false, follow: true },
+    };
+  }
 
   const { panels, lead } = resolved;
   const definition = leadDefinition(lead.entries);
@@ -112,18 +134,29 @@ export const generateMetadata = async ({ params }: WordPageP): Promise<Metadata>
   // The search engines are given the words of the dictionary the site
   // serves: the sitemap and the index of words are its headwords. A word the
   // served dataset does not hold is a page for a reader who followed a link
-  if (!panels.some((panel) => panel.active)) {
+  if (!panels.some((panel) => panel.active) && !new URLSearchParams(query).has('dataset')) {
     return { title, description: trimDescription(description), robots: { index: false, follow: true } };
   }
 
-  return pageMeta({
+  const selected = new URLSearchParams(query).get('dataset');
+  const canonical = wordPath(defaultPanel(panels)!.word);
+  const metadata = pageMeta({
     locale,
-    path: wordPath(lead.word),
+    path: selected ? `${wordPath(word)}?${new URLSearchParams({ dataset: selected })}` : canonical,
     title,
     // a snippet's length: search engines cut a description at about 160 characters
     description: trimDescription(description),
     type: 'article',
   });
+  // Tabs are shareable views, not additional indexable copies. Their social
+  // metadata describes the selected entry; the canonical stays the normal page.
+  return selected
+    ? {
+        ...metadata,
+        alternates: { canonical: `/${locale}${canonical}` },
+        robots: { index: false, follow: true },
+      }
+    : metadata;
 };
 
 // what was changed on the instance (issue #531): asked for only where an entry says it was
@@ -133,17 +166,30 @@ const historyOf = async (panel: WordPanelT): Promise<PublicChangeV1T[]> => {
   return panel.active ? fetchHeadwordHistory(panel.word) : fetchDatasetHistory(panel.word, panel.dataset);
 };
 
-export default async function WordPage({ params }: WordPageP) {
+export default async function WordPage({ params, searchParams }: WordPageP) {
   const { locale, word } = await headwordOf(params);
   setRequestLocale(locale);
   const t = await getTranslations('word');
   const nav = await getTranslations('nav');
   const termsNames = await getTranslations('terms');
-  const resolved = await resolve(locale, word);
+  const query = await queryOf(searchParams);
+  const resolved = await resolve(locale, word, query);
 
-  // A page the API failed to render must not be
+  // An API failure must not become a successful placeholder page.
   if (resolved.kind === 'unavailable') throw new DictionaryUnavailableError();
   if (resolved.kind === 'not_found') notFound();
+  if (resolved.kind === 'dataset_unavailable') {
+    return (
+      <div className={`container ${styles.page}`}>
+        <h1>{t('dataset_unavailable_title')}</h1>
+        <p role="status">{t('dataset_unavailable')}</p>
+        <Link href={resolved.fallback}>{t('dataset_default_page')}</Link>
+        <div className={styles.footer}>
+          <WordSearch />
+        </div>
+      </div>
+    );
+  }
 
   const { panels, lead } = resolved;
   const history = await historyOf(lead);
@@ -165,9 +211,9 @@ export default async function WordPage({ params }: WordPageP) {
           }),
         ]}
       />
-      {/* the other datasets are named, not sent: the browser reads the one whose tab is pressed */}
+      {/* A navigation renders one panel and keeps the tab buttons mounted. */}
       <DatasetPanels
-        word={word}
+        selected={lead.dataset}
         tabs={panels.map(({ dataset, title }) => ({ dataset, title }))}
         headline={{
           word: lead.word,
@@ -176,6 +222,7 @@ export default async function WordPage({ params }: WordPageP) {
       >
         <Panel
           panel={lead}
+          selectedDataset={new URLSearchParams(query).get('dataset') ?? undefined}
           history={history}
           locale={locale}
           t={t}

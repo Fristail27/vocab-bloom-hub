@@ -9,8 +9,11 @@ import { routing } from '@/i18n/routing';
 
 import styles from './styles.module.scss';
 
-/** The locale links for `pathname`, carrying `q` when the page has that query. */
-const LocaleLinks: React.FC<{ pathname: string; query: string | null }> = ({ pathname, query }) => {
+/** The locale links for `pathname`, carrying the search query and selected dataset. */
+const LocaleLinks: React.FC<{ pathname: string; query: Record<string, string | string[]> | null }> = ({
+  pathname,
+  query,
+}) => {
   const locale = useLocale();
   const t = useTranslations('nav');
 
@@ -21,7 +24,7 @@ const LocaleLinks: React.FC<{ pathname: string; query: string | null }> = ({ pat
           key={candidate}
           // The object form keeps the encoding; building the query string here
           // would double encode a term with a space or a non-ASCII character.
-          href={query ? { pathname, query: { q: query } } : pathname}
+          href={query ? { pathname, query } : pathname}
           locale={candidate}
           className={candidate === locale ? styles.active : undefined}
           aria-current={candidate === locale ? 'true' : undefined}
@@ -40,8 +43,13 @@ const LocaleLinks: React.FC<{ pathname: string; query: string | null }> = ({ pat
  * a locale switch (issue #546).
  */
 const LanguageSwitchWithQuery: React.FC<{ pathname: string }> = ({ pathname }) => {
-  const q = useSearchParams().get('q');
-  return <LocaleLinks pathname={pathname} query={q} />;
+  const params = useSearchParams();
+  const query: Record<string, string | string[]> = {};
+  for (const key of new Set(params.keys())) {
+    const values = params.getAll(key);
+    query[key] = values.length === 1 ? values[0] : values;
+  }
+  return <LocaleLinks pathname={pathname} query={query} />;
 };
 
 /** The same page in the other locale */

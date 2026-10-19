@@ -334,6 +334,10 @@ export default {
     phrasal_variants: 'Phrasal variants',
     // the tabs of a word page, a dataset of the instance each (issue #538)
     datasets_label: 'Datasets',
+    dataset_unavailable_title: 'Dataset entry unavailable',
+    dataset_unavailable:
+      'This dataset is unavailable or does not contain this word. It may have been closed or deleted.',
+    dataset_default_page: 'Open the normal word page',
     // an entry as a card (issue #538): the label of its forms, the fold of a long list of meanings
     forms: 'Forms',
     more_meanings: 'More meanings ({count})',

@@ -13,7 +13,7 @@ export const E2E_PASSWORD = 'e2e-password';
 // The website suite (playwright.site.config.ts, issue #330) boots its own
 // API + site pair on ports of its own, so the two suites can never collide
 export const SITE_PORT = 3021;
-export const SITE_API_PORT = 3012;
+export const SITE_API_PORT = Number(process.env.SITE_E2E_API_PORT ?? 3012);
 export const SITE_URL = `http://localhost:${SITE_PORT}`;
 export const SITE_API_URL = `http://localhost:${SITE_API_PORT}/api`;
 // What the site itself asks: the same API as an instance with two datasets

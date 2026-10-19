@@ -79,9 +79,9 @@ export const wordPanels = ({ headword, terms, groups }: WordPanelsP): WordPanelT
 };
 
 /**
- * The panel a page opens, and the one the server renders: the first tab.
+ * The panel a page opens without an explicit dataset selector: the first tab.
  * The dataset of the project where it holds the headword, whichever
- * dataset the instance serves. The others are read by the browser when
- * their tab is pressed
+ * dataset the instance serves. A selector can open any publicly available
+ * panel without changing this ordering
  */
 export const defaultPanel = (panels: readonly WordPanelT[]): WordPanelT | undefined => panels[0];
