@@ -1049,6 +1049,14 @@ export default {
     intro:
       "The public read-only API under /api/v1: no authorization, every response in a '{ data, meta }' envelope, errors as '{ statusCode, message, error: true }', every response carries X-API-Version. Every page describes the request filters and lets you run a real request against the current database. Compatibility routes under /api/compat/dictionaryapi return v1/v2 arrays instead of the native envelope.",
     public_endpoints: 'Public endpoints',
+    endpoint_datasets: 'Public datasets',
+    desc_datasets:
+      'Lists publicly readable datasets and their terms in installation order, with the maximum number selectable for search. Closed datasets are omitted.',
+    endpoint_search_datasets_get: 'Search selected datasets',
+    desc_search_datasets_get:
+      'Searches 1–5 public datasets in separate groups with source terms, local IDs and pagination. Each selected dataset costs one shared rate-budget unit. Empty results have status ok; failed readers have status unavailable and meta.partial is true. Unknown or closed targets return 404 without fallback.',
+    param_desc_datasets:
+      '1–5 unique public dataset names from GET /api/v1/datasets; enter comma-separated names, sent as repeated query keys.',
     endpoint_search_get: 'Basic search',
     endpoint_search_detailed_get: 'Detailed search',
     desc_search_get:
@@ -1109,7 +1117,7 @@ export default {
     param_desc_word:
       'Headword spelling; phrases may contain spaces. freedictionaryapi.com routes distinguish case.',
     param_desc_dataset:
-      'Name of a dataset of the instance, as dataset of a group says it: default, wiktionary, wordnet, wordnet_princeton',
+      'Public dataset name. In search, omission uses the active dataset; unknown or closed targets return 404 without fallback.',
     param_desc_words: 'Headword spellings, 1 to 50, comma-separated; each matched like the headword lookup',
     param_desc_id: 'Numeric id of the entry',
     param_desc_cursor: 'meta.next_cursor of the previous page; omit for the first page',

@@ -1,3 +1,9 @@
+import ar from '../../../../../../messages/ar';
+import de from '../../../../../../messages/de';
+import es from '../../../../../../messages/es';
+import fr from '../../../../../../messages/fr';
+import pt from '../../../../../../messages/pt';
+import zh from '../../../../../../messages/zh';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import en from '../../../../../../messages/en';
@@ -6,7 +12,7 @@ import { DOCUMENTED_ENDPOINTS } from '../constants';
 
 // A key referenced by a component but absent from the messages only shows up as
 // a MISSING_MESSAGE error at render time, so the descriptors are checked here
-const LOCALES = { en, ru };
+const LOCALES = { en, ru, ar, de, es, fr, pt, zh };
 
 describe.each(Object.entries(LOCALES))('documentation messages (%s)', (_locale, messages) => {
   const documentation = messages.documentation as Record<string, string>;

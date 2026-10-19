@@ -1060,6 +1060,14 @@ export default {
     intro:
       "A API pública somente leitura em /api/v1: sem autorização, cada resposta em um envelope '{ data, meta }', erros como '{ statusCode, message, error: true }', cada resposta traz X-API-Version. Cada página descreve os filtros da requisição e permite executar uma requisição real contra o banco de dados atual. As rotas de compatibilidade /api/compat/dictionaryapi retornam arrays v1/v2 em vez da estrutura nativa.",
     public_endpoints: 'Endpoints públicos',
+    endpoint_datasets: 'Conjuntos de dados públicos',
+    desc_datasets:
+      'Lista os conjuntos públicos e seus termos em ordem de instalação, com o máximo selecionável para pesquisa. Conjuntos fechados são omitidos.',
+    endpoint_search_datasets_get: 'Pesquisar nos conjuntos selecionados',
+    desc_search_datasets_get:
+      'Pesquisa em 1–5 conjuntos públicos em grupos separados com termos da fonte, IDs locais e paginação. Cada conjunto consome uma unidade do limite compartilhado. Resultados vazios têm status ok; falhas de leitura têm status unavailable e meta.partial: true. Alvos desconhecidos ou fechados retornam 404 sem substituição.',
+    param_desc_datasets:
+      'De 1 a 5 nomes públicos únicos de GET /api/v1/datasets; inserir separados por vírgulas, enviados como chaves de consulta repetidas.',
     endpoint_search_get: 'Busca básica',
     endpoint_search_detailed_get: 'Busca detalhada',
     desc_search_get:
@@ -1120,7 +1128,7 @@ export default {
       'Id de um verbete da palavra, quando o relato diz respeito a uma classe gramatical específica',
     param_desc_word: 'Grafia; expressões podem conter espaços. freedictionaryapi.com diferencia maiúsculas.',
     param_desc_dataset:
-      'Nome de um conjunto de dados da instância, como dataset de um grupo o indica: default, wiktionary, wordnet, wordnet_princeton',
+      'Nome de um conjunto público. Sem seleção, a pesquisa usa o ativo; alvos desconhecidos ou fechados retornam 404 sem substituição.',
     param_desc_words:
       'Grafias de palavras, de 1 a 50, separadas por vírgula; cada uma comparada como na consulta de verbete',
     param_desc_id: 'Id numérico do verbete',

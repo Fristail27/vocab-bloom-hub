@@ -1066,6 +1066,14 @@ export default {
     intro:
       "La API pública de solo lectura bajo /api/v1: sin autorización, cada respuesta en un sobre '{ data, meta }', los errores como '{ statusCode, message, error: true }', cada respuesta lleva X-API-Version. Cada página describe los filtros de la petición y permite lanzar una petición real contra la base de datos actual. Las rutas de compatibilidad /api/compat/dictionaryapi devuelven arrays v1/v2 en lugar de la estructura nativa.",
     public_endpoints: 'Endpoints públicos',
+    endpoint_datasets: 'Conjuntos de datos públicos',
+    desc_datasets:
+      'Lista los conjuntos de datos públicos y sus condiciones en orden de instalación, con el máximo seleccionable para la búsqueda. Omite los conjuntos cerrados.',
+    endpoint_search_datasets_get: 'Buscar en conjuntos seleccionados',
+    desc_search_datasets_get:
+      'Busca en 1–5 conjuntos públicos en grupos separados con condiciones de la fuente, IDs locales y paginación. Cada conjunto consume una unidad del límite compartido. Los resultados vacíos tienen status ok; los errores de lectura, status unavailable y meta.partial: true. Los destinos desconocidos o cerrados devuelven 404 sin sustitución.',
+    param_desc_datasets:
+      'Entre 1 y 5 nombres públicos únicos de GET /api/v1/datasets; introducir separados por comas, se envían como claves de consulta repetidas.',
     endpoint_search_get: 'Búsqueda básica',
     endpoint_search_detailed_get: 'Búsqueda detallada',
     desc_search_get:
@@ -1126,7 +1134,7 @@ export default {
       'Id de una entrada del lema, cuando el reporte se refiere a una categoría gramatical concreta',
     param_desc_word: 'Grafía; las frases pueden contener espacios. freedictionaryapi.com distingue mayúsculas.',
     param_desc_dataset:
-      'Nombre de un conjunto de datos de la instancia, tal como lo indica dataset en un grupo: default, wiktionary, wordnet, wordnet_princeton',
+      'Nombre de un conjunto público. Si se omite en la búsqueda, se usa el activo; los destinos desconocidos o cerrados devuelven 404 sin sustitución.',
     param_desc_words:
       'Grafías de lemas, de 1 a 50, separadas por comas; cada una se compara como en la consulta de lema',
     param_desc_id: 'Id numérico de la entrada',

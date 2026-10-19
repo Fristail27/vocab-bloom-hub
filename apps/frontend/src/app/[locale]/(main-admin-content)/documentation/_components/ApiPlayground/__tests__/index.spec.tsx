@@ -32,7 +32,8 @@ const makeWord = (id: number, word: string): PublicSearchWordV1T =>
     forms: [],
   }) as unknown as PublicSearchWordV1T;
 
-const typeSearch = (value: string) => fireEvent.change(screen.getByRole('textbox'), { target: { value } });
+const typeSearch = (value: string) =>
+  fireEvent.change(screen.getByRole('textbox', { name: /^(search|word)$/ }), { target: { value } });
 
 const send = async () => {
   await act(async () => {
@@ -87,6 +88,39 @@ describe('ApiPlayground (issue #245)', () => {
     expect(EnApi.publicGet).toHaveBeenCalledWith('/v1/search', { search: 'run', limit: 10 });
     expect(screen.getByText(/"word": "run"/)).toBeInTheDocument();
     expect(screen.getByText(/"count": 1/)).toBeInTheDocument();
+  });
+
+  it('sends an optional selected dataset without confusing it with the search term', async () => {
+    (EnApi.publicGet as jest.Mock).mockResolvedValue({ data: [], meta: { count: 0 } });
+    render(<ApiPlayground endpoint={searchEndpoint} />);
+    typeSearch('run');
+    fireEvent.change(screen.getByRole('textbox', { name: 'dataset', exact: true }), {
+      target: { value: 'reader_words' },
+    });
+    await send();
+    expect(EnApi.publicGet).toHaveBeenCalledWith('/v1/search', {
+      search: 'run',
+      dataset: 'reader_words',
+      limit: 10,
+    });
+  });
+
+  it('requires grouped targets and submits them separately from the search term', async () => {
+    (EnApi.publicGet as jest.Mock).mockResolvedValue({ data: [], meta: { datasets: 2, partial: false } });
+    const endpoint = DOCUMENTED_ENDPOINTS.find(({ key }) => key === ApiEndpointKeyE.search_datasets_get)!;
+    render(<ApiPlayground endpoint={endpoint} />);
+    typeSearch('run');
+    expect(screen.getByRole('button', { name: 'send_request' })).toBeDisabled();
+    fireEvent.change(screen.getByRole('textbox', { name: 'datasets', exact: true }), {
+      target: { value: 'default, reader_words' },
+    });
+    await send();
+    expect(EnApi.publicGet).toHaveBeenCalledWith('/v1/search/datasets', {
+      search: 'run',
+      datasets: ['default', 'reader_words'],
+      limit: 10,
+      page: 1,
+    });
   });
 
   it('переключает ответ между JSON и таблицей', async () => {

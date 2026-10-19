@@ -1,3 +1,4 @@
+import { DATASET_TARGET_PATTERN, MAX_SEARCH_DATASETS } from 'server/core/constants/datasets';
 import {
   AvailableTranslationLanguagesE,
   CategoryE,
@@ -13,6 +14,8 @@ import { DATASET_CATALOG } from 'server/core/constants/dataset_catalog';
 // Endpoints open to any consumer of the dictionary; the auth routes are admin
 // panel plumbing and stay out of the public documentation
 export enum ApiEndpointKeyE {
+  datasets = 'datasets',
+  search_datasets_get = 'search_datasets_get',
   search_get = 'search_get',
   search_detailed_get = 'search_detailed_get',
   word = 'word',
@@ -89,6 +92,14 @@ const SEARCH_TERM_PARAM: ApiParamDocT = {
   required: true,
 };
 
+const SELECTED_DATASET_PARAM: ApiParamDocT = {
+  name: 'dataset',
+  type: 'string',
+  control: ParamControlE.text,
+  required: false,
+  constraints: DATASET_TARGET_PATTERN.source,
+};
+
 const ENTRY_TYPE_PARAM: ApiParamDocT = {
   name: 'type',
   type: 'EnEntryTypesE',
@@ -157,6 +168,7 @@ const WITH_TRANSLATIONS_PARAM: ApiParamDocT = {
 // The fields of the search, shared by its GET (query) and POST (body) forms (issue #396)
 const SEARCH_PARAMS: ApiParamDocT[] = [
   SEARCH_TERM_PARAM,
+  SELECTED_DATASET_PARAM,
   ENTRY_TYPE_PARAM,
   {
     name: 'limit',
@@ -171,6 +183,7 @@ const SEARCH_PARAMS: ApiParamDocT[] = [
 
 const SEARCH_DETAILED_PARAMS: ApiParamDocT[] = [
   SEARCH_TERM_PARAM,
+  SELECTED_DATASET_PARAM,
   ENTRY_TYPE_PARAM,
   {
     name: 'limit',
@@ -370,6 +383,34 @@ export const DOCUMENTED_ENDPOINTS: ApiEndpointDocT[] = [
     clientPath: '/v1/search/detailed',
     responseType: 'PublicSearchDetailedV1ResT',
     params: SEARCH_DETAILED_PARAMS,
+  },
+  {
+    key: ApiEndpointKeyE.datasets,
+    slug: 'datasets',
+    method: 'GET',
+    path: '/api/v1/datasets',
+    clientPath: '/v1/datasets',
+    responseType: 'PublicDatasetsV1ResT',
+    params: [],
+  },
+  {
+    key: ApiEndpointKeyE.search_datasets_get,
+    slug: 'search-datasets',
+    method: 'GET',
+    path: '/api/v1/search/datasets',
+    clientPath: '/v1/search/datasets',
+    responseType: 'PublicSearchDatasetsV1ResT',
+    params: [
+      ...SEARCH_DETAILED_PARAMS.filter(({ name }) => name !== 'dataset'),
+      {
+        name: 'datasets',
+        type: 'string[]',
+        control: ParamControlE.text_list,
+        required: true,
+        min: 1,
+        max: MAX_SEARCH_DATASETS,
+      },
+    ],
   },
   {
     key: ApiEndpointKeyE.word,

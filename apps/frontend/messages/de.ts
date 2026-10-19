@@ -1073,6 +1073,14 @@ export default {
     intro:
       "Die öffentliche, nur lesende API unter /api/v1: ohne Autorisierung, jede Antwort in einer Hülle '{ data, meta }', Fehler als '{ statusCode, message, error: true }', jede Antwort trägt X-API-Version. Jede Seite beschreibt die Filter der Anfrage und lässt Sie eine echte Anfrage gegen die aktuelle Datenbank ausführen. Kompatibilitätsrouten unter /api/compat/dictionaryapi geben v1/v2-Arrays statt der nativen Antwortstruktur zurück.",
     public_endpoints: 'Öffentliche Endpunkte',
+    endpoint_datasets: 'Öffentliche Datensätze',
+    desc_datasets:
+      'Listet öffentlich lesbare Datensätze und ihre Bedingungen in Installationsreihenfolge sowie die maximale Anzahl für eine Suche auf. Geschlossene Datensätze fehlen.',
+    endpoint_search_datasets_get: 'Ausgewählte Datensätze durchsuchen',
+    desc_search_datasets_get:
+      'Durchsucht 1–5 öffentliche Datensätze in getrennten Gruppen mit Quellenbedingungen, lokalen IDs und Seitennavigation. Jeder gewählte Datensatz verbraucht eine Einheit des gemeinsamen Limits. Leere Ergebnisse haben status ok; Lesefehler status unavailable und meta.partial: true. Unbekannte oder geschlossene Ziele liefern 404 ohne Ersatz.',
+    param_desc_datasets:
+      '1–5 eindeutige öffentliche Namen aus GET /api/v1/datasets; durch Kommas getrennt eingeben, als wiederholte Abfrageschlüssel gesendet.',
     endpoint_search_get: 'Einfache Suche',
     endpoint_search_detailed_get: 'Detaillierte Suche',
     desc_search_get:
@@ -1134,7 +1142,7 @@ export default {
     param_desc_word:
       'Schreibweise; Wortgruppen dürfen Leerzeichen enthalten. freedictionaryapi.com unterscheidet Groß- und Kleinschreibung.',
     param_desc_dataset:
-      'Name eines Datensatzes der Instanz, wie ihn dataset einer Gruppe nennt: default, wiktionary, wordnet, wordnet_princeton',
+      'Name eines öffentlichen Datensatzes. Ohne Auswahl wird der aktive durchsucht; unbekannte oder geschlossene Ziele liefern 404 ohne Ersatz.',
     param_desc_words:
       'Schreibweisen von Stichwörtern, 1 bis 50, kommagetrennt; jede wie beim Nachschlagen abgeglichen',
     param_desc_id: 'Numerische ID des Eintrags',
