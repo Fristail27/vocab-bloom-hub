@@ -16,6 +16,8 @@ export type DatasetScopeT = {
   dataset: { name: string; source: string; own: boolean };
   /** A connection on the dataset's schema */
   dataSource: DataSource;
+  /** A pinned connection/transaction, when the entire operation must use one */
+  manager?: EntityManager;
 };
 
 const storage = new AsyncLocalStorage<DatasetScopeT>();
@@ -38,7 +40,7 @@ export const currentDatasetSource = (): string => currentDataset().source;
 /** The repository of the dataset the request works on: the one given is the active dataset's */
 export const scoped = <T extends ObjectLiteral>(repository: Repository<T>): Repository<T> => {
   const scope = storage.getStore();
-  return scope ? scope.dataSource.getRepository<T>(repository.target) : repository;
+  return scope ? (scope.manager ?? scope.dataSource).getRepository<T>(repository.target) : repository;
 };
 
 /** The connection of the dataset the request works on: the one given is the active dataset's */
@@ -47,4 +49,4 @@ export const scopedDataSource = (dataSource: DataSource): DataSource =>
 
 /** The manager of the dataset the request works on */
 export const scopedManager = (manager: EntityManager): EntityManager =>
-  storage.getStore()?.dataSource.manager ?? manager;
+  storage.getStore()?.manager ?? storage.getStore()?.dataSource.manager ?? manager;

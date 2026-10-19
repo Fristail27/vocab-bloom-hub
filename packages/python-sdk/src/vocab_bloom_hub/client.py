@@ -273,13 +273,16 @@ class VocabBloomClient:
         self,
         headword: str,
         *,
+        dataset: str | None = None,
         message: str | None = None,
         word_id: int | None = None,
         kind: str | Enum | None = None,
         edits: Iterable[Mapping[str, Any]] | None = None,
+        author_name: str | None = None,
+        author_consent: bool | None = None,
         options: RequestOptions | None = None,
     ) -> m.SuggestionCreatedResponse:
-        """Files reader feedback into the instance's moderation queue (issue #327).
+        """Files feedback into the named public dataset, or the active one when omitted.
 
         A free-text report by default; ``kind="edit"`` with ``edits`` — a list
         of ``{"target_type", "target_id", "changes"}`` items covering every
@@ -288,6 +291,9 @@ class VocabBloomClient:
         """
         body = {
             "headword": headword,
+            "dataset": dataset,
+            "author_name": author_name,
+            "author_consent": author_consent,
             "message": message,
             "word_id": word_id,
             "kind": kind,

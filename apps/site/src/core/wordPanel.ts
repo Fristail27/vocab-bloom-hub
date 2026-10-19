@@ -9,9 +9,11 @@ import type { DatasetTermsT } from './datasetTerms';
 export type WordPanelT = {
   /** The name of the dataset on the instance: `default`, `wiktionary`, … */
   dataset: string;
+  /** A legacy fallback without a trustworthy dataset name cannot accept reports. */
+  unidentified?: boolean;
   /** What a reader calls it: the title of the catalog, the name for a dataset the site does not know */
   title: string;
-  /** Whether it is the dataset the API serves: the one the sitemap and the reports are about */
+  /** Whether it is the dataset the API serves: the one the sitemap is about */
   active: boolean;
   terms: DatasetTermsT;
   /** The headword as this dataset spells it, and the spellings it holds that differ by case */

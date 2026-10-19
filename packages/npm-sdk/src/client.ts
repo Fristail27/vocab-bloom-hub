@@ -328,7 +328,8 @@ export class VocabBloomClient {
    * Files reader feedback into the instance's moderation queue (issue #327):
    * a free-text report, or a structured edit (`kind: 'edit'`) the admin can
    * apply in one click. Strictly rate-limited per client; answers 404 for a
-   * headword the dictionary does not have and 503 once the queue is full.
+   * headword/dataset that is unavailable and 503 once the target queue is full.
+   * Pass `dataset` from the viewed word group; omission uses the active dataset.
    */
   suggest(request: SuggestionRequest, options?: RequestOptions): Promise<SuggestionCreatedResponse> {
     return this.post('/suggestions', request, options);

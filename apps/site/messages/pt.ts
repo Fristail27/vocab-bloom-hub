@@ -373,6 +373,9 @@ export default {
     history_field_word: 'grafia',
     report_license_note:
       'Uma correção aceita pelo proprietário passa a fazer parte dos dados do dicionário, publicados sob {license}.',
+    report_dataset: 'Conjunto de dados: {dataset}',
+    report_target_unavailable:
+      'Este conjunto de dados ou entrada já não está disponível para relatos. Recarregue a página para verificar a disponibilidade.',
     report_button: 'Relatar um erro',
     report_hint:
       'Algo errado em "{word}" — um significado, uma tradução, uma forma? Avise o proprietário deste dicionário; o relato vai para a fila de moderação dele.',

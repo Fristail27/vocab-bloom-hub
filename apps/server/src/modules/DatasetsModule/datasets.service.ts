@@ -48,6 +48,7 @@ import {
   UpdateDatasetReqT,
 } from '../../../types';
 import { setActiveDataset } from '../../core/utils/active-dataset';
+import { withDatasetScope } from '../../core/utils/dataset-scope';
 import { getDbPoolConfig } from '../../core/utils/db-pool';
 import { createDatasetSchema, dropDatasetSchema, searchPathExtra } from '../../db/datasets';
 import { DB_ENTITIES } from '../../db/typeorm-options';
@@ -251,7 +252,10 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
    * startup options leaves it on `public`, and the data of one dataset
    * would be served under the terms of another
    */
-  private async assertOnSchema(schema: string, dataSource: DataSource = this.dataSource): Promise<void> {
+  private async assertOnSchema(
+    schema: string,
+    dataSource: Pick<DataSource, 'query'> = this.dataSource,
+  ): Promise<void> {
     const [{ current }] = (await dataSource.query('SELECT current_schema() AS "current"')) as Array<{
       current: string;
     }>;
@@ -423,6 +427,44 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
   /** Public transports share this selection; admin readers keep using installed()/find(). */
   async publiclyReadable(): Promise<Dataset[]> {
     return this.datasetsRep.find({ where: { is_public: true }, order: { id: 'ASC' } });
+  }
+
+  /** Public intake: pin the target, its terms/version and its queue to one connection. */
+  async withPublicDataset<T>(name: string | undefined, work: (dataset: Dataset) => Promise<T>): Promise<T> {
+    const target = name ?? this.active.name;
+    const dataset = (await this.publiclyReadable()).find((item) => item.name === target);
+    if (!dataset) throw new NotFoundException(ErrorCodes.dataset_not_found);
+    const dataSource = await this.reader(dataset);
+    const runner = dataSource.createQueryRunner();
+    try {
+      await runner.connect();
+      if (this.supported) {
+        await runner.startTransaction();
+        // Hold the target schema open until intake finishes. Without this,
+        // DROP SCHEMA could make later unqualified reads fall through to public.
+        await runner.query('LOCK TABLE suggestions IN ROW EXCLUSIVE MODE');
+        await this.assertOnSchema(dataset.schema, runner);
+      }
+      const query = runner.manager
+        .getRepository(Dataset)
+        .createQueryBuilder('dataset')
+        .where('dataset.id = :id AND dataset.is_public = :open', { id: dataset.id, open: true });
+      // Serialize submissions to this queue and changes to its visibility/terms.
+      // SQLite has one shared connection and cannot nest concurrent transactions.
+      if (this.supported) query.setLock('pessimistic_write');
+      const current = await query.getOne();
+      if (!current) throw new NotFoundException(ErrorCodes.dataset_not_found);
+      const result = await withDatasetScope({ dataset: current, dataSource, manager: runner.manager }, () =>
+        work(current),
+      );
+      if (runner.isTransactionActive) await runner.commitTransaction();
+      return result;
+    } catch (error) {
+      if (runner.isTransactionActive) await runner.rollbackTransaction();
+      throw error;
+    } finally {
+      await runner.release();
+    }
   }
 
   async setVisibility(name: string, isPublic: boolean): Promise<DatasetT> {

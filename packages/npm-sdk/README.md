@@ -116,6 +116,10 @@ display and error handling around it. Running both loops reads the same entries 
 | `openapi()`                         | `GET /openapi.json`                            | the OpenAPI 3 document                                                                                         |
 | `suggest(request)`                  | `POST /suggestions`                            | `SuggestionCreatedResponse` — files a reader report (or an edit proposal) into the instance's moderation queue |
 
+For a report from a dataset tab, pass its `dataset` name: `client.suggest({ headword: "run", dataset: "reader_words", message: "Please check this definition." })`.
+Omitting it uses the active dataset. Unknown, closed or deleted targets raise `NotFoundError`;
+the client-wide rate limit is shared across targets.
+
 Every method resolves to the `{ data, meta }` envelope the API answers with and takes an optional last argument `{ signal, headers, timeoutMs }`. The request and response types (`Word`, `Meaning`, `SearchRequest`, `ListWordsQuery`, …) are exported — the request types of the `GET` reads are their query strings, so a `SearchRequest` is `{ search, type?, limit? }` — and so are the raw generated `paths` / `components` / `operations` for anything not aliased. The contract itself — tiers, filters, cursor pagination, caching — is documented in the server's [`docs/api.md`](https://github.com/Fristail27/vocab-bloom-hub/blob/main/docs/api.md).
 
 ### Options

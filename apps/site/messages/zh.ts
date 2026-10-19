@@ -356,6 +356,8 @@ export default {
     history_field_antonyms: '反义词',
     history_field_word: '拼写',
     report_license_note: '所有者接受的更正将成为词典数据的一部分，并以 {license} 许可证发布。',
+    report_dataset: '数据集：{dataset}',
+    report_target_unavailable: '此数据集或词条已无法接收报告。请刷新页面以确认是否仍然可用。',
     report_button: '报告错误',
     report_hint: '“{word}”有什么问题——释义、翻译还是词形变化？告诉这部词典的所有者；报告会进入他们的审核队列。',
     report_entry: '哪个条目？',

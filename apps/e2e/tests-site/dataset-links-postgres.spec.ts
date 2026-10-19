@@ -89,7 +89,32 @@ test('dataset links read real isolated PostgreSQL datasets, history and visibili
     await expect(page.getByText('The active dataset definition.')).toBeVisible();
     await page.goBack();
     await expect(page.getByText('The selected dataset definition.').first()).toBeVisible();
+    // The form sends the actual inactive dataset and its local entry IDs (#651).
+    await page.getByRole('button', { name: 'Report a mistake' }).click();
+    let form = page.getByRole('form', { name: 'Report a mistake' });
+    await expect(form).toContainText('Dataset: Shared links fixture');
+    await expect(form).toContainText('CC0');
+    await form.getByRole('button', { name: 'Edit the entry' }).click();
+    await form.getByLabel('Description').fill('A reader correction for the selected dataset.');
+    const sent = page.waitForRequest((req) => req.url().endsWith('/v1/suggestions') && req.method() === 'POST');
+    await form.getByRole('button', { name: 'Suggest the changes' }).click();
+    expect((await sent).postDataJSON()).toMatchObject({
+      dataset: name,
+      headword: word,
+      edits: [{ target_type: 'word', target_id: id }],
+    });
+    await expect(page.getByText('Thank you — the proposal is in the moderation queue.')).toBeVisible();
+    const queue = await request.get(`${SITE_API_URL}/en/suggestions?dataset=${name}`, { headers });
+    expect(await queue.text()).toContain('A reader correction for the selected dataset.');
+    const activeQueue = await request.get(`${SITE_API_URL}/en/suggestions?dataset=default`, { headers });
+    expect(await activeQueue.text()).not.toContain('A reader correction for the selected dataset.');
+    await page.reload();
+    await page.getByRole('button', { name: 'Report a mistake' }).click();
+    form = page.getByRole('form', { name: 'Report a mistake' });
+    await form.getByRole('textbox', { name: 'What is wrong' }).fill('A report from an already opened page.');
     await visibility(false);
+    await form.getByRole('button', { name: 'Send the report' }).click();
+    await expect(form).toContainText('This dataset or entry is no longer available for reports.');
     await page.reload();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Dataset entry unavailable');
     await expect(page.getByText('Shared links fixture')).toHaveCount(0);

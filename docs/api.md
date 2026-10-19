@@ -74,7 +74,7 @@ Every successful answer is an envelope: the payload under `data`, paging and cou
 | `GET`  | `/api/v1/words`                                   | filters, `cursor?`, `limit?`, `with_meanings?`, `with_translations?`                                   | `{ data: PublicWordV1T[], meta: { limit, has_more, next_cursor } }`                                                 |
 | `GET`  | `/api/v1/random`                                  | filters                                                                                                | `{ data: PublicWordV1T }`                                                                                           |
 | `POST` | `/api/v1/words/batch`                             | `{ words: string[] }` (1–50)                                                                           | `{ data: { word, count, entries: PublicWordV1T[] }[], meta: { count, not_found } }`                                 |
-| `POST` | `/api/v1/suggestions`                             | `{ headword, word_id?, message?, kind?, edits?, author_name?, author_consent? }`                       | `201 { data: { id, status } }`                                                                                      |
+| `POST` | `/api/v1/suggestions`                             | `{ headword, dataset?, word_id?, message?, kind?, edits?, author_name?, author_consent? }`             | `201 { data: { id, status } }`                                                                                      |
 
 The same endpoints can be tried on the website's playground and the admin's _Documentation_
 pages ([api-tools.md](./api-tools.md)); the machine-readable contract is the
@@ -375,10 +375,12 @@ datasets were installed, and the groups are **never merged**:
 - **Every dataset the instance holds is read**, the ones that were never activated too: a
   dataset is public from the moment it is installed, with the history of its edits and the names
   of the readers credited in it.
-- **A report is about the served dataset.** `POST /api/v1/suggestions` files it in the dataset
-  the instance serves: the `word_id` and the `target_id` of an entry of another group name
-  nothing there, or another entry. Report what the headword read of the served dataset
-  answered.
+- **A report names the viewed dataset.** Send its group’s `dataset` with
+  `POST /api/v1/suggestions`; all IDs are validated in that dataset and headword.
+  Omitting `dataset` uses the active dataset. Closed, unknown or deleted targets answer
+  `404 dataset_not_found` without fallback. The client rate budget is shared across targets;
+  each dataset has its own queue cap. Reports remain available for admin moderation after
+  closing a dataset. See [reader reports](./datasets.md#reader-reports-in-a-viewed-dataset-651).
 
 An instance with one dataset — every instance on SQLite — answers one group.
 

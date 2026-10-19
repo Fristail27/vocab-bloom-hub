@@ -370,6 +370,9 @@ export default {
     history_field_word: 'spelling',
     report_license_note:
       'A correction the owner accepts becomes part of the dictionary data, published under {license}.',
+    report_dataset: 'Dataset: {dataset}',
+    report_target_unavailable:
+      'This dataset or entry is no longer available for reports. Reload the page to check its availability.',
     report_button: 'Report a mistake',
     report_hint:
       'Something wrong with "{word}" — a meaning, a translation, a form? Tell the owner of this dictionary; the report goes to their moderation queue.',

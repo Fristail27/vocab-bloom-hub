@@ -80,9 +80,12 @@ export const Panel = ({ panel, selectedDataset, history, locale, t, termsNames, 
           <p className={styles.meta}>{t('entries', { count: entries.length })}</p>
           <TranslationPicker label={languageLabel} />
         </div>
-        {/* a report goes to the queue of the served dataset: its entries only */}
-        {panel.active && (
+        {/* Every named public panel has its own moderation queue. */}
+        {!panel.unidentified && (
           <ReportMistake
+            key={`${panel.dataset}:${panel.word}`}
+            dataset={panel.dataset}
+            datasetTitle={panel.title}
             headword={panel.word}
             license={license}
             entries={entries.map((entry) => ({
