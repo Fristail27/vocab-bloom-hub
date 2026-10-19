@@ -1,120 +1,49 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
-import type {
-  PublicChangeV1T,
-  PublicHeadwordHistoryV1ResT,
-  PublicWordDatasetV1T,
-  PublicWordDatasetsV1ResT,
-} from 'server/types';
+import React, { useTransition } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 import { Pronounce } from '@/components/Pronounce';
-import { browserApiBase } from '@/core/apiBase';
-import { panelOfGroup, WordPanelT } from '@/core/wordPanel';
 
 import styles from '../../word.module.scss';
 import { ipa } from './Entry';
-import { Panel } from './Panel';
 
-// The datasets of a word page as tabs (issue #538). The page that is sent
-// holds one dataset, the one of the first tab: that is what the server
-// renders, a cache keeps and a search engine reads. The dataset of another
-// tab is read by the browser from the public API when the tab is pressed,
-// and the choice lives as long as the page does — it is no part of the URL
-
-type TabT = { dataset: string; title: string };
-
-type HeadlineT = { word: string; transcription: string | null };
-
+// URL navigation asks the server for just the selected panel, including its
+// metadata. Unselected dictionaries are neither rendered nor prefetched.
 type DatasetPanelsP = {
-  /** The headword as the URL spells it: what the other datasets are asked for */
-  word: string;
-  /** The datasets that hold the headword, the one of the page first */
-  tabs: TabT[];
-  /** The headword and the pronunciation of the dataset the server rendered */
-  headline: HeadlineT;
-  /** The panel the server rendered */
+  tabs: { dataset: string; title: string }[];
+  selected: string;
+  headline: { word: string; transcription: string | null };
   children: React.ReactNode;
 };
-
-type LoadedT = { panel: WordPanelT; history: PublicChangeV1T[] };
-
-type OthersT =
-  | { kind: 'idle' }
-  | { kind: 'loading' }
-  | { kind: 'failed' }
-  | { kind: 'loaded'; panels: Map<string, LoadedT> };
 
 const tabId = (dataset: string): string => `dataset-tab-${dataset}`;
 const panelId = (dataset: string): string => `dataset-panel-${dataset}`;
 
-const getJson = async <T,>(url: string): Promise<T | null> => {
-  const res = await fetch(url, { headers: { accept: 'application/json' } });
-  return res.ok ? ((await res.json()) as T) : null;
-};
-
-// what was changed on the instance (issue #531): asked for only where an entry says it was
-const historyOf = async (word: string, group: PublicWordDatasetV1T): Promise<PublicChangeV1T[]> => {
-  if (!group.entries.some((entry) => entry.modified)) return [];
-  try {
-    const path = `/v1/words/${encodeURIComponent(word)}/datasets/${encodeURIComponent(group.dataset)}/history`;
-    return (await getJson<PublicHeadwordHistoryV1ResT>(`${browserApiBase()}${path}`))?.data ?? [];
-  } catch {
-    // the panel stands without it: the entries still say that they were changed
-    return [];
-  }
-};
-
-export const DatasetPanels = ({ word, tabs, headline, children }: DatasetPanelsP) => {
+export const DatasetPanels = ({ tabs, selected, headline, children }: DatasetPanelsP) => {
   const t = useTranslations('word');
-  const termsNames = useTranslations('terms');
-  const nav = useTranslations('nav');
-  const locale = useLocale();
-  const [rendered] = tabs;
-  const [selected, setSelected] = useState(rendered?.dataset ?? '');
-  const [others, setOthers] = useState<OthersT>({ kind: 'idle' });
-  // one read answers for every tab: it is asked once, by the first tab that is pressed
-  const asked = useRef(false);
-
-  const load = async () => {
-    setOthers({ kind: 'loading' });
-    try {
-      const answer = await getJson<PublicWordDatasetsV1ResT>(
-        `${browserApiBase()}/v1/words/${encodeURIComponent(word)}/datasets`,
-      );
-      if (!answer) throw new Error('no answer');
-      const panels = new Map<string, LoadedT>();
-      await Promise.all(
-        tabs.map(async ({ dataset, title }) => {
-          const group = answer.data.find((candidate) => candidate.dataset === dataset);
-          if (!group || group.entries.length === 0) return;
-          panels.set(dataset, {
-            panel: panelOfGroup(group, title),
-            history: await historyOf(group.word, group),
-          });
-        }),
-      );
-      setOthers({ kind: 'loaded', panels });
-    } catch {
-      // the next press of a tab asks again
-      asked.current = false;
-      setOthers({ kind: 'failed' });
-    }
-  };
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [pending, startTransition] = useTransition();
 
   const select = (dataset: string) => {
-    setSelected(dataset);
-    if (dataset === rendered?.dataset || asked.current) return;
-    asked.current = true;
-    void load();
+    if (dataset === selected) return;
+    const query = new URLSearchParams(searchParams.toString());
+    query.set('dataset', dataset);
+    startTransition(() => {
+      router.push(`${pathname}?${query}${window.location.hash}`, { scroll: false });
+    });
   };
 
-  // the keys of a tab list: the arrows follow the direction of the writing
+  // Arrow keys follow the writing direction; focus stays on the tab while
+  // the transition replaces its panel. The selected state describes the
+  // content actually on screen until that navigation finishes.
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     const forward = getComputedStyle(event.currentTarget).direction === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
     const back = forward === 'ArrowLeft' ? 'ArrowRight' : 'ArrowLeft';
-    const index = tabs.findIndex((tab) => tab.dataset === selected);
+    const index = tabs.findIndex((tab) => tabId(tab.dataset) === document.activeElement?.id);
     const next = {
       [forward]: (index + 1) % tabs.length,
       [back]: (index - 1 + tabs.length) % tabs.length,
@@ -128,22 +57,12 @@ export const DatasetPanels = ({ word, tabs, headline, children }: DatasetPanelsP
   };
 
   const tabbed = tabs.length > 1;
-  const isRendered = selected === rendered?.dataset;
-  const loaded = others.kind === 'loaded' ? others.panels.get(selected) : undefined;
-  // the headword and the pronunciation are a dataset's: the ones of the open tab
-  const shown: HeadlineT = loaded
-    ? {
-        word: loaded.panel.word,
-        transcription: loaded.panel.entries.find((entry) => entry.transcription)?.transcription ?? null,
-      }
-    : headline;
-
   return (
     <>
       <div className={styles.headword}>
-        <h1>{shown.word}</h1>
-        <Pronounce word={shown.word} />
-        {shown.transcription && <span className={styles.transcription}>{ipa(shown.transcription)}</span>}
+        <h1>{headline.word}</h1>
+        <Pronounce word={headline.word} />
+        {headline.transcription && <span className={styles.transcription}>{ipa(headline.transcription)}</span>}
       </div>
       {tabbed && (
         <div
@@ -170,41 +89,19 @@ export const DatasetPanels = ({ word, tabs, headline, children }: DatasetPanelsP
           ))}
         </div>
       )}
-      {/* what the server rendered stays in the page: it is hidden, not thrown away */}
-      <div
-        hidden={!isRendered}
-        role={tabbed ? 'tabpanel' : undefined}
-        id={tabbed && rendered ? panelId(rendered.dataset) : undefined}
-        aria-labelledby={tabbed && rendered ? tabId(rendered.dataset) : undefined}
-      >
-        {children}
-      </div>
-      {!isRendered && (
+      {tabs.map(({ dataset }) => (
         <div
-          role="tabpanel"
-          id={panelId(selected)}
-          aria-labelledby={tabId(selected)}
-          aria-busy={others.kind === 'loading'}
-          data-testid="dataset-panel"
+          key={dataset}
+          hidden={dataset !== selected}
+          role={tabbed ? 'tabpanel' : undefined}
+          id={tabbed ? panelId(dataset) : undefined}
+          aria-labelledby={tabbed ? tabId(dataset) : undefined}
+          aria-busy={dataset === selected ? pending : undefined}
+          tabIndex={tabbed ? 0 : undefined}
         >
-          {loaded && (
-            <Panel
-              panel={loaded.panel}
-              history={loaded.history}
-              locale={locale}
-              t={t}
-              termsNames={termsNames}
-              languageLabel={nav('language')}
-            />
-          )}
-          {others.kind === 'loading' && <div className={styles.loading} aria-hidden="true" />}
-          {(others.kind === 'failed' || (others.kind === 'loaded' && !loaded)) && (
-            <p className={styles.failed} role="alert">
-              {t('search_error')}
-            </p>
-          )}
+          {dataset === selected && children}
         </div>
-      )}
+      ))}
     </>
   );
 };

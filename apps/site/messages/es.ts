@@ -337,6 +337,10 @@ export default {
     antonyms: 'Antónimos',
     phrasal_variants: 'Variantes phrasal',
     datasets_label: 'Conjuntos de datos',
+    dataset_unavailable_title: 'Entrada del conjunto de datos no disponible',
+    dataset_unavailable:
+      'Este conjunto de datos no está disponible o no contiene esta palabra. Puede haberse cerrado o eliminado.',
+    dataset_default_page: 'Abrir la página habitual de la palabra',
     forms: 'Formas',
     more_meanings: 'Más significados ({count})',
     try_in_playground: 'pruébala en el playground',

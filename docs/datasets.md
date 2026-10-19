@@ -491,13 +491,20 @@ merged: an entry stays in the group of its dataset, under the license of its sou
   as tabs, one for every open dataset that holds the word — the dataset of the project first,
   Wiktionary second, the others in the order of the instance; a headword one dataset holds has
   no tabs. A tab is a dataset on its own: the terms it comes under, its spelling, its entries
-  and the history of its edits. The page that is sent holds the first tab only, whichever
-  dataset is the active one: that is what the server renders on each request and what a search
-  engine reads. The dataset of another tab is read by the browser from this route when the tab
-  is pressed; the choice is no part of the URL. The sitemap and the index of words are the
-  headwords of the active dataset, and a headword the active dataset does not hold is a page
-  that is kept out of the search index. "Report a mistake" is offered on the tab of the active
-  dataset only.
+  and the history of its edits. Share a selected tab with its stable dataset name, for
+  example `/en/word/run?dataset=wiktionary`. A direct link or reload renders that dataset's
+  entry, pronunciation, terms and history immediately. Without the selector the first tab
+  opens. Switching tabs updates the URL, keeps other query parameters and the scroll position,
+  and works with Back/Forward; changing the interface language keeps the selection.
+  Only the selected panel is rendered and sent, including on tab navigation; other panels
+  are loaded on demand. Unknown, closed, deleted or non-matching datasets show an unavailable
+  message and a link to the normal word page, without falling back under the requested name.
+  Case-normalizing redirects retain the selector, and alternate-spelling links retain an
+  explicit selection. Tab URLs have `noindex, follow` and canonicalize to the normal word page;
+  their titles, descriptions and social metadata describe the visible entry. The sitemap
+  and the index of words still list only headwords of the active dataset, and a headword the
+  active dataset does not hold remains excluded from the search index, with or without a
+  selector. "Report a mistake" is offered on the tab of the active dataset only.
 - **Each tab has its own word graph.** Open **Word connections** and choose a part-of-speech
   tab. Switch to **Translations by meaning** to see meaning-specific
   translations in the language selected by the page’s translation picker: individual translation variants in the same language share a node when their spelling matches
@@ -522,6 +529,23 @@ merged: an entry stays in the group of its dataset, under the license of its sou
 - **`Last-Modified` costs a lookup per dataset**: the newest change of five tables in every
   schema, a sort without an index, at most once a minute and only while these routes are read
   ([`performance.md`](./performance.md)).
+
+### Checking shared word links
+
+`yarn e2e:site` covers direct links, tab navigation, Back/Forward, locale changes,
+case variants, metadata and unavailable datasets against the isolated SQLite fixture
+and the controlled multi-dataset API fixture. The real PostgreSQL scenario creates
+its own temporary database and removes it after the API stops:
+
+```bash
+yarn e2e:site:build
+SITE_E2E_POSTGRES_URL=postgres://user:password@localhost:5432/postgres yarn workspace e2e exec playwright test --config playwright.site-postgres.config.ts dataset-links-postgres.spec.ts
+```
+
+The supplied PostgreSQL user needs `CREATEDB` rights. The database named in the URL
+is used only to create and drop the temporary database; its contents are not changed.
+The scenario checks distinct entries, pronunciation, terms and edit history, then
+closes, reopens and deletes the selected dataset. CI runs both suites.
 
 ## Editing a dataset: the history of edits
 

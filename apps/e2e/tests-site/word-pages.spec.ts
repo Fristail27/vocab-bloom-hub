@@ -5,6 +5,9 @@ import { SITE_API_URL, SITE_STUB_URL } from '../config';
 // Server-rendered word pages over the public API (issue #330); the data is
 // the fixture dictionary seeded in site.setup.ts
 test.describe('word pages', () => {
+  test.afterEach(async ({ request }) => {
+    await request.delete(`${SITE_STUB_URL}/__test__/datasets/run`);
+  });
   test('a headword renders its entries from the fixture data', async ({ page }) => {
     await page.goto('/en/word/run');
 
@@ -225,15 +228,12 @@ test.describe('word pages', () => {
     await expect(second).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Report a mistake' })).toBeVisible();
 
-    // the dataset of another tab is read by the browser when the tab is pressed
-    const read = page.waitForResponse((response) => response.url().endsWith('/api/v1/words/run/datasets'));
+    // Navigation loads just the selected panel and updates its metadata.
     await tabs.nth(1).click();
-    expect((await read).status()).toBe(200);
     await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
     await expect(second).toBeVisible();
     await expect(served).toBeHidden();
-    // the choice is no part of the URL
-    await expect(page).toHaveURL(/\/en\/word\/run$/);
+    await expect(page).toHaveURL(/\/en\/word\/run\?dataset=wordnet$/);
     const panel = page.getByRole('tabpanel', { name: 'Open English WordNet' });
     await expect(panel.getByRole('heading', { level: 2 })).toHaveText(['noun']);
     // the pronunciation next to the headword is the one of the open dataset
@@ -256,7 +256,7 @@ test.describe('word pages', () => {
     await expect(page.getByRole('button', { name: 'Report a mistake' })).toBeHidden();
     await expect(panel.getByRole('link', { name: 'footrace' })).toHaveAttribute('href', '/en/word/footrace');
 
-    // the keys of a tab list; what the server rendered was kept, nothing is read again
+    // The tab buttons retain keyboard focus across navigation.
     await tabs.nth(1).press('ArrowLeft');
     await expect(tabs.nth(0)).toBeFocused();
     await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'true');
@@ -266,11 +266,12 @@ test.describe('word pages', () => {
 
   test('a fork labels its sources and shows contribution terms only under the edited word', async ({
     page,
+    request,
   }) => {
     // The second tab is an API fixture: PostgreSQL suites verify the stored
     // snapshots; here the browser consumes those fields on a lazily loaded tab.
-    await page.route('**/api/v1/words/run/datasets', async (route) => {
-      const response = await route.fetch();
+    {
+      const response = await request.get(`${SITE_STUB_URL}/v1/words/run/datasets`);
       const body = await response.json();
       const original = body.data[0].entries[0];
       original.origins[0].acquisitions = [
@@ -310,11 +311,11 @@ test.describe('word pages', () => {
           { ...original, id: 900011, part_of_speech: 'verb', modified: true, contributions: [contribution] },
         ],
       };
-      await route.fulfill({ response, json: body });
-    });
+      await request.post(`${SITE_STUB_URL}/__test__/datasets/run`, { data: body });
+    }
     await page.goto('/en/word/run');
-    await page.getByRole('tab', { name: 'Open English WordNet' }).click();
-    const panel = page.getByRole('tabpanel', { name: 'Open English WordNet' });
+    await page.getByRole('tab', { name: 'Example fork' }).click();
+    const panel = page.getByRole('tabpanel', { name: 'Example fork' });
     await expect(panel.getByRole('heading', { name: 'Dataset sources' })).toBeVisible();
     await expect(panel.getByText('Dataset description: A test fork description')).toBeVisible();
     const unchanged = panel.getByTestId('entry-900010');
@@ -370,9 +371,12 @@ test.describe('word pages', () => {
     // the dataset of the other tab is named, not sent
     expect(html).not.toContain('definition of a race run on foot');
     expect(response.headers()['cache-control']).toContain('no-store');
-    // a dataset is no part of the URL: a query changes nothing
+    // A direct link sends only the selected entry.
     const asked = await request.get('/en/word/run?dataset=wordnet');
-    expect(await asked.text()).not.toContain('definition of a race run on foot');
+    const selectedHtml = await asked.text();
+    expect(selectedHtml).toContain('definition of a race run on foot');
+    expect(selectedHtml).not.toContain('definition of to move fast');
+    expect(selectedHtml).toContain('content="noindex, follow"');
   });
 
   test('a headword only another dataset holds is a page, kept out of the search index', async ({ page }) => {

@@ -1,13 +1,17 @@
 import { expect, test } from '@playwright/test';
 import type { components } from '../../../packages/npm-sdk/src/generated/openapi';
 
-import { SITE_API_URL } from '../config';
+import { SITE_API_URL, SITE_STUB_URL } from '../config';
 
 type PublicHeadwordV1ResT = components['schemas']['PublicHeadwordV1ResT'];
 type PublicWordDatasetsV1ResT = components['schemas']['PublicWordDatasetsV1ResT'];
 
 // Keep neighbor reads at the browser boundary: the real fixture still renders
 // the root word, while responses prove dataset isolation and the depth limit.
+test.afterEach(async ({ request }) => {
+  await request.delete(`${SITE_STUB_URL}/__test__/datasets/run`);
+});
+
 test('loads only a selected direct neighbor, once, from the current dataset', async ({ page, request }) => {
   const response = await request.get(`${SITE_API_URL}/v1/words/run`);
   const root = ((await response.json()) as PublicHeadwordV1ResT).data[0];
@@ -94,108 +98,106 @@ test('each dataset has its own graph, including shared nodes and an RTL mobile l
   const original = (await response.json()) as PublicWordDatasetsV1ResT;
   const root = original.data[0].entries[0] as PublicHeadwordV1ResT['data'][number];
   const baseMeaning = root.meanings[0];
-  await page.route('**/v1/words/run/datasets', async (route) => {
-    await route.fulfill({
-      json: {
-        ...original,
-        data: [
-          original.data[0],
-          {
-            ...original.data[0],
-            dataset: 'wordnet',
-            active: false,
-            title: 'Open English WordNet',
-            entries: [
-              {
-                ...root,
-                modified: false,
-                meanings: [
-                  {
-                    ...baseMeaning,
-                    id: 101,
-                    title: 'Move quickly',
-                    translations: [
-                      {
-                        id: 501,
-                        language: 'ru',
-                        title: 'бежать',
-                        definition: 'Быстро передвигаться',
-                        variants_of_words: ['бежать', 'мчаться', 'нестись'],
-                      },
-                      {
-                        id: 502,
-                        language: 'fr',
-                        title: 'courir',
-                        definition: 'Se déplacer rapidement',
-                        variants_of_words: [],
-                      },
-                      {
-                        id: 503,
-                        language: 'ar',
-                        title: 'يركض',
-                        definition: 'يتحرك بسرعة',
-                        variants_of_words: [],
-                      },
-                    ],
-                    definition: 'Move quickly on foot.',
-                    synonyms: ['sprint', 'race', 'dash'],
-                    antonyms: ['walk'],
-                  },
-                  {
-                    ...baseMeaning,
-                    id: 102,
-                    title: 'Compete',
-                    translations: [
-                      {
-                        id: 504,
-                        language: 'ru',
-                        title: 'бежать',
-                        definition: 'Участвовать в забеге',
-                        variants_of_words: [],
-                      },
-                      {
-                        id: 505,
-                        language: 'ru',
-                        title: 'соревноваться',
-                        definition: '',
-                        variants_of_words: [],
-                      },
-                    ],
-                    definition: 'Take part in a race.',
-                    synonyms: ['race', 'compete'],
-                    antonyms: ['withdraw'],
-                  },
-                  {
-                    ...baseMeaning,
-                    id: 103,
-                    title: 'Operate',
-                    definition: 'Keep something in operation.',
-                    synonyms: ['operate', 'manage'],
-                    antonyms: ['stop'],
-                  },
-                ],
-              },
-              {
-                ...root,
-                id: 300,
-                part_of_speech: 'noun',
-                modified: false,
-                meanings: [
-                  {
-                    ...baseMeaning,
-                    id: 301,
-                    title: 'A series',
-                    translations: [],
-                    synonyms: ['sequence'],
-                    antonyms: [],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-    });
+  await request.post(`${SITE_STUB_URL}/__test__/datasets/run`, {
+    data: {
+      ...original,
+      data: [
+        original.data[0],
+        {
+          ...original.data[0],
+          dataset: 'wordnet',
+          active: false,
+          title: 'Open English WordNet',
+          entries: [
+            {
+              ...root,
+              modified: false,
+              meanings: [
+                {
+                  ...baseMeaning,
+                  id: 101,
+                  title: 'Move quickly',
+                  translations: [
+                    {
+                      id: 501,
+                      language: 'ru',
+                      title: 'бежать',
+                      definition: 'Быстро передвигаться',
+                      variants_of_words: ['бежать', 'мчаться', 'нестись'],
+                    },
+                    {
+                      id: 502,
+                      language: 'fr',
+                      title: 'courir',
+                      definition: 'Se déplacer rapidement',
+                      variants_of_words: [],
+                    },
+                    {
+                      id: 503,
+                      language: 'ar',
+                      title: 'يركض',
+                      definition: 'يتحرك بسرعة',
+                      variants_of_words: [],
+                    },
+                  ],
+                  definition: 'Move quickly on foot.',
+                  synonyms: ['sprint', 'race', 'dash'],
+                  antonyms: ['walk'],
+                },
+                {
+                  ...baseMeaning,
+                  id: 102,
+                  title: 'Compete',
+                  translations: [
+                    {
+                      id: 504,
+                      language: 'ru',
+                      title: 'бежать',
+                      definition: 'Участвовать в забеге',
+                      variants_of_words: [],
+                    },
+                    {
+                      id: 505,
+                      language: 'ru',
+                      title: 'соревноваться',
+                      definition: '',
+                      variants_of_words: [],
+                    },
+                  ],
+                  definition: 'Take part in a race.',
+                  synonyms: ['race', 'compete'],
+                  antonyms: ['withdraw'],
+                },
+                {
+                  ...baseMeaning,
+                  id: 103,
+                  title: 'Operate',
+                  definition: 'Keep something in operation.',
+                  synonyms: ['operate', 'manage'],
+                  antonyms: ['stop'],
+                },
+              ],
+            },
+            {
+              ...root,
+              id: 300,
+              part_of_speech: 'noun',
+              modified: false,
+              meanings: [
+                {
+                  ...baseMeaning,
+                  id: 301,
+                  title: 'A series',
+                  translations: [],
+                  synonyms: ['sequence'],
+                  antonyms: [],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
   });
   await page.route('**/v1/words/race/datasets', async (route) => {
     await route.fulfill({

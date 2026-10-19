@@ -14,6 +14,8 @@ if (!port || !api) throw new Error('usage: node site-datasets-stub.mjs <port> <t
 // Controlled API failures for the production SSR recovery tests. Each test
 // uses a distinct spelling, so an earlier ISR page cannot hide the failure.
 const failures = new Map();
+// Response fixtures shared by SSR and browser navigation.
+const datasetOverrides = new Map();
 
 const SECOND_DATASET = {
   dataset: 'wordnet',
@@ -138,6 +140,14 @@ http
         res.end('{}');
         return;
       }
+      const override = /^\/api\/__test__\/datasets\/([^/]+)$/.exec(path)?.[1];
+      if (override) {
+        if (req.method === 'POST') datasetOverrides.set(override, JSON.parse(await bodyOf(req)));
+        if (req.method === 'DELETE') datasetOverrides.delete(override);
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end('{}');
+        return;
+      }
       const control = /^\/api\/__test__\/word-failure\/([^/]+)$/.exec(path)?.[1];
       if (control) {
         if (req.method === 'POST') {
@@ -187,6 +197,11 @@ http
         return;
       }
       const word = /^\/api\/v1\/words\/([^/]+)\/datasets$/.exec(path)?.[1];
+      if (req.method === 'GET' && word && datasetOverrides.has(word)) {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify(datasetOverrides.get(word)));
+        return;
+      }
       if (req.method === 'GET' && word && headwordOf(word) in SECOND_DATASET_WORDS) {
         res.writeHead(200, { 'content-type': 'application/json' });
         res.end(JSON.stringify(await datasetsOf(headwordOf(word))));

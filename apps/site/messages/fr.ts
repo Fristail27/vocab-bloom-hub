@@ -339,6 +339,10 @@ export default {
     antonyms: 'Antonymes',
     phrasal_variants: 'Variantes phrasal',
     datasets_label: 'Jeux de données',
+    dataset_unavailable_title: 'Entrée du jeu de données indisponible',
+    dataset_unavailable:
+      'Ce jeu de données est indisponible ou ne contient pas ce mot. Il a peut-être été fermé ou supprimé.',
+    dataset_default_page: 'Ouvrir la page habituelle du mot',
     forms: 'Formes',
     more_meanings: 'Autres sens ({count})',
     try_in_playground: 'essayez-la dans le playground',

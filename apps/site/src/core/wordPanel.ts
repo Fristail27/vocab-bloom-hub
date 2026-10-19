@@ -3,9 +3,8 @@ import type { PublicWordDatasetV1T, PublicWordV1T } from 'server/types';
 import type { DatasetTermsT } from './datasetTerms';
 
 // What a tab of a word page shows (issue #538): one dataset with its own
-// spelling, entries and terms. Read by the server for the tab a page opens
-// and by the browser for the others, so nothing here may name the catalog
-// of the datasets — its notices are no part of a page
+// spelling, entries and terms. Keep this projection usable on either side
+// without importing the dataset catalog and all of its notices.
 
 export type WordPanelT = {
   /** The name of the dataset on the instance: `default`, `wiktionary`, … */

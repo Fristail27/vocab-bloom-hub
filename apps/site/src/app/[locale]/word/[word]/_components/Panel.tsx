@@ -19,6 +19,7 @@ import type { TranslateT } from './translate';
 
 type PanelP = {
   panel: WordPanelT;
+  selectedDataset?: string;
   /** What was changed on the instance in the entries of the panel (issue #531) */
   history: PublicChangeV1T[];
   locale: string;
@@ -30,11 +31,9 @@ type PanelP = {
 
 /**
  * A dataset's own account of the headword (issue #538): the terms it comes
- * under, its translations, spellings and entries. One component for both
- * sides: the server renders the panel a page opens, the browser the panel
- * of a tab that was pressed.
+ * under, its translations, spellings and entries. The server renders only the selected panel on each navigation.
  */
-export const Panel = ({ panel, history, locale, t, termsNames, languageLabel }: PanelP) => {
+export const Panel = ({ panel, selectedDataset, history, locale, t, termsNames, languageLabel }: PanelP) => {
   const p = useTranslations('provenance');
   const { entries, terms } = panel;
   // the other spellings of the headword, but for the ones the panel itself shows the entries of
@@ -72,7 +71,7 @@ export const Panel = ({ panel, history, locale, t, termsNames, languageLabel }: 
         <p className={styles.variants} data-testid="other-spellings">
           {t('other_spellings')}:{' '}
           {variants.map((variant) => (
-            <WordLink key={variant} word={variant} />
+            <WordLink key={variant} word={variant} dataset={selectedDataset} />
           ))}
         </p>
       )}
