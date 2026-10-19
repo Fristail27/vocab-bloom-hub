@@ -4,3 +4,17 @@
   gap: 16px;
   width: 100%;
 }
+
+.category {
+  margin-block-end: 16px;
+}
+.records {
+  padding-inline-start: 24px;
+  li {
+    margin-block-end: 20px;
+    overflow-wrap: anywhere;
+  }
+  p {
+    margin-block: 4px;
+  }
+}

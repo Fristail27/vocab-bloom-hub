@@ -4,7 +4,13 @@ import { App } from 'antd';
 import { DatasetT, DatasetsListT } from 'server/types';
 
 const refresh = jest.fn();
-jest.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));
+const push = jest.fn();
+let query = new URLSearchParams();
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh, push }),
+  useSearchParams: () => query,
+  usePathname: () => '/en/statistics/issues',
+}));
 
 jest.mock('next-intl', () => ({
   useTranslations: () => (key: string, values?: Record<string, unknown>) =>
@@ -94,8 +100,19 @@ const choose = async (title: string) => {
 describe('the switch of the dataset that is edited', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    query = new URLSearchParams();
     document.cookie = 'edited_dataset=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     (EnApi.getStatistics as jest.Mock).mockResolvedValue({ totals: { entries: 1234 } });
+  });
+
+  it('shows the dataset pinned by a quality link even if another tab changed the cookie', async () => {
+    document.cookie = 'edited_dataset=wiktionary; path=/';
+    query = new URLSearchParams('dataset=my_words&category=words_without_level&page=2');
+    renderSwitch();
+    expect(within(screen.getByTestId('edited-dataset')).getByText('My words')).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('edited-dataset')).queryByText('English Wiktionary'),
+    ).not.toBeInTheDocument();
   });
 
   it('is the active dataset by default, and says what it is', async () => {

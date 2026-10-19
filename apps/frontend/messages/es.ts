@@ -970,6 +970,22 @@ export default {
     add_slot: 'Añadir SLOT',
   },
   statistics: {
+    issues_explanation:
+      'La ausencia de datos no implica un error. Estas listas ayudan a revisar registros; las capacidades de la fuente no garantizan que estén completos.',
+    interpretation_missing: 'La fuente admite estos datos; revise las ausencias.',
+    interpretation_source_omission: 'Ausencia prevista: la fuente no proporciona este campo.',
+    interpretation_informational: 'Informativo: el campo es opcional o no se ha declarado su cobertura.',
+    interpretation_empty: 'Traducción guardada vacía: revísela y corríjala si es necesario.',
+    matching_records: 'Registros coincidentes: {count, number}',
+    record_word: 'Palabra',
+    record_meaning: 'Significado',
+    record_meaning_translation: 'Traducción de significado',
+    record_short_translation: 'Traducción breve',
+    open_record: 'Abrir editor',
+    back_to_matches: 'Volver a los registros coincidentes',
+    no_matching_records: 'No hay registros coincidentes',
+    invalid_category: 'Categoría o página no válida',
+
     common_statistics: 'Estadísticas generales',
     entries: 'Entradas del diccionario',
     words: 'Palabras',

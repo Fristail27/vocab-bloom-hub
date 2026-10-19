@@ -8,7 +8,9 @@ import { EnMeaningTranslation } from '../../entities/en_meaning_translation.enti
 import { EnShortTranslation } from '../../entities/en_short_translation.entity';
 import {
   AvailableTranslationLanguagesE,
-  EnIssueStatT,
+  EN_STATISTICS_ISSUE_KEYS,
+  EnIssueRecordsT,
+  EnIssueRecordsQueryT,
   EnIssuesStatisticsT,
   EnPartOfSpeechE,
   EnStatisticsT,
@@ -16,10 +18,10 @@ import {
   EnWordFormsE,
   WordLevelE,
 } from '../../../../../types';
-import { scoped } from '../../../../core/utils/dataset-scope';
+import { currentDataset, scoped } from '../../../../core/utils/dataset-scope';
 
-// simple-array serializes an empty list as '' (sqlite) or '{}' (postgres text[])
-const EMPTY_ARRAY_LITERALS = ['', '{}'];
+import { issueQuery } from './issue-query';
+import { issueInterpretation } from '../../../../../core/constants/statistics';
 
 const NON_WORD_TYPES = [EnPartOfSpeechE.phrase, EnPartOfSpeechE.grammar_pattern];
 
@@ -235,59 +237,67 @@ export class EnStatisticsService {
       this.enShortTranslationsRep.count(),
     ]);
 
-    const [
-      wordsWithoutMeanings,
-      wordsWithoutShortTranslations,
-      wordsWithoutLevel,
-      wordsWithoutTranscription,
-      wordsWithoutDescription,
-      meaningsWithoutTranslations,
-      meaningsWithoutExamples,
-      meaningsWithoutSynonyms,
-      meaningsWithoutAntonyms,
-      emptyMeaningTranslations,
-      emptyShortTranslations,
-    ] = await Promise.all([
-      this.baseWordsQb().leftJoin('w.meanings', 'm').andWhere('m.id IS NULL').getCount(),
-      this.baseWordsQb().leftJoin('w.short_translations', 'st').andWhere('st.id IS NULL').getCount(),
-      this.baseWordsQb().andWhere('w.word_level IS NULL').getCount(),
-      this.baseWordsQb().andWhere("(w.transcription IS NULL OR TRIM(w.transcription) = '')").getCount(),
-      this.baseWordsQb().andWhere("(w.description IS NULL OR TRIM(w.description) = '')").getCount(),
-      this.enMeaningsRep
-        .createQueryBuilder('m')
-        .leftJoin('m.translations', 't')
-        .where('t.id IS NULL')
-        .getCount(),
-      this.enMeaningsRep
-        .createQueryBuilder('m')
-        .where('m.examples IS NULL OR CAST(m.examples AS TEXT) IN (:...emptyLiterals)', {
-          emptyLiterals: EMPTY_ARRAY_LITERALS,
-        })
-        .getCount(),
-      // linked words live in junction tables: a meaning without a join row has none
-      this.enMeaningsRep.createQueryBuilder('m').leftJoin('m.synonyms', 's').where('s.word IS NULL').getCount(),
-      this.enMeaningsRep.createQueryBuilder('m').leftJoin('m.antonyms', 'a').where('a.word IS NULL').getCount(),
-      this.enMeaningTranslationsRep
-        .createQueryBuilder('t')
-        .where("TRIM(t.title) = '' OR TRIM(t.definition) = ''")
-        .getCount(),
-      this.enShortTranslationsRep.createQueryBuilder('t').where("TRIM(t.description) = ''").getCount(),
-    ]);
+    const dataset = currentDataset();
+    const totals = {
+      word: words,
+      meaning: meanings,
+      meaning_translation: meaningTranslations,
+      short_translation: shortTranslations,
+    };
+    const issues = await Promise.all(
+      EN_STATISTICS_ISSUE_KEYS.map(async (key) => {
+        const { qb, kind } = issueQuery(this.enWordsRep.manager, key);
+        return {
+          key,
+          kind,
+          count: await qb.getCount(),
+          total: totals[kind],
+          interpretation: issueInterpretation(key, dataset),
+        };
+      }),
+    );
+    return { dataset: dataset.name, issues };
+  }
 
-    const issues: EnIssueStatT[] = [
-      { key: 'words_without_meanings', count: wordsWithoutMeanings, total: words },
-      { key: 'words_without_short_translations', count: wordsWithoutShortTranslations, total: words },
-      { key: 'words_without_level', count: wordsWithoutLevel, total: words },
-      { key: 'words_without_transcription', count: wordsWithoutTranscription, total: words },
-      { key: 'words_without_description', count: wordsWithoutDescription, total: words },
-      { key: 'meanings_without_translations', count: meaningsWithoutTranslations, total: meanings },
-      { key: 'meanings_without_examples', count: meaningsWithoutExamples, total: meanings },
-      { key: 'meanings_without_synonyms', count: meaningsWithoutSynonyms, total: meanings },
-      { key: 'meanings_without_antonyms', count: meaningsWithoutAntonyms, total: meanings },
-      { key: 'empty_meaning_translations', count: emptyMeaningTranslations, total: meaningTranslations },
-      { key: 'empty_short_translations', count: emptyShortTranslations, total: shortTranslations },
-    ];
-
-    return { issues };
+  async getIssueRecords({ category, page = 1, limit = 25 }: EnIssueRecordsQueryT): Promise<EnIssueRecordsT> {
+    const dataset = currentDataset();
+    const { qb, kind } = issueQuery(this.enWordsRep.manager, category);
+    const total = await qb.getCount();
+    // After fixing the last record on a page, return the last existing page.
+    page = Math.min(page, Math.max(1, Math.ceil(total / limit)));
+    const word = kind === 'word' ? 'r' : 'w';
+    const meaning = kind === 'meaning' ? 'r' : kind === 'meaning_translation' ? 'm' : null;
+    const translated = kind === 'meaning_translation' || kind === 'short_translation';
+    const items = await qb
+      .select('r.id', 'id')
+      .addSelect(`${word}.id`, 'word_id')
+      .addSelect(`${word}.word`, 'word')
+      .addSelect(`${word}.part_of_speech`, 'part_of_speech')
+      .addSelect(meaning ? `${meaning}.id` : 'NULL', 'meaning_id')
+      .addSelect(meaning ? `${meaning}.title` : 'NULL', 'meaning_title')
+      .addSelect(meaning ? `${meaning}.definition` : 'NULL', 'meaning_definition')
+      .addSelect(translated ? 'r.language' : 'NULL', 'language')
+      .addSelect(
+        kind === 'meaning_translation'
+          ? 'r.definition'
+          : kind === 'short_translation'
+            ? 'r.description'
+            : 'NULL',
+        'text',
+      )
+      .orderBy('r.id', 'ASC')
+      .offset((page - 1) * limit)
+      .limit(limit)
+      .getRawMany<EnIssueRecordsT['items'][number]>();
+    return {
+      dataset: dataset.name,
+      category,
+      kind,
+      interpretation: issueInterpretation(category, dataset),
+      items,
+      total,
+      page,
+      limit,
+    };
   }
 }

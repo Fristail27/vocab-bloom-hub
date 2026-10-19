@@ -953,6 +953,22 @@ export default {
     add_slot: 'Add SLOT',
   },
   statistics: {
+    issues_explanation:
+      'Missing data is not necessarily an error. These lists help you inspect records; source capabilities do not guarantee completeness.',
+    interpretation_missing: 'Available in this source; inspect missing data.',
+    interpretation_source_omission: 'Expected omission: the source does not provide this field.',
+    interpretation_informational: 'Informational: this field is optional or its coverage is not declared.',
+    interpretation_empty: 'Empty stored translation: inspect and correct if needed.',
+    matching_records: 'Matching records: {count, number}',
+    record_word: 'Word',
+    record_meaning: 'Meaning',
+    record_meaning_translation: 'Meaning translation',
+    record_short_translation: 'Short translation',
+    open_record: 'Open editor',
+    back_to_matches: 'Back to matching records',
+    no_matching_records: 'No matching records',
+    invalid_category: 'Invalid category or page',
+
     common_statistics: 'Common statistics',
     entries: 'Dictionary entries',
     words: 'Words',

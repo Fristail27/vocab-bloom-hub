@@ -103,7 +103,7 @@ export const MeaningPreview: React.FC<MeaningPreviewP> = ({
         data={addTranslationData}
         updateMeaningTranslation={updateMeaningTranslation}
       />
-      <div className={styles.meaningPreview}>
+      <div id={`meaning-${meaning.id}`} className={styles.meaningPreview}>
         <div className={styles.titleLine}>
           {mode === WordCardModeE.edit && (
             <>
@@ -155,6 +155,7 @@ export const MeaningPreview: React.FC<MeaningPreviewP> = ({
             <div className={styles.meaningTranslations}>
               {meaning.translations.map((tr) => (
                 <MeaningTranslation
+                  id={`meaning-translation-${tr.id}`}
                   onDelete={() => setDeleteTranslationData(tr)}
                   onEdit={() => setAddTranslationData(tr)}
                   key={tr.id}

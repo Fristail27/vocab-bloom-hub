@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { DatasetT, DatasetsListT } from 'server/types';
 import { EnApi } from '@/core/api/EnApi';
-import { readEditedDataset, writeEditedDataset } from './cookie';
+import { datasetFromPage, readEditedDataset, writeEditedDataset } from './cookie';
 
 export type EditedDatasetContextT = {
   /** The datasets the instance holds; empty until the list is read, or without a session */
@@ -43,6 +43,8 @@ type EditedDatasetProviderP = {
  */
 export const EditedDatasetProvider: React.FC<EditedDatasetProviderP> = ({ initial, children }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlDataset = datasetFromPage(usePathname(), searchParams);
   const [list, setList] = React.useState<DatasetsListT | undefined>(initial);
   const [chosen, setChosen] = React.useState<string | undefined>(undefined);
 
@@ -56,7 +58,9 @@ export const EditedDatasetProvider: React.FC<EditedDatasetProviderP> = ({ initia
 
   const datasets = React.useMemo(() => (list?.datasets ?? []).filter((dataset) => dataset.installed), [list]);
   const active = datasets.find((dataset) => dataset.active);
-  const edited = datasets.find((dataset) => dataset.name === chosen) ?? active;
+  const edited = urlDataset
+    ? datasets.find((dataset) => dataset.name === urlDataset)
+    : (datasets.find((dataset) => dataset.name === chosen) ?? active);
 
   // a dataset that was deleted, or activated in the meantime, is the active one again
   React.useEffect(() => {
@@ -75,10 +79,21 @@ export const EditedDatasetProvider: React.FC<EditedDatasetProviderP> = ({ initia
       const value = !next || next.active ? undefined : next.name;
       writeEditedDataset(value);
       setChosen(value);
+      if (urlDataset && next) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('dataset', next.name);
+        url.searchParams.set('page', '1');
+        // A review must not reuse dataset-local word IDs in another dataset.
+        if (url.pathname.includes('/managing/edit-word/') && url.searchParams.has('category')) {
+          url.pathname = url.pathname.split('/managing/')[0] + '/statistics/issues';
+        }
+        url.hash = '';
+        router.push(url.pathname + url.search);
+      }
       // the pages rendered on the server read the cookie again
       router.refresh();
     },
-    [datasets, router],
+    [datasets, router, urlDataset],
   );
 
   const reload = React.useCallback(async () => {

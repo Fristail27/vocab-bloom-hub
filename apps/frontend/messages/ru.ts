@@ -955,6 +955,22 @@ export default {
     add_slot: 'Добавить SLOT',
   },
   statistics: {
+    issues_explanation:
+      'Отсутствие данных не обязательно означает ошибку. Эти списки помогают проверять записи; возможности источника не гарантируют полноту.',
+    interpretation_missing: 'Источник поддерживает эти данные; проверьте пропуски.',
+    interpretation_source_omission: 'Ожидаемый пропуск: источник не предоставляет это поле.',
+    interpretation_informational: 'Для информации: поле необязательно или его наличие не заявлено.',
+    interpretation_empty: 'Пустой сохранённый перевод: проверьте и при необходимости исправьте.',
+    matching_records: 'Найдено записей: {count, number}',
+    record_word: 'Слово',
+    record_meaning: 'Значение',
+    record_meaning_translation: 'Перевод значения',
+    record_short_translation: 'Краткий перевод',
+    open_record: 'Открыть редактор',
+    back_to_matches: 'Вернуться к найденным записям',
+    no_matching_records: 'Подходящих записей нет',
+    invalid_category: 'Недопустимая категория или страница',
+
     common_statistics: 'Общая статистика',
     entries: 'Слова',
     words: 'Слова',

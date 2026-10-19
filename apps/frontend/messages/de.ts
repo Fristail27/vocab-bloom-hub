@@ -976,6 +976,23 @@ export default {
     add_slot: 'SLOT hinzufügen',
   },
   statistics: {
+    issues_explanation:
+      'Fehlende Daten sind nicht zwangsläufig Fehler. Diese Listen helfen bei der Prüfung; die Möglichkeiten einer Quelle garantieren keine Vollständigkeit.',
+    interpretation_missing: 'Die Quelle unterstützt diese Daten; prüfen Sie fehlende Angaben.',
+    interpretation_source_omission: 'Erwartete Lücke: Die Quelle stellt dieses Feld nicht bereit.',
+    interpretation_informational:
+      'Zur Information: Das Feld ist optional oder seine Abdeckung ist nicht angegeben.',
+    interpretation_empty: 'Leere gespeicherte Übersetzung: prüfen und bei Bedarf korrigieren.',
+    matching_records: 'Passende Datensätze: {count, number}',
+    record_word: 'Wort',
+    record_meaning: 'Bedeutung',
+    record_meaning_translation: 'Bedeutungsübersetzung',
+    record_short_translation: 'Kurzübersetzung',
+    open_record: 'Editor öffnen',
+    back_to_matches: 'Zurück zu den passenden Datensätzen',
+    no_matching_records: 'Keine passenden Datensätze',
+    invalid_category: 'Ungültige Kategorie oder Seite',
+
     common_statistics: 'Allgemeine Statistik',
     entries: 'Wörterbucheinträge',
     words: 'Wörter',

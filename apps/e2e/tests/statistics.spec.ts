@@ -27,4 +27,57 @@ test.describe('statistics', () => {
 
     await expect(page.getByText('Incomplete or empty data')).toBeVisible();
   });
+  test('opens matching records, corrects a word and refreshes the list on return', async ({
+    page,
+    request,
+  }) => {
+    const word = 'qualityinspection';
+    await seedWord(request, word, { transcription: '', forms: [] });
+    await page.goto('/en/statistics/issues');
+    await page.getByRole('link', { name: 'Words without transcription', exact: true }).click();
+    await expect(page).toHaveURL(/dataset=default.*category=words_without_transcription/);
+    await page.getByRole('link', { name: new RegExp(`${word}.*Open editor`) }).click();
+    await expect(page).toHaveURL(/edit-word.*dataset=default.*category=words_without_transcription.*page=1/);
+    await page
+      .getByRole('dialog', { name: 'Editing a source dataset' })
+      .getByRole('button', { name: 'Continue editing' })
+      .click();
+    await page.getByRole('button', { name: 'Edit Common Data' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByPlaceholder('Pronunciation').fill('inspection');
+    await dialog.getByRole('button', { name: 'OK' }).click();
+    await expect(dialog).toBeHidden();
+    await page.getByRole('link', { name: 'Back to matching records' }).click();
+    await expect(page.getByText('Matching records:', { exact: false })).toBeVisible();
+    await expect(page.getByRole('link', { name: new RegExp(`${word}.*Open editor`) })).toHaveCount(0);
+  });
+
+  test('opens the precise meaning, and keeps page and category when returning', async ({ page, request }) => {
+    const word = 'qualitymeaning';
+    await seedWord(request, word, {
+      forms: [],
+      meanings: Array.from({ length: 26 }, (_, index) => ({
+        title: index === 25 ? 'Second distinct sense' : `First distinct sense ${index}`,
+        definition: index === 25 ? 'Second definition' : `First definition ${index}`,
+        is_obsolete: false,
+        sort_order: index,
+        examples: [],
+        area_variant: 'common',
+        translations: [],
+      })),
+    });
+    await page.goto('/en/statistics/issues?dataset=default&category=meanings_without_examples&page=2');
+    const row = page.getByRole('listitem').filter({ hasText: 'Second distinct sense' });
+    await row.getByRole('link', { name: /Open editor/ }).click();
+    await expect(page).toHaveURL(/#meaning-\d+$/);
+    await page
+      .getByRole('dialog', { name: 'Editing a source dataset' })
+      .getByRole('button', { name: 'Continue editing' })
+      .click();
+    const hash = new URL(page.url()).hash;
+    await expect(page.locator(hash)).toContainText('Second distinct sense');
+    await page.getByRole('link', { name: 'Back to matching records' }).click();
+    await expect(page).toHaveURL(/category=meanings_without_examples.*page=2/);
+    await expect(page.getByText('Second distinct sense — Second definition')).toBeVisible();
+  });
 });

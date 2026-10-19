@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { App } from 'antd';
@@ -71,11 +71,13 @@ export default async function RootLayout({ children, params }: RootLayoutP) {
           <App className={styles.antdAppContainer}>
             <Provider theme={theme} isAuth={isAuth}>
               <NextIntlClientProvider messages={messages}>
-                <EditedDatasetProvider initial={datasets && !('error' in datasets) ? datasets : undefined}>
-                  <Header />
-                  <main className={styles.mainContainer}>{children}</main>
-                  <Footer settings={settings} update={update} />
-                </EditedDatasetProvider>
+                <Suspense fallback={null}>
+                  <EditedDatasetProvider initial={datasets && !('error' in datasets) ? datasets : undefined}>
+                    <Header />
+                    <main className={styles.mainContainer}>{children}</main>
+                    <Footer settings={settings} update={update} />
+                  </EditedDatasetProvider>
+                </Suspense>
               </NextIntlClientProvider>
             </Provider>
           </App>

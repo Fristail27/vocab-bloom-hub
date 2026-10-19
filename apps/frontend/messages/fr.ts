@@ -977,6 +977,23 @@ export default {
     add_slot: 'Ajouter un SLOT',
   },
   statistics: {
+    issues_explanation:
+      'Une donnée absente ne constitue pas forcément une erreur. Ces listes facilitent la vérification ; les capacités de la source ne garantissent pas son exhaustivité.',
+    interpretation_missing: 'La source propose ces données ; vérifiez les omissions.',
+    interpretation_source_omission: 'Absence attendue : la source ne fournit pas ce champ.',
+    interpretation_informational:
+      'À titre informatif : ce champ est facultatif ou sa couverture n’est pas déclarée.',
+    interpretation_empty: 'Traduction enregistrée vide : vérifiez et corrigez si nécessaire.',
+    matching_records: 'Enregistrements correspondants : {count, number}',
+    record_word: 'Mot',
+    record_meaning: 'Sens',
+    record_meaning_translation: 'Traduction du sens',
+    record_short_translation: 'Traduction courte',
+    open_record: 'Ouvrir l’éditeur',
+    back_to_matches: 'Revenir aux enregistrements correspondants',
+    no_matching_records: 'Aucun enregistrement correspondant',
+    invalid_category: 'Catégorie ou page non valide',
+
     common_statistics: 'Statistiques générales',
     entries: 'Entrées du dictionnaire',
     words: 'Mots',

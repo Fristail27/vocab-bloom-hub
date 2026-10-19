@@ -12,6 +12,7 @@ const { Text } = Typography;
 
 type MeaningTranslationP = {
   text: string;
+  id?: string;
   language: EnMeaningTranslationT['language'];
   mode: WordCardModeE;
   onEdit: () => void;
@@ -19,6 +20,7 @@ type MeaningTranslationP = {
 };
 
 export const MeaningTranslation: React.FC<MeaningTranslationP> = ({
+  id,
   language,
   text,
   mode,
@@ -26,7 +28,7 @@ export const MeaningTranslation: React.FC<MeaningTranslationP> = ({
   onDelete,
 }) => {
   return (
-    <div className={styles.meaningTranslation}>
+    <div id={id} className={styles.meaningTranslation}>
       {mode === WordCardModeE.edit && (
         <>
           <Button className={styles.iconBtn} size="small" type="primary" onClick={onEdit}>
