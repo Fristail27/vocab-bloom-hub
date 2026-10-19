@@ -566,3 +566,52 @@ async def test_async_suggestions_target_and_consent(dataset: str | None) -> None
             author_consent=True,
         )
         assert result.data.id == 1
+
+
+@pytest.mark.asyncio
+async def test_grouped_search_query_and_uncacheable_failures() -> None:
+    from vocab_bloom_hub import SearchDatasetUnavailable
+
+    seen: list[httpx.Request] = []
+    terms = {
+        "dataset": "words",
+        "active": False,
+        "source": "words",
+        "dataset_version": None,
+        "license": "CC0-1.0",
+        "license_url": "https://example.org/license",
+        "attribution": "Author",
+        "attribution_url": None,
+        "notice": "",
+        "license_text": "",
+    }
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return json_response(
+            {
+                "data": [{**terms, "status": "unavailable", "error": "dataset_unavailable"}],
+                "meta": {"datasets": 1, "partial": True},
+            },
+            headers={"etag": '"partial"', "cache-control": "no-store"},
+        )
+
+    cache = MemoryCache()
+    with VocabBloomClient("https://dictionary.example", transport=transport(handle), cache=cache) as sync:
+        result = sync.search_datasets("run", ["default", "words"], page=2, translation_languages=["ru", "de"])
+        assert isinstance(result.data[0], SearchDatasetUnavailable)
+        assert len(cache) == 0
+        sync.search_datasets("run", ["default", "words"], page=2, translation_languages=["ru", "de"])
+    async with AsyncVocabBloomClient(
+        "https://dictionary.example", transport=transport(handle), cache=cache
+    ) as client:
+        result = await client.search_datasets(
+            "run", ["default", "words"], page=2, translation_languages=["ru", "de"]
+        )
+        assert isinstance(result.data[0], SearchDatasetUnavailable)
+    for req in seen:
+        assert req.url.path == "/api/v1/search/datasets"
+        assert req.url.params.get_list("datasets") == ["default", "words"]
+        assert req.url.params.get_list("translation_languages") == ["ru", "de"]
+        assert req.url.params["page"] == "2"
+        assert "if-none-match" not in req.headers

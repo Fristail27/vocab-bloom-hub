@@ -11,6 +11,8 @@ SPEC = Path(__file__).resolve().parents[3] / "apps" / "server" / "openapi" / "pu
 
 METHOD_BY_OPERATION = {
     # the searches are GET reads (issue #396); their POST forms were removed (issue #440)
+    "PublicDatasetsController_list": "datasets",
+    "PublicSearchController_searchDatasetsGet": "search_datasets",
     "PublicSearchController_searchGet": "search",
     "PublicSearchController_searchDetailedGet": "search_detailed",
     "PublicWordsController_list": "words",

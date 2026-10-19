@@ -62,18 +62,23 @@ class AsyncVocabBloomClient:
         self,
         search: str,
         *,
+        dataset: str | None = None,
         type: str | Enum | None = None,
         limit: int | None = None,
         options: RequestOptions | None = None,
     ) -> m.SearchResponse:
         return await self._get(
-            "/search", {"search": search, "type": type, "limit": limit}, m.SearchResponse, options
+            "/search",
+            {"search": search, "dataset": dataset, "type": type, "limit": limit},
+            m.SearchResponse,
+            options,
         )
 
     async def search_detailed(
         self,
         search: str,
         *,
+        dataset: str | None = None,
         type: str | Enum | None = None,
         limit: int | None = None,
         page: int | None = None,
@@ -84,6 +89,7 @@ class AsyncVocabBloomClient:
     ) -> m.DetailedSearchResponse:
         params = {
             "search": search,
+            "dataset": dataset,
             "type": type,
             "limit": limit,
             "page": page,
@@ -97,6 +103,7 @@ class AsyncVocabBloomClient:
         self,
         search: str,
         *,
+        dataset: str | None = None,
         type: str | Enum | None = None,
         limit: int | None = None,
         page: int | None = None,
@@ -109,6 +116,7 @@ class AsyncVocabBloomClient:
         while True:
             answer = await self.search_detailed(
                 search,
+                dataset=dataset,
                 type=type,
                 limit=limit,
                 page=current,
@@ -122,6 +130,36 @@ class AsyncVocabBloomClient:
             current += 1
             if not answer.meta.has_more or current > DETAILED_SEARCH_MAX_PAGE:
                 return
+
+    async def datasets(self, *, options: RequestOptions | None = None) -> m.DatasetsResponse:
+        """Public dataset terms in installation order; closed datasets are omitted."""
+        return await self._get("/datasets", None, m.DatasetsResponse, options)
+
+    async def search_datasets(
+        self,
+        search: str,
+        datasets: Iterable[str],
+        *,
+        type: str | Enum | None = None,
+        limit: int | None = None,
+        page: int | None = None,
+        with_meanings: bool | None = None,
+        with_translations: bool | None = None,
+        translation_languages: Iterable[str | Enum] | None = None,
+        options: RequestOptions | None = None,
+    ) -> m.SearchDatasetsResponse:
+        """Separate paged groups for 1-5 datasets; one public budget unit per dataset."""
+        params = {
+            "search": search,
+            "datasets": datasets,
+            "type": type,
+            "limit": limit,
+            "page": page,
+            "with_meanings": with_meanings,
+            "with_translations": with_translations,
+            "translation_languages": translation_languages,
+        }
+        return await self._get("/search/datasets", params, m.SearchDatasetsResponse, options)
 
     async def word(self, headword: str, *, options: RequestOptions | None = None) -> m.HeadwordResponse:
         return await self._get(headword_path(headword), None, m.HeadwordResponse, options)

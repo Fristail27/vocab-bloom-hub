@@ -23,7 +23,7 @@ export const PUBLIC_ERROR_DESCRIPTIONS: Record<number, string> = {
   400: 'Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor',
   404: 'Nothing matches',
   429: 'Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window',
-  503: 'Not available: the OpenAPI document is not ready, or the suggestion queue is full',
+  503: 'Not available: a selected dataset could not be read, the OpenAPI document is not ready, or the suggestion queue is full',
 };
 
 export const PUBLIC_RESPONSES: Record<string, PublicResponseSpecT> = {
@@ -65,8 +65,13 @@ export const PUBLIC_RESPONSES: Record<string, PublicResponseSpecT> = {
     errors: [400, 404, 429],
     errorType: 'DictionaryApiErrorT',
   },
-  PublicSearchController_searchGet: { type: 'PublicSearchV1ResT', errors: [400, 429] },
-  PublicSearchController_searchDetailedGet: { type: 'PublicSearchDetailedV1ResT', errors: [400, 429] },
+  PublicSearchController_searchGet: { type: 'PublicSearchV1ResT', errors: [400, 404, 429, 503] },
+  PublicSearchController_searchDetailedGet: {
+    type: 'PublicSearchDetailedV1ResT',
+    errors: [400, 404, 429, 503],
+  },
+  PublicSearchController_searchDatasetsGet: { type: 'PublicSearchDatasetsV1ResT', errors: [400, 404, 429] },
+  PublicDatasetsController_list: { type: 'PublicDatasetsV1ResT', errors: [429] },
   PublicWordsController_list: { type: 'PublicWordsV1ResT', errors: [400, 429] },
   PublicWordsController_byId: { type: 'PublicWordV1ResT', errors: [400, 404, 429] },
   PublicWordsController_byHeadword: { type: 'PublicHeadwordV1ResT', errors: [400, 404, 429] },

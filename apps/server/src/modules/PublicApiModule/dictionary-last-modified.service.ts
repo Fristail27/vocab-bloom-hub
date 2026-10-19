@@ -1,6 +1,6 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { EnEntry } from '../EnModule/entities/en_entry.entity';
 import { EnWord } from '../EnModule/entities/en_word.entity';
 import { EnMeaning } from '../EnModule/entities/en_meaning.entity';
@@ -38,7 +38,7 @@ export const newestChange = async (
   newestOf(await Promise.all(repositories.map((repository) => newestUpdateAt(repository))));
 
 /** The newest change of the dataset a connection is on (issue #528) */
-export const newestChangeOn = (dataSource: DataSource): Promise<Date | null> =>
+export const newestChangeOn = (dataSource: DataSource | EntityManager): Promise<Date | null> =>
   newestChange(TIMESTAMPED_ENTITIES.map((entity) => dataSource.getRepository<TimestampedT>(entity)));
 
 /**

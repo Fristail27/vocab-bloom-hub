@@ -197,3 +197,32 @@ def test_words_dataframe(client: VocabBloomClient) -> None:
     assert isinstance(frame, pandas.DataFrame)
     assert list(frame["word"]) == ["abandon", "run", "sprint"]
     assert frame.loc[frame["word"] == "run", "meanings"].iloc[0][0]["title"] == "to move fast"
+
+
+def test_selected_search(client: VocabBloomClient) -> None:
+    from vocab_bloom_hub import SearchDatasetResult
+
+    assert [d.dataset for d in client.datasets().data] == ["default"]
+    assert client.search("run", dataset="default").meta.dataset == "default"
+    assert client.search_detailed("run", dataset="default").meta.dataset == "default"
+    grouped = client.search_datasets("run", ["default"], with_meanings=True)
+    assert grouped.meta.partial is False
+    group = grouped.data[0]
+    assert isinstance(group, SearchDatasetResult)
+    assert group.dataset == "default"
+    assert "run" in [w.word for w in group.data]
+    with pytest.raises(NotFoundError):
+        client.search("run", dataset="uninstalled")
+
+
+@pytest.mark.asyncio
+async def test_async_selected_search(server_url: str) -> None:
+    from vocab_bloom_hub import SearchDatasetResult
+
+    async with AsyncVocabBloomClient(server_url) as client:
+        assert [d.dataset for d in (await client.datasets()).data] == ["default"]
+        assert (await client.search("run", dataset="default")).meta.dataset == "default"
+        assert (await client.search_detailed("run", dataset="default")).meta.dataset == "default"
+        group = (await client.search_datasets("run", ["default"], with_meanings=True)).data[0]
+        assert isinstance(group, SearchDatasetResult)
+        assert "run" in [w.word for w in group.data]

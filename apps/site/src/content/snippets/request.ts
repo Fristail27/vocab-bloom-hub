@@ -24,7 +24,7 @@ export const buildSnippetRequest = (
 
   return {
     method: endpoint.method,
-    url: `${origin}${path}`,
+    url: `${origin}${path}${endpoint.slug === 'get-search-datasets' ? '?search=run&datasets=default' : ''}`,
     path,
     origin,
     // A report requires a message although edit proposals can omit it in the shared DTO.

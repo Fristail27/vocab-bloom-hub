@@ -399,10 +399,11 @@ purge any reverse-proxy copies stored under the former cache policy.
 
 ## What a switch changes
 
-- **Every read of the public API** goes to the tables of the new active dataset: the words, the
-  search and the list. Suggestions without an explicit `dataset` target also use the active dataset. The one exception is the read of a headword
-  from every dataset ([below](#reading-every-dataset-at-once)), which answers from all open datasets
-  whichever is active. The admin UI works on
+- **Unselected reads of the public API** go to the new active dataset: words, search and the list.
+  Suggestions without an explicit `dataset` also use it. Selected search and
+  [grouped search](./api.md#selected-and-grouped-search-652) use the requested public datasets;
+  the read of a headword from every dataset ([below](#reading-every-dataset-at-once)) answers
+  from all open datasets whichever is active. The admin UI works on
   [the dataset that is edited](#the-dataset-that-is-edited) — the active one, unless its switch
   names another.
 - **`GET /api/v1/meta`** reports the dataset (`dataset`, `source`, `dataset_version`) and its
@@ -452,7 +453,7 @@ they work on the active dataset, as before; with another dataset they work on it
 connection on its schema — the one the [read of every dataset](#reading-every-dataset-at-once)
 keeps — and no statement names two schemas. The search of the admin UI is
 `GET /api/en/search`, the flat search of the public API on the dataset the request names; the
-public search serves the active dataset only. A name that is no dataset answers
+public search defaults to the active dataset and accepts a public `dataset` selector (#652). A name that is no dataset answers
 `400 dataset_name_invalid`, a dataset the instance does not hold `404 dataset_not_found`.
 
 - An edit leaves its row in `en_changes` **of the dataset it was made in**. Content edits are
@@ -503,9 +504,9 @@ merged: an entry stays in the group of its dataset, under the license of its sou
   for its reads; count them against the connection limit of a managed Postgres.
 - **No statement names two schemas**: each group is a read of one dataset, the ones the active
   dataset is answered with.
-- **The search and the list stay on the active dataset.** So do the reports of the readers: a
-  report is filed in the active dataset, and the ids of an entry of another group mean nothing
-  there.
+- **The list and unselected search use the active dataset.** Selected and grouped search
+  use named public datasets ([contract](./api.md#selected-and-grouped-search-652)). Reader
+  reports can name the viewed dataset; omission targets the active one. IDs remain local.
 - **A word page of the website has a tab per dataset.** The page of a headword shows this read
   as tabs, one for every open dataset that holds the word — the dataset of the project first,
   Wiktionary second, the others in the order of the instance; a headword one dataset holds has
@@ -720,9 +721,6 @@ backed up and what a connection pooler has to pass through:
 
 ## Not there yet
 
-- A search across datasets: the headword read answers from every dataset
-  ([above](#reading-every-dataset-at-once)), the search from the active one (the admin UI: from
-  the dataset that is edited).
 - Scheduled unattended synchronization of forks. Parent updates and related-dataset merges
   are available through the explicit review workflow below.
 - Datasets of other headword languages: the registry records the language of a dataset, the

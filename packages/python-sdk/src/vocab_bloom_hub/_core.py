@@ -211,7 +211,10 @@ class Core:
             raise error_from_response(response)
         body = response.json()
         etag = response.headers.get("etag")
-        if self.cache is not None and etag:
+        no_store = "no-store" in {
+            part.strip().lower() for part in response.headers.get("cache-control", "").split(",")
+        }
+        if self.cache is not None and etag and not no_store:
             self.cache.set(prepared.url, CacheEntry(etag=etag, body=body))
         return model.model_validate(body)
 

@@ -44,3 +44,6 @@ const OUTSIDE_A_DATASET = /^\/en\/(datasets|statistics\/datasets|dictionary\/imp
  */
 export const isDatasetScopedRoute = (route: string): boolean =>
   route.startsWith('/en/') && !OUTSIDE_A_DATASET.test(route);
+
+/** Maximum datasets searched in one grouped public request (one budget unit each). */
+export const MAX_SEARCH_DATASETS = 5;

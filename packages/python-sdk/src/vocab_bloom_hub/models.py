@@ -54,6 +54,13 @@ WordsBatchResponse = _g.PublicWordsBatchV1ResT
 MetaResponse = _g.PublicMetaV1ResT
 SuggestionCreatedResponse = _g.PublicSuggestionCreatedV1ResT
 
+SearchDatasetsResponse = _g.PublicSearchDatasetsV1ResT
+SearchDatasetResult = _g.PublicSearchDatasetResultV1T
+SearchDatasetUnavailable = _g.PublicSearchDatasetUnavailableV1T
+SearchDataset = SearchDatasetResult | SearchDatasetUnavailable
+DatasetsResponse = _g.PublicDatasetsV1ResT
+DatasetTerms = _g.PublicDatasetTermsV1T
+
 __all__ = [
     "ApiError",
     "AreaVariant",
@@ -61,6 +68,8 @@ __all__ = [
     "Category",
     "Change",
     "DatasetCounts",
+    "DatasetTerms",
+    "DatasetsResponse",
     "DetailedSearchResponse",
     "FormsResponse",
     "HeadwordResponse",
@@ -75,6 +84,10 @@ __all__ = [
     "MetaResponse",
     "PartOfSpeech",
     "PhrasalObjectPattern",
+    "SearchDataset",
+    "SearchDatasetResult",
+    "SearchDatasetUnavailable",
+    "SearchDatasetsResponse",
     "SearchResponse",
     "SearchWord",
     "ShortTranslation",

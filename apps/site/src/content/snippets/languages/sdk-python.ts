@@ -85,6 +85,23 @@ const BY_SLUG: Record<string, (request: SnippetRequestT) => string> = {
       'print(answer.data[0].definition if answer.data else None)',
     ].join('\n');
   },
+  'get-datasets': ({ origin }) =>
+    [
+      ...client(origin),
+      'answer = client.datasets()',
+      'print([dataset.dataset for dataset in answer.data])',
+    ].join('\n'),
+  'get-search-datasets': ({ origin }) =>
+    [
+      ...client(origin),
+      'from vocab_bloom_hub import SearchDatasetResult',
+      'answer = client.search_datasets("run", ["default"])',
+      'for group in answer.data:',
+      '    if isinstance(group, SearchDatasetResult):',
+      '        print(group.dataset, group.data, group.meta.has_more)',
+      '    else:',
+      '        print(group.dataset, group.error)',
+    ].join('\n'),
   'get-search-detailed': ({ origin }) =>
     [
       ...client(origin),

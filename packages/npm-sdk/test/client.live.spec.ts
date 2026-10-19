@@ -90,6 +90,20 @@ describe('VocabBloomClient against the running server (issue #275)', () => {
     await app.close();
   });
 
+  it('searches an explicit dataset and decodes grouped results and inventory from the real server', async () => {
+    expect((await client.datasets()).data.map((d) => d.dataset)).toEqual(['default']);
+    const flat = await client.search({ search: 'run', dataset: 'default' });
+    expect(flat.meta.dataset).toBe('default');
+    const grouped = await client.searchDatasets({ search: 'run', datasets: ['default'], with_meanings: true });
+    const group = grouped.data[0];
+    expect(group.status).toBe('ok');
+    if (group.status !== 'ok') throw new Error('expected a result group');
+    expect(group.data.map((w) => w.word)).toContain('run');
+    await expect(client.search({ search: 'run', dataset: 'uninstalled' })).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+  });
+
   it('searches, flat and detailed', async () => {
     const flat = await client.search({ search: 'run' });
     expect(flat.meta).toEqual({ count: flat.data.length, fuzzy: false, short_term: false });

@@ -204,6 +204,43 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/search/datasets': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Search up to five public datasets, in separate groups
+     * @description Repeat datasets for each target (1–5 unique names). Groups follow installation order. The detailed search filters, limit (1–20) and page (1–20) apply independently to every group. Relevance scores are local to each dataset. Empty matches have status ok and an empty data array; failed readers have status unavailable and no results/pagination. Unknown or closed targets reject the entire request with 404. Partial failures return 200 with meta.partial and Cache-Control: no-store. Each selected dataset costs one unit of the shared public rate budget, including failed reads. Selected searches revalidate their ETag on every use.
+     */
+    get: operations['PublicSearchController_searchDatasetsGet'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/datasets': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Publicly readable datasets and their terms, in installation order */
+    get: operations['PublicDatasetsController_list'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/words/{word}/datasets': {
     parameters: {
       query?: never;
@@ -525,6 +562,8 @@ export interface components {
       words: string[];
     };
     PublicSearchV1MetaT: {
+      /** @description Present only for an explicitly selected dataset. */
+      dataset?: string;
       count: number;
       fuzzy: boolean;
       short_term: boolean;
@@ -714,6 +753,8 @@ export interface components {
       pronunciations?: components['schemas']['PronunciationT'][];
     };
     PublicSearchDetailedV1MetaT: {
+      /** @description Present only for an explicitly selected dataset. */
+      dataset?: string;
       page: number;
       limit: number;
       has_more: boolean;
@@ -1362,6 +1403,64 @@ export interface components {
       code: string;
       name: string;
     }[];
+    /** @description Public selector inventory, in installation order; no dictionary connections or counts. */
+    PublicDatasetsV1ResT: {
+      data: components['schemas']['PublicDatasetTermsV1T'][];
+      meta: {
+        max_search_datasets: number;
+      };
+    };
+    PublicSearchDatasetResultV1T: {
+      /** @enum {string} */
+      status: 'ok';
+      data: components['schemas']['PublicWordV1T'][];
+      meta: components['schemas']['PublicSearchDetailedV1MetaT'];
+      origins?: components['schemas']['OriginT'][];
+      licenses?: components['schemas']['WordLicenseT'][];
+      description?: string | null;
+      dataset: string;
+      title?: string;
+      active: boolean;
+      source: string;
+      dataset_version: string | null;
+      license: string;
+      license_url: string;
+      attribution: string;
+      attribution_url: string | null;
+      notice: string;
+      license_text: string;
+    };
+    /** @description A failed reader has no result list or paging metadata; it is not an empty match. */
+    PublicSearchDatasetUnavailableV1T: {
+      /** @enum {string} */
+      status: 'unavailable';
+      /** @enum {string} */
+      error: 'dataset_unavailable';
+      origins?: components['schemas']['OriginT'][];
+      licenses?: components['schemas']['WordLicenseT'][];
+      description?: string | null;
+      dataset: string;
+      title?: string;
+      active: boolean;
+      source: string;
+      dataset_version: string | null;
+      license: string;
+      license_url: string;
+      attribution: string;
+      attribution_url: string | null;
+      notice: string;
+      license_text: string;
+    };
+    PublicSearchDatasetV1T:
+      | components['schemas']['PublicSearchDatasetResultV1T']
+      | components['schemas']['PublicSearchDatasetUnavailableV1T'];
+    PublicSearchDatasetsV1ResT: {
+      data: components['schemas']['PublicSearchDatasetV1T'][];
+      meta: {
+        datasets: number;
+        partial: boolean;
+      };
+    };
   };
   responses: never;
   parameters: never;
@@ -1420,7 +1519,7 @@ export interface operations {
           'application/json': components['schemas']['PublicApiErrorT'];
         };
       };
-      /** @description Not available: the OpenAPI document is not ready, or the suggestion queue is full */
+      /** @description Not available: a selected dataset could not be read, the OpenAPI document is not ready, or the suggestion queue is full */
       503: {
         headers: {
           [name: string]: unknown;
@@ -1780,6 +1879,8 @@ export interface operations {
         /** @description Restrict the answer to one entry type */
         type?: 'word' | 'grammar_pattern' | 'phrase';
         limit?: number;
+        /** @description Public dataset name; omitted = the active dataset. Unknown or closed targets return 404, never a fallback. */
+        dataset?: string;
       };
       header?: never;
       path?: never;
@@ -1805,8 +1906,26 @@ export interface operations {
           'application/json': components['schemas']['PublicApiErrorT'];
         };
       };
+      /** @description Nothing matches */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
       /** @description Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window */
       429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+      /** @description Not available: a selected dataset could not be read, the OpenAPI document is not ready, or the suggestion queue is full */
+      503: {
         headers: {
           [name: string]: unknown;
         };
@@ -1831,6 +1950,8 @@ export interface operations {
         with_translations?: boolean;
         /** @description Keep only these translation languages (a repeated key); omit the key for all of them */
         translation_languages?: ('ru' | 'es' | 'fr' | 'de' | 'pt' | 'zh' | 'ar')[];
+        /** @description Public dataset name; omitted = the active dataset. Unknown or closed targets return 404, never a fallback. */
+        dataset?: string;
       };
       header?: never;
       path?: never;
@@ -1854,6 +1975,115 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+      /** @description Nothing matches */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+      /** @description Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+      /** @description Not available: a selected dataset could not be read, the OpenAPI document is not ready, or the suggestion queue is full */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+    };
+  };
+  PublicSearchController_searchDatasetsGet: {
+    parameters: {
+      query: {
+        /** @description The term to search for */
+        search: string;
+        /** @description Restrict the answer to one entry type */
+        type?: 'word' | 'grammar_pattern' | 'phrase';
+        limit?: number;
+        page?: number;
+        /** @description Join the meanings (with translations, synonyms, antonyms) of every item */
+        with_meanings?: boolean;
+        /** @description Join the short translations of every item */
+        with_translations?: boolean;
+        /** @description Keep only these translation languages (a repeated key); omit the key for all of them */
+        translation_languages?: ('ru' | 'es' | 'fr' | 'de' | 'pt' | 'zh' | 'ar')[];
+        /** @description Public dataset names as repeated keys. Groups follow installation order. Each selected dataset costs one unit of the shared public rate budget. */
+        datasets: string[];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicSearchDatasetsV1ResT'];
+        };
+      };
+      /** @description Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+      /** @description Nothing matches */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+      /** @description Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+    };
+  };
+  PublicDatasetsController_list: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicDatasetsV1ResT'];
         };
       };
       /** @description Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window */
@@ -2677,7 +2907,7 @@ export interface operations {
           'application/json': components['schemas']['PublicApiErrorT'];
         };
       };
-      /** @description Not available: the OpenAPI document is not ready, or the suggestion queue is full */
+      /** @description Not available: a selected dataset could not be read, the OpenAPI document is not ready, or the suggestion queue is full */
       503: {
         headers: {
           [name: string]: unknown;

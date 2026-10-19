@@ -81,6 +81,7 @@ class VocabBloomClient:
         self,
         search: str,
         *,
+        dataset: str | None = None,
         type: str | Enum | None = None,
         limit: int | None = None,
         options: RequestOptions | None = None,
@@ -91,13 +92,17 @@ class VocabBloomClient:
         ETag and the client's cache revalidates it (issue #396).
         """
         return self._get(
-            "/search", {"search": search, "type": type, "limit": limit}, m.SearchResponse, options
+            "/search",
+            {"search": search, "dataset": dataset, "type": type, "limit": limit},
+            m.SearchResponse,
+            options,
         )
 
     def search_detailed(
         self,
         search: str,
         *,
+        dataset: str | None = None,
         type: str | Enum | None = None,
         limit: int | None = None,
         page: int | None = None,
@@ -109,6 +114,7 @@ class VocabBloomClient:
         """Paged search with meanings and translations on request (``GET``, cacheable)."""
         params = {
             "search": search,
+            "dataset": dataset,
             "type": type,
             "limit": limit,
             "page": page,
@@ -122,6 +128,7 @@ class VocabBloomClient:
         self,
         search: str,
         *,
+        dataset: str | None = None,
         type: str | Enum | None = None,
         limit: int | None = None,
         page: int | None = None,
@@ -138,6 +145,7 @@ class VocabBloomClient:
         while True:
             answer = self.search_detailed(
                 search,
+                dataset=dataset,
                 type=type,
                 limit=limit,
                 page=current,
@@ -152,6 +160,36 @@ class VocabBloomClient:
                 return
 
     # -------------------------------------------------------------- reads
+
+    def datasets(self, *, options: RequestOptions | None = None) -> m.DatasetsResponse:
+        """Public dataset terms in installation order; closed datasets are omitted."""
+        return self._get("/datasets", None, m.DatasetsResponse, options)
+
+    def search_datasets(
+        self,
+        search: str,
+        datasets: Iterable[str],
+        *,
+        type: str | Enum | None = None,
+        limit: int | None = None,
+        page: int | None = None,
+        with_meanings: bool | None = None,
+        with_translations: bool | None = None,
+        translation_languages: Iterable[str | Enum] | None = None,
+        options: RequestOptions | None = None,
+    ) -> m.SearchDatasetsResponse:
+        """Separate paged groups for 1-5 datasets; one public budget unit per dataset."""
+        params = {
+            "search": search,
+            "datasets": datasets,
+            "type": type,
+            "limit": limit,
+            "page": page,
+            "with_meanings": with_meanings,
+            "with_translations": with_translations,
+            "translation_languages": translation_languages,
+        }
+        return self._get("/search/datasets", params, m.SearchDatasetsResponse, options)
 
     def word(self, headword: str, *, options: RequestOptions | None = None) -> m.HeadwordResponse:
         """All entries of a headword: parts of speech, forms, meanings, translations, links."""

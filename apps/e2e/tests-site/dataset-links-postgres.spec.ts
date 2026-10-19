@@ -56,6 +56,26 @@ test('dataset links read real isolated PostgreSQL datasets, history and visibili
       expect(response.ok(), await response.text()).toBe(true);
     };
     await visibility(true);
+    // Discovery through real selected/grouped search keeps the origin in every link (#652).
+    await page.goto(`/en/word?q=${word}&dataset=${name}`);
+    await expect(page.getByRole('status')).toHaveText('1 result shown.');
+    const found = page.getByRole('link', { name: word, exact: true });
+    await expect(found).toHaveAttribute('href', `/en/word/${word}?dataset=${name}`);
+    await found.click();
+    await expect(page.getByRole('tab', { name: 'Shared links fixture' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await page.goto(`/en/word?q=${word}&datasets=default&datasets=${name}`);
+    await expect(page.getByRole('status')).toHaveText('2 results shown.');
+    await expect(
+      page.getByRole('region', { name: 'Shared links fixture' }).getByRole('link', { name: word, exact: true }),
+    ).toHaveAttribute('href', `/en/word/${word}?dataset=${name}`);
+    await expect(
+      page
+        .getByRole('region', { name: 'Vocab Bloom Hub English dataset' })
+        .getByRole('link', { name: word, exact: true }),
+    ).toHaveAttribute('href', `/en/word/${word}?dataset=default`);
     const link = `/en/word/${word}?dataset=${name}`;
     // Check the response before JavaScript can select or fetch another panel.
     const rendered = await request.get(link);

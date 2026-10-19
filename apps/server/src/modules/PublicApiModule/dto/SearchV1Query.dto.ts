@@ -1,6 +1,20 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsBoolean, IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayUnique,
+  IsString,
+  Matches,
+  ArrayMinSize,
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  Max,
+  Min,
+} from 'class-validator';
+import { DATASET_TARGET_PATTERN, MAX_SEARCH_DATASETS } from '../../../../core/constants/datasets';
 import { AvailableTranslationLanguagesE } from '../../../../types';
 import { SearchReqDTO } from '../../EnModule/modules/EnSearch/dto/SearchReq.dto';
 import { SearchDetailedReqDTO } from '../../EnModule/modules/EnSearch/dto/SearchDetailedReq.dto';
@@ -15,6 +29,16 @@ import { toArray, toBoolean } from '../../EnModule/modules/EnAdminLists/dto/Pagi
 // required).
 
 export class SearchV1QueryDTO extends SearchReqDTO {
+  @ApiPropertyOptional({
+    description:
+      'Public dataset name; omitted = the active dataset. Unknown or closed targets return 404, never a fallback.',
+    pattern: DATASET_TARGET_PATTERN.source,
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(DATASET_TARGET_PATTERN)
+  dataset?: string;
+
   @ApiPropertyOptional({ type: 'integer', minimum: 1, maximum: 100, default: 10 })
   @IsOptional()
   @Type(() => Number)
@@ -25,6 +49,16 @@ export class SearchV1QueryDTO extends SearchReqDTO {
 }
 
 export class SearchDetailedV1QueryDTO extends SearchDetailedReqDTO {
+  @ApiPropertyOptional({
+    description:
+      'Public dataset name; omitted = the active dataset. Unknown or closed targets return 404, never a fallback.',
+    pattern: DATASET_TARGET_PATTERN.source,
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(DATASET_TARGET_PATTERN)
+  dataset?: string;
+
   @ApiPropertyOptional({ type: 'integer', minimum: 1, maximum: 20, default: 10 })
   @IsOptional()
   @Type(() => Number)
@@ -74,4 +108,24 @@ export class SearchDetailedV1QueryDTO extends SearchDetailedReqDTO {
   @ArrayMinSize(1, { message: 'translation_languages must not be empty; omit the key for every language' })
   @IsEnum(AvailableTranslationLanguagesE, { each: true })
   override translation_languages?: AvailableTranslationLanguagesE[] = undefined;
+}
+
+/** Deliberately separate from single-dataset search: no implicit all-datasets mode. */
+export class SearchDatasetsV1QueryDTO extends OmitType(SearchDetailedV1QueryDTO, ['dataset'] as const) {
+  @ApiProperty({
+    type: [String],
+    minItems: 1,
+    maxItems: MAX_SEARCH_DATASETS,
+    uniqueItems: true,
+    description:
+      'Public dataset names as repeated keys. Groups follow installation order. Each selected dataset costs one unit of the shared public rate budget.',
+  })
+  @Transform(toArray)
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_SEARCH_DATASETS)
+  @ArrayUnique()
+  @IsString({ each: true })
+  @Matches(DATASET_TARGET_PATTERN, { each: true })
+  datasets!: string[];
 }

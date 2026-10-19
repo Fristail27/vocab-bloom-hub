@@ -198,3 +198,22 @@ reading older v1 servers. See the
 
 What the licenses ask for:
 [DATA_LICENSE.md](https://github.com/Fristail27/vocab-bloom-hub/blob/main/DATA_LICENSE.md#using-data-that-was-changed-on-an-instance).
+
+### Search selected dictionaries
+
+```ts
+const choices = await client.datasets(); // public names and terms; installation order
+const flat = await client.search({ search: 'run', dataset: 'wiktionary' });
+const detailed = await client.searchDetailed({ search: 'run', dataset: 'wiktionary', with_meanings: true });
+const grouped = await client.searchDatasets({ search: 'run', datasets: ['default', 'wiktionary'], limit: 5 });
+for (const group of grouped.data) {
+  if (group.status === 'ok') console.log(group.dataset, group.data, group.meta.has_more);
+  else console.log(group.dataset, group.error); // unavailable, not an empty match
+}
+```
+
+Omit `dataset` to keep active-dictionary behavior. Explicit unknown or closed targets fail with
+404, without fallback. Grouped search accepts 1–5 names; each costs one unit of the shared public
+budget. Pagination and ranking are per group; request only that name to advance one group.
+Both selected searches and inventory revalidate on every read. Partial-failure responses are
+not cached. Preserve each group's source terms and use its dataset when linking to a word page.

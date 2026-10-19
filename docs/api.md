@@ -55,26 +55,26 @@ public, max-age=<PUBLIC_API_CACHE_MAX_AGE>, stale-while-revalidate=<the same>`; 
 Every successful answer is an envelope: the payload under `data`, paging and counts under
 `meta`. The response types are in `apps/server/types/public/v1/index.ts`.
 
-| Method | Path                                              | Query / body                                                                                           | Response                                                                                                            |
-| ------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| `GET`  | `/api/v1/meta`                                    | —                                                                                                      | `{ data: { api_version, app_version, dataset, source, dataset_version, license, …, counts, available_languages } }` |
-| `GET`  | `/api/v1/openapi.json`                            | —                                                                                                      | the OpenAPI 3 document of this contract (no envelope; see [OpenAPI document](#openapi-document))                    |
-| `GET`  | `/api/v1/search`                                  | `search`, `type?`, `limit?`                                                                            | `{ data: PublicSearchWordV1T[], meta: { count, fuzzy, short_term } }`                                               |
-| `GET`  | `/api/v1/search/detailed`                         | `search`, `type?`, `limit?`, `page?`, `with_meanings?`, `with_translations?`, `translation_languages?` | `{ data: PublicWordV1T[], meta: { page, limit, has_more, fuzzy, short_term } }`                                     |
-| `GET`  | `/api/v1/words/{word}`                            | —                                                                                                      | `{ data: PublicWordV1T[], meta: { word, count } }`                                                                  |
-| `GET`  | `/api/v1/words/{word}/meanings`                   | —                                                                                                      | `{ data: PublicMeaningV1T[], meta: { word, count } }`                                                               |
-| `GET`  | `/api/v1/words/{word}/translations`               | `language?`                                                                                            | `{ data: { short_translations, meaning_translations }, meta }`                                                      |
-| `GET`  | `/api/v1/words/{word}/forms`                      | —                                                                                                      | `{ data: PublicWordFormV1T[], meta: { word, count } }`                                                              |
-| `GET`  | `/api/v1/words/{word}/synonyms`                   | —                                                                                                      | `{ data: PublicWordLinkV1T[], meta: { word, count } }`                                                              |
-| `GET`  | `/api/v1/words/{word}/antonyms`                   | —                                                                                                      | `{ data: PublicWordLinkV1T[], meta: { word, count } }`                                                              |
-| `GET`  | `/api/v1/words/{word}/history`                    | —                                                                                                      | `{ data: PublicChangeV1T[], meta: { word, count } }`                                                                |
-| `GET`  | `/api/v1/words/{word}/datasets`                   | —                                                                                                      | `{ data: PublicWordDatasetV1T[], meta: { word, datasets, found } }`                                                 |
-| `GET`  | `/api/v1/words/{word}/datasets/{dataset}/history` | —                                                                                                      | `{ data: PublicChangeV1T[], meta: { word, count } }`                                                                |
-| `GET`  | `/api/v1/words/id/{id}`                           | —                                                                                                      | `{ data: PublicWordV1T }`                                                                                           |
-| `GET`  | `/api/v1/words`                                   | filters, `cursor?`, `limit?`, `with_meanings?`, `with_translations?`                                   | `{ data: PublicWordV1T[], meta: { limit, has_more, next_cursor } }`                                                 |
-| `GET`  | `/api/v1/random`                                  | filters                                                                                                | `{ data: PublicWordV1T }`                                                                                           |
-| `POST` | `/api/v1/words/batch`                             | `{ words: string[] }` (1–50)                                                                           | `{ data: { word, count, entries: PublicWordV1T[] }[], meta: { count, not_found } }`                                 |
-| `POST` | `/api/v1/suggestions`                             | `{ headword, dataset?, word_id?, message?, kind?, edits?, author_name?, author_consent? }`             | `201 { data: { id, status } }`                                                                                      |
+| Method | Path                                              | Query / body                                                                                                       | Response                                                                                                            |
+| ------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `GET`  | `/api/v1/meta`                                    | —                                                                                                                  | `{ data: { api_version, app_version, dataset, source, dataset_version, license, …, counts, available_languages } }` |
+| `GET`  | `/api/v1/openapi.json`                            | —                                                                                                                  | the OpenAPI 3 document of this contract (no envelope; see [OpenAPI document](#openapi-document))                    |
+| `GET`  | `/api/v1/search`                                  | `search`, `dataset?`, `type?`, `limit?`                                                                            | `{ data: PublicSearchWordV1T[], meta: { count, fuzzy, short_term } }`                                               |
+| `GET`  | `/api/v1/search/detailed`                         | `search`, `dataset?`, `type?`, `limit?`, `page?`, `with_meanings?`, `with_translations?`, `translation_languages?` | `{ data: PublicWordV1T[], meta: { page, limit, has_more, fuzzy, short_term } }`                                     |
+| `GET`  | `/api/v1/words/{word}`                            | —                                                                                                                  | `{ data: PublicWordV1T[], meta: { word, count } }`                                                                  |
+| `GET`  | `/api/v1/words/{word}/meanings`                   | —                                                                                                                  | `{ data: PublicMeaningV1T[], meta: { word, count } }`                                                               |
+| `GET`  | `/api/v1/words/{word}/translations`               | `language?`                                                                                                        | `{ data: { short_translations, meaning_translations }, meta }`                                                      |
+| `GET`  | `/api/v1/words/{word}/forms`                      | —                                                                                                                  | `{ data: PublicWordFormV1T[], meta: { word, count } }`                                                              |
+| `GET`  | `/api/v1/words/{word}/synonyms`                   | —                                                                                                                  | `{ data: PublicWordLinkV1T[], meta: { word, count } }`                                                              |
+| `GET`  | `/api/v1/words/{word}/antonyms`                   | —                                                                                                                  | `{ data: PublicWordLinkV1T[], meta: { word, count } }`                                                              |
+| `GET`  | `/api/v1/words/{word}/history`                    | —                                                                                                                  | `{ data: PublicChangeV1T[], meta: { word, count } }`                                                                |
+| `GET`  | `/api/v1/words/{word}/datasets`                   | —                                                                                                                  | `{ data: PublicWordDatasetV1T[], meta: { word, datasets, found } }`                                                 |
+| `GET`  | `/api/v1/words/{word}/datasets/{dataset}/history` | —                                                                                                                  | `{ data: PublicChangeV1T[], meta: { word, count } }`                                                                |
+| `GET`  | `/api/v1/words/id/{id}`                           | —                                                                                                                  | `{ data: PublicWordV1T }`                                                                                           |
+| `GET`  | `/api/v1/words`                                   | filters, `cursor?`, `limit?`, `with_meanings?`, `with_translations?`                                               | `{ data: PublicWordV1T[], meta: { limit, has_more, next_cursor } }`                                                 |
+| `GET`  | `/api/v1/random`                                  | filters                                                                                                            | `{ data: PublicWordV1T }`                                                                                           |
+| `POST` | `/api/v1/words/batch`                             | `{ words: string[] }` (1–50)                                                                                       | `{ data: { word, count, entries: PublicWordV1T[] }[], meta: { count, not_found } }`                                 |
+| `POST` | `/api/v1/suggestions`                             | `{ headword, dataset?, word_id?, message?, kind?, edits?, author_name?, author_consent? }`                         | `201 { data: { id, status } }`                                                                                      |
 
 The same endpoints can be tried on the website's playground and the admin's _Documentation_
 pages ([api-tools.md](./api-tools.md)); the machine-readable contract is the
@@ -122,6 +122,60 @@ curl 'http://localhost:3010/api/v1/words/run'
 curl 'http://localhost:3010/api/v1/words?part_of_speech=noun&word_level=B1&word_level=B2&limit=50'
 curl 'http://localhost:3010/api/v1/random?part_of_speech=verb&word_level=A2'
 ```
+
+#### Selected and grouped search (#652)
+
+`GET /api/v1/search` and `/search/detailed` accept optional `dataset=<name>`.
+Omitting it retains the existing active-dataset envelope and behavior. An explicit selector
+searches that public dataset without activating it and adds `meta.dataset`. Unknown, closed
+and deleted targets all return `404 dataset_not_found`, without fallback or private details.
+A temporarily unreadable selected dictionary returns `503 dataset_unavailable`.
+Unselected search also sends `X-Dataset`, identifying the active dictionary without changing
+its JSON envelope. Use the result's exact spelling and dataset in a website link:
+`/en/word/Amber?dataset=my_words`; IDs are local to that dataset.
+
+`GET /api/v1/datasets` lists publicly readable dataset terms in installation order and
+`meta.max_search_datasets` (currently **5**). It opens no dictionary connections and includes
+no private datasets or word counts. Use it to populate selectors.
+
+`GET /api/v1/search/datasets?search=run&datasets=default&datasets=my_words` is a separate,
+**grouped detailed search**. Specify 1–5 unique names as repeated keys; there is no implicit
+“all dictionaries” selection. The same `type`, meanings/translation flags and translation
+language filters apply to each group. Groups follow installation order, regardless of the
+order of the requested names. Each group carries the dataset's full terms (name, title,
+source, version, license and attribution). The same spelling in two dictionaries remains
+two results with separate local IDs, content and source terms.
+
+- `status: "ok"` has `data` and detailed-search `meta` (`page`, `limit`, `has_more`, `fuzzy`,
+  `short_term`). Zero matches is an empty `data` array. Scores/ranking belong to the group;
+  scores from different dictionaries are not compared.
+- `status: "unavailable"` has `error: "dataset_unavailable"`, with **no** `data` or pagination.
+  Reader failures return HTTP 200 with `meta.partial: true`, even if every selected reader
+  failed. An inaccessible target rejects the whole selection with 404 instead.
+- `limit` is 1–20 per group (default 10), `page` is 1–20 (default 1); at most 100 entries are
+  returned. To advance just one group, repeat the request with only its name and the next
+  page. The website's group pagination does this independently.
+- One request consumes **one unit of the shared public budget per selected dataset**,
+  including failed reads. All units are charged before searching; if the budget runs out,
+  the request returns 429 without searching (units already charged are not refunded).
+  Single-dataset searches cost one unit. Readers are used sequentially, at most one at a
+  time per grouped request; the existing indexed search tiers are reused unchanged.
+- Selected searches and the selector inventory use `Cache-Control: public, no-cache,
+must-revalidate` and a body ETag. Only ETags validate these responses; `Last-Modified` is
+  informational because visibility changes can occur within one HTTP-date second.
+  Changing an inactive selected dictionary changes its results and ETag. Closing a target
+  yields 404 even with a previously valid validator. Partial failures use `no-store` and
+  never return 304. Unselected search retains the existing cache policy.
+
+```bash
+curl 'http://localhost:3010/api/v1/search?search=run&dataset=wiktionary'
+curl 'http://localhost:3010/api/v1/search/datasets?search=run&datasets=default&datasets=wiktionary&limit=5&with_meanings=true'
+```
+
+On the website, open **Dictionaries**, select up to five, and submit the search. No selection
+means the active dictionary. The query and selection travel in `q`, `dataset` (one selection)
+or repeated `datasets` keys (several), including when switching interface language. Results
+link to their originating dictionary's word-page tab; unsuccessful groups are shown separately.
 
 #### Search tiers and typo tolerance
 
@@ -370,11 +424,10 @@ datasets were installed, and the groups are **never merged**:
   own.
 - **`404 word_doesnt_found`** when no dataset holds the headword. A dataset without it answers an
   empty group: that the source has no such word is information.
-- **One request** against the rate limit, whatever the number of datasets. The search stays on
-  the served dataset.
-- **Every dataset the instance holds is read**, the ones that were never activated too: a
-  dataset is public from the moment it is installed, with the history of its edits and the names
-  of the readers credited in it.
+- **One request** against the rate limit for this headword read, whatever the number of datasets.
+  Grouped search has a separate weighted budget cost (see above).
+- **Only publicly open datasets are read**, whether active or not, with their edit history and
+  credited authors. New installations and own datasets start closed; the administrator controls visibility.
 - **A report names the viewed dataset.** Send its group’s `dataset` with
   `POST /api/v1/suggestions`; all IDs are validated in that dataset and headword.
   Omitting `dataset` uses the active dataset. Closed, unknown or deleted targets answer

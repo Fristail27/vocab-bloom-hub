@@ -92,6 +92,21 @@ const BY_SLUG: Record<string, (request: SnippetRequestT) => string> = {
       'console.log(data[0]?.definition);',
     ].join('\n');
   },
+  'get-datasets': ({ origin }) =>
+    [
+      ...client(origin),
+      'const { data } = await client.datasets();',
+      'console.log(data.map(dataset => dataset.dataset));',
+    ].join('\n'),
+  'get-search-datasets': ({ origin }) =>
+    [
+      ...client(origin),
+      "const { data } = await client.searchDatasets({ search: 'run', datasets: ['default'] });",
+      'for (const group of data) {',
+      "  if (group.status === 'ok') console.log(group.dataset, group.data, group.meta.has_more);",
+      '  else console.log(group.dataset, group.error);',
+      '}',
+    ].join('\n'),
   'get-search-detailed': ({ origin }) =>
     [
       ...client(origin),

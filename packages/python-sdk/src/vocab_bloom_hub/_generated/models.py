@@ -70,6 +70,7 @@ class WordsBatchV1ReqDTO(BaseModel):
 
 
 class PublicSearchV1MetaT(BaseModel):
+    dataset: str | None = Field(None, description="Present only for an explicitly selected dataset.")
     count: int
     fuzzy: bool
     short_term: bool
@@ -259,6 +260,7 @@ class EnPhrasalObjectPatternE(Enum):
 
 
 class PublicSearchDetailedV1MetaT(BaseModel):
+    dataset: str | None = Field(None, description="Present only for an explicitly selected dataset.")
     page: int
     limit: int
     has_more: bool
@@ -533,6 +535,27 @@ class FreeDictionaryLanguagesResTItem(BaseModel):
 
 class FreeDictionaryLanguagesResT(RootModel[list[FreeDictionaryLanguagesResTItem]]):
     root: list[FreeDictionaryLanguagesResTItem]
+
+
+class Meta3(BaseModel):
+    max_search_datasets: int
+
+
+class Status5(Enum):
+    ok = "ok"
+
+
+class Status6(Enum):
+    unavailable = "unavailable"
+
+
+class Error(Enum):
+    dataset_unavailable = "dataset_unavailable"
+
+
+class Meta4(BaseModel):
+    datasets: int
+    partial: bool
 
 
 class OriginT(BaseModel):
@@ -859,6 +882,38 @@ class FreeDictionaryEntryT(BaseModel):
     )
 
 
+class PublicDatasetsV1ResT(BaseModel):
+    """
+    Public selector inventory, in installation order; no dictionary connections or counts.
+    """
+
+    data: list[PublicDatasetTermsV1T]
+    meta: Meta3
+
+
+class PublicSearchDatasetUnavailableV1T(BaseModel):
+    """
+    A failed reader has no result list or paging metadata; it is not an empty match.
+    """
+
+    status: Status6
+    error: Error
+    origins: list[OriginT] | None = None
+    licenses: list[WordLicenseT] | None = None
+    description: str | None = None
+    dataset: str
+    title: str | None = None
+    active: bool
+    source: str
+    dataset_version: str | None = Field(...)
+    license: str
+    license_url: str
+    attribution: str
+    attribution_url: str | None = Field(...)
+    notice: str
+    license_text: str
+
+
 class PublicSearchWordV1T(BaseModel):
     alternatives: list[str] | None = Field(
         None, description="Alternative spellings of this headword, shared by all its parts of speech."
@@ -1160,6 +1215,31 @@ class FreeDictionaryDatasetsResT(BaseModel):
         ...,
         description="found counts datasets with entries, including for adapters whose misses are HTTP 200.",
     )
+
+
+class PublicSearchDatasetResultV1T(BaseModel):
+    status: Status5
+    data: list[PublicWordV1T]
+    meta: PublicSearchDetailedV1MetaT
+    origins: list[OriginT] | None = None
+    licenses: list[WordLicenseT] | None = None
+    description: str | None = None
+    dataset: str
+    title: str | None = None
+    active: bool
+    source: str
+    dataset_version: str | None = Field(...)
+    license: str
+    license_url: str
+    attribution: str
+    attribution_url: str | None = Field(...)
+    notice: str
+    license_text: str
+
+
+class PublicSearchDatasetsV1ResT(BaseModel):
+    data: list[PublicSearchDatasetResultV1T | PublicSearchDatasetUnavailableV1T]
+    meta: Meta4
 
 
 class PublicSearchDetailedV1ResT(BaseModel):

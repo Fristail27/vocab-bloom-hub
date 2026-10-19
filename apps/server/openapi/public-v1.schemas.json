@@ -2,6 +2,10 @@
   "PublicSearchV1MetaT": {
     "type": "object",
     "properties": {
+      "dataset": {
+        "type": "string",
+        "description": "Present only for an explicitly selected dataset."
+      },
       "count": {
         "type": "integer"
       },
@@ -619,6 +623,10 @@
   "PublicSearchDetailedV1MetaT": {
     "type": "object",
     "properties": {
+      "dataset": {
+        "type": "string",
+        "description": "Present only for an explicitly selected dataset."
+      },
       "page": {
         "type": "integer"
       },
@@ -3459,5 +3467,241 @@
         "words"
       ]
     }
+  },
+  "PublicDatasetsV1ResT": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/PublicDatasetTermsV1T"
+        }
+      },
+      "meta": {
+        "type": "object",
+        "properties": {
+          "max_search_datasets": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "max_search_datasets"
+        ]
+      }
+    },
+    "required": [
+      "data",
+      "meta"
+    ],
+    "description": "Public selector inventory, in installation order; no dictionary connections or counts."
+  },
+  "PublicSearchDatasetResultV1T": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "string",
+        "enum": [
+          "ok"
+        ]
+      },
+      "data": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/PublicWordV1T"
+        }
+      },
+      "meta": {
+        "$ref": "#/components/schemas/PublicSearchDetailedV1MetaT"
+      },
+      "origins": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/OriginT"
+        }
+      },
+      "licenses": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/WordLicenseT"
+        }
+      },
+      "description": {
+        "type": "string",
+        "nullable": true
+      },
+      "dataset": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "active": {
+        "type": "boolean"
+      },
+      "source": {
+        "type": "string"
+      },
+      "dataset_version": {
+        "type": "string",
+        "nullable": true
+      },
+      "license": {
+        "type": "string"
+      },
+      "license_url": {
+        "type": "string"
+      },
+      "attribution": {
+        "type": "string"
+      },
+      "attribution_url": {
+        "type": "string",
+        "nullable": true
+      },
+      "notice": {
+        "type": "string"
+      },
+      "license_text": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "active",
+      "attribution",
+      "attribution_url",
+      "data",
+      "dataset",
+      "dataset_version",
+      "license",
+      "license_text",
+      "license_url",
+      "meta",
+      "notice",
+      "source",
+      "status"
+    ]
+  },
+  "PublicSearchDatasetUnavailableV1T": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "string",
+        "enum": [
+          "unavailable"
+        ]
+      },
+      "error": {
+        "type": "string",
+        "enum": [
+          "dataset_unavailable"
+        ]
+      },
+      "origins": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/OriginT"
+        }
+      },
+      "licenses": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/WordLicenseT"
+        }
+      },
+      "description": {
+        "type": "string",
+        "nullable": true
+      },
+      "dataset": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "active": {
+        "type": "boolean"
+      },
+      "source": {
+        "type": "string"
+      },
+      "dataset_version": {
+        "type": "string",
+        "nullable": true
+      },
+      "license": {
+        "type": "string"
+      },
+      "license_url": {
+        "type": "string"
+      },
+      "attribution": {
+        "type": "string"
+      },
+      "attribution_url": {
+        "type": "string",
+        "nullable": true
+      },
+      "notice": {
+        "type": "string"
+      },
+      "license_text": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "active",
+      "attribution",
+      "attribution_url",
+      "dataset",
+      "dataset_version",
+      "error",
+      "license",
+      "license_text",
+      "license_url",
+      "notice",
+      "source",
+      "status"
+    ],
+    "description": "A failed reader has no result list or paging metadata; it is not an empty match."
+  },
+  "PublicSearchDatasetV1T": {
+    "anyOf": [
+      {
+        "$ref": "#/components/schemas/PublicSearchDatasetResultV1T"
+      },
+      {
+        "$ref": "#/components/schemas/PublicSearchDatasetUnavailableV1T"
+      }
+    ]
+  },
+  "PublicSearchDatasetsV1ResT": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/PublicSearchDatasetV1T"
+        }
+      },
+      "meta": {
+        "type": "object",
+        "properties": {
+          "datasets": {
+            "type": "integer"
+          },
+          "partial": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "datasets",
+          "partial"
+        ]
+      }
+    },
+    "required": [
+      "data",
+      "meta"
+    ]
   }
 }
