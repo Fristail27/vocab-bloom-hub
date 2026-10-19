@@ -228,6 +228,20 @@ describe('AbstractBaseApi: the dataset that is edited', () => {
 
   const urlOf = (call: number): URL => new URL(fetchMock.mock.calls[call][0]);
 
+  it('pins editor reads and mutations to the URL dataset despite a cookie changed in another tab', async () => {
+    document.cookie = 'edited_dataset=other; path=/';
+    window.history.replaceState({}, '', '/en/managing/edit-word/1?dataset=mine&category=words_without_level');
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) });
+    try {
+      await AbstractBaseApi.get(`${BASE}/en/1`);
+      await AbstractBaseApi.patch(`${BASE}/en/common-info/1`, { transcription: 'fixed' });
+      expect(urlOf(0).searchParams.get('dataset')).toBe('mine');
+      expect(urlOf(1).searchParams.get('dataset')).toBe('mine');
+    } finally {
+      window.history.replaceState({}, '', '/');
+    }
+  });
+
   it('sends nothing without a choice: the active dataset', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) });
     await AbstractBaseApi.get(`${BASE}/en/words`, { query: { page: 2 } });

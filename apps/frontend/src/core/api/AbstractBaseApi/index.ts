@@ -1,7 +1,7 @@
 import { ErrorResT } from 'server/types';
 import { ErrorCodes } from 'server/core/constants/error_codes';
 import { DATASET_QUERY_PARAM, isDatasetScopedRoute } from 'server/core/constants/datasets';
-import { readEditedDataset } from '@/components/EditedDataset/cookie';
+import { datasetFromPage, readEditedDataset } from '@/components/EditedDataset/cookie';
 
 type QueryScalarT = string | number | boolean;
 // an array value is sent as a repeated key (?a=1&a=2), which is how the
@@ -58,7 +58,11 @@ export class AbstractBaseApi {
    * server-side rendering the Server*Api wrappers read it from the request.
    */
   static async getDataset(): Promise<string | undefined> {
-    return typeof document === 'undefined' ? undefined : readEditedDataset();
+    if (typeof document === 'undefined') return undefined;
+    return (
+      datasetFromPage(window.location.pathname, new URLSearchParams(window.location.search)) ||
+      readEditedDataset()
+    );
   }
 
   /**

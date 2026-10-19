@@ -11,6 +11,36 @@ This page is about **the project's own dataset**, the one an instance is born wi
 can hold datasets of other sources next to it — the English Wiktionary, WordNet, OpenGloss — each under the
 terms of its source: [Datasets from other sources](#datasets-from-other-sources).
 
+## Inspecting missing and empty data in the admin
+
+**Statistics → Data issues** opens matching records from each category. The list counts
+words, meanings, meaning translations or short translations as labelled: several meanings
+of one word are separate records. Word categories use base forms, excluding phrases and grammar
+patterns; meaning and translation categories include those entries too. The counter and list
+use the same filters.
+
+Each row opens the word editor at the affected meaning or translation where applicable.
+**Back to matching records** keeps the dataset, category and page and reloads the counts and
+list. Corrected records leave the list; removing the last match on a page moves to the last
+remaining page. An empty category remains available and says there are no matching records.
+The URL pins the dataset for reads and edits, including inactive and closed datasets, without
+changing the publicly active dictionary. The header's dataset switch returns a review to its
+list when changing datasets, so a word ID is never reused in another dataset.
+
+Missing fields are not a universal quality score. Catalog capabilities explain expected
+omissions (for example, WordNet translations and CEFR levels). Synonyms, antonyms and the
+word-level description are informational; a meaning need not have an antonym. Own datasets
+have no declared completeness requirements, so their missing fields are informational too.
+Stored translations with blank text are listed separately for inspection. Every category can
+be opened, including informational ones.
+
+The authenticated API is `GET /api/en/statistics/issues/records` with a required `category`
+(one of the keys returned by `GET /api/en/statistics/issues`), optional `dataset`, `page`
+(default 1) and `limit` (default 25, maximum 100). Results contain the exact record ID, parent
+word ID, meaning and language where applicable, record kind, interpretation and pagination.
+Lists use ascending record IDs. Counts describe the current data; concurrent edits can change
+them between requests.
+
 ## Where the data comes from
 
 Every entry is produced by an **LLM-assisted pipeline** — a model is asked for the entry

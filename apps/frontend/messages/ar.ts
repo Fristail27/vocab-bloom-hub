@@ -935,6 +935,22 @@ export default {
     add_slot: 'إضافة SLOT',
   },
   statistics: {
+    issues_explanation:
+      'غياب البيانات لا يعني بالضرورة وجود خطأ. تساعد هذه القوائم على مراجعة السجلات؛ ولا تضمن إمكانات المصدر اكتمال البيانات.',
+    interpretation_missing: 'يدعم المصدر هذه البيانات؛ راجع الحقول الناقصة.',
+    interpretation_source_omission: 'غياب متوقع: لا يوفر المصدر هذا الحقل.',
+    interpretation_informational: 'للعلم: هذا الحقل اختياري أو لم يُعلن عن مدى تغطيته.',
+    interpretation_empty: 'ترجمة محفوظة فارغة: راجعها وصححها عند الحاجة.',
+    matching_records: 'السجلات المطابقة: {count, number}',
+    record_word: 'كلمة',
+    record_meaning: 'معنى',
+    record_meaning_translation: 'ترجمة المعنى',
+    record_short_translation: 'ترجمة مختصرة',
+    open_record: 'فتح المحرر',
+    back_to_matches: 'العودة إلى السجلات المطابقة',
+    no_matching_records: 'لا توجد سجلات مطابقة',
+    invalid_category: 'فئة أو صفحة غير صالحة',
+
     common_statistics: 'الإحصاءات العامة',
     entries: 'مدخلات القاموس',
     words: 'الكلمات',

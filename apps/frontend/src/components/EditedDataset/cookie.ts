@@ -15,3 +15,9 @@ export const writeEditedDataset = (name: string | undefined): void => {
   if (name) cookies.set(EDITED_DATASET_COOKIE, name, { path: '/', sameSite: 'lax', expires: YEAR_DAYS });
   else cookies.remove(EDITED_DATASET_COOKIE, { path: '/' });
 };
+
+/** Only pages that resolve this parameter on both server and client may override the cookie. */
+export const datasetFromPage = (pathname: string, query: Pick<URLSearchParams, 'get'>): string | undefined =>
+  /\/(?:statistics\/issues|managing\/edit-word\/[^/]+)\/?$/.test(pathname)
+    ? query.get('dataset') || undefined
+    : undefined;

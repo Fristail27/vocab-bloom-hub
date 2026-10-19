@@ -73,7 +73,11 @@ export const ShortTranslationsPreview: React.FC<ShortTranslationsPreviewP> = ({
         </div>
         <div className={styles.shortTranslationsList}>
           {translations.map((translation, i) => (
-            <div className={clsx(styles.translation, styles[mode])} key={translation.language + i}>
+            <div
+              id={`short-translation-${translation.id}`}
+              className={clsx(styles.translation, styles[mode])}
+              key={translation.language + i}
+            >
               {mode === WordCardModeE.edit && (
                 <Button
                   type="primary"

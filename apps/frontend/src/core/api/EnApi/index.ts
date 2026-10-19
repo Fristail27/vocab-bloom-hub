@@ -1,3 +1,4 @@
+import { EnIssueRecordsQueryT, EnIssueRecordsT } from 'server/types';
 import type { CopyWordSourceT, EnWordT, ForkProgressT, UpdateOriginsReqT } from 'server/types';
 import { AbstractBaseApi, type ApiQueryT, type DownloadedFileT } from '../AbstractBaseApi';
 import {
@@ -229,8 +230,8 @@ export class EnApi extends AbstractBaseApi {
     );
   }
 
-  static async getWordById(id: number): Promise<GetWordByIdResT> {
-    return this.get<GetWordByIdResT>(`${this.baseURL}/en/${id}`);
+  static async getWordById(id: number, dataset?: string): Promise<GetWordByIdResT> {
+    return this.get<GetWordByIdResT>(`${this.baseURL}/en/${id}`, { query: { dataset } });
   }
 
   static async addWordForm(body: AddWordFormReqT): Promise<AddWordFormResT> {
@@ -517,7 +518,17 @@ export class EnApi extends AbstractBaseApi {
     return this.get<EnTranslationsStatisticsT>(`${this.baseURL}/en/statistics/translations`);
   }
 
-  static async getIssuesStatistics(): Promise<GetEnIssuesStatisticsResT> {
-    return this.get<EnIssuesStatisticsT>(`${this.baseURL}/en/statistics/issues`);
+  static async getIssueRecords(query: EnIssueRecordsQueryT) {
+    return this.get<EnIssueRecordsT>(`${this.baseURL}/en/statistics/issues/records`, {
+      query,
+      cache: 'no-store',
+    });
+  }
+
+  static async getIssuesStatistics(dataset?: string): Promise<GetEnIssuesStatisticsResT> {
+    return this.get<EnIssuesStatisticsT>(`${this.baseURL}/en/statistics/issues`, {
+      query: { dataset },
+      cache: 'no-store',
+    });
   }
 }

@@ -341,21 +341,58 @@ export type EnTranslationsStatisticsT = {
 };
 export type GetEnTranslationsStatisticsResT = EnTranslationsStatisticsT | ErrorResT;
 
-export type EnStatisticsIssueKeyT =
-  | 'words_without_meanings'
-  | 'words_without_short_translations'
-  | 'words_without_level'
-  | 'words_without_transcription'
-  | 'words_without_description'
-  | 'meanings_without_translations'
-  | 'meanings_without_examples'
-  | 'meanings_without_synonyms'
-  | 'meanings_without_antonyms'
-  | 'empty_meaning_translations'
-  | 'empty_short_translations';
-export type EnIssueStatT = { key: EnStatisticsIssueKeyT; count: number; total: number };
-export type EnIssuesStatisticsT = { issues: EnIssueStatT[] };
+export const EN_STATISTICS_ISSUE_KEYS = [
+  'words_without_meanings',
+  'words_without_short_translations',
+  'words_without_level',
+  'words_without_transcription',
+  'words_without_description',
+  'meanings_without_translations',
+  'meanings_without_examples',
+  'meanings_without_synonyms',
+  'meanings_without_antonyms',
+  'empty_meaning_translations',
+  'empty_short_translations',
+] as const;
+export type EnStatisticsIssueKeyT = (typeof EN_STATISTICS_ISSUE_KEYS)[number];
+export type EnIssueKindT = 'word' | 'meaning' | 'meaning_translation' | 'short_translation';
+export type EnIssueInterpretationT = 'missing' | 'source_omission' | 'informational' | 'empty';
+export type EnIssueStatT = {
+  key: EnStatisticsIssueKeyT;
+  count: number;
+  total: number;
+  kind: EnIssueKindT;
+  interpretation: EnIssueInterpretationT;
+};
+export type EnIssuesStatisticsT = { dataset: string; issues: EnIssueStatT[] };
 export type GetEnIssuesStatisticsResT = EnIssuesStatisticsT | ErrorResT;
+export type EnIssueRecordT = {
+  id: number;
+  word_id: number;
+  word: string;
+  part_of_speech: EnPartOfSpeechE;
+  meaning_id: number | null;
+  meaning_title: string | null;
+  meaning_definition: string | null;
+  language: AvailableTranslationLanguagesE | null;
+  text: string | null;
+};
+export type EnIssueRecordsT = {
+  dataset: string;
+  category: EnStatisticsIssueKeyT;
+  kind: EnIssueKindT;
+  interpretation: EnIssueInterpretationT;
+  items: EnIssueRecordT[];
+  total: number;
+  page: number;
+  limit: number;
+};
+export type EnIssueRecordsQueryT = {
+  category: EnStatisticsIssueKeyT;
+  page?: number;
+  limit?: number;
+  dataset?: string;
+};
 
 // Mirrors ExportDictionaryQueryDTO: the settings of an export
 export type ExportDictionaryQueryT = {

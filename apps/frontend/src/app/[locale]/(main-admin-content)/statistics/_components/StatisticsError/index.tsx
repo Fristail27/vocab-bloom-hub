@@ -1,4 +1,4 @@
-import { getTranslations } from 'next-intl/server';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { Button, Result } from 'antd';
 import { ErrorCodes } from 'server/core/constants/error_codes';
@@ -9,9 +9,9 @@ type StatisticsErrorP = {
   message: string;
 };
 
-export const StatisticsError = async ({ locale, message }: StatisticsErrorP) => {
-  const tError = await getTranslations('errors');
-  const statsT = await getTranslations('statistics');
+export const StatisticsError = ({ locale, message }: StatisticsErrorP) => {
+  const tError = useTranslations('errors');
+  const statsT = useTranslations('statistics');
   const isKnownCode = (Object.values(ErrorCodes) as string[]).includes(message);
 
   return (

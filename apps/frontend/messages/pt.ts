@@ -964,6 +964,22 @@ export default {
     add_slot: 'Adicionar SLOT',
   },
   statistics: {
+    issues_explanation:
+      'A ausência de dados não significa necessariamente um erro. Estas listas ajudam a rever registos; as capacidades da fonte não garantem a sua completude.',
+    interpretation_missing: 'A fonte disponibiliza estes dados; reveja as ausências.',
+    interpretation_source_omission: 'Ausência esperada: a fonte não fornece este campo.',
+    interpretation_informational: 'Informativo: o campo é opcional ou a sua cobertura não foi declarada.',
+    interpretation_empty: 'Tradução guardada vazia: reveja e corrija se necessário.',
+    matching_records: 'Registos correspondentes: {count, number}',
+    record_word: 'Palavra',
+    record_meaning: 'Significado',
+    record_meaning_translation: 'Tradução do significado',
+    record_short_translation: 'Tradução breve',
+    open_record: 'Abrir editor',
+    back_to_matches: 'Voltar aos registos correspondentes',
+    no_matching_records: 'Nenhum registo correspondente',
+    invalid_category: 'Categoria ou página inválida',
+
     common_statistics: 'Estatísticas gerais',
     entries: 'Verbetes do dicionário',
     words: 'Palavras',

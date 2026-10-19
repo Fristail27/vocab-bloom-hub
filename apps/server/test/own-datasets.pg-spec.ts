@@ -482,6 +482,68 @@ describe('datasets of the instance’s own (Postgres, issue #540)', () => {
     expect(relicensed.text).toContain('dataset_source_mismatch');
   });
 
+  it('keeps quality counts, matching records and corrections in the closed, inactive dataset (#648)', async () => {
+    await request(server()).post('/api/en/datasets/default/activate').set(auth).expect(200);
+    await request(server())
+      .patch(`/api/en/datasets/${MINE}/visibility`)
+      .set(auth)
+      .send({ is_public: false })
+      .expect(200);
+    const headword = `${HEADWORD}quality`;
+    for (const dataset of [MINE, HOUSE]) {
+      await request(server())
+        .post('/api/en/add/word')
+        .query({ dataset })
+        .set(auth)
+        .send({
+          word: headword,
+          part_of_speech: EnPartOfSpeechE.noun,
+          form_of_word: EnWordFormsE.base_form,
+          forms: [],
+          meanings: [],
+          short_translations: [],
+          ...(dataset === HOUSE ? { transcription: 'present' } : {}),
+        })
+        .expect(201);
+    }
+    const query = { dataset: MINE, category: 'words_without_transcription' };
+    const before = (
+      await request(server()).get('/api/en/statistics/issues/records').set(auth).query(query).expect(200)
+    ).body;
+    const record = before.items.find((item: { word: string }) => item.word === headword);
+    expect(record).toBeDefined();
+    const stats = (
+      await request(server()).get('/api/en/statistics/issues').set(auth).query({ dataset: MINE }).expect(200)
+    ).body;
+    expect(stats.dataset).toBe(MINE);
+    expect(stats.issues.find((item: { key: string }) => item.key === query.category).count).toBe(before.total);
+    const other = (
+      await request(server())
+        .get('/api/en/statistics/issues/records')
+        .set(auth)
+        .query({ ...query, dataset: HOUSE })
+        .expect(200)
+    ).body;
+    expect(other.items.map((item: { word: string }) => item.word)).not.toContain(headword);
+    await request(server())
+      .patch(`/api/en/common-info/${record.word_id}`)
+      .set(auth)
+      .query({ dataset: MINE })
+      .send({ transcription: 'corrected' })
+      .expect(200);
+    const after = (
+      await request(server()).get('/api/en/statistics/issues/records').set(auth).query(query).expect(200)
+    ).body;
+    expect(after.total).toBe(before.total - 1);
+    expect(after.items.map((item: { word: string }) => item.word)).not.toContain(headword);
+    expect((await list()).active).toBe('default');
+    await request(server())
+      .get('/api/en/statistics/issues/records')
+      .set(auth)
+      .query({ ...query, dataset: 'does_not_exist' })
+      .expect(404);
+  });
+
   it('deletes a dataset of the owner’s with its schema', async () => {
     await request(server()).delete(`/api/en/datasets/${HOUSE}`).set(auth).expect(200);
     expect((await list()).datasets.map((dataset) => dataset.name)).not.toContain(HOUSE);

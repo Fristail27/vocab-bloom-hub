@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Progress } from 'antd';
 import { useLocale } from 'next-intl';
 import styles from './styles.module.scss';
@@ -11,15 +12,24 @@ type DistributionRowP = {
   count: number;
   total: number;
   showPercent?: boolean;
+  href?: string;
 };
 
-export const DistributionRow = ({ label, count, total, showPercent }: DistributionRowP) => {
+export const DistributionRow = ({ label, count, total, showPercent, href }: DistributionRowP) => {
   // the number in the interface language, not the browser's (issue #479)
   const locale = useLocale();
 
   return (
     <div className={styles.distributionRow}>
-      <span className={styles.distributionLabel}>{label}</span>
+      <span className={styles.distributionLabel}>
+        {href ? (
+          <Link prefetch={false} href={href}>
+            {label}
+          </Link>
+        ) : (
+          label
+        )}
+      </span>
       <Progress percent={percentOf(count, total)} showInfo={false} size="small" />
       <span className={styles.distributionCount}>
         {count.toLocaleString(locale)}
