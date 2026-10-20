@@ -5,6 +5,70 @@ the admin UI, the website and both SDKs; the published dataset keeps its own ver
 (`manifest.version`), bumped at the next export after a release. Entries are curated from the
 generated release notes; the full commit history lives in git.
 
+## v1.3.0 — 2026-10-20
+
+Dictionaries can now evolve through reviewed updates and merges, with richer word data and
+control over which datasets readers can discover.
+
+- **Reviewed updates and merges**: updating an existing dataset prepares a saved comparison
+  before changing its content. Update forks from their parents or merge related dictionaries,
+  resolve conflicting fields and deletions, then apply the result atomically. Stale reviews
+  are rejected; cancellation leaves the dictionary intact. Exports retain synchronization
+  history. Retained snapshots currently have no automatic pruning.
+
+- **Public dataset visibility**: open or close datasets from their cards. Closed dictionaries
+  remain available to admins but are excluded from public reads, compatibility APIs, DICT
+  and website tabs. Existing visibility is preserved on upgrade; new installations, own
+  datasets and forks start closed and must be opened before activation. Purge reverse-proxy
+  responses cached under the previous policy when upgrading.
+
+- **Search across selected dictionaries**: search one public dataset or up to five together
+  through the website, API and both SDKs. Results remain grouped with their own attribution,
+  relevance and pagination. Links open the matching dataset tab; unavailable datasets are
+  distinguished from empty results.
+
+- **Shareable tabs and targeted corrections**: word-page links preserve the selected dataset
+  across reloads, browser history and interface-language changes. Readers can report mistakes
+  from any public tab; suggestions explicitly target that dictionary and use its terms.
+
+- **Richer dictionary data**: preserve alternative spellings, etymologies linked to meanings,
+  sourced quotations, multiple IPA and EnPR pronunciations, and external pronunciation
+  recordings with their own attribution and licenses. These fields travel through supported
+  conversion, API reads, both SDKs, import/export, copies, forks and edit history. Existing
+  Wiktionary datasets need reconversion and import to populate newly supported data.
+
+- **Compatible dictionary APIs**: adapters for dictionaryapi.dev v1/v2 and
+  freedictionaryapi.com serve the instance's English dictionaries, including reads across
+  public datasets. Responses retain actual source and license information. Migration guides
+  and an interactive comparison show how to replace the original service's base URL.
+
+- **DICT clients**: an optional RFC 2229 TCP service supports definitions, exact and prefix
+  matching, and discovery of public dictionaries. Enable it directly or through the ordinary
+  Docker Compose setup; the default port is 2628.
+
+- **Word exploration and accessibility**: interactive graphs connect meanings, synonyms,
+  antonyms and translations, with keyboard-accessible alternatives, zoom and panning.
+  Search announces loading, results and errors to assistive technology while preserving focus.
+
+- **Actionable administration statistics**: an overview covers every installed dataset,
+  including closed, empty and inactive dictionaries. Data-quality counters open matching
+  records and their editors, preserving filters and pagination when returning.
+
+- **Local content review**: mark definitions, meaning translations and short translations
+  as checked, then filter unchecked or subsequently changed content. Review state follows
+  unchanged content through updates and exact reverts, remains local to the instance and
+  is excluded from forks, exports and public responses.
+
+- **Documentation and examples**: expanded Node.js and Python SDK snippets, Java, Rust and
+  Ruby request examples, and a runnable Node.js cursor-pagination example. Portuguese website
+  text and Spanish and Portuguese installation instructions have been revised.
+
+- **Import completion**: the completion notification now waits for cleanup and release of
+  the import slot, so immediate activation or deletion does not fail with an import-in-progress
+  error after a successful import.
+
+- **Dependency security**: update Handlebars to resolve reported critical vulnerabilities.
+
 ## v1.2.0 — 2026-10-06
 
 Dictionaries can now be forked and extended while keeping the sources and terms of their words,

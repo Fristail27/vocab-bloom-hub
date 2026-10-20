@@ -155,7 +155,7 @@ curl -s 'localhost:3240/api/v1/search/detailed?search=run&with_meanings=true'
 ```
 
 > [!TIP]
-> Чтобы закрепить релиз вместо сборки `main`, задайте `VBH_TAG=1.2.0` в `.env`. Чтобы
+> Чтобы закрепить релиз вместо сборки `main`, задайте `VBH_TAG=1.3.0` в `.env`. Чтобы
 > добавить сайт (документация, справочник API, песочница, страницы слов) на
 > <http://localhost:3242>, задайте `COMPOSE_PROFILES=db,site`.
 

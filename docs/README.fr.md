@@ -158,7 +158,7 @@ curl -s 'localhost:3240/api/v1/search/detailed?search=run&with_meanings=true'
 ```
 
 > [!TIP]
-> Pour épingler une version au lieu de la construction `main`, mettez `VBH_TAG=1.2.0` dans
+> Pour épingler une version au lieu de la construction `main`, mettez `VBH_TAG=1.3.0` dans
 > `.env`. Pour ajouter le site web (documentation, référence de l’API, bac à sable, pages de mots)
 > sur <http://localhost:3242>, mettez `COMPOSE_PROFILES=db,site`.
 

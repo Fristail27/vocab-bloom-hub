@@ -157,7 +157,7 @@ curl -s 'localhost:3240/api/v1/search/detailed?search=run&with_meanings=true'
 ```
 
 > [!TIP]
-> Para fijar una versión específica en lugar de la compilación de desarrollo de `main`, define `VBH_TAG=1.2.0` en `.env`.
+> Para fijar una versión específica en lugar de la compilación de desarrollo de `main`, define `VBH_TAG=1.3.0` en `.env`.
 > Para habilitar el sitio web (documentación, referencia de la API, playground y páginas de palabras)
 > en <http://localhost:3242>, define `COMPOSE_PROFILES=db,site`.
 
