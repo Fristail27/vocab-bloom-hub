@@ -1,3 +1,4 @@
+import { EnContentReview } from '../EnModule/entities/en_content_review.entity';
 import { randomUUID } from 'node:crypto';
 import { DataSource } from 'typeorm';
 import { datasetOrigin, defaultOrigins } from '../../../core/utils/provenance';
@@ -24,7 +25,9 @@ export const forkDataset = async (
   const quote = (name: string): string => connection.driver.escape(name);
   const sourceSchema = quote(assertSafeSchema(source.schema));
   const targetSchema = quote(assertSafeSchema(target.schema));
-  const tables = DICTIONARY_ENTITIES.map((entity) => connection.getMetadata(entity));
+  const tables = DICTIONARY_ENTITIES.filter((entity) => entity !== EnContentReview).map((entity) =>
+    connection.getMetadata(entity),
+  );
   const junctions = tables.flatMap((meta) =>
     meta.ownRelations
       .filter((relation) => relation.isManyToManyOwner)

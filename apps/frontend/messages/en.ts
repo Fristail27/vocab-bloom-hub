@@ -169,7 +169,34 @@ export default {
       'This dataset receives source updates. Create an independent fork to make your own changes and keep its origin visible.',
     continue_editing: 'Continue editing',
   },
+  content_review: {
+    intro:
+      'Local review notes only. Checking a definition covers its title and definition; checking a translation covers its text and variants. Examples, grammar and pronunciation remain separate. These notes are not a guarantee of correctness and are not exported or copied to forks.',
+    definition: 'Definition',
+    meaning_translation: 'Meaning translation',
+    short_translation: 'Short translation',
+    unchecked: 'Not checked',
+    checked: 'Checked',
+    changed: 'Changed since checking',
+    check: 'Mark as checked',
+    recheck: 'Confirm again',
+    clear: 'Clear check',
+    loading: 'Loading review status…',
+    stale: 'Content changed. Reload the word before checking it.',
+    load_error: 'Could not load review status.',
+    retry: 'Refresh',
+    browse: 'Content review',
+    filter_hint:
+      'Filter words by a portion’s review status. Counts refer to individual portions of the selected kind, within the word prefix above. A word can contain portions in different states.',
+    scope: 'Portion',
+    status: 'Review status',
+    empty: 'No matching words.',
+    matches: 'Matching portions: {count}',
+  },
   errors: {
+    review_target_not_found: 'This portion no longer exists. Reload the word.',
+    review_content_changed: 'The content changed. Reload the word before marking it as checked.',
+
     [ErrorCodes.provenance_invalid]: 'Check the source and license fields.',
     [ErrorCodes.provenance_inherited]: 'Inherited source terms cannot be removed or changed.',
     [ErrorCodes.provenance_license_conflict]:

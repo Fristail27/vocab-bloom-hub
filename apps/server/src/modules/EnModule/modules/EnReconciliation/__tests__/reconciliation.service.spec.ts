@@ -1,3 +1,6 @@
+import { EnReviewService } from '../../EnReview/enReview.service';
+import { ReviewScopeE, ReviewStatusE } from '../../../../../../types/reviews';
+import { EnContentReview } from '../../../entities/en_content_review.entity';
 import { randomUUID } from 'node:crypto';
 import { datasetOrigin } from '../../../../../../core/utils/provenance';
 import { EnMeaning } from '../../../entities/en_meaning.entity';
@@ -110,6 +113,49 @@ describe('reconciliation publishes dictionary changes', () => {
       imports,
     );
   }
+
+  it('keeps local reviews content-aware through source publication and never imports source reviews', async () => {
+    const local = await word(db, 'reviewed', 'base');
+    const incoming = await word(source, 'reviewed', 'base');
+    const identity = randomUUID();
+    const localMeaning = await db.manager.save(EnMeaning, {
+      word: local,
+      sync_id: identity,
+      title: 'sense',
+      definition: 'original definition',
+      sort_order: 1,
+    });
+    const incomingMeaning = await source.manager.save(EnMeaning, {
+      word: incoming,
+      sync_id: identity,
+      title: 'sense',
+      definition: 'original definition',
+      sort_order: 1,
+    });
+    const reviews = new EnReviewService(db);
+    const upstreamReviews = new EnReviewService(source);
+    const original = (await reviews.word(local.id))[0];
+    await reviews.set(ReviewScopeE.definition, localMeaning.id, { checked: true, expected: original.expected });
+    await service.rememberSource('default');
+    // Another field of the word changes; publication recreates nested rows.
+    await source.manager.update(EnWord, incoming.id, { description: 'new description' });
+    let plan = await service.prepareSource('default', source.manager, '2', true);
+    await service.apply('default', plan.id);
+    expect((await reviews.word(local.id))[0].status).toBe(ReviewStatusE.checked);
+    await source.manager.update(EnMeaning, incomingMeaning.id, { definition: 'updated definition' });
+    const sourceState = (await upstreamReviews.word(incoming.id))[0];
+    await upstreamReviews.set(ReviewScopeE.definition, incomingMeaning.id, {
+      checked: true,
+      expected: sourceState.expected,
+    });
+    plan = await service.prepareSource('default', source.manager, '3', true);
+    await service.apply('default', plan.id);
+    expect((await reviews.word(local.id))[0].status).toBe(ReviewStatusE.changed);
+    expect(await db.manager.count(EnContentReview)).toBe(1);
+    expect((await db.manager.findOneByOrFail(EnMeaning, { sync_id: identity })).definition).toBe(
+      'updated definition',
+    );
+  });
 
   it('acknowledges apply immediately, reports stages and finishes only after commit, with idempotent retries', async () => {
     await word(db, 'word', 'original');

@@ -1,3 +1,4 @@
+import { EnContentReview } from './en_content_review.entity';
 import { EnPronunciationAudio } from './en_pronunciation_audio.entity';
 import { EnPronunciation } from './en_pronunciation.entity';
 import { EnEtymology } from './en_etymology.entity';
@@ -24,4 +25,5 @@ export const DICTIONARY_ENTITIES = [
   EnMeaningTranslation,
   EnShortTranslation,
   EnChange,
+  EnContentReview,
 ];

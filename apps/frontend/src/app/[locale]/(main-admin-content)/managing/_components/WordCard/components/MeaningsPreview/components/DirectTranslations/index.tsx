@@ -1,3 +1,5 @@
+import { ContentReview } from '@/components/ContentReview';
+import { ReviewScopeE } from 'server/types/reviews';
 import { EnMeaningTranslationT } from 'server/types';
 import React from 'react';
 import { Button, Tag } from 'antd';
@@ -29,6 +31,9 @@ export const DirectTranslations: React.FC<DirectTranslationsP> = ({ translation,
         </>
       )}
       <Icon name={FlagByAreaEnum[translation.language] as IconNamesT} size="medium" />
+      {mode === WordCardModeE.edit && (
+        <ContentReview scope={ReviewScopeE.meaning_translation} id={translation.id} />
+      )}
       {translation.variants_of_words.map((v, i) => (
         <Tag key={i} variant="outlined" color="orange" dir="auto">
           {v}

@@ -1,5 +1,6 @@
 'use client';
 
+import { ReviewBrowser } from '@/components/ContentReview/ReviewBrowser';
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { App, Skeleton } from 'antd';
@@ -45,6 +46,7 @@ export const SearchModule: React.FC = () => {
         value={searchValue}
         onChange={(e) => setSearchValue(e.target.value)}
       />
+      <ReviewBrowser search={debouncedValue} />
       <div>
         {isSearching && <Skeleton active paragraph={{ rows: 4 }} title={false} />}
         {!isSearching &&

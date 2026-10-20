@@ -1,3 +1,10 @@
+import type {
+  ContentReviewT,
+  ReviewScopeE,
+  ReviewWordsQueryT,
+  ReviewWordsT,
+  SetContentReviewT,
+} from 'server/types/reviews';
 import type { EnDatasetsStatisticsT } from 'server/types';
 import { EnIssueRecordsQueryT, EnIssueRecordsT } from 'server/types';
 import type { CopyWordSourceT, EnWordT, ForkProgressT, UpdateOriginsReqT } from 'server/types';
@@ -86,6 +93,16 @@ import { ErrorCodes } from 'server/core/constants/error_codes';
 import { DATASET_QUERY_PARAM } from 'server/core/constants/datasets';
 
 export class EnApi extends AbstractBaseApi {
+  static wordReviews(id: number, dataset?: string) {
+    return this.get<ContentReviewT[]>(`${this.baseURL}/en/reviews/word/${id}`, { query: { dataset } });
+  }
+  static setContentReview(scope: ReviewScopeE, id: number, body: SetContentReviewT, dataset?: string) {
+    return this.post<ContentReviewT>(`${this.baseURL}/en/reviews/${scope}/${id}`, body, { query: { dataset } });
+  }
+  static reviewWords(query: ReviewWordsQueryT, dataset?: string) {
+    return this.get<ReviewWordsT>(`${this.baseURL}/en/reviews/words`, { query: { ...query, dataset } });
+  }
+
   static async forkDataset(name: string, body: CreateDatasetReqT) {
     return this.post<ForkProgressT>(`${this.baseURL}/en/datasets/${encodeURIComponent(name)}/fork`, body);
   }
