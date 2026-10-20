@@ -1,3 +1,5 @@
+import { PublicSearchService } from './public-search.service';
+import { PublicSearchCacheInterceptor } from './public-search-cache.interceptor';
 import { FreeDictionaryApiController } from './freedictionaryapi/freedictionaryapi.controller';
 import { FreeDictionaryApiService } from './freedictionaryapi/freedictionaryapi.service';
 import { FreeDictionaryJsonInterceptor } from './freedictionaryapi/json.interceptor';
@@ -11,7 +13,7 @@ import { EnWord } from '../EnModule/entities/en_word.entity';
 import { EnMeaning } from '../EnModule/entities/en_meaning.entity';
 import { EnMeaningTranslation } from '../EnModule/entities/en_meaning_translation.entity';
 import { EnShortTranslation } from '../EnModule/entities/en_short_translation.entity';
-import { PublicSearchController } from './public-search.controller';
+import { PublicSearchController, PublicDatasetsController } from './public-search.controller';
 import { PublicWordsController } from './public-words.controller';
 import { PublicDictionaryController } from './public-dictionary.controller';
 import { PublicWordsService } from './public-words.service';
@@ -45,6 +47,7 @@ import { CompatibilityDatasetsService } from './compatibility-datasets.service';
     DictionaryApiController,
     FreeDictionaryApiController,
     PublicSearchController,
+    PublicDatasetsController,
     // before the reads of the served dataset: /words/id/datasets is about the
     // headword "id", and /words/id/{id} of the next controller would take it
     PublicWordDatasetsController,
@@ -54,6 +57,8 @@ import { CompatibilityDatasetsService } from './compatibility-datasets.service';
   ],
   exports: [PublicMetaService],
   providers: [
+    PublicSearchService,
+    PublicSearchCacheInterceptor,
     CompatibilityDatasetsService,
     FreeDictionaryApiService,
     FreeDictionaryJsonInterceptor,

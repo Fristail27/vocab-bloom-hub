@@ -36,6 +36,8 @@ export type PublicListResT<TItem, TMeta> = { data: TItem[]; meta: TMeta };
 // `short_term`: the term has fewer than 3 characters, so only the exact and
 // prefix tiers were searched (issue #292)
 export type PublicSearchV1MetaT = {
+  /** Present only for an explicitly selected dataset. */
+  dataset?: string;
   /** @asType integer */
   count: number;
   fuzzy: boolean;
@@ -44,6 +46,8 @@ export type PublicSearchV1MetaT = {
 export type PublicSearchV1ResT = PublicListResT<PublicSearchWordV1T, PublicSearchV1MetaT>;
 
 export type PublicSearchDetailedV1MetaT = {
+  /** Present only for an explicitly selected dataset. */
+  dataset?: string;
   /** @asType integer */
   page: number;
   /** @asType integer */
@@ -492,3 +496,32 @@ export type {
   FreeDictionaryErrorT,
   FreeDictionaryLanguagesResT,
 } from '../freedictionaryapi';
+
+/** Public selector inventory, in installation order; no dictionary connections or counts. */
+export type PublicDatasetsV1ResT = PublicListResT<
+  PublicDatasetTermsV1T,
+  {
+    /** @asType integer */
+    max_search_datasets: number;
+  }
+>;
+
+export type PublicSearchDatasetResultV1T = PublicDatasetTermsV1T & {
+  status: 'ok';
+  data: PublicWordV1T[];
+  meta: PublicSearchDetailedV1MetaT;
+};
+/** A failed reader has no result list or paging metadata; it is not an empty match. */
+export type PublicSearchDatasetUnavailableV1T = PublicDatasetTermsV1T & {
+  status: 'unavailable';
+  error: 'dataset_unavailable';
+};
+export type PublicSearchDatasetV1T = PublicSearchDatasetResultV1T | PublicSearchDatasetUnavailableV1T;
+export type PublicSearchDatasetsV1ResT = PublicListResT<
+  PublicSearchDatasetV1T,
+  {
+    /** @asType integer */
+    datasets: number;
+    partial: boolean;
+  }
+>;

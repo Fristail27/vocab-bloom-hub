@@ -2,6 +2,9 @@ import { MemoryCache, type ResponseCache } from './cache';
 import { errorFromResponse, NetworkError } from './errors';
 import { USER_AGENT } from './version';
 import type {
+  SearchDatasetsRequest,
+  SearchDatasetsResponse,
+  DatasetsResponse,
   DetailedSearchRequest,
   DetailedSearchResponse,
   FormsResponse,
@@ -185,6 +188,16 @@ export class VocabBloomClient {
     return this.get('/search/detailed', request, options);
   }
 
+  /** Public dataset selector inventory; closed datasets are omitted. */
+  datasets(options?: RequestOptions): Promise<DatasetsResponse> {
+    return this.get('/datasets', undefined, options);
+  }
+
+  /** Separate paged groups in installation order; one public budget unit per dataset. */
+  searchDatasets(request: SearchDatasetsRequest, options?: RequestOptions): Promise<SearchDatasetsResponse> {
+    return this.get('/search/datasets', request, options);
+  }
+
   /**
    * Every item of the detailed search, page after page from `request.page`
    * (1 by default) while `meta.has_more` says there is one (issue #408); the
@@ -366,7 +379,11 @@ export class VocabBloomClient {
     if (!response.ok) throw await errorFromResponse(response);
     const body = (await response.json()) as T;
     const etag = response.headers.get('etag');
-    if (this.cache && etag) this.cache.set(url, { etag, body });
+    const noStore = response.headers
+      .get('cache-control')
+      ?.split(',')
+      .some((directive) => directive.trim().toLowerCase() === 'no-store');
+    if (this.cache && etag && !noStore) this.cache.set(url, { etag, body });
     return body;
   }
 

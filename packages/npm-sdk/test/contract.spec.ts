@@ -9,6 +9,8 @@ type PathsT = Record<string, Record<string, { operationId: string }>>;
 // in the spec fails here until the SDK covers it
 const METHOD_BY_OPERATION: Record<string, keyof VocabBloomClient> = {
   // the searches are GET reads (issue #396); their POST forms were removed (issue #440)
+  PublicDatasetsController_list: 'datasets',
+  PublicSearchController_searchDatasetsGet: 'searchDatasets',
   PublicSearchController_searchGet: 'search',
   PublicSearchController_searchDetailedGet: 'searchDetailed',
   PublicWordsController_list: 'words',

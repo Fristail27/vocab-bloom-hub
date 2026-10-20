@@ -183,3 +183,26 @@ reading older v1 servers. See the
 
 What the licenses ask for:
 [DATA_LICENSE.md](https://github.com/Fristail27/vocab-bloom-hub/blob/main/DATA_LICENSE.md#using-data-that-was-changed-on-an-instance).
+
+### Search selected dictionaries
+
+```python
+from vocab_bloom_hub import SearchDatasetResult
+
+choices = client.datasets()  # public names and terms, installation order
+flat = client.search("run", dataset="wiktionary")
+detailed = client.search_detailed("run", dataset="wiktionary", with_meanings=True)
+grouped = client.search_datasets("run", ["default", "wiktionary"], limit=5)
+for group in grouped.data:
+    if isinstance(group, SearchDatasetResult):
+        print(group.dataset, group.data, group.meta.has_more)
+    else:
+        print(group.dataset, group.error)  # unavailable, not an empty match
+```
+
+The async client offers the same methods with `await`. `iter_search_detailed` also accepts
+`dataset`. Omit the selector for existing active-dictionary behavior. Unknown or closed targets
+raise `NotFoundError`, without fallback. Grouped search takes 1–5 names and charges one public
+budget unit per dataset. Ranking, IDs and pagination stay within each group; request just one
+name to advance it. Preserve source terms and the dataset in word-page links. Partial failures
+are not cached; selected reads and the inventory always revalidate.

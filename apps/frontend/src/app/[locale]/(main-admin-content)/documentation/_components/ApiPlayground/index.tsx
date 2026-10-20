@@ -136,6 +136,7 @@ export const ApiPlayground: React.FC<ApiPlaygroundP> = ({ endpoint }) => {
           <Input
             key={param.name}
             label={param.name}
+            aria-label={param.name}
             value={String(value ?? '')}
             onChange={(e) => setValue(param.name, e.target.value)}
           />

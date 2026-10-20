@@ -108,26 +108,26 @@ public, max-age=<PUBLIC_API_CACHE_MAX_AGE>, stale-while-revalidate=<то же>`;
 Каждый успешный ответ — конверт: полезная нагрузка под `data`, пагинация и счётчики под
 `meta`. Типы ответов — в `apps/server/types/public/v1/index.ts`.
 
-| Метод  | Путь                                              | Query / тело                                                                                           | Ответ                                                                                                               |
-| ------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| `GET`  | `/api/v1/meta`                                    | —                                                                                                      | `{ data: { api_version, app_version, dataset, source, dataset_version, license, …, counts, available_languages } }` |
-| `GET`  | `/api/v1/openapi.json`                            | —                                                                                                      | OpenAPI 3-документ этого контракта (без конверта; см. [OpenAPI-документ](#openapi-документ))                        |
-| `GET`  | `/api/v1/search`                                  | `search`, `type?`, `limit?`                                                                            | `{ data: PublicSearchWordV1T[], meta: { count, fuzzy, short_term } }`                                               |
-| `GET`  | `/api/v1/search/detailed`                         | `search`, `type?`, `limit?`, `page?`, `with_meanings?`, `with_translations?`, `translation_languages?` | `{ data: PublicWordV1T[], meta: { page, limit, has_more, fuzzy, short_term } }`                                     |
-| `GET`  | `/api/v1/words/{word}`                            | —                                                                                                      | `{ data: PublicWordV1T[], meta: { word, count } }`                                                                  |
-| `GET`  | `/api/v1/words/{word}/meanings`                   | —                                                                                                      | `{ data: PublicMeaningV1T[], meta: { word, count } }`                                                               |
-| `GET`  | `/api/v1/words/{word}/translations`               | `language?`                                                                                            | `{ data: { short_translations, meaning_translations }, meta }`                                                      |
-| `GET`  | `/api/v1/words/{word}/forms`                      | —                                                                                                      | `{ data: PublicWordFormV1T[], meta: { word, count } }`                                                              |
-| `GET`  | `/api/v1/words/{word}/synonyms`                   | —                                                                                                      | `{ data: PublicWordLinkV1T[], meta: { word, count } }`                                                              |
-| `GET`  | `/api/v1/words/{word}/antonyms`                   | —                                                                                                      | `{ data: PublicWordLinkV1T[], meta: { word, count } }`                                                              |
-| `GET`  | `/api/v1/words/{word}/history`                    | —                                                                                                      | `{ data: PublicChangeV1T[], meta: { word, count } }`                                                                |
-| `GET`  | `/api/v1/words/{word}/datasets`                   | —                                                                                                      | `{ data: PublicWordDatasetV1T[], meta: { word, datasets, found } }`                                                 |
-| `GET`  | `/api/v1/words/{word}/datasets/{dataset}/history` | —                                                                                                      | `{ data: PublicChangeV1T[], meta: { word, count } }`                                                                |
-| `GET`  | `/api/v1/words/id/{id}`                           | —                                                                                                      | `{ data: PublicWordV1T }`                                                                                           |
-| `GET`  | `/api/v1/words`                                   | фильтры, `cursor?`, `limit?`, `with_meanings?`, `with_translations?`                                   | `{ data: PublicWordV1T[], meta: { limit, has_more, next_cursor } }`                                                 |
-| `GET`  | `/api/v1/random`                                  | фильтры                                                                                                | `{ data: PublicWordV1T }`                                                                                           |
-| `POST` | `/api/v1/words/batch`                             | `{ words: string[] }` (1–50)                                                                           | `{ data: { word, count, entries: PublicWordV1T[] }[], meta: { count, not_found } }`                                 |
-| `POST` | `/api/v1/suggestions`                             | `{ headword, dataset?, word_id?, message?, kind?, edits?, author_name?, author_consent? }`             | `201 { data: { id, status } }`                                                                                      |
+| Метод  | Путь                                              | Query / тело                                                                                                       | Ответ                                                                                                               |
+| ------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `GET`  | `/api/v1/meta`                                    | —                                                                                                                  | `{ data: { api_version, app_version, dataset, source, dataset_version, license, …, counts, available_languages } }` |
+| `GET`  | `/api/v1/openapi.json`                            | —                                                                                                                  | OpenAPI 3-документ этого контракта (без конверта; см. [OpenAPI-документ](#openapi-документ))                        |
+| `GET`  | `/api/v1/search`                                  | `search`, `dataset?`, `type?`, `limit?`                                                                            | `{ data: PublicSearchWordV1T[], meta: { count, fuzzy, short_term } }`                                               |
+| `GET`  | `/api/v1/search/detailed`                         | `search`, `dataset?`, `type?`, `limit?`, `page?`, `with_meanings?`, `with_translations?`, `translation_languages?` | `{ data: PublicWordV1T[], meta: { page, limit, has_more, fuzzy, short_term } }`                                     |
+| `GET`  | `/api/v1/words/{word}`                            | —                                                                                                                  | `{ data: PublicWordV1T[], meta: { word, count } }`                                                                  |
+| `GET`  | `/api/v1/words/{word}/meanings`                   | —                                                                                                                  | `{ data: PublicMeaningV1T[], meta: { word, count } }`                                                               |
+| `GET`  | `/api/v1/words/{word}/translations`               | `language?`                                                                                                        | `{ data: { short_translations, meaning_translations }, meta }`                                                      |
+| `GET`  | `/api/v1/words/{word}/forms`                      | —                                                                                                                  | `{ data: PublicWordFormV1T[], meta: { word, count } }`                                                              |
+| `GET`  | `/api/v1/words/{word}/synonyms`                   | —                                                                                                                  | `{ data: PublicWordLinkV1T[], meta: { word, count } }`                                                              |
+| `GET`  | `/api/v1/words/{word}/antonyms`                   | —                                                                                                                  | `{ data: PublicWordLinkV1T[], meta: { word, count } }`                                                              |
+| `GET`  | `/api/v1/words/{word}/history`                    | —                                                                                                                  | `{ data: PublicChangeV1T[], meta: { word, count } }`                                                                |
+| `GET`  | `/api/v1/words/{word}/datasets`                   | —                                                                                                                  | `{ data: PublicWordDatasetV1T[], meta: { word, datasets, found } }`                                                 |
+| `GET`  | `/api/v1/words/{word}/datasets/{dataset}/history` | —                                                                                                                  | `{ data: PublicChangeV1T[], meta: { word, count } }`                                                                |
+| `GET`  | `/api/v1/words/id/{id}`                           | —                                                                                                                  | `{ data: PublicWordV1T }`                                                                                           |
+| `GET`  | `/api/v1/words`                                   | фильтры, `cursor?`, `limit?`, `with_meanings?`, `with_translations?`                                               | `{ data: PublicWordV1T[], meta: { limit, has_more, next_cursor } }`                                                 |
+| `GET`  | `/api/v1/random`                                  | фильтры                                                                                                            | `{ data: PublicWordV1T }`                                                                                           |
+| `POST` | `/api/v1/words/batch`                             | `{ words: string[] }` (1–50)                                                                                       | `{ data: { word, count, entries: PublicWordV1T[] }[], meta: { count, not_found } }`                                 |
+| `POST` | `/api/v1/suggestions`                             | `{ headword, dataset?, word_id?, message?, kind?, edits?, author_name?, author_consent? }`                         | `201 { data: { id, status } }`                                                                                      |
 
 Те же эндпоинты можно попробовать в плейграунде сайта и на страницах _Documentation_ в админке
 ([api-tools.md](./api-tools.md)); машиночитаемый контракт — [OpenAPI-документ](#openapi-документ).
@@ -175,6 +175,39 @@ curl 'http://localhost:3010/api/v1/words/run'
 curl 'http://localhost:3010/api/v1/words?part_of_speech=noun&word_level=B1&word_level=B2&limit=50'
 curl 'http://localhost:3010/api/v1/random?part_of_speech=verb&word_level=A2'
 ```
+
+#### Поиск в выбранных датасетах (#652)
+
+`GET /api/v1/search` и `/search/detailed` принимают необязательный `dataset=<имя>`.
+Без него ответ и поведение остаются прежними: поиск в активном словаре. Явный выбор
+добавляет `meta.dataset` и не переключает активный датасет. Закрытый, удалённый или
+неизвестный датасет отвечает одинаковым `404 dataset_not_found`, без подмены активным.
+Ошибка чтения выбранного словаря — `503 dataset_unavailable`.
+
+`GET /api/v1/datasets` возвращает публичные датасеты с их условиями в порядке установки,
+без счётчиков слов и открытия соединений со словарями. `meta.max_search_datasets` — 5.
+`GET /api/v1/search/datasets?search=run&datasets=default&datasets=wiktionary` ищет в 1–5
+уникальных публичных датасетах. Группы идут в порядке установки; каждая содержит название,
+источник, версию, лицензию и атрибуцию. Одинаковое написание в разных словарях не объединяется.
+
+- `status: "ok"`: `data` и `meta` подробного поиска; пустой `data` означает отсутствие совпадений.
+- `status: "unavailable"`: `error: "dataset_unavailable"`, без результатов и пагинации.
+  Частичная ошибка — HTTP 200 с `meta.partial: true`; недоступный по публичности адресат
+  отклоняет весь запрос с 404. Внутренние сведения об ошибке не возвращаются.
+- Фильтры, ранжирование, идентификаторы и пагинация действуют внутри каждой группы:
+  `limit` 1–20 (по умолчанию 10), `page` 1–20 (по умолчанию 1), не более 100 записей в ответе.
+  Чтобы перелистнуть одну группу, запросите только её имя и следующую страницу.
+- Каждый выбранный датасет расходует одну единицу общего публичного лимита, включая
+  неудачные чтения. Бюджет списывается до поиска; при нехватке — 429 без выполнения поиска,
+  уже списанные единицы не возвращаются. Группы читаются последовательно.
+- Выбранный поиск и список датасетов требуют проверки ETag при каждом использовании
+  (`public, no-cache, must-revalidate`). `Last-Modified` информационный: изменения видимости
+  могут произойти в одну секунду. Частичные ошибки — `no-store`, никогда 304.
+
+На сайте раздел «Словари» позволяет выбрать до пяти словарей; без выбора используется активный.
+Запрос сохраняется в `q`, один выбор — в `dataset`, несколько — в повторяющемся `datasets`,
+включая смену языка интерфейса. Ссылки ведут на вкладку словаря-источника, например
+`/ru/word/Amber?dataset=my_words`. Неудачные группы показаны отдельно от пустых.
 
 #### Тиры поиска и допуск опечаток
 
@@ -419,11 +452,10 @@ curl 'http://localhost:3010/api/v1/random?part_of_speech=verb&word_level=A2'
   share-alike одной группы не распространяется на записи другой и не покидает свои.
 - **`404 word_doesnt_found`**, когда слова нет ни в одном датасете. Датасет без такого слова
   отвечает пустой группой: то, что в источнике слова нет, тоже сведение.
-- **Один запрос** в счёт лимита, сколько бы ни было датасетов. Поиск остаётся на отдаваемом
-  датасете.
-- **Читается каждый датасет экземпляра**, в том числе ни разу не активированный: датасет
-  публичен с момента установки, вместе с историей его правок и именами читателей, указанных
-  в ней.
+- **Один запрос** в счёт лимита для этого чтения слова, сколько бы ни было датасетов.
+  Групповой поиск отдельно расходует единицу бюджета за каждый выбранный датасет.
+- **Читаются только публично открытые датасеты**, активные и неактивные, с историей правок
+  и указанными авторами. Новые установки и собственные датасеты изначально закрыты.
 - **Сообщение об ошибке указывает просматриваемый датасет.** Передавайте `dataset` группы
   в `POST /api/v1/suggestions`: все IDs проверяются в этом датасете и для указанного слова.
   Без `dataset` используется активный словарь. Закрытый, неизвестный или удалённый датасет

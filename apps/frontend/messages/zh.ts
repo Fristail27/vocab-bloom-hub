@@ -1006,6 +1006,14 @@ export default {
     intro:
       "/api/v1 下的公共只读 API：无需授权，每个响应都封装在 '{ data, meta }' 中，错误以 '{ statusCode, message, error: true }' 返回，每个响应都带有 X-API-Version。每个页面都描述了请求的筛选参数，并允许您对当前数据库发起真实请求。 /api/compat/dictionaryapi 兼容接口返回 v1/v2 数组，而非原生响应封装。",
     public_endpoints: '公共端点',
+    endpoint_datasets: '公开数据集',
+    desc_datasets:
+      '按安装顺序列出可公开读取的数据集及其使用条款，以及搜索最多可选择的数据集数量。不包含已关闭的数据集。',
+    endpoint_search_datasets_get: '搜索所选数据集',
+    desc_search_datasets_get:
+      '在 1–5 个公开数据集中分别搜索，每组保留来源条款、本地 ID 和分页。每个所选数据集消耗共享配额的一个单位。空结果的 status 为 ok；读取失败的 status 为 unavailable，且 meta.partial 为 true。未知或已关闭的目标返回 404，不回退到其他数据集。',
+    param_desc_datasets:
+      'GET /api/v1/datasets 中的 1–5 个不重复的公开数据集名称；用逗号分隔输入，以重复的查询键发送。',
     endpoint_search_get: '基本搜索',
     endpoint_search_detailed_get: '详细搜索',
     desc_search_get:
@@ -1062,7 +1070,7 @@ export default {
     param_desc_word_id: '词目下某一个词条的 id，当报告涉及特定词性时使用',
     param_desc_word: '词目拼写；短语可包含空格。freedictionaryapi.com 接口区分大小写。',
     param_desc_dataset:
-      '实例中数据集的名称，与分组的 dataset 字段一致：default、wiktionary、wordnet、wordnet_princeton',
+      '公开数据集名称。搜索时省略则使用当前启用的数据集；未知或已关闭的目标返回 404，不回退。',
     param_desc_words: '词目拼写，1 到 50 个，以逗号分隔；每个都按词目查询的方式匹配',
     param_desc_id: '词条的数字 id',
     param_desc_cursor: '上一页的 meta.next_cursor；第一页省略',

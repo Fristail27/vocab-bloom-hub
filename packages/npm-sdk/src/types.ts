@@ -67,3 +67,12 @@ export type WordsResponse = Schemas['PublicWordsV1ResT'];
 export type WordsBatchResponse = Schemas['PublicWordsBatchV1ResT'];
 export type MetaResponse = Schemas['PublicMetaV1ResT'];
 export type SuggestionCreatedResponse = Schemas['PublicSuggestionCreatedV1ResT'];
+
+/** Grouped detailed search in 1–5 public datasets; repeated dataset query keys. */
+export type SearchDatasetsRequest = NonNullable<
+  operations['PublicSearchController_searchDatasetsGet']['parameters']['query']
+>;
+export type SearchDatasetsResponse = Schemas['PublicSearchDatasetsV1ResT'];
+export type SearchDataset = Schemas['PublicSearchDatasetV1T'];
+export type DatasetsResponse = Schemas['PublicDatasetsV1ResT'];
+export type DatasetTerms = Schemas['PublicDatasetTermsV1T'];

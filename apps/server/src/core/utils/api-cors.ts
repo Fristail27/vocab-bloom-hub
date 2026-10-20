@@ -22,6 +22,6 @@ export const apiCorsOptions =
               'X-RateLimit-Reset',
             ],
           }
-        : { origin: origins, credentials: true },
+        : { origin: origins, credentials: true, exposedHeaders: ['X-Dataset'] },
     );
   };

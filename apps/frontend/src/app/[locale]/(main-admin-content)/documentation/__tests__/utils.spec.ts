@@ -49,6 +49,22 @@ describe('buildRequestBody', () => {
     expect(buildRequestBody(batchEndpoint.params, { words: ' , ' })).toEqual({});
   });
 
+  it('keeps selected search targets and serializes grouped targets as repeated keys', () => {
+    expect(buildRequestBody(searchEndpoint.params, { search: 'run', dataset: 'reader_words' })).toEqual({
+      search: 'run',
+      dataset: 'reader_words',
+    });
+    const grouped = getEndpointBySlug('search-datasets')!;
+    const body = buildRequestBody(grouped.params, {
+      search: 'run',
+      datasets: 'default, reader_words',
+      dataset: 'ignored',
+    });
+    expect(buildCurlSnippet(grouped, '/api', body)).toBe(
+      "curl -X GET '/api/v1/search/datasets?search=run&datasets=default&datasets=reader_words'",
+    );
+  });
+
   it('не пропускает значения параметров, которых нет в описании метода', () => {
     const body = buildRequestBody(searchEndpoint.params, { search: 'run', page: 3 });
 
@@ -142,6 +158,7 @@ describe('DOCUMENTED_ENDPOINTS', () => {
   it('описывает все фильтры детального поиска', () => {
     expect(detailedEndpoint.params.map(({ name }) => name)).toEqual([
       'search',
+      'dataset',
       'type',
       'limit',
       'page',

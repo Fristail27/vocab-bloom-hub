@@ -126,4 +126,54 @@ describe('WordSearch status', () => {
     await render();
     expect(status().textContent).toBe('1 result shown.');
   });
+  it('restores a selected dictionary and links to its exact word tab', async () => {
+    window.history.replaceState(null, '', '/en/word?q=run&dataset=wordnet');
+    fetchMock.mockResolvedValue(response(1));
+    await render();
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/search?search=run&limit=20&dataset=wordnet');
+    expect(container.querySelector('ul a')!.getAttribute('href')).toBe('/word/word0?dataset=wordnet');
+  });
+
+  it('keeps equal local IDs in separate groups and never calls a failed group empty', async () => {
+    window.history.replaceState(null, '', '/en/word?q=run&datasets=default&datasets=wordnet');
+    const group = (dataset: string) => ({
+      dataset,
+      title: dataset,
+      attribution: dataset,
+      license: 'CC0',
+      status: 'ok',
+      data: [hit(1)],
+      meta: { page: 1, limit: 20, has_more: false, fuzzy: false },
+    });
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [group('default'), group('wordnet')], meta: { datasets: 2, partial: false } }),
+    });
+    await render();
+    expect(container.querySelectorAll('section')).toHaveLength(2);
+    expect([...container.querySelectorAll('ul a')].map((a) => a.getAttribute('href'))).toEqual([
+      '/word/word1?dataset=default',
+      '/word/word1?dataset=wordnet',
+    ]);
+    expect(status().textContent).toBe('2 results shown.');
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [
+          {
+            ...group('wordnet'),
+            status: 'unavailable',
+            data: undefined,
+            meta: undefined,
+            error: 'dataset_unavailable',
+          },
+        ],
+        meta: { datasets: 1, partial: true },
+      }),
+    });
+    await submit();
+    expect(status().textContent).toBe('Some dictionaries could not be searched.');
+    expect(container.querySelector('section')!.textContent).toContain('This dictionary could not be searched.');
+    expect(container.textContent).not.toContain('Nothing found.');
+  });
 });

@@ -289,6 +289,17 @@ export default {
       'El diccionario en páginas: un lema con cada categoría gramatical, sus formas, significados, ejemplos y traducciones — lo que responde la API, en formato legible.',
     search_placeholder: 'Una palabra o una frase…',
     search_label: 'Buscar en el diccionario',
+    search_datasets: 'Diccionarios',
+    search_dataset_hint:
+      'Selecciona hasta {count} diccionarios. Sin selección, se busca en el diccionario activo.',
+    search_active_dataset: 'Diccionario activo (predeterminado)',
+    search_partial: 'No se pudo buscar en algunos diccionarios.',
+    search_group_unavailable: 'No se pudo buscar en este diccionario. Inténtalo de nuevo.',
+    search_retry: 'Reintentar',
+    search_previous: 'Anterior',
+    search_next: 'Siguiente',
+    search_page: 'Página {page}',
+    search_group_pages: 'Páginas de {dataset}',
     search_button: 'Buscar',
     search_loading: 'Buscando…',
     search_results:

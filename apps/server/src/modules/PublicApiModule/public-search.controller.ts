@@ -1,30 +1,25 @@
 import { Controller, Get, Query, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { EnSearchService } from '../EnModule/modules/EnSearch/enSearch.service';
-import { SearchDetailedV1QueryDTO, SearchV1QueryDTO } from './dto/SearchV1Query.dto';
-import { PublicSearchDetailedV1ResT, PublicSearchV1ResT } from '../../../types';
-import { PublicApiThrottlerGuard } from '../../core/guards/public-api-throttler.guard';
-import { PublicCacheInterceptor } from './public-cache.interceptor';
+import { PublicSearchService } from './public-search.service';
+import { SearchDatasetsV1QueryDTO, SearchDetailedV1QueryDTO, SearchV1QueryDTO } from './dto/SearchV1Query.dto';
+import {
+  PublicDatasetsV1ResT,
+  PublicSearchDatasetsV1ResT,
+  PublicSearchDetailedV1ResT,
+  PublicSearchV1ResT,
+} from '../../../types';
+import { PublicSearchThrottlerGuard } from '../../core/guards/public-search-throttler.guard';
+import { PublicSearchCacheInterceptor } from './public-search-cache.interceptor';
 import { PUBLIC_API_PREFIX, PUBLIC_API_THROTTLE } from '../../core/utils/public-api';
 
 @ApiTags('Public API v1')
 @Controller(`${PUBLIC_API_PREFIX}/search`)
-@UseGuards(PublicApiThrottlerGuard)
+@UseGuards(PublicSearchThrottlerGuard)
 @Throttle(PUBLIC_API_THROTTLE)
-@UseInterceptors(PublicCacheInterceptor)
+@UseInterceptors(PublicSearchCacheInterceptor)
 export class PublicSearchController {
-  constructor(private readonly enSearchService: EnSearchService) {}
-
-  private async flat(request: SearchV1QueryDTO): Promise<PublicSearchV1ResT> {
-    const { items, fuzzy, short_term } = await this.enSearchService.searchFlat(request);
-    return { data: items, meta: { count: items.length, fuzzy, short_term } };
-  }
-
-  private async detailed(request: SearchDetailedV1QueryDTO): Promise<PublicSearchDetailedV1ResT> {
-    const { items, ...meta } = await this.enSearchService.searchDetailed(request);
-    return { data: items, meta };
-  }
+  constructor(private readonly search: PublicSearchService) {}
 
   // Both searches are GET reads (issue #396): the fields travel in the query
   // string and the answer carries the caching headers of the prefix (ETag,
@@ -41,7 +36,7 @@ export class PublicSearchController {
   })
   @Get('/')
   async searchGet(@Query() query: SearchV1QueryDTO): Promise<PublicSearchV1ResT> {
-    return this.flat(query);
+    return this.search.flat(query);
   }
 
   @ApiOperation({
@@ -52,6 +47,31 @@ export class PublicSearchController {
   })
   @Get('/detailed')
   async searchDetailedGet(@Query() query: SearchDetailedV1QueryDTO): Promise<PublicSearchDetailedV1ResT> {
-    return this.detailed(query);
+    return this.search.detailed(query);
+  }
+
+  @ApiOperation({
+    summary: 'Search up to five public datasets, in separate groups',
+    description:
+      'Repeat datasets for each target (1–5 unique names). Groups follow installation order. The detailed search filters, limit (1–20) and page (1–20) apply independently to every group. Relevance scores are local to each dataset. Empty matches have status ok and an empty data array; failed readers have status unavailable and no results/pagination. Unknown or closed targets reject the entire request with 404. Partial failures return 200 with meta.partial and Cache-Control: no-store. Each selected dataset costs one unit of the shared public rate budget, including failed reads. Selected searches revalidate their ETag on every use.',
+  })
+  @Get('/datasets')
+  searchDatasetsGet(@Query() query: SearchDatasetsV1QueryDTO): Promise<PublicSearchDatasetsV1ResT> {
+    return this.search.grouped(query);
+  }
+}
+
+@ApiTags('Public API v1')
+@Controller(`${PUBLIC_API_PREFIX}/datasets`)
+@UseGuards(PublicSearchThrottlerGuard)
+@Throttle(PUBLIC_API_THROTTLE)
+@UseInterceptors(PublicSearchCacheInterceptor)
+export class PublicDatasetsController {
+  constructor(private readonly search: PublicSearchService) {}
+
+  @ApiOperation({ summary: 'Publicly readable datasets and their terms, in installation order' })
+  @Get('/')
+  list(): Promise<PublicDatasetsV1ResT> {
+    return this.search.inventory();
   }
 }

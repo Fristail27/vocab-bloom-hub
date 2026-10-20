@@ -343,3 +343,42 @@ describe('VocabBloomClient without a server (issue #275)', () => {
     expect(cache.size).toBe(2);
   });
 });
+
+describe('selected dataset search (#652)', () => {
+  it('encodes single selectors, repeated group selectors, filters and inventory reads', async () => {
+    const { fetch, calls } = fakeFetch(Array.from({ length: 4 }, () => () => json({ data: [], meta: {} })));
+    const client = new VocabBloomClient({ baseUrl: 'https://dictionary.example', fetch });
+    await client.search({ search: 'run', dataset: 'words' });
+    await client.searchDetailed({ search: 'run', dataset: 'words', with_meanings: true });
+    await client.searchDatasets({
+      search: 'run',
+      datasets: ['default', 'words'],
+      page: 2,
+      limit: 5,
+      translation_languages: ['ru', 'de'],
+    });
+    await client.datasets();
+    expect(new URL(calls[0].url).searchParams.get('dataset')).toBe('words');
+    expect(new URL(calls[1].url).searchParams.get('dataset')).toBe('words');
+    const grouped = new URL(calls[2].url);
+    expect(grouped.pathname).toBe('/api/v1/search/datasets');
+    expect(grouped.searchParams.getAll('datasets')).toEqual(['default', 'words']);
+    expect(grouped.searchParams.getAll('translation_languages')).toEqual(['ru', 'de']);
+    expect(grouped.searchParams.get('page')).toBe('2');
+    expect(new URL(calls[3].url).pathname).toBe('/api/v1/datasets');
+  });
+
+  it('keeps partial-failure bodies out of its conditional cache', async () => {
+    const partial = { data: [], meta: { datasets: 1, partial: true } };
+    const { fetch, calls } = fakeFetch([
+      () => json(partial, { headers: { ETag: '"partial"', 'Cache-Control': 'no-store' } }),
+      () => json({ data: [], meta: { datasets: 1, partial: false } }),
+    ]);
+    const cache = new MemoryCache();
+    const client = new VocabBloomClient({ baseUrl: 'https://dictionary.example', fetch, cache });
+    expect((await client.searchDatasets({ search: 'run', datasets: ['default'] })).meta.partial).toBe(true);
+    expect(cache.size).toBe(0);
+    await client.searchDatasets({ search: 'run', datasets: ['default'] });
+    expect(calls[1].init.headers).not.toHaveProperty('If-None-Match');
+  });
+});

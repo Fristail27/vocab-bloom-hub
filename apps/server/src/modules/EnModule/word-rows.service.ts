@@ -11,7 +11,7 @@ import { EnMeaning } from './entities/en_meaning.entity';
 import { EnMeaningTranslation } from './entities/en_meaning_translation.entity';
 import { EnShortTranslation } from './entities/en_short_translation.entity';
 import { EnWordFormsE } from '../../../types';
-import { scopedDataSource } from '../../core/utils/dataset-scope';
+import { scopedDataSource, scopedManager } from '../../core/utils/dataset-scope';
 import type { OriginT } from '../../../types';
 import { contributionsOf } from '../../../core/utils/word_contributions';
 
@@ -49,7 +49,7 @@ export class WordRowsService {
   }
 
   private get manager(): EntityManager {
-    return this.transactionManager ?? this.dataSource.manager;
+    return this.transactionManager ?? scopedManager(this.dataSource.manager);
   }
 
   constructor(

@@ -1075,6 +1075,14 @@ export default {
     intro:
       "L'API publique en lecture seule sous /api/v1 : sans autorisation, chaque réponse dans une enveloppe '{ data, meta }', les erreurs sous la forme '{ statusCode, message, error: true }', chaque réponse porte X-API-Version. Chaque page décrit les filtres de la requête et permet de lancer une vraie requête sur la base de données actuelle. Les routes de compatibilité /api/compat/dictionaryapi renvoient des tableaux v1/v2 au lieu de l’enveloppe native.",
     public_endpoints: 'Points de terminaison publics',
+    endpoint_datasets: 'Jeux de données publics',
+    desc_datasets:
+      'Liste les jeux de données publics et leurs conditions dans l’ordre d’installation, avec le nombre maximal sélectionnable pour une recherche. Les jeux fermés sont omis.',
+    endpoint_search_datasets_get: 'Rechercher dans les jeux sélectionnés',
+    desc_search_datasets_get:
+      'Recherche dans 1 à 5 jeux publics, en groupes distincts avec conditions de source, IDs locaux et pagination. Chaque jeu consomme une unité du quota partagé. Un résultat vide a status ok ; une erreur de lecture a status unavailable et meta.partial: true. Une cible inconnue ou fermée renvoie 404 sans substitution.',
+    param_desc_datasets:
+      '1 à 5 noms publics uniques de GET /api/v1/datasets ; saisir des noms séparés par des virgules, envoyés sous forme de clés de requête répétées.',
     endpoint_search_get: 'Recherche simple',
     endpoint_search_detailed_get: 'Recherche détaillée',
     desc_search_get:
@@ -1137,7 +1145,7 @@ export default {
     param_desc_word:
       'Graphie ; les expressions peuvent contenir des espaces. freedictionaryapi.com distingue la casse.',
     param_desc_dataset:
-      'Nom d’un jeu de données de l’instance, tel que dataset d’un groupe l’indique : default, wiktionary, wordnet, wordnet_princeton',
+      'Nom d’un jeu public. Sans sélection, la recherche utilise le jeu actif ; une cible inconnue ou fermée renvoie 404 sans substitution.',
     param_desc_words:
       "Graphies de mots-vedettes, de 1 à 50, séparées par des virgules ; chacune comparée comme dans la consultation d'entrée",
     param_desc_id: "Id numérique de l'entrée",

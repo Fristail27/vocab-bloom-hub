@@ -429,29 +429,52 @@ export class DatasetsService implements OnModuleInit, OnModuleDestroy {
     return this.datasetsRep.find({ where: { is_public: true }, order: { id: 'ASC' } });
   }
 
+  /** Resolve only publicly readable targets; never reveal a closed registry row. */
+  async selectPublic(names: readonly string[]): Promise<Dataset[]> {
+    const readable = await this.publiclyReadable();
+    const selected = readable.filter((dataset) => names.includes(dataset.name));
+    if (selected.length !== new Set(names).size) throw new NotFoundException(ErrorCodes.dataset_not_found);
+    return selected;
+  }
+
   /** Public intake: pin the target, its terms/version and its queue to one connection. */
   async withPublicDataset<T>(name: string | undefined, work: (dataset: Dataset) => Promise<T>): Promise<T> {
-    const target = name ?? this.active.name;
-    const dataset = (await this.publiclyReadable()).find((item) => item.name === target);
-    if (!dataset) throw new NotFoundException(ErrorCodes.dataset_not_found);
+    return this.withPublicScope(name, work, true);
+  }
+
+  /** Hold the schema and public terms for a read, without serializing other readers. */
+  async withPublicRead<T>(name: string, work: (dataset: Dataset) => Promise<T>): Promise<T> {
+    return this.withPublicScope(name, work, false);
+  }
+
+  private async withPublicScope<T>(
+    name: string | undefined,
+    work: (dataset: Dataset) => Promise<T>,
+    intake: boolean,
+  ): Promise<T> {
+    const [dataset] = await this.selectPublic([name ?? this.active.name]);
     const dataSource = await this.reader(dataset);
     const runner = dataSource.createQueryRunner();
     try {
       await runner.connect();
       if (this.supported) {
         await runner.startTransaction();
-        // Hold the target schema open until intake finishes. Without this,
+        // Hold the target schema open until the operation finishes. Without this,
         // DROP SCHEMA could make later unqualified reads fall through to public.
-        await runner.query('LOCK TABLE suggestions IN ROW EXCLUSIVE MODE');
+        await runner.query(
+          intake
+            ? 'LOCK TABLE suggestions IN ROW EXCLUSIVE MODE'
+            : 'LOCK TABLE en_entries IN ACCESS SHARE MODE',
+        );
         await this.assertOnSchema(dataset.schema, runner);
       }
       const query = runner.manager
         .getRepository(Dataset)
         .createQueryBuilder('dataset')
         .where('dataset.id = :id AND dataset.is_public = :open', { id: dataset.id, open: true });
-      // Serialize submissions to this queue and changes to its visibility/terms.
+      // Intake serializes submissions; readers share the lock. Both hold visibility/terms.
       // SQLite has one shared connection and cannot nest concurrent transactions.
-      if (this.supported) query.setLock('pessimistic_write');
+      if (this.supported) query.setLock(intake ? 'pessimistic_write' : 'pessimistic_read');
       const current = await query.getOne();
       if (!current) throw new NotFoundException(ErrorCodes.dataset_not_found);
       const result = await withDatasetScope({ dataset: current, dataSource, manager: runner.manager }, () =>

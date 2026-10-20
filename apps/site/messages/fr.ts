@@ -291,6 +291,17 @@ export default {
       "Le dictionnaire en pages : un mot-vedette avec chaque catégorie grammaticale, ses formes, sens, exemples et traductions — ce que l'API répond, en version lisible.",
     search_placeholder: 'Un mot ou une expression…',
     search_label: 'Chercher dans le dictionnaire',
+    search_datasets: 'Dictionnaires',
+    search_dataset_hint:
+      'Sélectionnez jusqu’à {count} dictionnaires. Sans sélection, la recherche porte sur le dictionnaire actif.',
+    search_active_dataset: 'Dictionnaire actif (par défaut)',
+    search_partial: 'La recherche a échoué dans certains dictionnaires.',
+    search_group_unavailable: 'La recherche a échoué dans ce dictionnaire. Réessayez.',
+    search_retry: 'Réessayer',
+    search_previous: 'Précédent',
+    search_next: 'Suivant',
+    search_page: 'Page {page}',
+    search_group_pages: 'Pages de {dataset}',
     search_button: 'Chercher',
     search_loading: 'Recherche en cours…',
     search_results:

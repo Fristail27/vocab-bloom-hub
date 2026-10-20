@@ -10,6 +10,8 @@ test.describe('documentation', () => {
     // the searches are GET reads only (issue #396); the POST forms are gone (#440)
     await expect(page.getByRole('link', { name: 'Basic search', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Detailed search', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Public datasets', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Search selected datasets', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: /POST form/ })).toHaveCount(0);
     // the auth routes are admin plumbing, not part of the public API
     await expect(page.getByRole('link', { name: 'Sign in' })).toHaveCount(0);
@@ -63,7 +65,7 @@ test.describe('documentation', () => {
     await page.goto('/en/documentation/word-dataset-history');
     const params = page.getByRole('table').first();
     await expect(params.getByText('dataset', { exact: true })).toBeVisible();
-    await expect(params.getByText(/Name of a dataset of the instance/)).toBeVisible();
+    await expect(params.getByText(/Public dataset name/)).toBeVisible();
     await page.getByRole('textbox').first().fill('dapple');
     // the last select of the page: the ones of the header come first
     await page.getByRole('combobox').last().click();
