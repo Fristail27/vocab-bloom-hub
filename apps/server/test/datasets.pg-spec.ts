@@ -46,6 +46,7 @@ const DICTIONARY_TABLES = [
   'suggestions',
   // the history of edits (issue #531)
   'en_changes',
+  'en_content_reviews',
   'reconciliation_identity',
   'reconciliation_revisions',
   'reconciliation_records',

@@ -272,3 +272,47 @@ read and each word-page tab describes its own dataset; an admin export describes
 selected on its card. Catalog terms come from `apps/server/core/constants/dataset_catalog.ts`;
 own datasets and forks have owner-supplied contribution terms. Word origins and contribution
 snapshots retain the terms captured from their sources, including through export/import.
+
+## Local content review (#647)
+
+In the admin word editor, each definition, meaning translation and short translation has
+an independent review marker: **Not checked**, **Checked**, or **Changed since checking**.
+A definition check covers its title and definition text. A meaning-translation check covers
+the language, translated title, definition and variants, in the context of its source
+meaning. A short-translation check covers its language, description and variants.
+Examples, quotations, grammar, forms, pronunciation and source/license metadata are outside
+these scopes. A checked portion does not certify the entire word or guarantee correctness.
+No reviewer identity is collected; existing content starts unchecked.
+
+Use **Mark as checked**, **Confirm again**, or **Clear check** beside the portion in the
+editor. Confirmation verifies that the displayed text is still current; on a concurrent
+edit, reload the word before checking it. Under the word search on the Managing page,
+expand **Content review** and select a portion kind and status. The word prefix above
+also filters this list. Counts refer to individual portions, while the paginated list
+contains distinct words with matching portions. A word may appear under several statuses.
+All reads and writes use the dataset selected for editing, including inactive/closed ones.
+
+A marker stores a content snapshot under the portion's portable identity, separately from
+content-edit history, generation flags, versions and origins. Comparing the current content
+with that snapshot handles admin edits, applied suggestions and source/merge publication.
+Unchanged saves and unrelated changes preserve checks; a changed source definition also
+makes checks of its translations stale. An exact revert restores the applicable checked
+state. A removed portion is not listed; a new portion with only a reused database ID starts
+unchecked. Notes for removed identities are retained for restoration of the original content.
+
+Reviewing does not modify content history, `user_modified`, public `modified`, release versions,
+source attribution, or contribution licenses, and does not protect content from source updates.
+Review notes are local to the dataset and instance: native exports, imports, copied words and
+forks do not transfer them. Source updates can preserve an existing local note when the
+portable identity survives; their current content still has to match its snapshot. A new
+identity starts unchecked. A full database backup, unlike a dataset export, retains local notes.
+There are no public review badges, public API fields, review accounts, or review markers for
+examples, pronunciation or other scopes in this first version.
+
+The admin-only endpoints are `GET /api/en/reviews/word/{id}`,
+`GET /api/en/reviews/words?scope=definition&status=unchecked`, and
+`POST /api/en/reviews/{scope}/{id}` with `{checked, expected}`. Scopes are `definition`,
+`meaning_translation`, and `short_translation`. Each endpoint supports the usual `dataset`
+query parameter. The listing accepts `search` (word prefix), `page` and `limit` (1–100).
+PostgreSQL stores `en_content_reviews` in each dataset schema through a dataset migration;
+SQLite supports the same markers for its single dataset.

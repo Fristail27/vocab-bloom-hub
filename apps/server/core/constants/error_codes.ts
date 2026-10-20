@@ -61,6 +61,8 @@ export enum ErrorCodes {
   translation_doesnt_found = 'translation_doesnt_found',
   setting_field_doesnt_found = 'setting_field_doesnt_found',
   setting_field_already_exists = 'setting_field_already_exists',
+  review_target_not_found = 'review_target_not_found',
+  review_content_changed = 'review_content_changed',
   unknown_error = 'unknown_error',
   too_many_requests = 'too_many_requests',
   // reader feedback on the dictionary data (issue #327)

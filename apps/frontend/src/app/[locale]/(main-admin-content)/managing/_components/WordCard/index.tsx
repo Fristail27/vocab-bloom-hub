@@ -1,5 +1,6 @@
 'use client';
 
+import { ContentReviewProvider } from '@/components/ContentReview';
 import { WordOrigins } from '@/components/Origins/WordOrigins';
 import React, { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
@@ -178,151 +179,153 @@ export const WordCard: React.FC<WordCardP> = ({ word, mode = WordCardModeE.view,
 
   return (
     <EditedDatasetContext.Provider value={mode === WordCardModeE.edit ? dataset : undefined}>
-      {mode === WordCardModeE.edit && <EditLicenseNote confirmSource />}
-      <EditCommonDataModal
-        data={state}
-        isOpen={showEditDataModal}
-        onClose={() => setShowEditDataModal(false)}
-        pos={word.part_of_speech}
-        submit={editCommonInfo}
-      />
-      <section className={styles.wordCard}>
-        {mode === WordCardModeE.edit && (
-          <Button
-            className={styles.editCommonData}
-            type="primary"
-            size="small"
-            onClick={() => setShowEditDataModal(true)}
-          >
-            <EditOutlined />
-            {t('edit_common_data_btn')}
-          </Button>
-        )}
-        <div className={clsx(styles.line, styles.mainLine)}>
-          <Tag className={styles.mainTag} color="volcano" variant="outlined">
-            <Icon name={FlagByAreaEnum[word.area_variant ?? EnAreaVariantsE.common] as IconNamesT} />
-            {word.word}
-          </Tag>
-          <Tag color="blue" variant="outlined">
-            {word.part_of_speech}
-          </Tag>
-        </div>
-        <div className={styles.line}>
-          <Tag className={styles.tag} color="geekblue" variant="outlined">
-            <Text>{t('version')}:</Text>
-            {state.version}
-          </Tag>
-          <Tag className={styles.tag} color="geekblue" variant="outlined">
-            <Text>{t('pronunciation')}:</Text>
-            {state.transcription}
-          </Tag>
-          <Tag className={styles.tag} color="success" variant="outlined">
-            <Text>{t('level')}:</Text>
-            {state.word_level}
-          </Tag>
-          <Tag className={styles.tag} color="geekblue" variant="outlined">
-            <Text>{t('register')}:</Text>
-            {state.language_register}
-          </Tag>
-          <Tag className={styles.tag} color="geekblue" variant="outlined">
-            {t('is_obsolete')}
-          </Tag>
-          {state.generated && (
-            <Tag className={styles.tag} color="geekblue" variant="outlined">
-              {t('is_ai_generated')}
-            </Tag>
-          )}
-          {state.generated && (
-            <Tag className={styles.tag} color="geekblue" variant="outlined">
-              <Text>{t('source_model')}:</Text>
-              {state.generated_by_model}
-            </Tag>
-          )}
-          {state.user_modified && (
-            <Tag className={styles.tag} color="orange" variant="outlined">
-              {t('user_modified')}
-            </Tag>
-          )}
-          {mode === WordCardModeE.edit && state.user_modified && (
-            <Popconfirm
-              title={t('user_modified_reset_confirm')}
-              onConfirm={resetUserModified}
-              okText={t('user_modified_reset_ok')}
-              cancelText={t('user_modified_reset_cancel')}
+      <ContentReviewProvider word={state} enabled={mode === WordCardModeE.edit} dataset={dataset?.name}>
+        {mode === WordCardModeE.edit && <EditLicenseNote confirmSource />}
+        <EditCommonDataModal
+          data={state}
+          isOpen={showEditDataModal}
+          onClose={() => setShowEditDataModal(false)}
+          pos={word.part_of_speech}
+          submit={editCommonInfo}
+        />
+        <section className={styles.wordCard}>
+          {mode === WordCardModeE.edit && (
+            <Button
+              className={styles.editCommonData}
+              type="primary"
+              size="small"
+              onClick={() => setShowEditDataModal(true)}
             >
-              <Button size="small">{t('user_modified_reset')}</Button>
-            </Popconfirm>
+              <EditOutlined />
+              {t('edit_common_data_btn')}
+            </Button>
           )}
-        </div>
-        {word.part_of_speech === EnPartOfSpeechE.noun && <NounInfoTags word={state} />}
-        {word.part_of_speech === EnPartOfSpeechE.verb && (
-          <VerbInfoTags word={state} mode={mode} updatePhrasal={updatePhrasal} />
-        )}
-        {state.categories && state.categories.length > 0 && (
-          <CategoriesTags categories={state.categories || []} word={word.word} />
-        )}
-        <div className={styles.desc}>
-          <Text strong>{t('description')}</Text>
-          <Text code>{state.description}</Text>
-        </div>
-        {word.part_of_speech === EnPartOfSpeechE.grammar_pattern && state.pattern && (
+          <div className={clsx(styles.line, styles.mainLine)}>
+            <Tag className={styles.mainTag} color="volcano" variant="outlined">
+              <Icon name={FlagByAreaEnum[word.area_variant ?? EnAreaVariantsE.common] as IconNamesT} />
+              {word.word}
+            </Tag>
+            <Tag color="blue" variant="outlined">
+              {word.part_of_speech}
+            </Tag>
+          </div>
+          <div className={styles.line}>
+            <Tag className={styles.tag} color="geekblue" variant="outlined">
+              <Text>{t('version')}:</Text>
+              {state.version}
+            </Tag>
+            <Tag className={styles.tag} color="geekblue" variant="outlined">
+              <Text>{t('pronunciation')}:</Text>
+              {state.transcription}
+            </Tag>
+            <Tag className={styles.tag} color="success" variant="outlined">
+              <Text>{t('level')}:</Text>
+              {state.word_level}
+            </Tag>
+            <Tag className={styles.tag} color="geekblue" variant="outlined">
+              <Text>{t('register')}:</Text>
+              {state.language_register}
+            </Tag>
+            <Tag className={styles.tag} color="geekblue" variant="outlined">
+              {t('is_obsolete')}
+            </Tag>
+            {state.generated && (
+              <Tag className={styles.tag} color="geekblue" variant="outlined">
+                {t('is_ai_generated')}
+              </Tag>
+            )}
+            {state.generated && (
+              <Tag className={styles.tag} color="geekblue" variant="outlined">
+                <Text>{t('source_model')}:</Text>
+                {state.generated_by_model}
+              </Tag>
+            )}
+            {state.user_modified && (
+              <Tag className={styles.tag} color="orange" variant="outlined">
+                {t('user_modified')}
+              </Tag>
+            )}
+            {mode === WordCardModeE.edit && state.user_modified && (
+              <Popconfirm
+                title={t('user_modified_reset_confirm')}
+                onConfirm={resetUserModified}
+                okText={t('user_modified_reset_ok')}
+                cancelText={t('user_modified_reset_cancel')}
+              >
+                <Button size="small">{t('user_modified_reset')}</Button>
+              </Popconfirm>
+            )}
+          </div>
+          {word.part_of_speech === EnPartOfSpeechE.noun && <NounInfoTags word={state} />}
+          {word.part_of_speech === EnPartOfSpeechE.verb && (
+            <VerbInfoTags word={state} mode={mode} updatePhrasal={updatePhrasal} />
+          )}
+          {state.categories && state.categories.length > 0 && (
+            <CategoriesTags categories={state.categories || []} word={word.word} />
+          )}
           <div className={styles.desc}>
-            <Text strong>{t('pattern')}</Text>
-            <Text italic>{state.pattern?.join(' ')}</Text>
+            <Text strong>{t('description')}</Text>
+            <Text code>{state.description}</Text>
+          </div>
+          {word.part_of_speech === EnPartOfSpeechE.grammar_pattern && state.pattern && (
+            <div className={styles.desc}>
+              <Text strong>{t('pattern')}</Text>
+              <Text italic>{state.pattern?.join(' ')}</Text>
+            </div>
+          )}
+          {formNames && (
+            <WordForms
+              updateFormOfWord={updateFormOfWord}
+              forms={state.forms}
+              formNames={formNames}
+              mode={mode}
+            />
+          )}
+          <ShortTranslationsPreview
+            translations={state.short_translations}
+            mode={mode}
+            updateShortTranslation={updateShortTranslation}
+          />
+          <MeaningsPreview
+            meanings={state.meanings}
+            mode={mode}
+            updateMeaning={updateMeaning}
+            headword={word.word}
+          />
+        </section>
+        <WordOrigins
+          id={state.id}
+          origins={state.origins}
+          contributions={state.contributions}
+          editable={mode === WordCardModeE.edit}
+          onSaved={() => void reload()}
+        />
+        {mode === WordCardModeE.edit && (
+          // a wrapper of its own: the margin of a class does not outweigh the styles of the component
+          <div className={styles.history}>
+            <Collapse
+              items={[
+                {
+                  key: 'history',
+                  label: tChanges('title'),
+                  children: (
+                    <>
+                      <p className={styles.historyIntro}>{tChanges('intro')}</p>
+                      <ChangesHistory
+                        headword={word.word}
+                        partOfSpeech={word.part_of_speech}
+                        pageSize={10}
+                        refreshKey={edits}
+                        onReverted={reload}
+                      />
+                    </>
+                  ),
+                },
+              ]}
+            />
           </div>
         )}
-        {formNames && (
-          <WordForms
-            updateFormOfWord={updateFormOfWord}
-            forms={state.forms}
-            formNames={formNames}
-            mode={mode}
-          />
-        )}
-        <ShortTranslationsPreview
-          translations={state.short_translations}
-          mode={mode}
-          updateShortTranslation={updateShortTranslation}
-        />
-        <MeaningsPreview
-          meanings={state.meanings}
-          mode={mode}
-          updateMeaning={updateMeaning}
-          headword={word.word}
-        />
-      </section>
-      <WordOrigins
-        id={state.id}
-        origins={state.origins}
-        contributions={state.contributions}
-        editable={mode === WordCardModeE.edit}
-        onSaved={() => void reload()}
-      />
-      {mode === WordCardModeE.edit && (
-        // a wrapper of its own: the margin of a class does not outweigh the styles of the component
-        <div className={styles.history}>
-          <Collapse
-            items={[
-              {
-                key: 'history',
-                label: tChanges('title'),
-                children: (
-                  <>
-                    <p className={styles.historyIntro}>{tChanges('intro')}</p>
-                    <ChangesHistory
-                      headword={word.word}
-                      partOfSpeech={word.part_of_speech}
-                      pageSize={10}
-                      refreshKey={edits}
-                      onReverted={reload}
-                    />
-                  </>
-                ),
-              },
-            ]}
-          />
-        </div>
-      )}
+      </ContentReviewProvider>
     </EditedDatasetContext.Provider>
   );
 };

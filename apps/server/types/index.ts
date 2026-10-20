@@ -8,4 +8,5 @@ export * from './errors';
 export * from './health';
 export * from './provenance';
 export * from './public';
+export * from './reviews';
 export * from './suggestions';

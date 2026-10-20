@@ -1,3 +1,5 @@
+import { EnReviewController } from './modules/EnReview/enReview.controller';
+import { EnReviewService } from './modules/EnReview/enReview.service';
 import { WordCopyService } from './word-copy.service';
 import { ReconciliationService } from './modules/EnReconciliation/reconciliation.service';
 import { ReconciliationController } from './modules/EnReconciliation/reconciliation.controller';
@@ -51,6 +53,7 @@ import { EnChangesService } from './modules/EnChanges/enChanges.service';
     SettingsModule,
   ],
   controllers: [
+    EnReviewController,
     ReconciliationController,
     // EnStatisticsController and EnAdminListsController must be registered before
     // EnController, otherwise GET /api/en/statistics, /api/en/words, /api/en/meanings
@@ -76,6 +79,7 @@ import { EnChangesService } from './modules/EnChanges/enChanges.service';
     EnImportDictionaryController,
   ],
   providers: [
+    EnReviewService,
     ReconciliationService,
     WordCopyService,
     WordRowsService,

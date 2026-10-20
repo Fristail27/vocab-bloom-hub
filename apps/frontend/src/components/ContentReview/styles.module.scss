@@ -1,0 +1,13 @@
+.browser {
+  display: grid;
+  gap: 12px;
+  padding-block: 12px;
+
+  ul {
+    padding-inline-start: 24px;
+  }
+
+  li {
+    padding-block: 6px;
+  }
+}

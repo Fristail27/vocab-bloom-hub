@@ -158,6 +158,15 @@ is shared across all targets; the queue cap is per dataset.
 
 Every edit of the content leaves a row in `en_changes` (entity `EnChange`, one table per dataset schema, created by a dataset migration): what was edited, the action and the values before and after (`diff`), keyed by headword and part of speech — never by id. The edit services call `recordChange` (`EnModule/utils/changes/`) inside the transaction of the mutation; where an edit comes from (admin, an applied suggestion with its author, a revert) is said around the call with `withChangeSource`, not passed through signatures. An edit of the common data stamps the entry `custom_version` and records the version it had (`diff.version`, admin-only); taking back the last change of an entry that shows returns that version (`restoreVersion`). A new mutation of the content must call `recordChange`, and a new field of a record goes into its snapshot (`snapshots.ts`) and into the column list of `revertChange.ts`. The history starts empty — a dataset is clean until an edit is recorded, nothing is inferred from `user_modified`, by a migration or by an import. "Modified" is computed, not stored: an entry is modified while it has rows with an empty `superseded_at` (`WordRowsService.modifiedWords`, one statement per answer). Every public answer that carries an entry or a part of one carries `source` and `modified` — a new public read must too. `EnChanges` (controller + service) lists the history, takes a change back and removes an author's name; the public projection is `toPublicChange` behind `GET /api/v1/words/{word}/history`. The history travels in an export (`vocab-bloom-hub-en-changes.jsonl`) and is merged by an import. Content edits are **not** written to `audit_log`. Human-authored public sources take nothing marked `generated` (`generated_not_allowed`, `isHumanAuthoredDataset`); OpenGloss explicitly declares generated content and accepts it, as do the project's dataset and the owner's. Details: `docs/datasets.md#editing-a-dataset-the-history-of-edits`.
 
+### Local content review
+
+`EnReview` (#647) serves admin-only `/api/en/reviews`: per-portion checks for definition
+(title/text), meaning translation (including its source meaning context), and short translation.
+`en_content_reviews` stores snapshots keyed by scope and portable `sync_id`, never just a row ID.
+Statuses are computed from content, including after edits, suggestions, reverts and reconciliation.
+Checks do not create content history or modify public/editorial flags. They are excluded from
+fork copying and native exports; never transfer an incoming review. See `docs/data.md#local-content-review-647`.
+
 ### Server: domain modules with sub-controller/service pairs
 
 Modules live in `apps/server/src/modules/` (AppModule is the root; AuthModule, EnModule, SettingsModule, SuggestionsModule, PublicApiModule, AuditModule, DatasetsModule, HealthModule, MetricsModule). The pattern inside a domain module like `EnModule`:

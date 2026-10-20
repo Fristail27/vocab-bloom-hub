@@ -1,3 +1,5 @@
+import { ContentReview } from '@/components/ContentReview';
+import { ReviewScopeE } from 'server/types/reviews';
 import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Typography, Badge, Tag, Button, App } from 'antd';
@@ -172,6 +174,7 @@ export const MeaningPreview: React.FC<MeaningPreviewP> = ({
           <Text className={styles.def} italic>
             {meaning.definition}
           </Text>
+          {mode === WordCardModeE.edit && <ContentReview scope={ReviewScopeE.definition} id={meaning.id} />}
           <div className={styles.meaningTranslationsContainer}>
             <Text className={styles.title}>{t('translation_full_meaning')}:</Text>
             <div className={styles.meaningTranslations}>

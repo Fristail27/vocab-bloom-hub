@@ -1,3 +1,5 @@
+import { ContentReview } from '@/components/ContentReview';
+import { ReviewScopeE } from 'server/types/reviews';
 import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { CloseOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
@@ -104,6 +106,9 @@ export const ShortTranslationsPreview: React.FC<ShortTranslationsPreviewP> = ({
                 <Icon size="medium" name={FlagByAreaEnum[translation.language] as IconNamesT} />
                 <Text dir="auto">{translation.description}</Text>
               </div>
+              {mode === WordCardModeE.edit && (
+                <ContentReview scope={ReviewScopeE.short_translation} id={translation.id} />
+              )}
               <div className={styles.variantsOfWord}>
                 {translation.variants_of_words.map((v) => (
                   <Tag key={v} color="orange" variant="outlined" dir="auto">

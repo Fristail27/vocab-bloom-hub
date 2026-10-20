@@ -175,7 +175,34 @@ export default {
       'Dieser Datensatz erhält Quellaktualisierungen. Erstellen Sie eine unabhängige Kopie für eigene Änderungen mit erhaltener Herkunft.',
     continue_editing: 'Weiter bearbeiten',
   },
+  content_review: {
+    intro:
+      'Lokale Prüfvermerke. Bei einer Definition werden Titel und Text geprüft, bei einer Übersetzung Text und Varianten. Beispiele, Grammatik und Aussprache bleiben getrennt. Die Vermerke garantieren keine Richtigkeit und werden weder exportiert noch in Forks übernommen.',
+    definition: 'Definition',
+    meaning_translation: 'Bedeutungsübersetzung',
+    short_translation: 'Kurzübersetzung',
+    unchecked: 'Nicht geprüft',
+    checked: 'Geprüft',
+    changed: 'Seit der Prüfung geändert',
+    check: 'Als geprüft markieren',
+    recheck: 'Erneut bestätigen',
+    clear: 'Markierung entfernen',
+    loading: 'Prüfstatus wird geladen…',
+    stale: 'Der Inhalt wurde geändert. Laden Sie das Wort vor der Prüfung neu.',
+    load_error: 'Der Prüfstatus konnte nicht geladen werden.',
+    retry: 'Aktualisieren',
+    browse: 'Inhalte prüfen',
+    filter_hint:
+      'Wörter nach dem Prüfstatus einzelner Teile filtern. Die Zähler gelten für Teile der gewählten Art und den Wortanfang oben. Teile desselben Wortes können unterschiedliche Zustände haben.',
+    scope: 'Teil des Eintrags',
+    status: 'Prüfstatus',
+    empty: 'Keine passenden Wörter.',
+    matches: 'Passende Teile: {count}',
+  },
   errors: {
+    review_target_not_found: 'Dieser Teil existiert nicht mehr. Laden Sie das Wort neu.',
+    review_content_changed: 'Der Inhalt wurde geändert. Laden Sie das Wort vor der Bestätigung neu.',
+
     [ErrorCodes.provenance_invalid]: 'Quellen- und Lizenzfelder prüfen.',
     [ErrorCodes.provenance_inherited]: 'Geerbte Bedingungen können nicht geändert werden.',
     [ErrorCodes.provenance_license_conflict]:
