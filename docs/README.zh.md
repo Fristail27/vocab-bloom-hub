@@ -147,7 +147,7 @@ curl -s 'localhost:3240/api/v1/search/detailed?search=run&with_meanings=true'
 ```
 
 > [!TIP]
-> 要固定使用某个发布版本而不是 `main` 开发构建，请在 `.env` 中设置 `VBH_TAG=1.2.0`。
+> 要固定使用某个发布版本而不是 `main` 开发构建，请在 `.env` 中设置 `VBH_TAG=1.3.0`。
 > 要在 <http://localhost:3242> 上添加网站（文档、API 参考、演练场、单词页面），请设置
 > `COMPOSE_PROFILES=db,site`。
 

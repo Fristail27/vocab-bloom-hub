@@ -152,7 +152,7 @@ curl -s 'localhost:3240/api/v1/search/detailed?search=run&with_meanings=true'
 ```
 
 > [!TIP]
-> To pin a release instead of the `main` development build, set `VBH_TAG=1.2.0` in `.env`.
+> To pin a release instead of the `main` development build, set `VBH_TAG=1.3.0` in `.env`.
 > To add the website (docs, API reference, playground, word pages) on <http://localhost:3242>, set
 > `COMPOSE_PROFILES=db,site`.
 

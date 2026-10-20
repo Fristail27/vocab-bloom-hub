@@ -152,7 +152,7 @@ curl -s 'localhost:3240/api/v1/search/detailed?search=run&with_meanings=true'
 ```
 
 > [!TIP]
-> لتثبيت إصدار محدد بدلًا من بناء التطوير `main`، عيّن `VBH_TAG=1.2.0` في `.env`.
+> لتثبيت إصدار محدد بدلًا من بناء التطوير `main`، عيّن `VBH_TAG=1.3.0` في `.env`.
 > لإضافة الموقع الإلكتروني (الوثائق، ومرجع الواجهة البرمجية، وساحة التجربة، وصفحات الكلمات) على
 > <http://localhost:3242>، عيّن `COMPOSE_PROFILES=db,site`.
 

@@ -157,7 +157,7 @@ curl -s 'localhost:3240/api/v1/search/detailed?search=run&with_meanings=true'
 
 > [!TIP]
 > Um ein Release statt des Entwicklungs-Builds `main` zu pinnen, setzen Sie
-> `VBH_TAG=1.2.0` in der `.env`. Um die Website (Dokumentation, API-Referenz, Playground,
+> `VBH_TAG=1.3.0` in der `.env`. Um die Website (Dokumentation, API-Referenz, Playground,
 > Wortseiten) auf <http://localhost:3242> hinzuzufügen, setzen Sie `COMPOSE_PROFILES=db,site`.
 
 ### 2. Aus dem Repository starten
