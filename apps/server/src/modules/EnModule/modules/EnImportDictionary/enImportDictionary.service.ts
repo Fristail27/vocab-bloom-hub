@@ -1,3 +1,4 @@
+import { exportMeaningEmbeddings, importMeaningEmbeddings } from '../../../../core/embeddings/transfer';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { ReconciliationStore } from '../EnReconciliation/store';
 import { persistentLineage, datasetSnapshotMetadata, dictionaryRecords } from '../EnReconciliation/snapshot';
@@ -187,6 +188,7 @@ export type ExportOptionsT = {
   // the version the entries edited on the instance are exported under, in
   // place of `custom_version`; the database keeps what it holds
   editedVersion?: string | undefined;
+  embeddingsOnly?: boolean;
 };
 
 const EXPORT_TTL_MS = 15 * 60 * 1000;
@@ -261,6 +263,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
   // through the application's connection, another one through a connection
   // on its schema. One import runs at a time, so one field is enough.
   private target: DatasetConnectionT | null = null;
+  private readonly importing = new AsyncLocalStorage<EntityManager>();
   private readonly exporting = new AsyncLocalStorage<EntityManager>();
   private importingOrigins: OriginT[] = [];
   private provenanceFormat = false;
@@ -271,7 +274,9 @@ export class EnImportDictionaryService implements OnModuleDestroy {
 
   /** Where the import and the export read and write: the import's target, else the active dataset */
   private get db(): EntityManager {
-    return this.exporting.getStore() ?? this.target?.manager ?? this.enWordsRep.manager;
+    return (
+      this.importing.getStore() ?? this.exporting.getStore() ?? this.target?.manager ?? this.enWordsRep.manager
+    );
   }
 
   /**
@@ -1676,16 +1681,28 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       : undefined;
     let outcome: Parameters<ImportStatusService['end']>[0] = {};
     let preparedPlan: string | undefined;
+    let opened: DatasetSource | undefined;
+    let sourceStarted = false;
     try {
       // the dataset the import names is created on first use — a schema of
       // its own — and filled through a connection of its own (issue #527)
       const dataset = await this.datasets?.resolveTarget(options?.dataset);
       this.target = dataset && this.datasets ? await this.datasets.connect(dataset) : null;
+      if (typeof source === 'function') {
+        tracked.start();
+        sourceStarted = true;
+        opened = await source(tracked);
+      } else opened = source;
+      const incomingManifest = await opened.readManifest();
+      const vectorsOnly = Boolean(
+        incomingManifest?.embeddings &&
+        Object.keys(incomingManifest.files).every((name) => name === DATASET_FILE_NAMES.meaningEmbeddings),
+      );
       const empty =
         (await this.db.count(EnEntry)) === 0 &&
         (!this.reconciliation ||
           ((await this.db.count(EnChange)) === 0 && (await this.db.count(ReconciliationBaseline)) === 0));
-      this.preparingReconciliation = Boolean(this.reconciliation && dataset && !empty);
+      this.preparingReconciliation = Boolean(this.reconciliation && dataset && !empty && !vectorsOnly);
       if (this.preparingReconciliation && this.target) {
         const original = this.target;
         const stage = await stageDictionary(original.manager.connection);
@@ -1703,10 +1720,12 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       }
       this.hasEdits = null;
       const datasetVersion = await this.runImport(
-        source,
+        opened,
+        incomingManifest,
         label,
         tracked,
         this.preparingReconciliation ? undefined : updateCtx,
+        sourceStarted,
       );
       if (this.preparingReconciliation && dataset && this.reconciliation) {
         tracked.write({ stage: EnDictionaryImportPhasesE.preparing_update, percent: 0 });
@@ -1721,7 +1740,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         ).id;
       } else {
         outcome = { dataset_version: datasetVersion };
-        if (empty && dataset && this.reconciliation)
+        if (empty && dataset && this.reconciliation && !vectorsOnly)
           await this.reconciliation.rememberSource(dataset.name, this.incomingAdapter);
       }
       if (!preparedPlan)
@@ -1752,6 +1771,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       outcome = { error: message };
       throw error;
     } finally {
+      await opened?.dispose().catch(() => undefined);
       const target = this.target;
       this.target = null;
       this.preparingReconciliation = false;
@@ -1780,52 +1800,39 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     progress.end();
   }
 
-  /** The import pipeline shared by every source; the source is disposed at the end */
+  /** Import one opened source; importFrom owns its lifetime and the import slot. */
   private async runImport(
-    given: DatasetSource | DatasetSourceFactoryT,
+    source: DatasetSource,
+    manifest: DatasetManifestT | null,
     label: string,
     progress: ImportProgressSink,
     updateCtx?: UpdateModeContextT,
+    sourceStarted = false,
   ): Promise<string | undefined> {
-    // a source that has to be made first — a file of a public source being
-    // converted — is made inside the import slot and reports its progress:
-    // the stream opens before it
-    const made = typeof given === 'function';
-    if (made) progress.start();
-    const source = made ? await given(progress) : given;
-    let manifest: DatasetManifestT | null;
-    try {
-      // the manifest is read before the stream opens: a local source has
-      // already validated it, HuggingFace may be unreachable
-      manifest = await source.readManifest();
-      this.incomingComplete =
-        manifest?.snapshot?.complete === true &&
-        manifest.snapshot.skipped === 0 &&
-        manifest.snapshot.revision === 1;
-      this.incomingFiles = manifest?.files ?? {};
-      this.incomingAdapter = manifest?.snapshot
-        ? { adapter: manifest.snapshot.adapter, revision: manifest.snapshot.revision }
-        : null;
-      this.assertSameSource(manifest, source);
-      this.provenanceFormat = manifest?.provenance_format === 1;
-      const target = this.target?.dataset ?? this.datasets?.getActive();
-      if (manifest?.provenance && target) {
-        assertOrigins(manifest.provenance.origins);
-        assertCompatibleOrigins(manifest.provenance.origins, target.license);
-      }
-      this.importingOrigins = target
-        ? defaultOrigins({
-            ...target,
-            ...(target.own && manifest?.provenance),
-            version: this.provenanceFormat ? manifest!.version || null : manifest?.version || target.version,
-            origins: manifest?.provenance?.origins ?? target.origins,
-          })
-        : [];
-    } catch (error) {
-      await source.dispose().catch(() => undefined);
-      throw error;
+    this.incomingComplete =
+      manifest?.snapshot?.complete === true &&
+      manifest.snapshot.skipped === 0 &&
+      manifest.snapshot.revision === 1;
+    this.incomingFiles = manifest?.files ?? {};
+    this.incomingAdapter = manifest?.snapshot
+      ? { adapter: manifest.snapshot.adapter, revision: manifest.snapshot.revision }
+      : null;
+    this.assertSameSource(manifest, source);
+    this.provenanceFormat = manifest?.provenance_format === 1;
+    const target = this.target?.dataset ?? this.datasets?.getActive();
+    if (manifest?.provenance && target) {
+      assertOrigins(manifest.provenance.origins);
+      assertCompatibleOrigins(manifest.provenance.origins, target.license);
     }
-    if (!made) progress.start();
+    this.importingOrigins = target
+      ? defaultOrigins({
+          ...target,
+          ...(target.own && manifest?.provenance),
+          version: this.provenanceFormat ? manifest!.version || null : manifest?.version || target.version,
+          origins: manifest?.provenance?.origins ?? target.origins,
+        })
+      : [];
+    if (!sourceStarted) progress.start();
     // a manifest that lists no history has none; without a manifest the file may still be there
     this.pendingAlternatives = new Map();
     this.written = !manifest || manifest.files[DATASET_FILE_NAMES.changes] ? new Set() : null;
@@ -1863,50 +1870,74 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     this.metrics?.transferStarted('import');
 
     try {
-      // meaning → synonym / antonym links are collected across every file and
-      // written last, once all the entries they can point at exist
-      const pendingLinks: PendingWordLinksT = { synonyms: [], antonyms: [] };
-      await this.saveWords(source, progress, allLength, plusCount, pendingLinks, updateCtx);
-      await this.savePhrasalVerbs(source, progress, allLength, plusCount);
-      await this.saveGrammarPatterns(source, progress, allLength, plusCount, pendingLinks, updateCtx);
-      await this.savePhrases(source, progress, allLength, plusCount, pendingLinks, updateCtx);
-      // the collection files (issue #442) come after every entry file: a
-      // meaning may belong to a phrase, a translation to a meaning of any file
-      await this.saveMeanings(source, progress, allLength, plusCount, pendingLinks, updateCtx);
-      await this.saveMeaningTranslations(source, progress, allLength, plusCount, updateCtx);
-      await this.saveShortTranslations(source, progress, allLength, plusCount, updateCtx);
-      await this.db.transaction((em) => replaceAlternatives(em, this.pendingAlternatives, true));
-      // after every entry is in: what the import just brought in has taken
-      // the place of the edits it superseded, the history of the copy is added
-      await this.saveChanges(source, progress, allLength, plusCount);
-      await this.linkPendingWords(
-        progress,
-        pendingLinks,
-        allLength,
-        () => count,
-        (n) => {
-          count += n;
-        },
+      const vectorsOnly = Boolean(
+        manifest?.embeddings &&
+        Object.keys(manifest.files).every((name) => name === DATASET_FILE_NAMES.meaningEmbeddings),
       );
-      if (manifest?.files[DATASET_FILE_NAMES.synchronization]) {
-        const archive = await source.acquireFile(DATASET_FILE_NAMES.synchronization, progress);
-        if (!archive.path) throw new BadRequestException('reconciliation_archive_missing');
+      const saveEmbeddings = async () => {
+        if (!manifest?.embeddings) return;
+        const file = await source.acquireFile(DATASET_FILE_NAMES.meaningEmbeddings, progress);
+        if (!file.path) throw new BadRequestException('embeddings_invalid');
         try {
-          await this.db.transaction((em) => importSynchronization(em, archive.path!));
+          await importMeaningEmbeddings(
+            this.db,
+            file.path,
+            manifest.embeddings,
+            manifest.files[DATASET_FILE_NAMES.meaningEmbeddings].lines,
+          );
         } finally {
-          if (archive.temporary) await unlink(archive.path).catch(() => undefined);
+          if (file.temporary) await unlink(file.path).catch(() => undefined);
         }
+      };
+      if (vectorsOnly) {
+        await saveEmbeddings();
+        return undefined;
       }
+      const saveContent = async () => {
+        // meaning → synonym / antonym links are collected across every file and
+        // written last, once all the entries they can point at exist
+        const pendingLinks: PendingWordLinksT = { synonyms: [], antonyms: [] };
+        await this.saveWords(source, progress, allLength, plusCount, pendingLinks, updateCtx);
+        await this.savePhrasalVerbs(source, progress, allLength, plusCount);
+        await this.saveGrammarPatterns(source, progress, allLength, plusCount, pendingLinks, updateCtx);
+        await this.savePhrases(source, progress, allLength, plusCount, pendingLinks, updateCtx);
+        // the collection files (issue #442) come after every entry file: a
+        // meaning may belong to a phrase, a translation to a meaning of any file
+        await this.saveMeanings(source, progress, allLength, plusCount, pendingLinks, updateCtx);
+        await this.saveMeaningTranslations(source, progress, allLength, plusCount, updateCtx);
+        await this.saveShortTranslations(source, progress, allLength, plusCount, updateCtx);
+        await this.db.transaction((em) => replaceAlternatives(em, this.pendingAlternatives, true));
+        // after every entry is in: what the import just brought in has taken
+        // the place of the edits it superseded, the history of the copy is added
+        await this.saveChanges(source, progress, allLength, plusCount);
+        await this.linkPendingWords(
+          progress,
+          pendingLinks,
+          allLength,
+          () => count,
+          (n) => {
+            count += n;
+          },
+        );
+        if (manifest?.files[DATASET_FILE_NAMES.synchronization]) {
+          const archive = await source.acquireFile(DATASET_FILE_NAMES.synchronization, progress);
+          if (!archive.path) throw new BadRequestException('reconciliation_archive_missing');
+          try {
+            await this.db.transaction((em) => importSynchronization(em, archive.path!));
+          } finally {
+            if (archive.temporary) await unlink(archive.path).catch(() => undefined);
+          }
+        }
+        await saveEmbeddings();
+      };
+      // With derived data attached, content and vectors become visible together.
+      if (manifest?.embeddings) await this.db.transaction((em) => this.importing.run(em, saveContent));
+      else await saveContent();
     } catch (error) {
       this.metrics?.transferFinished('import', 'failure');
       throw error;
     } finally {
       this.pendingAlternatives.clear();
-      await source.dispose().catch((error) => {
-        this.logger.warn(
-          `Failed to clean up the dataset source: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      });
     }
 
     // What the import left on the dataset it filled (issue #527): the
@@ -2154,12 +2185,13 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       async (em) => {
         await this.exporting.run(em, async () => {
           // Assign portable identities before serializing content, in one consistent snapshot.
-          await new ReconciliationStore(em).capture(
-            await persistentLineage(em, dataset),
-            datasetSnapshotMetadata(dataset),
-            true,
-            dictionaryRecords(em, dataset),
-          );
+          if (!options.embeddingsOnly)
+            await new ReconciliationStore(em).capture(
+              await persistentLineage(em, dataset),
+              datasetSnapshotMetadata(dataset),
+              true,
+              dictionaryRecords(em, dataset),
+            );
           await this.writeExport(res, options);
         });
       },
@@ -2180,8 +2212,8 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     const zipPath = path.join(tmpDir, `${exportId}.zip`);
 
     const startedAt = Date.now();
-    const keys = await this.loadExportKeys();
-    const stages = this.exportStages(runDir, keys, options);
+    const keys = options.embeddingsOnly ? [] : await this.loadExportKeys();
+    const stages = options.embeddingsOnly ? [] : this.exportStages(runDir, keys, options);
     // every stage walks its entries once; the total is what the progress counts
     const total = stages.reduce((sum, stage) => sum + stage.keys.length, 0);
     this.logger.log(`Dictionary export ${exportId} started: ${keys.length} base records to export`);
@@ -2222,11 +2254,12 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       // what was changed or added on this instance (issue #531): the copy
       // differs from its source by these entries, and says so — in the
       // manifest, in its LICENSE and, edit by edit, in the history it carries
-      const modifiedEntries = await this.countModifiedEntries();
+      const modifiedEntries = options.embeddingsOnly ? 0 : await this.countModifiedEntries();
       const changesPath = path.join(runDir, DATASET_FILE_NAMES.changes);
-      const changeLines = await this.exportChanges(changesPath);
+      const changeLines = options.embeddingsOnly ? 0 : await this.exportChanges(changesPath);
       if (changeLines > 0) files[DATASET_FILE_NAMES.changes] = { lines: changeLines };
       if (
+        !options.embeddingsOnly &&
         this.db.connection.hasMetadata(ReconciliationRevision) &&
         (await this.db.count(ReconciliationRevision)) > 0
       ) {
@@ -2235,8 +2268,15 @@ export class EnImportDictionaryService implements OnModuleDestroy {
           lines: await this.db.transaction((em) => exportSynchronization(em, synchronization)),
         };
       }
+      const vectors = await exportMeaningEmbeddings(
+        this.db,
+        path.join(runDir, DATASET_FILE_NAMES.meaningEmbeddings),
+      );
+      if (vectors) files[DATASET_FILE_NAMES.meaningEmbeddings] = { lines: vectors.count };
+      if (options.embeddingsOnly && !vectors) throw new BadRequestException('embeddings_empty');
       const manifest: DatasetManifestT = {
-        snapshot: { complete: true, adapter: 'native', revision: 1, skipped: 0 },
+        ...(vectors && { embeddings: vectors.manifest }),
+        snapshot: { complete: !options.embeddingsOnly, adapter: 'native', revision: 1, skipped: 0 },
         provenance_format: 1,
         provenance: {
           attribution: exported?.attribution ?? DATA_LICENSE.attribution,
@@ -2252,6 +2292,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         // the code would be taken back by an import as the version of its data
         version: isProjects ? getVersion() : (exported.version ?? (isOwnDataset(exported) ? '' : getVersion())),
         generatedAt: new Date().toISOString(),
+        source: exported?.source ?? OWN_DATASET_SOURCE,
         license: exported?.license ?? DATA_LICENSE.spdx,
         attribution: exported?.attribution ?? DATA_LICENSE.attribution,
         ...(exported && {
@@ -2260,9 +2301,9 @@ export class EnImportDictionaryService implements OnModuleDestroy {
           attribution_url: exported.attribution_url ?? '',
           notice: exported.notice ?? '',
         }),
-        synonym_links: await this.countExportedLinks('synonyms'),
-        antonym_links: await this.countExportedLinks('antonyms'),
-        translations: await this.countTranslationsByLanguage(),
+        synonym_links: options.embeddingsOnly ? 0 : await this.countExportedLinks('synonyms'),
+        antonym_links: options.embeddingsOnly ? 0 : await this.countExportedLinks('antonyms'),
+        translations: options.embeddingsOnly ? {} : await this.countTranslationsByLanguage(),
         ...(modifiedEntries > 0 && { modified_entries: modifiedEntries }),
         files,
       };
@@ -2314,6 +2355,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         unlink(licensePath),
         unlink(path.join(runDir, DATASET_FILE_NAMES.changes)),
         unlink(path.join(runDir, DATASET_FILE_NAMES.synchronization)),
+        unlink(path.join(runDir, DATASET_FILE_NAMES.meaningEmbeddings)),
       ]);
       res.end();
     }

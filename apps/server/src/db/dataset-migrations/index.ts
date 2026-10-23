@@ -1,3 +1,5 @@
+import { AddPendingEmbeddings1792700001000 } from './1792700001000-AddPendingEmbeddings';
+import { AddMeaningEmbeddings1792700000000 } from './1792700000000-AddMeaningEmbeddings';
 import { AddContentReviews1792500000000 } from './1792500000000-AddContentReviews';
 import { RefineReconciliation1792100001000 } from './1792100001000-RefineReconciliation';
 import { AddReconciliation1792100000000 } from './1792100000000-AddReconciliation';
@@ -36,6 +38,8 @@ export const datasetMigrations = [
   AddReconciliation1792100000000,
   RefineReconciliation1792100001000,
   AddContentReviews1792500000000,
+  AddMeaningEmbeddings1792700000000,
+  AddPendingEmbeddings1792700001000,
 ];
 
 /** The table each dataset schema records its applied migrations in */

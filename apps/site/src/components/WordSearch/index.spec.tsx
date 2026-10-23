@@ -33,7 +33,10 @@ describe('WordSearch status', () => {
     document.body.appendChild(container);
     root = createRoot(container);
     fetchMock = jest.fn();
-    globalThis.fetch = fetchMock;
+    globalThis.fetch = ((url: string, init?: RequestInit) =>
+      url.endsWith('/search/semantic/status')
+        ? Promise.resolve({ ok: true, json: async () => ({ data: { enabled: false } }) } as Response)
+        : fetchMock(url, ...(init ? [init] : []))) as typeof fetch;
   });
   afterEach(() => {
     act(() => root.unmount());

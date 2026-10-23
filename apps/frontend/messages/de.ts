@@ -1109,6 +1109,14 @@ export default {
     param_desc_datasets:
       '1–5 eindeutige öffentliche Namen aus GET /api/v1/datasets; durch Kommas getrennt eingeben, als wiederholte Abfrageschlüssel gesendet.',
     endpoint_search_get: 'Einfache Suche',
+    endpoint_search_semantic_get: 'Suche nach Bedeutung',
+    desc_search_semantic_get:
+      'Findet passende Bedeutungen anhand einer Beschreibung in einem öffentlichen Datensatz. Erfordert SEMANTIC_SEARCH_ENABLED=true und kompatible Vektoren sowie ein Modell. Liefert 404 bei Deaktivierung und 503 bei Nichtverfügbarkeit; kein Wechsel zur Schreibweisensuche. Die Bewertung misst Ähnlichkeit, nicht Sicherheit.',
+    endpoint_search_semantic_status: 'Status der Bedeutungssuche',
+    desc_search_semantic_status:
+      'Meldet ohne Modellaufruf, ob die Bedeutungssuche aktiviert ist. Prüft nicht die Betriebsbereitschaft.',
+    param_desc_query:
+      'Beschreibung der gesuchten Bedeutung (1–1000 Zeichen nach Entfernen äußerer Leerzeichen).',
     endpoint_search_detailed_get: 'Detaillierte Suche',
     desc_search_get:
       'Durchsucht die Wörterbucheinträge und antwortet mit einer flachen Liste von Wörtern ohne Bedeutungen und Übersetzungen, mit den Feldern im Query-String. Die Antwort trägt ETag, Last-Modified und Cache-Control wie jedes öffentliche GET, kann also hinter einem CDN liegen und als Link geteilt werden. Die Ergebnisse sind nach Trefferqualität geordnet: exakter Treffer zuerst, dann Phrasal Verbs, Einträge, die mit dem Suchbegriff beginnen, Phrasen, Einträge, die mit ihm enden, und alle weiteren Vorkommen. Passt nichts, beantwortet eine Trigramm-Ähnlichkeitsstufe Tippfehler: meta.fuzzy ist true und jedes Element trägt similarity (0–1) — nur Postgres-Instanzen. Ein Begriff aus ein oder zwei Zeichen durchsucht nur die exakte und die Präfixstufe (meta.short_term ist true).',

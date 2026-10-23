@@ -284,6 +284,17 @@ export default {
     list: 'Lista de relações',
   },
   word: {
+    search_mode: 'Modo de pesquisa',
+    search_by_spelling: 'Por grafia',
+    search_by_meaning: 'Por significado',
+    semantic_hint: 'Descreva o significado para encontrar os sentidos existentes mais próximos.',
+    semantic_dataset_hint: 'A pesquisa por significado usa um dicionário de cada vez.',
+    semantic_placeholder: 'Um cientista que estuda aves',
+    semantic_label: 'Descreva um significado',
+    semantic_unavailable: 'A pesquisa por significado está indisponível. Pode escolher a pesquisa por grafia.',
+    semantic_results: 'Significados próximos',
+    semantic_modified: 'Alterado nesta instância',
+
     index_title: 'Palavras',
     index_intro:
       'O dicionário em páginas: uma palavra com cada classe gramatical, suas formas, significados, exemplos e traduções — o que a API responde, em formato legível.',

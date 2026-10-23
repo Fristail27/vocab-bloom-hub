@@ -1085,6 +1085,13 @@ export default {
     param_desc_datasets:
       '1–5 unique public dataset names from GET /api/v1/datasets; enter comma-separated names, sent as repeated query keys.',
     endpoint_search_get: 'Basic search',
+    endpoint_search_semantic_get: 'Search by meaning',
+    desc_search_semantic_get:
+      'Finds matching meanings from a description in one public dataset. Requires SEMANTIC_SEARCH_ENABLED=true and compatible vectors/model. Returns 404 when disabled and 503 when unavailable; never falls back to spelling search. Scores are similarity, not confidence.',
+    endpoint_search_semantic_status: 'Meaning search status',
+    desc_search_semantic_status:
+      'Reports whether meaning search is enabled without contacting the model. This is not a readiness check.',
+    param_desc_query: 'A description of the intended meaning (1–1000 characters after trimming).',
     endpoint_search_detailed_get: 'Detailed search',
     desc_search_get:
       'Searches dictionary entries and answers with a flat list of words without meanings and translations, with the fields in the query string. The answer carries ETag, Last-Modified and Cache-Control like every public GET, so it can sit behind a CDN and be shared as a link. Results are ordered by match quality: exact match first, then phrasal verbs, entries starting with the query, phrases, entries ending with it and any other occurrence. When nothing matches, a trigram similarity tier answers typos: meta.fuzzy is true and every item carries similarity (0–1) — Postgres instances only. A term of one or two characters searches the exact and prefix tiers only (meta.short_term is true).',

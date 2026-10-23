@@ -49,6 +49,7 @@ export const DATASET_FILE_NAMES = {
   // what was changed or added where the dataset was edited (issue #531): a
   // line per edit, with its values. Absent in a dataset nobody edited
   changes: 'vocab-bloom-hub-en-changes.jsonl',
+  meaningEmbeddings: 'meaning-embeddings.jsonl',
   synchronization: 'vocab-bloom-hub-en-synchronization.jsonl',
 } as const;
 
@@ -125,6 +126,7 @@ export const UPLOAD_FILE_FIELDS: Readonly<Record<string, string>> = {
     ]),
   ),
   changes: DATASET_FILE_NAMES.changes,
+  embeddings: DATASET_FILE_NAMES.meaningEmbeddings,
   manifest: MANIFEST_FILE_NAME,
   provenance: DATASET_FORMAT_FILE_NAME,
 };

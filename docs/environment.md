@@ -65,6 +65,25 @@ only a warning: the variables may come from the process environment).
 | `SHUTDOWN_TIMEOUT`           | no                | `30`                                                            | server                 | Seconds a graceful stop may take after SIGTERM / SIGINT: the listener closes, requests in flight finish, the database pool closes. Past the budget the server logs `forcing exit` and exits with code 1 instead of waiting for the process manager's SIGKILL. Whole seconds, at least 1; anything else fails startup. See [deployment/README.md](./deployment/README.md#stopping-and-restarting).                                                                                                                                                                                                                                                                                                                                           |
 | `NODE_ENV`                   | no                | —                                                               | both                   | `development` enables debug logging and `pretty` logs; `production` requires a `postgres://` `DATABASE_URL`, disables the Swagger UI at `/api`, logs JSON and warns at every admin login that arrives over plain http (the cookie is `secure` whenever the request came over https, in any mode). Schema management does not depend on it: SQLite always synchronizes, Postgres always uses migrations.                                                                                                                                                                                                                                                                                                                                     |
 
+## Semantic search (optional)
+
+`SEMANTIC_SEARCH_ENABLED` defaults to `false` and independently enables the semantic API
+and website mode. Starting a model or importing vectors does not enable search. The website
+reads this switch from its API; it does not need its own environment variable.
+
+| Variable                | Default                                                              | Purpose                                                           |
+| ----------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `EMBEDDINGS_URL`        | Native: `http://localhost:11434`; Compose: `http://embeddings:11434` | Ollama HTTP(S) origin, including a remote LAN host.               |
+| `EMBEDDINGS_MODEL`      | `embeddinggemma-2:latest`                                            | Exact model name used by the imported profile.                    |
+| `EMBEDDINGS_REVISION`   | unset                                                                | Required for enabled search: immutable 64-character model digest. |
+| `EMBEDDINGS_DIMENSIONS` | `768`                                                                | Imported profile/query vector dimension (1–2,000).                |
+| `EMBEDDINGS_IMAGE`      | `ollama/ollama:0.40.8`                                               | Compose-only runtime image; independent of the model digest.      |
+
+See [semantic-search.md](./semantic-search.md) for external vector files, API behavior,
+limits, unavailable errors and [Docker/remote configuration](./semantic-search.md#docker-and-remote-ollama).
+The `embeddings` Compose profile starts a private Ollama service with persistent model storage;
+its model download and PostgreSQL extension activation are explicit operator actions.
+
 ## Startup validation
 
 The server validates its configuration before Nest is created (`assertRequiredConfig` in

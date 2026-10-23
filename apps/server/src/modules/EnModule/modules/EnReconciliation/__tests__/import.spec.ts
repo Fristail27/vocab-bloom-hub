@@ -1,3 +1,8 @@
+import { randomUUID } from 'node:crypto';
+import { embeddingInputHash, embeddingProfileId } from '../../../../../core/embeddings/profile';
+import { EnMeaning } from '../../../entities/en_meaning.entity';
+import { EnMeaningEmbedding } from '../../../entities/en_meaning_embedding.entity';
+import { ReconciliationEmbedding } from '../entities';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -144,6 +149,127 @@ describe('source file reconciliation pipeline', () => {
     expect((await db.manager.findOneByOrFail(EnWord, { id: 1 })).description).toBe('original');
     expect(await db.manager.count(EnChange)).toBe(0);
   });
+  it('keeps vectors with a durable plan and publishes them only with accepted content', async () => {
+    const input = await source();
+    const sync_id = randomUUID();
+    await writeFile(
+      join(dir, 'words.jsonl'),
+      JSON.stringify({
+        word: 'word',
+        part_of_speech: 'noun',
+        description: 'incoming',
+        forms: [],
+        is_obsolete: false,
+        meanings: [{ sync_id, title: 'sense', definition: 'Incoming definition', sort_order: 1 }],
+      }) + '\n',
+    );
+    const profile = {
+      model: 'fixture',
+      revision: 'a'.repeat(64),
+      dimensions: 3,
+      normalization: 'l2' as const,
+      document_format: 'meaning-v1',
+      query_format: 'search-query-v1',
+    };
+    const vectors = join(dir, 'vectors.jsonl');
+    await writeFile(
+      vectors,
+      JSON.stringify({
+        meaning_sync_id: sync_id,
+        profile_id: embeddingProfileId(profile),
+        input_hash: embeddingInputHash('title: word (noun) | text: sense. Incoming definition'),
+        embedding: [1, 0, 0],
+      }) + '\n',
+    );
+    const enriched: DatasetSource = {
+      ...input,
+      readManifest: async () => ({
+        ...(await input.readManifest())!,
+        embeddings: { format: 1, profiles: [{ ...profile, id: embeddingProfileId(profile) }] },
+        files: {
+          [DATASET_FILE_NAMES.words]: { lines: 1 },
+          [DATASET_FILE_NAMES.meaningEmbeddings]: { lines: 1 },
+        },
+      }),
+      acquireFile: async (name, sink) =>
+        name === DATASET_FILE_NAMES.meaningEmbeddings
+          ? { path: vectors, temporary: false }
+          : input.acquireFile(name, sink),
+    };
+    const chunks: ImportDictionaryChunkT[] = [];
+    await importer.importFrom(
+      enriched,
+      'vectors with content',
+      {
+        start() {},
+        write: (c) => {
+          chunks.push(c);
+        },
+        end() {},
+      },
+      ImportTriggerE.manual,
+    );
+    const id = chunks.at(-1)!.reconciliation_plan!;
+    expect(await db.manager.count(EnMeaningEmbedding)).toBe(0);
+    expect(await db.manager.count(ReconciliationEmbedding)).toBe(1);
+    await rm(vectors); // The upload and staging database are no longer needed.
+    await service.apply('default', id);
+    const meaning = await db.manager.findOneByOrFail(EnMeaning, { sync_id });
+    expect((await db.manager.findOneByOrFail(EnMeaningEmbedding, {})).meaning_id).toBe(meaning.id);
+    expect(await db.manager.count(ReconciliationEmbedding)).toBe(0);
+    await service.apply('default', id);
+    expect(await db.manager.count(EnMeaningEmbedding)).toBe(1);
+  });
+
+  it('imports vector-only input directly without a review or a dictionary version change', async () => {
+    const word = await db.manager.findOneByOrFail(EnWord, { id: 1 });
+    const meaning = await db.manager.save(EnMeaning, {
+      word,
+      sync_id: randomUUID(),
+      title: 'sense',
+      definition: 'Definition',
+      sort_order: 1,
+    });
+    const profile = {
+      model: 'fixture',
+      revision: 'a'.repeat(64),
+      dimensions: 3,
+      normalization: 'l2' as const,
+      document_format: 'meaning-v1',
+      query_format: 'search-query-v1',
+    };
+    const vectors = join(dir, 'only-vectors.jsonl');
+    await writeFile(
+      vectors,
+      JSON.stringify({
+        meaning_sync_id: meaning.sync_id,
+        profile_id: embeddingProfileId(profile),
+        input_hash: embeddingInputHash('title: word (noun) | text: sense. Definition'),
+        embedding: [1, 0, 0],
+      }) + '\n',
+    );
+    const input: DatasetSource = {
+      readManifest: async () => ({
+        version: 'must-not-be-used',
+        source: dataset.source,
+        embeddings: { format: 1, profiles: [{ ...profile, id: embeddingProfileId(profile) }] },
+        files: { [DATASET_FILE_NAMES.meaningEmbeddings]: { lines: 1 } },
+      }),
+      acquireFile: async () => ({ path: vectors, temporary: false }),
+      dispose: async () => {},
+    };
+    await importer.importFrom(
+      input,
+      'only vectors',
+      { start() {}, write() {}, end() {} },
+      ImportTriggerE.manual,
+    );
+    expect(await db.manager.count(ReconciliationPlan)).toBe(0);
+    expect(await db.manager.count(EnChange)).toBe(0);
+    expect(await db.manager.count(EnMeaningEmbedding)).toBe(1);
+    expect((await db.manager.findOneByOrFail(Dataset, { id: dataset.id })).version).toBe('1');
+  });
+
   it('does not treat a locally emptied dataset as a first installation', async () => {
     await db.manager.delete(EnEntry, { word: 'word' });
     const chunks: ImportDictionaryChunkT[] = [];

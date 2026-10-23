@@ -1,3 +1,6 @@
+import { PublicSemanticController } from './public-semantic.controller';
+import { PublicSemanticService } from './public-semantic.service';
+import { OllamaQueryService } from '../../core/embeddings/ollama-query.service';
 import { PublicSearchService } from './public-search.service';
 import { PublicSearchCacheInterceptor } from './public-search-cache.interceptor';
 import { FreeDictionaryApiController } from './freedictionaryapi/freedictionaryapi.controller';
@@ -43,6 +46,7 @@ import { CompatibilityDatasetsService } from './compatibility-datasets.service';
     SettingsModule,
   ],
   controllers: [
+    PublicSemanticController,
     CompatibilityDatasetsController,
     DictionaryApiController,
     FreeDictionaryApiController,
@@ -57,6 +61,8 @@ import { CompatibilityDatasetsService } from './compatibility-datasets.service';
   ],
   exports: [PublicMetaService],
   providers: [
+    PublicSemanticService,
+    OllamaQueryService,
     PublicSearchService,
     PublicSearchCacheInterceptor,
     CompatibilityDatasetsService,

@@ -558,6 +558,14 @@ class Meta4(BaseModel):
     partial: bool
 
 
+class Data4(BaseModel):
+    enabled: bool
+
+
+class PublicSemanticStatusV1ResT(BaseModel):
+    data: Data4
+
+
 class OriginT(BaseModel):
     id: str
     name: str
@@ -914,6 +922,35 @@ class PublicSearchDatasetUnavailableV1T(BaseModel):
     license_text: str
 
 
+class Meaning(BaseModel):
+    source: str
+    modified: bool
+    etymology_number: int | None = Field(
+        None, description="Local number of the owning word etymology; null when unknown."
+    )
+    id: int
+    sort_order: int
+    title: str
+    definition: str
+    is_obsolete: bool
+    examples: list[str]
+    quotes: list[MeaningQuoteT] | None = None
+    categories: list[CategoryE]
+    meaning_level: WordLevelE | None = Field(...)
+    area_variant: EnAreaVariantsE
+    language_register: LanguageRegisterE | None = Field(...)
+    translations: list[PublicWordV1MeaningTranslationT]
+    synonyms: list[str]
+    antonyms: list[str]
+
+
+class Meta5(BaseModel):
+    count: int
+    limit: int
+    dataset: PublicDatasetTermsV1T
+    profile_id: str
+
+
 class PublicSearchWordV1T(BaseModel):
     alternatives: list[str] | None = Field(
         None, description="Alternative spellings of this headword, shared by all its parts of speech."
@@ -1057,6 +1094,23 @@ class FreeDictionaryEntriesResT(BaseModel):
     vocabBloom: PublicDatasetTermsV1T = Field(
         ..., description="Terms of the dataset read. Word-specific origins are retained on each entry."
     )
+
+
+class PublicSemanticMatchV1T(BaseModel):
+    """
+    A matching existing sense, with cosine similarity (not a confidence probability).
+    """
+
+    word: PublicSearchWordV1T
+    meaning: Meaning
+    score: float = Field(
+        ..., description="Cosine similarity from -1 to 1; no calibrated no-answer threshold."
+    )
+
+
+class PublicSemanticSearchV1ResT(BaseModel):
+    data: list[PublicSemanticMatchV1T]
+    meta: Meta5
 
 
 class PublicSearchV1ResT(BaseModel):

@@ -76,3 +76,9 @@ export type SearchDatasetsResponse = Schemas['PublicSearchDatasetsV1ResT'];
 export type SearchDataset = Schemas['PublicSearchDatasetV1T'];
 export type DatasetsResponse = Schemas['PublicDatasetsV1ResT'];
 export type DatasetTerms = Schemas['PublicDatasetTermsV1T'];
+
+export type SemanticSearchRequest = NonNullable<
+  operations['PublicSemanticController_search']['parameters']['query']
+>;
+export type SemanticSearchResponse = Schemas['PublicSemanticSearchV1ResT'];
+export type SemanticStatusResponse = Schemas['PublicSemanticStatusV1ResT'];

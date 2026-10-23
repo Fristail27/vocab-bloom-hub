@@ -24,6 +24,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/search/semantic/status': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Whether the instance enables semantic search
+     * @description Reflects only SEMANTIC_SEARCH_ENABLED. Performs no inference and does not promise model/vector availability. Never cached.
+     */
+    get: operations['PublicSemanticController_status'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/search/semantic': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Find existing meanings from a description
+     * @description Separate from spelling search; no lexical fallback. Requires SEMANTIC_SEARCH_ENABLED, PostgreSQL/pgvector, imported current vectors and a matching Ollama model. Disabled = 404 semantic_search_disabled; missing infrastructure, busy service or incompatible model = 503. Returns up to 20 meanings, ordered by cosine similarity then meaning ID. Scores are not confidence probabilities; no calibrated no-answer threshold. No pagination or cross-dataset ranking. Uses the shared public rate budget. Responses are no-store.
+     */
+    get: operations['PublicSemanticController_search'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/compat/dictionaryapi/v2/entries/{language}/{word}/datasets': {
     parameters: {
       query?: never;
@@ -1461,6 +1501,46 @@ export interface components {
         partial: boolean;
       };
     };
+    /** @description A matching existing sense, with cosine similarity (not a confidence probability). */
+    PublicSemanticMatchV1T: {
+      word: components['schemas']['PublicSearchWordV1T'];
+      meaning: {
+        source: string;
+        modified: boolean;
+        /** @description Local number of the owning word etymology; null when unknown. */
+        etymology_number?: number | null;
+        id: number;
+        sort_order: number;
+        title: string;
+        definition: string;
+        is_obsolete: boolean;
+        examples: string[];
+        quotes?: components['schemas']['MeaningQuoteT'][];
+        categories: components['schemas']['CategoryE'][];
+        meaning_level: components['schemas']['WordLevelE'] | null;
+        area_variant: components['schemas']['EnAreaVariantsE'];
+        language_register: components['schemas']['LanguageRegisterE'] | null;
+        translations: components['schemas']['PublicWordV1MeaningTranslationT'][];
+        synonyms: string[];
+        antonyms: string[];
+      };
+      /** @description Cosine similarity from -1 to 1; no calibrated no-answer threshold. */
+      score: number;
+    };
+    PublicSemanticSearchV1ResT: {
+      data: components['schemas']['PublicSemanticMatchV1T'][];
+      meta: {
+        count: number;
+        limit: number;
+        dataset: components['schemas']['PublicDatasetTermsV1T'];
+        profile_id: string;
+      };
+    };
+    PublicSemanticStatusV1ResT: {
+      data: {
+        enabled: boolean;
+      };
+    };
   };
   responses: never;
   parameters: never;
@@ -1490,6 +1570,97 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['PublicSuggestionCreatedV1ResT'];
+        };
+      };
+      /** @description Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+      /** @description Nothing matches */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+      /** @description Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+      /** @description Not available: a selected dataset could not be read, the OpenAPI document is not ready, or the suggestion queue is full */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+    };
+  };
+  PublicSemanticController_status: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicSemanticStatusV1ResT'];
+        };
+      };
+      /** @description Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicApiErrorT'];
+        };
+      };
+    };
+  };
+  PublicSemanticController_search: {
+    parameters: {
+      query: {
+        /** @description A description of the intended meaning, in English or another language supported by the model. */
+        query: string;
+        /** @description One public dataset; omitted = active dataset. Closed/unknown targets return 404. */
+        dataset?: string;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicSemanticSearchV1ResT'];
         };
       };
       /** @description Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor */

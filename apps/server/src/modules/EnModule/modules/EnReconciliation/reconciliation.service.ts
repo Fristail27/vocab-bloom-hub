@@ -1,3 +1,4 @@
+import { stageEmbeddings, publishEmbeddings } from './embeddings';
 import { captureCurrent, commonAncestor, copyRevisionGraph } from './ancestry';
 import { randomUUID } from 'node:crypto';
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
@@ -31,6 +32,7 @@ import {
   ReconciliationItem,
   ReconciliationPlan,
   ReconciliationRevision,
+  ReconciliationEmbedding,
 } from './entities';
 import { object, validateDocument } from './document';
 import { ReconciliationDependencies } from './dependencies';
@@ -230,7 +232,10 @@ export class ReconciliationService {
     });
   }
   cancel(name: string, id: string) {
-    return this.on(name, (store) => store.cancel(id));
+    return this.on(name, async (store, em) => {
+      await store.cancel(id);
+      await em.delete(ReconciliationEmbedding, { plan: id });
+    });
   }
   override(name: string, id: string, headword: string, version: number, result: ReconciliationSideT) {
     return this.on(name, async (store, em, dataset) => {
@@ -306,6 +311,7 @@ export class ReconciliationService {
       // Legacy imports receive an explicit two-way review: every differing value
       // is a conflict and no fabricated ancestor enables automatic replacement.
       const plan = await store.prepare('source', local.id, incoming.id, !baseline);
+      await stageEmbeddings(em, incomingManager, plan.id);
       await this.dependencies(store, em, plan.id);
       return store.summary(plan.id);
     });
@@ -374,6 +380,7 @@ export class ReconciliationService {
           allowTwoWay,
           preparationStage(progress, 'comparing'),
         );
+        await stageEmbeddings(em, sourceManager, plan.id);
         await this.dependencies(store, em, plan.id, preparationStage(progress, 'dependencies'));
         preparationStage(progress, 'finalizing');
         return store.summary(plan.id);
@@ -514,6 +521,7 @@ export class ReconciliationService {
             await withDatasetScope({ dataset, dataSource: em.connection }, () =>
               publishPlan(em, plan, dataset.license, progress),
             );
+            await publishEmbeddings(em, plan.id);
             if (plan.kind === 'source') {
               const incoming = await store.revision(plan.incoming);
               const version = typeof incoming.metadata.version === 'string' ? incoming.metadata.version : null;

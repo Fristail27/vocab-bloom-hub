@@ -1096,6 +1096,14 @@ export default {
     param_desc_datasets:
       'De 1 a 5 nomes públicos únicos de GET /api/v1/datasets; inserir separados por vírgulas, enviados como chaves de consulta repetidas.',
     endpoint_search_get: 'Busca básica',
+    endpoint_search_semantic_get: 'Pesquisa por significado',
+    desc_search_semantic_get:
+      'Encontra significados a partir de uma descrição num conjunto público. Requer SEMANTIC_SEARCH_ENABLED=true e vetores e modelo compatíveis. Devolve 404 quando desativada e 503 quando indisponível; não recorre à pesquisa por escrita. A pontuação mede semelhança, não confiança.',
+    endpoint_search_semantic_status: 'Estado da pesquisa por significado',
+    desc_search_semantic_status:
+      'Indica se a pesquisa por significado está ativada sem consultar o modelo. Não verifica se está pronta.',
+    param_desc_query:
+      'Descrição do significado pretendido (1–1000 caracteres após remover espaços nas extremidades).',
     endpoint_search_detailed_get: 'Busca detalhada',
     desc_search_get:
       'Busca verbetes do dicionário e responde com uma lista plana de palavras sem significados nem traduções, com os campos na query string. A resposta traz ETag, Last-Modified e Cache-Control como todo GET público, então pode ficar atrás de uma CDN e ser compartilhada como link. Os resultados são ordenados por qualidade da correspondência: a exata primeiro, depois phrasal verbs, verbetes que começam com o termo, frases, verbetes que terminam com ele e qualquer outra ocorrência. Quando nada corresponde, um nível de similaridade por trigramas responde a erros de digitação: meta.fuzzy é true e cada item traz similarity (0–1) — apenas em instâncias com Postgres. Um termo de um ou dois caracteres busca só nos níveis exato e de prefixo (meta.short_term é true).',

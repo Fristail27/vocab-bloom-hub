@@ -61,6 +61,9 @@ SearchDataset = SearchDatasetResult | SearchDatasetUnavailable
 DatasetsResponse = _g.PublicDatasetsV1ResT
 DatasetTerms = _g.PublicDatasetTermsV1T
 
+SemanticSearchResponse = _g.PublicSemanticSearchV1ResT
+SemanticStatusResponse = _g.PublicSemanticStatusV1ResT
+
 __all__ = [
     "ApiError",
     "AreaVariant",
@@ -90,6 +93,8 @@ __all__ = [
     "SearchDatasetsResponse",
     "SearchResponse",
     "SearchWord",
+    "SemanticSearchResponse",
+    "SemanticStatusResponse",
     "ShortTranslation",
     "SuggestionCreatedResponse",
     "TranslationLanguage",

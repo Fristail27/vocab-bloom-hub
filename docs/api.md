@@ -951,3 +951,18 @@ curl -fsS 'http://localhost:3240/api/compat/freedictionaryapi/v1/entries/en/hell
 
 The optional [RFC 2229 listener](./dict.md) serves installed datasets through DICT commands.
 It has its own port and configuration and does not change these HTTP contracts.
+
+## Semantic search (#655)
+
+`GET /api/v1/search/semantic/status` returns whether the independent
+`SEMANTIC_SEARCH_ENABLED` switch is on; it never invokes a model.
+`GET /api/v1/search/semantic?query=<description>&dataset=<name>&limit=10` returns matching
+existing senses from one public dataset, each with its word, definition, cosine score,
+source and modification marker. The response metadata includes the dataset's terms.
+The description is 1–1,000 characters and the limit 1–20; dataset omission uses the active one.
+Both routes share the public rate budget and return `Cache-Control: no-store`.
+
+This is a separate mode: spelling search is unchanged, and semantic failures never fall
+back to it. Disabled search returns 404; unavailable vectors/model/storage return 503.
+See [semantic-search.md](./semantic-search.md#runtime-search-and-website-mode) for configuration,
+errors, model compatibility and current exact-ranking/performance limits.

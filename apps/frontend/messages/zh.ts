@@ -1042,6 +1042,12 @@ export default {
     param_desc_datasets:
       'GET /api/v1/datasets 中的 1–5 个不重复的公开数据集名称；用逗号分隔输入，以重复的查询键发送。',
     endpoint_search_get: '基本搜索',
+    endpoint_search_semantic_get: '按含义搜索',
+    desc_search_semantic_get:
+      '根据描述在一个公开数据集中查找匹配的含义。需要 SEMANTIC_SEARCH_ENABLED=true 以及兼容的向量和模型。禁用时返回 404，不可用时返回 503；不会回退到拼写搜索。分数表示相似度，而非置信度。',
+    endpoint_search_semantic_status: '含义搜索状态',
+    desc_search_semantic_status: '报告含义搜索是否已启用，不调用模型。此接口不检查搜索是否就绪。',
+    param_desc_query: '描述所需含义（去除首尾空格后为 1–1000 个字符）。',
     endpoint_search_detailed_get: '详细搜索',
     desc_search_get:
       '搜索词典词条，返回不含释义和翻译的扁平单词列表，字段通过查询字符串传递。响应与所有公共 GET 一样带有 ETag、Last-Modified 和 Cache-Control，因此可以放在 CDN 之后并作为链接分享。结果按匹配质量排序：精确匹配优先，然后是短语动词、以查询词开头的词条、短语、以查询词结尾的词条以及其他任何出现位置。没有匹配时，三元组相似度层会应对拼写错误：meta.fuzzy 为 true，每一项都带有 similarity（0–1）— 仅限 Postgres 实例。一到两个字符的搜索词只搜索精确匹配层和前缀层（meta.short_term 为 true）。',

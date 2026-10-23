@@ -108,7 +108,15 @@ export const validateDatasetDir = async (dir: string, logger: Logger): Promise<D
   ) {
     reject('the complete declared provenance history is required');
   }
+  const vectorLines = counted[DATASET_FILE_NAMES.meaningEmbeddings]?.lines;
+  if (
+    vectorLines !== undefined &&
+    (!manifest?.embeddings || manifest.files[DATASET_FILE_NAMES.meaningEmbeddings]?.lines !== vectorLines)
+  )
+    reject('complete declared embeddings and their manifest are required');
+  if (manifest?.embeddings && vectorLines === undefined) reject('declared embeddings file is missing');
   return {
+    ...(manifest?.embeddings && { embeddings: manifest.embeddings }),
     version: manifest?.version ?? '',
     ...(manifest?.provenance_format && {
       provenance_format: manifest.provenance_format,

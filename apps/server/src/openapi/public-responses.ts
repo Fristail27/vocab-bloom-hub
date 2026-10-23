@@ -65,6 +65,8 @@ export const PUBLIC_RESPONSES: Record<string, PublicResponseSpecT> = {
     errors: [400, 404, 429],
     errorType: 'DictionaryApiErrorT',
   },
+  PublicSemanticController_search: { type: 'PublicSemanticSearchV1ResT', errors: [400, 404, 429, 503] },
+  PublicSemanticController_status: { type: 'PublicSemanticStatusV1ResT', errors: [429] },
   PublicSearchController_searchGet: { type: 'PublicSearchV1ResT', errors: [400, 404, 429, 503] },
   PublicSearchController_searchDetailedGet: {
     type: 'PublicSearchDetailedV1ResT',

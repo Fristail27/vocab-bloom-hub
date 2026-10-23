@@ -21,6 +21,7 @@ import { CategoryE, EnAreaVariantsE, LanguageRegisterE, WordLevelE } from '../..
 import { checkIsPostgres } from '../../../../configuration';
 
 @Entity('en_meanings')
+@Index('IDX_EN_MEANING_SYNC_ID', ['sync_id'])
 @Index('IDX_EN_MEANING_ETYMOLOGY', ['etymology'])
 @Index('IDX_EN_MEANING_WORD', ['word'])
 @Index('IDX_EN_MEANING_WORD_SORT', ['word', 'sort_order'])

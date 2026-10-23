@@ -30,6 +30,7 @@ import { inheritHistory, retireReplacedHistory } from './history';
 import type { OriginT } from '../../../../../types';
 import { applicationStage, ReconciliationApplicationSinkT } from './progress';
 import { freezeOrigins, publishVersions } from './publication-metadata';
+import { retainingWordEmbeddings } from '../../../../core/embeddings/reuse';
 
 async function writePronunciations(em: EntityManager, word: EnWord, document: DocumentObjectT): Promise<void> {
   await em.delete(EnPronunciation, { word: { id: word.id } });
@@ -209,7 +210,9 @@ export async function publishPlan(
               generated: false,
             });
           const empty = before ? null : (await findWord(em, item.headword, part))!;
-          await writeWord(em, item.headword, part, object(proposed), plan.kind !== 'source');
+          await retainingWordEmbeddings(em, (before ?? empty)!.id, () =>
+            writeWord(em, item.headword, part, object(proposed), plan.kind !== 'source'),
+          );
           const after = (await findWord(em, item.headword, part))!;
           if (before) await recordCopiedEdits(em, before, after, true, recordResolution);
           else {

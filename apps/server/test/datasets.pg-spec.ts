@@ -47,6 +47,9 @@ const DICTIONARY_TABLES = [
   // the history of edits (issue #531)
   'en_changes',
   'en_content_reviews',
+  'en_embedding_profiles',
+  'en_meaning_embeddings',
+  'reconciliation_embeddings',
   'reconciliation_identity',
   'reconciliation_revisions',
   'reconciliation_records',

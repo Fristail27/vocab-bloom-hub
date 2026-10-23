@@ -1,3 +1,4 @@
+import { embeddingManifest } from '../../../../../core/embeddings/transfer';
 import { DATASET_KNOWN_FILE_NAMES } from '../constants';
 import { validOrigins } from '../../../../../core/utils/provenance';
 import { DatasetManifestT, MANIFEST_PROVENANCE_FIELDS } from '../../../../../../types';
@@ -68,6 +69,14 @@ export const parseManifest = (raw: unknown): DatasetManifestT | null => {
     (manifest.modified_entries === undefined || isCount(manifest.modified_entries)) &&
     MANIFEST_PROVENANCE_FIELDS.every((field) => isOptionalString(manifest[field]));
   if (!isValid) return null;
+  if (manifest.embeddings !== undefined) {
+    try {
+      manifest.embeddings = embeddingManifest(manifest.embeddings);
+    } catch {
+      return null;
+    }
+    if (!manifest.files['meaning-embeddings.jsonl'] || !manifest.source) return null;
+  } else if (manifest.files['meaning-embeddings.jsonl']) return null;
   if (
     manifest.snapshot &&
     (typeof manifest.snapshot.complete !== 'boolean' ||

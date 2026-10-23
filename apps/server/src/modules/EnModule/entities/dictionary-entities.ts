@@ -1,3 +1,5 @@
+import { EnEmbeddingProfile } from './en_embedding_profile.entity';
+import { EnMeaningEmbedding } from './en_meaning_embedding.entity';
 import { EnContentReview } from './en_content_review.entity';
 import { EnPronunciationAudio } from './en_pronunciation_audio.entity';
 import { EnPronunciation } from './en_pronunciation.entity';
@@ -8,6 +10,9 @@ import { EnMeaning } from './en_meaning.entity';
 import { EnMeaningTranslation } from './en_meaning_translation.entity';
 import { EnShortTranslation } from './en_short_translation.entity';
 import { EnWord } from './en_word.entity';
+
+// Derived vectors are transferred explicitly; generic content copying excludes them.
+export const EMBEDDING_ENTITIES = [EnEmbeddingProfile, EnMeaningEmbedding];
 
 /**
  * The tables of a dictionary: what a dataset keeps in its schema next to the
@@ -26,4 +31,5 @@ export const DICTIONARY_ENTITIES = [
   EnShortTranslation,
   EnChange,
   EnContentReview,
+  ...EMBEDDING_ENTITIES,
 ];

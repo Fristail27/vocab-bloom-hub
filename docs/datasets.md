@@ -820,6 +820,11 @@ deletion do not alter the saved chain. A fork can be updated from its parent thr
 is explicit and never runs automatically.
 SQLite still supports word attribution, but cannot hold a second dataset or create a fork.
 
+Forks also retain compatible current meaning vectors through a validated transfer in the
+same snapshot. Stale inputs and unsupported profiles are omitted; the copy has independent
+rows, and deleting its parent does not delete its vectors. Ordinary native export/import
+preserves them through portable meaning identities. See [semantic vector lifecycle](./semantic-search.md#edits-reverts-forks-and-merges).
+
 The editor of a catalog dataset, including the project's published dataset, recommends a fork.
 **Continue editing** keeps direct edits available and acknowledges the warning for that dataset
 in the current browser session. The reminder remains visible in the editor.

@@ -2,6 +2,9 @@ import { MemoryCache, type ResponseCache } from './cache';
 import { errorFromResponse, NetworkError } from './errors';
 import { USER_AGENT } from './version';
 import type {
+  SemanticSearchRequest,
+  SemanticSearchResponse,
+  SemanticStatusResponse,
   SearchDatasetsRequest,
   SearchDatasetsResponse,
   DatasetsResponse,
@@ -186,6 +189,16 @@ export class VocabBloomClient {
   /** Paged search with meanings and translations on request */
   searchDetailed(request: DetailedSearchRequest, options?: RequestOptions): Promise<DetailedSearchResponse> {
     return this.get('/search/detailed', request, options);
+  }
+
+  /** Description-to-meaning search; requires the server's independent feature flag. No lexical fallback. */
+  searchSemantic(request: SemanticSearchRequest, options?: RequestOptions): Promise<SemanticSearchResponse> {
+    return this.get('/search/semantic', request, options);
+  }
+
+  /** Whether semantic search is enabled; does not invoke or probe the model. */
+  semanticStatus(options?: RequestOptions): Promise<SemanticStatusResponse> {
+    return this.get('/search/semantic/status', undefined, options);
   }
 
   /** Public dataset selector inventory; closed datasets are omitted. */

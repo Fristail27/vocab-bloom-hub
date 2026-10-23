@@ -227,6 +227,7 @@ export type ImportStatusT = {
 // the export writes it into the archive, the import reads it for progress
 // totals and the dataset version
 export type DatasetManifestT = {
+  embeddings?: import('../../embeddings').EmbeddingManifestT;
   snapshot?: { complete: boolean; adapter: string; revision: number; skipped: number };
   provenance_format?: 1;
   /** Logical names mapped to versioned physical filenames by the manifest reader. */

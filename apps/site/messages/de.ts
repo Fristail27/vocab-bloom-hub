@@ -287,6 +287,17 @@ export default {
     list: 'Verbindungsliste',
   },
   word: {
+    search_mode: 'Suchmodus',
+    search_by_spelling: 'Nach Schreibweise',
+    search_by_meaning: 'Nach Bedeutung',
+    semantic_hint: 'Beschreibe die Bedeutung, um die ähnlichsten vorhandenen Bedeutungen zu finden.',
+    semantic_dataset_hint: 'Die Bedeutungssuche verwendet jeweils ein Wörterbuch.',
+    semantic_placeholder: 'Ein Wissenschaftler, der Vögel erforscht',
+    semantic_label: 'Beschreibe eine Bedeutung',
+    semantic_unavailable: 'Die Bedeutungssuche ist nicht verfügbar. Du kannst nach Schreibweise suchen.',
+    semantic_results: 'Ähnliche Bedeutungen',
+    semantic_modified: 'Auf dieser Instanz bearbeitet',
+
     index_title: 'Wörter',
     index_intro:
       'Das Wörterbuch als Seiten: ein Stichwort mit jeder Wortart, seinen Formen, Bedeutungen, Beispielen und Übersetzungen — was die API antwortet, lesbar.',

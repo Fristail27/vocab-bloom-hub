@@ -525,3 +525,23 @@ export type PublicSearchDatasetsV1ResT = PublicListResT<
     partial: boolean;
   }
 >;
+
+/** A matching existing sense, with cosine similarity (not a confidence probability). */
+export type PublicSemanticMatchV1T = {
+  word: PublicSearchWordV1T;
+  meaning: PublicWordV1MeaningT & { source: string; modified: boolean };
+  /** Cosine similarity from -1 to 1; no calibrated no-answer threshold. */
+  score: number;
+};
+export type PublicSemanticSearchV1ResT = PublicListResT<
+  PublicSemanticMatchV1T,
+  {
+    /** @asType integer */
+    count: number;
+    /** @asType integer */
+    limit: number;
+    dataset: PublicDatasetTermsV1T;
+    profile_id: string;
+  }
+>;
+export type PublicSemanticStatusV1ResT = PublicItemResT<{ enabled: boolean }>;
