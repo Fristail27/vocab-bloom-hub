@@ -223,7 +223,7 @@ jobs:
           docker exec semantic-pg pg_isready -h 127.0.0.1 -U vocab -d vocab_bloom
       # Suites create/drop their own databases; extension-free storage first,
       # then explicit activation and search against a local HTTP model fixture.
-      - run: yarn workspace server test:postgres meaning-embeddings.pg-spec.ts semantic-search.pg-spec.ts
+      - run: yarn workspace server test:postgres meaning-embeddings.pg-spec.ts semantic-search.pg-spec.ts pgvector-bootstrap.pg-spec.ts
       - name: Stop fixture
         if: always()
         run: docker rm -f -v semantic-pg || true

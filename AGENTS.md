@@ -188,7 +188,11 @@ corresponding backend as well as exposing devices.
 Compose defaults `EMBEDDINGS_URL` to `http://embeddings:11434`, native runs to localhost;
 remote URLs need no model profile. No server dependency on model health. The bundled
 `docker/postgres/Dockerfile` adds pgvector to PostgreSQL 17 Alpine without changing the
-volume path or automatically creating the extension. Enable it explicitly per database.
+volume path. With `SEMANTIC_SEARCH_ENABLED=true`, `prepareDatabase()` calls
+`preparePgvector` before migrations: bounded, serialized, transactional activation in `public`
+when missing. Existing extension versions/schemas are preserved; no automatic upgrade. Missing
+packages/privileges roll back and warn without blocking ordinary startup. Disabled search
+performs no extension initialization. The capability probe remains read-only.
 `scripts/semantic-compose.spec.mjs` and `.github/scripts/semantic-deployment-smoke.sh`
 verify profile/flag independence and disposable existing-volume/model-service lifecycles.
 
