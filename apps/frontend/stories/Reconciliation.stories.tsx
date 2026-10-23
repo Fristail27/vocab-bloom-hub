@@ -142,7 +142,7 @@ export const ReplaceWholeArticle: Story = {
     await userEvent.click(await dialog.findByText('lamp', { exact: true }));
     await userEvent.click(dialog.getByText(t.whole_article, { selector: 'summary' }));
     await userEvent.click(dialog.getByRole('button', { name: t.accept_article }));
-    await expect(dialog.getByRole('region', { name: t.whole_article })).toBeVisible();
+    await waitFor(() => expect(dialog.getByRole('region', { name: t.whole_article })).toBeVisible());
     await userEvent.click(dialog.getByRole('button', { name: t.save }));
     await waitFor(() => expect(dialog.getByRole('button', { name: t.apply })).toBeEnabled());
   },

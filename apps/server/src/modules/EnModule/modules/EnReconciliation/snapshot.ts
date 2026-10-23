@@ -98,7 +98,11 @@ const keyed = async <T extends IdentifiedT>(
 };
 
 /** Assign legacy nested IDs in batches, without changing content timestamps. */
-async function identifyRows<T extends IdentifiedT>(em: EntityManager, entity: EntityTarget<T>, rows: T[]) {
+export async function identifyRows<T extends IdentifiedT>(
+  em: EntityManager,
+  entity: EntityTarget<T>,
+  rows: T[],
+) {
   const missing = rows.filter((row) => !row.sync_id);
   const quote = (value: string) => em.connection.driver.escape(value);
   const table = quote(em.connection.getMetadata(entity).tableName);

@@ -191,6 +191,10 @@ verify profile/flag independence and disposable existing-volume/model-service li
 
 Vector files use `meaning-embeddings.jsonl` and `manifest.embeddings` (format 1), with
 portable `meaning_sync_id`, immutable model digest, profile ID and exact document hash.
+Legacy vector inputs may instead identify a meaning by exact `word`, `part_of_speech` and
+`sort_order`; require a unique base-form match before validating its full document hash.
+Reject mixed identity fields and duplicate resolved meaning/profile pairs across the file.
+This does not assign sync IDs; native exports and internal transfers still use UUIDs.
 The existing import accepts vector-only packages without changing dictionary versions;
 native exports include current vectors, and `embeddings_only=true` exports just those.
 Transfers never call a model or depend on the semantic-search flag. Reconciliation retains

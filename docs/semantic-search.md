@@ -41,7 +41,8 @@ checks dimensions. The meaning foreign key uses `ON DELETE CASCADE`, and profile
 removes only its vectors. The index on `meaning_id` supports this cleanup.
 
 The database IDs are internal links. The transfer format resolves a portable
-`meaning_sync_id` to the local row and validates the current input hash. It never uses
+`meaning_sync_id`, or an exact `(word, part_of_speech, sort_order)` key for datasets without
+portable IDs, to the local row and validates the current input hash. It never uses
 IDs from the old local prototype as portable identifiers. `embeddingVector` rejects wrong
 sizes, sparse/non-finite values, float32 overflow and non-unit vectors before storage.
 It rounds values to float32, as PostgreSQL and pgvector do. The current limit is 2,000
@@ -87,7 +88,7 @@ A standalone manifest has this shape (replace the placeholders with actual hashe
 ```
 
 Use the source name of the target dataset. A standalone vectors import does not change
-the dictionary version, content or edit history. Each JSONL row has exactly these fields:
+the dictionary version, content or edit history. A JSONL row identified by UUID has exactly these fields:
 
 ```json
 {
@@ -102,7 +103,32 @@ The two-component vector above illustrates the row shape; a 768-dimensional prof
 exactly 768 finite numbers. Float32 rounding must leave the L2 norm within 0.001 of one.
 Take `meaning_sync_id` from the meaning's `sync_id` in a normal dictionary export, which
 assigns missing portable identities. Numeric database IDs and the old prototype IDs are
-not accepted. The profile ID is the lowercase SHA-256 of UTF-8 `JSON.stringify` of the array:
+not accepted. For an older dataset without `sync_id`, replace `meaning_sync_id` with these
+three fields (do not combine both identity forms in one row):
+
+```json
+{
+  "word": "ornithologist",
+  "part_of_speech": "noun",
+  "sort_order": 1,
+  "profile_id": "<profile SHA-256>",
+  "input_hash": "<input SHA-256>",
+  "embedding": [0.6, 0.8]
+}
+```
+
+The importer matches the exact spelling (including case), part of speech and positive
+integer `sort_order` of a base-form word in the receiving dataset. It requires exactly one
+meaning before checking the hash of the complete model input, including the title and
+definition. Missing or ambiguous matches and changed inputs reject the entire file; a hash
+does not disambiguate duplicate keys. Reordering meanings requires preparing new keys.
+This import does not assign or alter any `sync_id`. Both row forms may occur in one file,
+but multiple rows for the same resolved meaning and profile are rejected, even when one
+uses a UUID and another a natural key. Native exports continue to use UUIDs; a vector-only
+export assigns missing meaning UUIDs too, without changing content timestamps or edit history.
+The natural-key form requires an importer with this support; older importers reject it.
+
+The profile ID is the lowercase SHA-256 of UTF-8 `JSON.stringify` of the array:
 `[model, revision, dimensions, normalization, document_format, query_format]`.
 
 `meaning-v1` hashes and embeds the exact UTF-8 string below, with no trimming, case folding
