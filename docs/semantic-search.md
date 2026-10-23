@@ -388,9 +388,24 @@ inference; the semantic API checks those on every query. The server has no depen
 this service, so unavailable inference does not prevent startup, readiness, lexical search
 or vector import/export. Nothing pulls models or installs the extension automatically.
 
-CPU execution is the default. For an optional NVIDIA GPU on a configured Docker host, an
-override can add `gpus: all` under `services.embeddings`. Other GPU runtimes need their own
-device settings; follow the [official Ollama Docker instructions](https://docs.ollama.com/docker).
+The bundled service explicitly forces CPU execution and system RAM with
+`CUDA_VISIBLE_DEVICES=-1`, `ROCR_VISIBLE_DEVICES=-1` and `OLLAMA_VULKAN=0`. These values
+belong to the `embeddings` service's environment and do not inherit GPU selection from
+the instance's `.env`. They affect inference, not the size of the downloaded image.
+For an optional NVIDIA GPU on a configured Docker host, an override must both expose
+the device and re-enable CUDA selection, for example:
+
+```yaml
+services:
+  embeddings:
+    gpus: all
+    environment:
+      CUDA_VISIBLE_DEVICES: '0'
+```
+
+Other GPU runtimes need their own device settings and corresponding environment overrides;
+follow the [official Ollama Docker instructions](https://docs.ollama.com/docker) and
+[GPU selection documentation](https://docs.ollama.com/gpu).
 On Docker Desktop for macOS, use native Ollama and `host.docker.internal` if you need Metal
 acceleration rather than Linux-container CPU inference.
 

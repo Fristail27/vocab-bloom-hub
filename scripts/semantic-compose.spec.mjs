@@ -52,13 +52,24 @@ function config(values, build = false) {
 for (const profile of ['', 'db', 'db,embeddings', 'db,site,embeddings']) {
   for (const enabled of ['false', 'true']) {
     test(`profile=${profile || '(none)'}, search=${enabled}: independent startup`, () => {
-      const { services } = config({ COMPOSE_PROFILES: profile, SEMANTIC_SEARCH_ENABLED: enabled });
+      const { services } = config({
+        COMPOSE_PROFILES: profile,
+        SEMANTIC_SEARCH_ENABLED: enabled,
+        CUDA_VISIBLE_DEVICES: '0',
+        ROCR_VISIBLE_DEVICES: '0',
+        OLLAMA_VULKAN: '1',
+      });
       assert.equal(Boolean(services.embeddings), profile.includes('embeddings'));
       assert.equal(Boolean(services.postgres), profile.includes('db'));
       assert.equal(services.server.environment.SEMANTIC_SEARCH_ENABLED, enabled);
       assert.equal(services.server.environment.EMBEDDINGS_URL, 'http://embeddings:11434');
       assert.equal(services.server.depends_on, undefined);
       if (services.embeddings) {
+        assert.equal(services.embeddings.environment.CUDA_VISIBLE_DEVICES, '-1');
+        assert.equal(services.embeddings.environment.ROCR_VISIBLE_DEVICES, '-1');
+        assert.equal(services.embeddings.environment.OLLAMA_VULKAN, '0');
+        assert.equal(services.embeddings.gpus, undefined);
+        assert.equal(services.embeddings.devices, undefined);
         assert.equal(services.embeddings.ports, undefined);
         assert.equal(services.embeddings.volumes[0].target, '/root/.ollama');
         assert.match(services.embeddings.healthcheck.test[1], /ollama show/);

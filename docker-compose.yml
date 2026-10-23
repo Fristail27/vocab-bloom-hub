@@ -48,9 +48,13 @@ services:
     environment:
       OLLAMA_HOST: 0.0.0.0:11434
       EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL:-embeddinggemma-2:latest}
+      # Force CPU inference and system RAM even when the host exposes GPU devices.
+      CUDA_VISIBLE_DEVICES: '-1'
+      ROCR_VISIBLE_DEVICES: '-1'
+      OLLAMA_VULKAN: '0'
     volumes:
       - embeddings-data:/root/.ollama
-    # Private to the Compose network. No GPU is required or reserved.
+    # Private to the Compose network. GPU use requires an explicit override.
     healthcheck:
       # The daemon and the explicitly provisioned model must both be present.
       # No inference, downloads or dictionary-vector generation in a probe.
