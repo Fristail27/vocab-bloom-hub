@@ -107,6 +107,16 @@ const BY_SLUG: Record<string, (request: SnippetRequestT) => string> = {
       '  else console.log(group.dataset, group.error);',
       '}',
     ].join('\n'),
+  'get-search-semantic': ({ origin }) =>
+    [
+      ...client(origin),
+      "const { data } = await client.searchSemantic({ query: 'A scientist who studies birds' });",
+      'console.log(data[0]?.word.word, data[0]?.meaning.definition);',
+    ].join('\n'),
+  'get-search-semantic-status': ({ origin }) =>
+    [...client(origin), 'const { data } = await client.semanticStatus();', 'console.log(data.enabled);'].join(
+      '\n',
+    ),
   'get-search-detailed': ({ origin }) =>
     [
       ...client(origin),

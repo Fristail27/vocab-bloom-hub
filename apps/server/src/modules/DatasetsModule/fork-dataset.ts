@@ -6,13 +6,14 @@ import { inheritOrigin } from '../../../core/utils/origin_acquisitions';
 import { assertCompatibleOrigins, assertOrigins } from '../../core/utils/provenance';
 import { assertSafeSchema, searchPathOf } from '../../db/datasets';
 import { datasetMigrations, DATASET_MIGRATIONS_TABLE } from '../../db/dataset-migrations';
-import { DICTIONARY_ENTITIES } from '../EnModule/entities/dictionary-entities';
+import { DICTIONARY_ENTITIES, EMBEDDING_ENTITIES } from '../EnModule/entities/dictionary-entities';
 import { Dataset } from './entities/dataset.entity';
 import type { ForkProgressT, OriginT, OriginAcquisitionT } from '../../../types';
 import { ReconciliationStore } from '../EnModule/modules/EnReconciliation/store';
 import { captureCurrent } from '../EnModule/modules/EnReconciliation/ancestry';
 import { persistentLineage } from '../EnModule/modules/EnReconciliation/snapshot';
 import { ReconciliationIdentity } from '../EnModule/modules/EnReconciliation/entities';
+import { copyForkEmbeddings } from '../../core/embeddings/reuse';
 
 /** DDL and data commit together. A process crash cannot leave a staging schema. */
 export const forkDataset = async (
@@ -25,23 +26,24 @@ export const forkDataset = async (
   const quote = (name: string): string => connection.driver.escape(name);
   const sourceSchema = quote(assertSafeSchema(source.schema));
   const targetSchema = quote(assertSafeSchema(target.schema));
-  const tables = DICTIONARY_ENTITIES.filter((entity) => entity !== EnContentReview).map((entity) =>
-    connection.getMetadata(entity),
-  );
+  const tables = DICTIONARY_ENTITIES.filter(
+    (entity) => entity !== EnContentReview && !EMBEDDING_ENTITIES.some((derived) => derived === entity),
+  ).map((entity) => connection.getMetadata(entity));
   const junctions = tables.flatMap((meta) =>
     meta.ownRelations
       .filter((relation) => relation.isManyToManyOwner)
       .map((relation) => relation.junctionEntityMetadata!),
   );
   const copying = [...tables, ...junctions];
-  progress.total_tables = copying.length;
+  const derived = EMBEDDING_ENTITIES.map((entity) => connection.getMetadata(entity));
+  progress.total_tables = copying.length + derived.length;
   await runner.connect();
   await runner.startTransaction('REPEATABLE READ');
   try {
     // Keep a deletion or import from dropping/truncating source tables while
     // the transaction is reading the snapshot; ordinary row edits can proceed.
     await runner.query(
-      `LOCK TABLE ${copying.map((meta) => `${sourceSchema}.${quote(meta.tableName)}`).join(', ')} IN ACCESS SHARE MODE`,
+      `LOCK TABLE ${[...copying, ...derived].map((meta) => `${sourceSchema}.${quote(meta.tableName)}`).join(', ')} IN ACCESS SHARE MODE`,
     );
     const parent = await runner.manager.findOneOrFail(Dataset, { where: { id: source.id } });
     // Capture the ancestor while on the parent's schema and in this same snapshot.
@@ -107,6 +109,8 @@ export const forkDataset = async (
       }
       progress.completed_tables++;
     }
+    await copyForkEmbeddings(runner.manager, source.schema);
+    progress.completed_tables += derived.length;
     // Retain immutable ancestors for later merges between siblings. Pending review plans
     // and operation state must never become operations of the new dataset.
     await runner.query(

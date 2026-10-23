@@ -102,6 +102,14 @@ const BY_SLUG: Record<string, (request: SnippetRequestT) => string> = {
       '    else:',
       '        print(group.dataset, group.error)',
     ].join('\n'),
+  'get-search-semantic': ({ origin }) =>
+    [
+      ...client(origin),
+      'answer = client.search_semantic("A scientist who studies birds")',
+      'print(answer.data[0].meaning.definition if answer.data else None)',
+    ].join('\n'),
+  'get-search-semantic-status': ({ origin }) =>
+    [...client(origin), 'answer = client.semantic_status()', 'print(answer.data.enabled)'].join('\n'),
   'get-search-detailed': ({ origin }) =>
     [
       ...client(origin),

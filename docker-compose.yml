@@ -9,6 +9,8 @@
 # the `site` profile: COMPOSE_PROFILES=db,site starts it too — off by
 # default, an installation does not need it. Nothing in this file needs
 # editing either way.
+# `embeddings` adds a private Ollama service. Provision its model explicitly;
+# SEMANTIC_SEARCH_ENABLED separately enables search (off by default).
 # The HTTP apps are published on localhost only, on ports away from the usual
 # 3000 / 9090 of other tools: the API on 3240, the admin UI on 3241, the
 # website on 3242 (SERVER_PORT / FRONT_PORT / SITE_PORT in .env; the
@@ -19,7 +21,7 @@
 services:
   postgres:
     profiles: [db]
-    image: postgres:17-alpine
+    image: ghcr.io/fristail27/vocab-bloom-hub-postgres:${VBH_TAG:-main}
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-vocab}
       # not published outside the compose network; .env.example still sets it
@@ -37,6 +39,27 @@ services:
       interval: 5s
       timeout: 5s
       retries: 12
+    restart: unless-stopped
+
+  embeddings:
+    # Starting Ollama does not enable search or download/generate any model data.
+    profiles: [embeddings]
+    image: ${EMBEDDINGS_IMAGE:-ollama/ollama:0.40.8}
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+      EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL:-embeddinggemma-2:latest}
+    volumes:
+      - embeddings-data:/root/.ollama
+    # Private to the Compose network. No GPU is required or reserved.
+    healthcheck:
+      # The daemon and the explicitly provisioned model must both be present.
+      # No inference, downloads or dictionary-vector generation in a probe.
+      test:
+        ['CMD-SHELL', 'OLLAMA_HOST=http://127.0.0.1:11434 ollama show "$${EMBEDDINGS_MODEL}" >/dev/null 2>&1']
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
     restart: unless-stopped
 
   server:
@@ -64,6 +87,12 @@ services:
       # ./imports when a dataset is there, otherwise from HuggingFace; the
       # readiness probe reports `importing` meanwhile (docs/deployment/docker.md)
       DICTIONARY_AUTO_IMPORT: ${DICTIONARY_AUTO_IMPORT:-true}
+      # Independent of the embeddings profile. Remote Ollama needs no container.
+      SEMANTIC_SEARCH_ENABLED: ${SEMANTIC_SEARCH_ENABLED:-false}
+      EMBEDDINGS_URL: ${EMBEDDINGS_URL:-http://embeddings:11434}
+      EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL:-embeddinggemma-2:latest}
+      EMBEDDINGS_REVISION: ${EMBEDDINGS_REVISION:-}
+      EMBEDDINGS_DIMENSIONS: ${EMBEDDINGS_DIMENSIONS:-768}
     volumes:
       - ./imports:/data/dictionary-imports:ro
     ports:
@@ -121,3 +150,4 @@ services:
 
 volumes:
   postgres-data:
+  embeddings-data:

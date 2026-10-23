@@ -74,6 +74,26 @@ class AsyncVocabBloomClient:
             options,
         )
 
+    async def search_semantic(
+        self,
+        query: str,
+        *,
+        dataset: str | None = None,
+        limit: int | None = None,
+        options: RequestOptions | None = None,
+    ) -> m.SemanticSearchResponse:
+        """Find existing senses from a description, without lexical fallback."""
+        return await self._get(
+            "/search/semantic",
+            {"query": query, "dataset": dataset, "limit": limit},
+            m.SemanticSearchResponse,
+            options,
+        )
+
+    async def semantic_status(self, *, options: RequestOptions | None = None) -> m.SemanticStatusResponse:
+        """Read the feature switch without invoking the model."""
+        return await self._get("/search/semantic/status", None, m.SemanticStatusResponse, options)
+
     async def search_detailed(
         self,
         search: str,

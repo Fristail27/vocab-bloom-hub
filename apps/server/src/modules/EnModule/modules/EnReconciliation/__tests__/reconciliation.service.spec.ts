@@ -28,8 +28,17 @@ import { EnEntry } from '../../../entities/en_entry.entity';
 import { EnWord } from '../../../entities/en_word.entity';
 import { EnChange } from '../../../entities/en_change.entity';
 import { EnPartOfSpeechE, EnWordFormsE } from '../../../../../../types';
-import { ReconciliationPlan, ReconciliationRevision, ReconciliationIdentity } from '../entities';
+import {
+  ReconciliationPlan,
+  ReconciliationRevision,
+  ReconciliationIdentity,
+  ReconciliationEmbedding,
+} from '../entities';
 import { dictionaryRecords, datasetSnapshotMetadata, persistentLineage } from '../snapshot';
+import { EnEmbeddingProfile } from '../../../entities/en_embedding_profile.entity';
+import { EnMeaningEmbedding } from '../../../entities/en_meaning_embedding.entity';
+import { embeddingProfileId, embeddingInputHash } from '../../../../../core/embeddings/profile';
+import { embeddingDocument, currentEmbeddingLines } from '../../../../../core/embeddings/transfer';
 
 describe('reconciliation publishes dictionary changes', () => {
   let db: DataSource;
@@ -113,6 +122,174 @@ describe('reconciliation publishes dictionary changes', () => {
       imports,
     );
   }
+
+  const vectorProfile = (revision = 'a'.repeat(64)) => {
+    const profile = {
+      model: 'fixture:latest',
+      revision,
+      dimensions: 3,
+      normalization: 'l2' as const,
+      document_format: 'meaning-v1',
+      query_format: 'search-query-v1',
+    };
+    return { ...profile, id: embeddingProfileId(profile) };
+  };
+  async function vector(connection: DataSource, meaning: EnMeaning, revision?: string) {
+    const profile = vectorProfile(revision);
+    await connection.manager.upsert(EnEmbeddingProfile, profile, ['id']);
+    const loaded = await connection.manager.findOneOrFail(EnMeaning, {
+      where: { id: meaning.id },
+      relations: { word: { word: true } },
+    });
+    await connection.manager.save(EnMeaningEmbedding, {
+      meaning_id: meaning.id,
+      profile_id: profile.id,
+      dimensions: 3,
+      input_hash: embeddingInputHash(embeddingDocument(loaded)),
+      embedding: [1, 0, 0],
+    });
+  }
+  async function senses() {
+    const identity = randomUUID();
+    const local = await word(db, 'vectorword', 'base');
+    const incoming = await word(source, 'vectorword', 'base');
+    const attrs = { sync_id: identity, title: 'sense', definition: 'Original definition', sort_order: 1 };
+    return {
+      local,
+      incoming,
+      meaning: await db.manager.save(EnMeaning, { ...attrs, word: local }),
+      sourceMeaning: await source.manager.save(EnMeaning, { ...attrs, word: incoming }),
+    };
+  }
+
+  it('preserves compatible local vectors across row recreation but drops changed or removed senses', async () => {
+    const { local, incoming, meaning, sourceMeaning } = await senses();
+    await vector(db, meaning);
+    await vector(db, meaning, 'b'.repeat(64));
+    await service.rememberSource('default');
+    await source.manager.update(EnWord, incoming.id, { description: 'Unrelated metadata edit' });
+    let plan = await service.prepareSource('default', source.manager, '2', true);
+    await service.apply('default', plan.id);
+    const recreated = await db.manager.findOneByOrFail(EnMeaning, { sync_id: meaning.sync_id });
+    expect(recreated.id).not.toBe(meaning.id);
+    const kept = await db.manager.find(EnMeaningEmbedding);
+    expect(kept).toHaveLength(2);
+    expect(kept.every((v) => v.meaning_id === recreated.id)).toBe(true);
+    expect(new Set(kept.map((v) => v.profile_id)).size).toBe(2);
+    const changes = await db.manager.find(EnChange);
+    expect(JSON.stringify(changes)).not.toMatch(/embedding|profile_id/);
+
+    await source.manager.update(EnMeaning, sourceMeaning.id, { definition: 'Changed input' });
+    plan = await service.prepareSource('default', source.manager, '3', true);
+    await service.apply('default', plan.id);
+    expect(await db.manager.count(EnMeaningEmbedding)).toBe(0);
+    const updated = await db.manager.findOneByOrFail(EnMeaning, { word: { id: local.id } });
+    await vector(db, updated);
+    await source.manager.delete(EnMeaning, sourceMeaning.id);
+    plan = await service.prepareSource('default', source.manager, '4', true);
+    await service.apply('default', plan.id);
+    expect(await db.manager.count(EnMeaningEmbedding)).toBe(0);
+  });
+
+  it.each(['source', 'parent'])(
+    'snapshots incoming %s vectors and publishes only the final exact meaning',
+    async (kind) => {
+      const { meaning, sourceMeaning } = await senses();
+      await service.rememberSource('default');
+      await vector(db, meaning);
+      await source.manager.update(EnMeaning, sourceMeaning.id, { definition: 'Incoming input' });
+      await vector(source, sourceMeaning, 'b'.repeat(64));
+      const merging = kind === 'parent' ? parentService() : service;
+      const plan =
+        kind === 'parent'
+          ? await merging.prepareParent('default', 'parent', true)
+          : await merging.prepareSource('default', source.manager, '2', true);
+      // Decisions and vectors are durable; later source changes cannot rewrite this plan.
+      await source.manager.update(EnMeaning, sourceMeaning.id, { definition: 'Changed after preparation' });
+      await source.manager.delete(EnEmbeddingProfile, vectorProfile('b'.repeat(64)).id);
+      const items = await merging.items('default', plan.id, 1);
+      for (const item of items.items)
+        await merging.override('default', plan.id, item.headword, item.version, item.incoming);
+      await merging.apply('default', plan.id);
+      const saved = await db.manager.findOneByOrFail(EnMeaning, { sync_id: meaning.sync_id });
+      expect(saved.definition).toBe('Incoming input');
+      const rows = await db.manager.find(EnMeaningEmbedding);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ meaning_id: saved.id, profile_id: vectorProfile('b'.repeat(64)).id });
+      const valid = [];
+      for await (const line of currentEmbeddingLines(db.manager, vectorProfile('b'.repeat(64))))
+        valid.push(line);
+      expect(valid).toHaveLength(1);
+    },
+  );
+
+  it('rolls back retained vectors and rebuilt meanings together when publication fails', async () => {
+    const { meaning, incoming } = await senses();
+    await vector(db, meaning);
+    await service.rememberSource('default');
+    await source.manager.update(EnWord, incoming.id, { description: 'An unrelated edit' });
+    const plan = await service.prepareSource('default', source.manager, '2', true);
+    const before = await db.manager.find(EnMeaningEmbedding);
+    // Publication runs on another manager. Fail at an actual SQL statement after rebuilding content.
+    const query = db.createQueryRunner().query;
+    const runnerPrototype = Object.getPrototypeOf(db.createQueryRunner());
+    const fault = jest.spyOn(runnerPrototype, 'query').mockImplementation(function (
+      this: unknown,
+      ...args: unknown[]
+    ) {
+      if (String(args[0]).startsWith('INSERT INTO "audit_log"')) throw new Error('fixture publication failure');
+      return Reflect.apply(query, this, args);
+    });
+    try {
+      await expect(service.apply('default', plan.id)).rejects.toThrow('fixture publication failure');
+    } finally {
+      fault.mockRestore();
+    }
+    expect(await db.manager.find(EnMeaningEmbedding)).toEqual(before);
+    expect((await db.manager.findOneByOrFail(EnMeaning, { id: meaning.id })).definition).toBe(
+      'Original definition',
+    );
+  });
+
+  it.each(['local', 'custom'])(
+    'does not install incoming vectors when the final decision is %s',
+    async (decision) => {
+      const { meaning, sourceMeaning } = await senses();
+      await vector(db, meaning);
+      await service.rememberSource('default');
+      await source.manager.update(EnMeaning, sourceMeaning.id, { definition: 'Incoming input' });
+      await vector(source, sourceMeaning, 'b'.repeat(64));
+      const plan = await service.prepareSource('default', source.manager, '2', true);
+      const item = (await service.items('default', plan.id, 1)).items[0];
+      const result = structuredClone(decision === 'local' ? item.local : item.incoming);
+      if (decision === 'custom' && result.present) {
+        const meanings = object(object(object(object(result.value).parts).noun).meanings);
+        object(meanings[meaning.sync_id!]).definition = 'Custom input';
+      }
+      await service.override('default', plan.id, item.headword, item.version, result);
+      await service.apply('default', plan.id);
+      const rows = await db.manager.find(EnMeaningEmbedding);
+      expect(rows.map((row) => row.profile_id)).toEqual(decision === 'local' ? [vectorProfile().id] : []);
+    },
+  );
+
+  it('removes cancelled plan vectors without changing live vectors or content', async () => {
+    const { meaning, sourceMeaning } = await senses();
+    await vector(db, meaning);
+    await service.rememberSource('default');
+    await source.manager.update(EnMeaning, sourceMeaning.id, { definition: 'Incoming input' });
+    await vector(source, sourceMeaning);
+    const before = await db.manager.find(EnMeaningEmbedding);
+    const plan = await service.prepareSource('default', source.manager, '2', true);
+    expect(await db.manager.count(ReconciliationEmbedding)).toBe(1);
+    await service.cancel('default', plan.id);
+    expect(await db.manager.count(ReconciliationEmbedding)).toBe(0);
+    expect(await db.manager.find(EnMeaningEmbedding)).toEqual(before);
+    expect((await db.manager.findOneByOrFail(EnMeaning, { id: meaning.id })).definition).toBe(
+      'Original definition',
+    );
+    await expect(service.apply('default', plan.id)).rejects.toThrow();
+  });
 
   it('keeps local reviews content-aware through source publication and never imports source reviews', async () => {
     const local = await word(db, 'reviewed', 'base');

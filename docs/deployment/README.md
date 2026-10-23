@@ -6,18 +6,18 @@ published images, the easiest ([`docker.md`](./docker.md)) — or as plain Node.
 ([`reverse-proxy.md`](./reverse-proxy.md)) and Postgres holds the data
 ([`../database.md`](../database.md)).
 
-| Page                                           | What it covers                                                               |
-| ---------------------------------------------- | ---------------------------------------------------------------------------- |
-| this page                                      | Build and start the two processes, probes, graceful stop, systemd / PM2      |
-| [`docker.md`](./docker.md)                     | The three images, `docker-compose.yml`, the first start, building the images |
-| [`reverse-proxy.md`](./reverse-proxy.md)       | TLS, one origin for both apps, keeping the admin API private (Caddy / nginx) |
-| [`vps.md`](./vps.md)                           | A checkout on a VPS: build the images there, update with `git pull`          |
-| [`examples/`](./examples/)                     | systemd units, a PM2 process file, nginx for a website + admin host pair     |
-| [`../database.md`](../database.md)             | Postgres inside compose or separate, migrations, backups, size               |
-| [`../environment.md`](../environment.md)       | Every environment variable                                                   |
-| [`../operations.md`](../operations.md)         | Backups, upgrading, rolling back, dataset updates                            |
-| [`../observability.md`](../observability.md)   | Metrics (Prometheus + Grafana) and logs                                      |
-| [`../offline-import.md`](../offline-import.md) | Loading the dictionary without internet access                               |
+| Page                                           | What it covers                                                                                              |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| this page                                      | Build and start the two processes, probes, graceful stop, systemd / PM2                                     |
+| [`docker.md`](./docker.md)                     | The app/database images, optional model service, `docker-compose.yml`, the first start, building the images |
+| [`reverse-proxy.md`](./reverse-proxy.md)       | TLS, one origin for both apps, keeping the admin API private (Caddy / nginx)                                |
+| [`vps.md`](./vps.md)                           | A checkout on a VPS: build the images there, update with `git pull`                                         |
+| [`examples/`](./examples/)                     | systemd units, a PM2 process file, nginx for a website + admin host pair                                    |
+| [`../database.md`](../database.md)             | Postgres inside compose or separate, migrations, backups, size                                              |
+| [`../environment.md`](../environment.md)       | Every environment variable                                                                                  |
+| [`../operations.md`](../operations.md)         | Backups, upgrading, rolling back, dataset updates                                                           |
+| [`../observability.md`](../observability.md)   | Metrics (Prometheus + Grafana) and logs                                                                     |
+| [`../offline-import.md`](../offline-import.md) | Loading the dictionary without internet access                                                              |
 
 ## What production requires
 

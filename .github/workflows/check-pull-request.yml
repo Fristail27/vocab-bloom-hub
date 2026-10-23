@@ -195,6 +195,39 @@ jobs:
         run: uv build
         working-directory: packages/python-sdk
 
+  pgvector:
+    name: optional semantic deployment and search
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://vocab:vocab@localhost:5432/vocab_bloom
+      TEST_PGVECTOR: 'true'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          node-version: 24
+      - name: Compose flag/profile matrix
+        run: node --test scripts/semantic-compose.spec.mjs
+      - name: Build bundled PostgreSQL with pgvector
+        run: docker build -f docker/postgres/Dockerfile -t vbh-semantic-pg .
+      - name: Existing volume and model service lifecycle
+        run: bash .github/scripts/semantic-deployment-smoke.sh vbh-semantic-pg
+      - name: Start isolated PostgreSQL
+        run: |
+          docker run -d --name semantic-pg -p 127.0.0.1:5432:5432 -e POSTGRES_USER=vocab -e POSTGRES_PASSWORD=vocab -e POSTGRES_DB=vocab_bloom vbh-semantic-pg
+          for i in $(seq 1 60); do
+            if docker exec semantic-pg pg_isready -h 127.0.0.1 -U vocab -d vocab_bloom; then break; fi
+            sleep 1
+          done
+          docker exec semantic-pg pg_isready -h 127.0.0.1 -U vocab -d vocab_bloom
+      # Suites create/drop their own databases; extension-free storage first,
+      # then explicit activation and search against a local HTTP model fixture.
+      - run: yarn workspace server test:postgres meaning-embeddings.pg-spec.ts semantic-search.pg-spec.ts
+      - name: Stop fixture
+        if: always()
+        run: docker rm -f -v semantic-pg || true
+
   postgres:
     name: postgres-only tests
     runs-on: ubuntu-latest
@@ -319,7 +352,7 @@ jobs:
     timeout-minutes: 30
 
     # The Dockerfiles and docker-compose.yml (issue #316) are exercised the way
-    # an operator uses them: build the three images, `docker compose up` with
+    # an operator uses them: build the app and database images, `docker compose up` with
     # the site profile, wait for the readiness probe and the login page, sign
     # in over plain http (the cookie must not be `secure` there), check the
     # website reaches the API, stop gracefully

@@ -4,6 +4,11 @@
 # The built images take the names docker-compose.yml expects, so a later
 # plain `docker compose up` keeps using them until `docker compose pull`.
 services:
+  postgres:
+    build:
+      context: .
+      dockerfile: docker/postgres/Dockerfile
+
   server:
     build:
       context: .

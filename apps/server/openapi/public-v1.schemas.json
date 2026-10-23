@@ -3703,5 +3703,183 @@
       "data",
       "meta"
     ]
+  },
+  "PublicSemanticMatchV1T": {
+    "type": "object",
+    "properties": {
+      "word": {
+        "$ref": "#/components/schemas/PublicSearchWordV1T"
+      },
+      "meaning": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "modified": {
+            "type": "boolean"
+          },
+          "etymology_number": {
+            "description": "Local number of the owning word etymology; null when unknown.",
+            "type": "integer",
+            "nullable": true
+          },
+          "id": {
+            "type": "integer"
+          },
+          "sort_order": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "definition": {
+            "type": "string"
+          },
+          "is_obsolete": {
+            "type": "boolean"
+          },
+          "examples": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "quotes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeaningQuoteT"
+            }
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CategoryE"
+            }
+          },
+          "meaning_level": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WordLevelE"
+              }
+            ],
+            "nullable": true
+          },
+          "area_variant": {
+            "$ref": "#/components/schemas/EnAreaVariantsE"
+          },
+          "language_register": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LanguageRegisterE"
+              }
+            ],
+            "nullable": true
+          },
+          "translations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicWordV1MeaningTranslationT"
+            }
+          },
+          "synonyms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "antonyms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "antonyms",
+          "area_variant",
+          "categories",
+          "definition",
+          "examples",
+          "id",
+          "is_obsolete",
+          "language_register",
+          "meaning_level",
+          "modified",
+          "sort_order",
+          "source",
+          "synonyms",
+          "title",
+          "translations"
+        ]
+      },
+      "score": {
+        "type": "number",
+        "description": "Cosine similarity from -1 to 1; no calibrated no-answer threshold."
+      }
+    },
+    "required": [
+      "word",
+      "meaning",
+      "score"
+    ],
+    "description": "A matching existing sense, with cosine similarity (not a confidence probability)."
+  },
+  "PublicSemanticSearchV1ResT": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/PublicSemanticMatchV1T"
+        }
+      },
+      "meta": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "dataset": {
+            "$ref": "#/components/schemas/PublicDatasetTermsV1T"
+          },
+          "profile_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "count",
+          "limit",
+          "dataset",
+          "profile_id"
+        ]
+      }
+    },
+    "required": [
+      "data",
+      "meta"
+    ]
+  },
+  "PublicSemanticStatusV1ResT": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      }
+    },
+    "required": [
+      "data"
+    ]
   }
 }

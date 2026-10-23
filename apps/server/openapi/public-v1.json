@@ -74,6 +74,135 @@
         ]
       }
     },
+    "/api/v1/search/semantic/status": {
+      "get": {
+        "description": "Reflects only SEMANTIC_SEARCH_ENABLED. Performs no inference and does not promise model/vector availability. Never cached.",
+        "operationId": "PublicSemanticController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSemanticStatusV1ResT"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Whether the instance enables semantic search",
+        "tags": [
+          "Public API v1"
+        ]
+      }
+    },
+    "/api/v1/search/semantic": {
+      "get": {
+        "description": "Separate from spelling search; no lexical fallback. Requires SEMANTIC_SEARCH_ENABLED, PostgreSQL/pgvector, imported current vectors and a matching Ollama model. Disabled = 404 semantic_search_disabled; missing infrastructure, busy service or incompatible model = 503. Returns up to 20 meanings, ordered by cosine similarity then meaning ID. Scores are not confidence probabilities; no calibrated no-answer threshold. No pagination or cross-dataset ranking. Uses the shared public rate budget. Responses are no-store.",
+        "operationId": "PublicSemanticController_search",
+        "parameters": [
+          {
+            "name": "query",
+            "required": true,
+            "in": "query",
+            "description": "A description of the intended meaning, in English or another language supported by the model.",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 1000,
+              "type": "string"
+            }
+          },
+          {
+            "name": "dataset",
+            "required": false,
+            "in": "query",
+            "description": "One public dataset; omitted = active dataset. Closed/unknown targets return 404.",
+            "schema": {
+              "pattern": "^(default|[a-z][a-z0-9_]{1,39})$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 20,
+              "default": 10,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSemanticSearchV1ResT"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input: an unknown field, a value outside the allowed set, or a foreign cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nothing matches",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit of the public prefix exceeded (PUBLIC_API_RATE_LIMIT); retry after the window",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Not available: a selected dataset could not be read, the OpenAPI document is not ready, or the suggestion queue is full",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiErrorT"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Find existing meanings from a description",
+        "tags": [
+          "Public API v1"
+        ]
+      }
+    },
     "/api/compat/dictionaryapi/v2/entries/{language}/{word}/datasets": {
       "get": {
         "description": "One group per installed dataset with its terms, status and response in the adapter format. Missing words have status 404 and the adapter error in response. The outer request returns 200 even when no dataset matches. English only; the usual headword and inflection rules apply in each dataset. No query parameters. Does not activate any dataset. One public rate-limit unit; cached across all datasets.",
@@ -6102,6 +6231,184 @@
         "required": [
           "data",
           "meta"
+        ]
+      },
+      "PublicSemanticMatchV1T": {
+        "type": "object",
+        "properties": {
+          "word": {
+            "$ref": "#/components/schemas/PublicSearchWordV1T"
+          },
+          "meaning": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string"
+              },
+              "modified": {
+                "type": "boolean"
+              },
+              "etymology_number": {
+                "description": "Local number of the owning word etymology; null when unknown.",
+                "type": "integer",
+                "nullable": true
+              },
+              "id": {
+                "type": "integer"
+              },
+              "sort_order": {
+                "type": "integer"
+              },
+              "title": {
+                "type": "string"
+              },
+              "definition": {
+                "type": "string"
+              },
+              "is_obsolete": {
+                "type": "boolean"
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "quotes": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/MeaningQuoteT"
+                }
+              },
+              "categories": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/CategoryE"
+                }
+              },
+              "meaning_level": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/WordLevelE"
+                  }
+                ],
+                "nullable": true
+              },
+              "area_variant": {
+                "$ref": "#/components/schemas/EnAreaVariantsE"
+              },
+              "language_register": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/LanguageRegisterE"
+                  }
+                ],
+                "nullable": true
+              },
+              "translations": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/PublicWordV1MeaningTranslationT"
+                }
+              },
+              "synonyms": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "antonyms": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "antonyms",
+              "area_variant",
+              "categories",
+              "definition",
+              "examples",
+              "id",
+              "is_obsolete",
+              "language_register",
+              "meaning_level",
+              "modified",
+              "sort_order",
+              "source",
+              "synonyms",
+              "title",
+              "translations"
+            ]
+          },
+          "score": {
+            "type": "number",
+            "description": "Cosine similarity from -1 to 1; no calibrated no-answer threshold."
+          }
+        },
+        "required": [
+          "word",
+          "meaning",
+          "score"
+        ],
+        "description": "A matching existing sense, with cosine similarity (not a confidence probability)."
+      },
+      "PublicSemanticSearchV1ResT": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicSemanticMatchV1T"
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "integer"
+              },
+              "limit": {
+                "type": "integer"
+              },
+              "dataset": {
+                "$ref": "#/components/schemas/PublicDatasetTermsV1T"
+              },
+              "profile_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "count",
+              "limit",
+              "dataset",
+              "profile_id"
+            ]
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "PublicSemanticStatusV1ResT": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "enabled"
+            ]
+          }
+        },
+        "required": [
+          "data"
         ]
       }
     }

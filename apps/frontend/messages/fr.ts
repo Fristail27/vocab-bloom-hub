@@ -1111,6 +1111,14 @@ export default {
     param_desc_datasets:
       '1 à 5 noms publics uniques de GET /api/v1/datasets ; saisir des noms séparés par des virgules, envoyés sous forme de clés de requête répétées.',
     endpoint_search_get: 'Recherche simple',
+    endpoint_search_semantic_get: 'Recherche par sens',
+    desc_search_semantic_get:
+      'Trouve des sens à partir d’une description dans un jeu de données public. Nécessite SEMANTIC_SEARCH_ENABLED=true ainsi que des vecteurs et un modèle compatibles. Renvoie 404 si désactivée et 503 si indisponible ; aucun repli sur la recherche orthographique. Le score mesure la similarité, pas la confiance.',
+    endpoint_search_semantic_status: 'État de la recherche par sens',
+    desc_search_semantic_status:
+      'Indique si la recherche par sens est activée sans interroger le modèle. Ne vérifie pas sa disponibilité.',
+    param_desc_query:
+      'Description du sens recherché (1 à 1000 caractères après suppression des espaces aux extrémités).',
     endpoint_search_detailed_get: 'Recherche détaillée',
     desc_search_get:
       "Recherche des entrées du dictionnaire et répond par une liste plate de mots sans sens ni traductions, avec les champs dans la chaîne de requête. La réponse porte ETag, Last-Modified et Cache-Control comme tout GET public, elle peut donc passer par un CDN et être partagée comme lien. Les résultats sont classés par qualité de correspondance : la correspondance exacte d'abord, puis les phrasal verbs, les entrées commençant par le terme, les expressions, celles qui se terminent par lui et toute autre occurrence. Quand rien ne correspond, un niveau de similarité par trigrammes répond aux fautes de frappe : meta.fuzzy vaut true et chaque élément porte similarity (0–1) — instances Postgres uniquement. Un terme d'un ou deux caractères ne cherche que dans les niveaux exact et préfixe (meta.short_term vaut true).",

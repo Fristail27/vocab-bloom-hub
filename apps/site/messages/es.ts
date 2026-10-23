@@ -284,6 +284,18 @@ export default {
     list: 'Lista de conexiones',
   },
   word: {
+    search_mode: 'Modo de búsqueda',
+    search_by_spelling: 'Por escritura',
+    search_by_meaning: 'Por significado',
+    semantic_hint: 'Describe el significado para ver las acepciones más cercanas del diccionario.',
+    semantic_dataset_hint: 'La búsqueda por significado usa un diccionario a la vez.',
+    semantic_placeholder: 'Un científico que estudia las aves',
+    semantic_label: 'Describe un significado',
+    semantic_unavailable:
+      'La búsqueda por significado no está disponible. Puedes elegir la búsqueda por escritura.',
+    semantic_results: 'Significados cercanos',
+    semantic_modified: 'Modificado en esta instancia',
+
     index_title: 'Palabras',
     index_intro:
       'El diccionario en páginas: un lema con cada categoría gramatical, sus formas, significados, ejemplos y traducciones — lo que responde la API, en formato legible.',

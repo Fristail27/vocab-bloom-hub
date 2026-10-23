@@ -271,6 +271,17 @@ export default {
     list: '关系列表',
   },
   word: {
+    search_mode: '搜索方式',
+    search_by_spelling: '按拼写',
+    search_by_meaning: '按含义',
+    semantic_hint: '描述含义，查找词典中最接近的已有释义。',
+    semantic_dataset_hint: '含义搜索每次仅使用一本词典。',
+    semantic_placeholder: '研究鸟类的科学家',
+    semantic_label: '描述含义',
+    semantic_unavailable: '含义搜索暂不可用。你可以选择按拼写搜索。',
+    semantic_results: '相近含义',
+    semantic_modified: '已在此实例修改',
+
     index_title: '词条',
     index_intro:
       '以页面形式呈现的词典：一个词条及其所有词性、词形变化、释义、例句和翻译——API 返回的内容，以可读的方式展示。',

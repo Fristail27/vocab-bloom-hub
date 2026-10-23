@@ -167,6 +167,50 @@ Statuses are computed from content, including after edits, suggestions, reverts 
 Checks do not create content history or modify public/editorial flags. They are excluded from
 fork copying and native exports; never transfer an incoming review. See `docs/data.md#local-content-review-647`.
 
+### Semantic search storage and transfer (issue #655, implementation in progress)
+
+`en_embedding_profiles` and `en_meaning_embeddings` are dataset-local derived data.
+Profiles identify the exact model revision and document/query formats; vectors carry the
+hash of the exact input. PostgreSQL stores float32 `real[]`, castable/indexable by pgvector;
+the migration does not require or install the optional extension. SQLite stores JSON.
+Validate writes with `src/core/embeddings/profile.ts`; `pgvectorSupport` only probes capability.
+Generic table copying excludes vectors; the fork transaction transfers them separately with
+portable-identity/profile/hash validation. HNSW provisioning and full-dictionary performance follow later.
+Meaning vectors are prepared externally: do not add internal generation commands or workers.
+The semantic API/site mode is separate from lexical search, guarded by
+`SEMANTIC_SEARCH_ENABLED=false` by default, independent of the `embeddings` Docker profile.
+The model is used at runtime only to embed new queries. See `docs/semantic-search.md`.
+The optional `embeddings` Compose service uses Ollama with a named model volume and a
+no-inference `ollama show` healthcheck. Provision models explicitly; no startup pulls.
+Compose defaults `EMBEDDINGS_URL` to `http://embeddings:11434`, native runs to localhost;
+remote URLs need no model profile. No server dependency on model health. The bundled
+`docker/postgres/Dockerfile` adds pgvector to PostgreSQL 17 Alpine without changing the
+volume path or automatically creating the extension. Enable it explicitly per database.
+`scripts/semantic-compose.spec.mjs` and `.github/scripts/semantic-deployment-smoke.sh`
+verify profile/flag independence and disposable existing-volume/model-service lifecycles.
+
+Vector files use `meaning-embeddings.jsonl` and `manifest.embeddings` (format 1), with
+portable `meaning_sync_id`, immutable model digest, profile ID and exact document hash.
+The existing import accepts vector-only packages without changing dictionary versions;
+native exports include current vectors, and `embeddings_only=true` exports just those.
+Transfers never call a model or depend on the semantic-search flag. Reconciliation retains
+incoming vectors locally in `reconciliation_embeddings` until content publication; only
+matching final identities/hashes receive them. See the file contract in `docs/semantic-search.md`.
+Parent/related merge preparation stages vectors from the same source snapshot too. Publication
+retains current local vectors for one word while rebuilding its nested rows and remaps only
+identical sync IDs/inputs to new row IDs (`core/embeddings/reuse.ts`). Search/export always
+filter current input hashes, including after suggestions/reverts; exact ordinary reverts can
+reuse a surviving row. Deletion cascades remove vectors, never regenerate them. Unsupported
+stored profiles are omitted from reuse/export; incoming files remain strictly validated.
+
+`PublicSemanticService` serves `/api/v1/search/semantic`, with an uncached `/status` read
+used by the site's mode selector. It pins one public dataset through `withPublicRead`,
+validates the configured imported profile, embeds only the query through Ollama (digest
+checked before/after), then performs exact pgvector ranking with current-input filtering.
+Responses use the existing public projections and dataset terms. No lexical fallback.
+Two concurrent requests per process; 10-second model deadline and 5-second DB statement
+limit. Keep status/model errors explicit. Full-dictionary HNSW/performance remains pending.
+
 ### Server: domain modules with sub-controller/service pairs
 
 Modules live in `apps/server/src/modules/` (AppModule is the root; AuthModule, EnModule, SettingsModule, SuggestionsModule, PublicApiModule, AuditModule, DatasetsModule, HealthModule, MetricsModule). The pattern inside a domain module like `EnModule`:

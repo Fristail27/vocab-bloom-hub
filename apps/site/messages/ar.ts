@@ -278,6 +278,17 @@ export default {
     list: 'قائمة العلاقات',
   },
   word: {
+    search_mode: 'وضع البحث',
+    search_by_spelling: 'حسب الكتابة',
+    search_by_meaning: 'حسب المعنى',
+    semantic_hint: 'صف المعنى لعرض أقرب المعاني الموجودة في القاموس.',
+    semantic_dataset_hint: 'يستخدم البحث حسب المعنى قاموسًا واحدًا في كل مرة.',
+    semantic_placeholder: 'عالم يدرس الطيور',
+    semantic_label: 'صف المعنى',
+    semantic_unavailable: 'البحث حسب المعنى غير متاح. يمكنك اختيار البحث حسب الكتابة.',
+    semantic_results: 'معانٍ قريبة',
+    semantic_modified: 'عُدّل في هذا الخادم',
+
     index_title: 'الكلمات',
     index_intro:
       'القاموس على هيئة صفحات: كلمة رئيسية بكل أقسام الكلام الخاصة بها، وصيغها، ومعانيها، وأمثلتها، وترجماتها — ما تجيب به واجهة API، في صورة مقروءة.',

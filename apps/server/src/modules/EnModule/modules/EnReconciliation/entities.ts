@@ -140,7 +140,24 @@ export class ReconciliationItem {
   version!: number;
 }
 
+/** Derived incoming data retained until a reviewed import is applied. Never exported as history. */
+@Entity('reconciliation_embeddings')
+export class ReconciliationEmbedding {
+  @PrimaryColumn({ type: 'varchar', length: 36 })
+  plan!: string;
+  @PrimaryColumn({ type: 'varchar', length: 64 })
+  profile_id!: string;
+  @PrimaryColumn({ type: 'integer' })
+  ordinal!: number;
+  @Column({ type: 'simple-json' })
+  payload!: {
+    profile: import('../../../../../types/embeddings').EmbeddingProfileT & { id: string };
+    line: import('../../../../../types/embeddings').MeaningEmbeddingLineT;
+  };
+}
+
 export const RECONCILIATION_ENTITIES = [
+  ReconciliationEmbedding,
   ReconciliationIdentity,
   ReconciliationRevision,
   ReconciliationRecord,

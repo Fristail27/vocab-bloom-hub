@@ -1,15 +1,16 @@
 # Docker
 
-Three published images — the API, the admin UI and the project website — and a
-`docker-compose.yml` that adds Postgres.
+Four project images — the API, the admin UI, the project website and PostgreSQL with
+pgvector — and a `docker-compose.yml` with an optional Ollama service.
 
 | Image                                         | What                                                                  |
 | --------------------------------------------- | --------------------------------------------------------------------- |
 | `ghcr.io/fristail27/vocab-bloom-hub-server`   | the API (NestJS), port 3010                                           |
 | `ghcr.io/fristail27/vocab-bloom-hub-frontend` | the admin UI (Next.js), port 3000                                     |
 | `ghcr.io/fristail27/vocab-bloom-hub-site`     | the website (Next.js), port 3020 — the `site` profile, off by default |
+| `ghcr.io/fristail27/vocab-bloom-hub-postgres` | PostgreSQL 17 Alpine with pgvector 0.8.1 — the `db` profile           |
 
-All three are built for `linux/amd64` and `linux/arm64`. The tags:
+All four are built for `linux/amd64` and `linux/arm64`. The tags:
 
 | Tag                 | Built from                | Use it for                                                      |
 | ------------------- | ------------------------- | --------------------------------------------------------------- |
@@ -19,6 +20,8 @@ All three are built for `linux/amd64` and `linux/arm64`. The tags:
 | `main`, `sha-…`     | every push to `main`      | following development; may break between pushes                 |
 
 `docker-compose.yml` defaults to `main`; production pins a release with `VBH_TAG` in `.env`.
+Use the Compose file from that same release: releases before the semantic deployment
+feature do not publish the PostgreSQL image. Unpublished changes require the build overlay.
 
 ## Quick start
 
@@ -75,12 +78,13 @@ See [datasets](../datasets.md#installing-a-dataset).
 
 ## What is in `docker-compose.yml`
 
-| Service    | Image                                                        | Notes                                                                                                                                                               |
-| ---------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `postgres` | `postgres:17-alpine` (profile `db`)                          | Data in the named volume `postgres-data`; `pg_isready` healthcheck; credentials from `POSTGRES_*` in `.env`; `shm_size: 256m`; not started for an external database |
-| `server`   | `ghcr.io/…/vocab-bloom-hub-server:${VBH_TAG}`                | Retries the database for a minute, runs pending migrations on start, listens on `3010`; `./imports` mounted read-only as `DICTIONARY_IMPORT_DIR`                    |
-| `frontend` | `ghcr.io/…/vocab-bloom-hub-frontend:${VBH_TAG}`              | The standalone Next.js build on `3000`; server-side rendering reaches the API at `http://server:3010/api` (`API_INTERNAL_URL`)                                      |
-| `site`     | `ghcr.io/…/vocab-bloom-hub-site:${VBH_TAG}` (profile `site`) | The project website on `3020` ([below](#the-website)); the word pages reach the API at `http://server:3010/api` (`API_INTERNAL_URL`)                                |
+| Service      | Image                                                          | Notes                                                                                                                                                                                           |
+| ------------ | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `postgres`   | `ghcr.io/…/vocab-bloom-hub-postgres:${VBH_TAG}` (profile `db`) | PostgreSQL 17 Alpine plus pgvector files; extension activation is explicit. Existing `postgres-data` path is retained; `pg_isready` healthcheck, `POSTGRES_*` credentials and `shm_size: 256m`. |
+| `server`     | `ghcr.io/…/vocab-bloom-hub-server:${VBH_TAG}`                  | Retries the database for a minute, runs pending migrations on start, listens on `3010`; `./imports` mounted read-only as `DICTIONARY_IMPORT_DIR`                                                |
+| `frontend`   | `ghcr.io/…/vocab-bloom-hub-frontend:${VBH_TAG}`                | The standalone Next.js build on `3000`; server-side rendering reaches the API at `http://server:3010/api` (`API_INTERNAL_URL`)                                                                  |
+| `site`       | `ghcr.io/…/vocab-bloom-hub-site:${VBH_TAG}` (profile `site`)   | The project website on `3020` ([below](#the-website)); the word pages reach the API at `http://server:3010/api` (`API_INTERNAL_URL`)                                                            |
+| `embeddings` | `ollama/ollama:0.40.8` (profile `embeddings`)                  | Optional CPU model service, private network only; `embeddings-data` volume. Model download is explicit; `ollama show` healthcheck; no automatic search activation.                              |
 
 Host ports come from `SERVER_PORT` / `FRONT_PORT` / `SITE_PORT` in `.env` (defaults `3240` /
 `3241` / `3242`, chosen away from the `3000` and `9090` other tools take; the observability
@@ -238,9 +242,10 @@ service, set its variable in `.env` — nothing inside the compose network chang
 talking to each other on their container ports. Only `CORS_ORIGINS` follows the admin UI and the
 website, and only for browsers that call the API directly.
 
-The state lives in three named volumes that survive `docker compose down`: `postgres-data` (the
-dictionary), `prometheus-data` (the metrics, `PROMETHEUS_RETENTION`, 15 days) and `grafana-data`
-(Grafana's own settings). `./imports` is a read-only bind mount for datasets loaded from a file.
+The named volumes survive `docker compose down`: `postgres-data` (the dictionary),
+`prometheus-data` (the metrics, `PROMETHEUS_RETENTION`, 15 days), `grafana-data` (Grafana's
+settings), and `embeddings-data` when the model service is used. `./imports` is a read-only
+bind mount for datasets loaded from a file.
 
 > [!IMPORTANT]
 > Pass both `-f` files to every later command — `pull`, `up -d`, `logs`, `down`. With the first
@@ -262,9 +267,10 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 docker build -f apps/server/Dockerfile   -t ghcr.io/fristail27/vocab-bloom-hub-server:main   .
 docker build -f apps/frontend/Dockerfile -t ghcr.io/fristail27/vocab-bloom-hub-frontend:main .
 docker build -f apps/site/Dockerfile     -t ghcr.io/fristail27/vocab-bloom-hub-site:main     .
+docker build -f docker/postgres/Dockerfile -t ghcr.io/fristail27/vocab-bloom-hub-postgres:main .
 ```
 
-Multi-stage builds on `node:22-alpine`, from the **repository root** (the workspace install
+The app multi-stage builds use `node:22-alpine`, from the **repository root** (the workspace install
 needs every `package.json`; the frontend and the site import types from the server workspace):
 
 - **server** — Nest build, then a runtime stage with `dist/` and the production dependencies of
@@ -275,6 +281,9 @@ needs every `package.json`; the frontend and the site import types from the serv
   the traced `node_modules`, `.next/static` and `public`. `HEALTHCHECK` on `GET /en/login`.
 - **site** — the same shape; the build stage also copies the READMEs, `docs/`, the licences and
   the OpenAPI document the pages are rendered from. `HEALTHCHECK` on `GET /en`.
+- **postgres** — pgvector 0.8.1 compiled from a checksum-verified source archive on
+  `postgres:17-alpine`; the runtime adds only extension files and their license. No automatic
+  `CREATE EXTENSION`, model downloads or major-version/OS-family migration.
 
 > [!IMPORTANT]
 > **`NEXT_PUBLIC_BASE_API_URL` is a build argument**: `next build` inlines it into the browser
@@ -326,7 +335,7 @@ The packages live at <https://github.com/Fristail27?tab=packages>.
 > The data lives in the `postgres-data` volume, not in the images: `docker compose down` keeps it,
 > `down -v` deletes it.
 
-CI builds the three images from the checkout and runs `docker compose up` against them on every
+CI builds the app and database images from the checkout and runs `docker compose up` against them on every
 pull request, probing `/api/ready`, the login page and the website.
 
 ### Optional DICT listener
@@ -335,5 +344,14 @@ Set `DICT_ENABLED=true` in `.env` and run `docker compose up -d` to enable the R
 TCP listener in the server container. The main Compose file publishes it on all host interfaces;
 `DICT_PORT` selects the host port (2628 by default).
 See [DICT configuration and client examples](../dict.md). The default stack keeps it disabled.
+
+### Optional semantic search
+
+Add `embeddings` to `COMPOSE_PROFILES` to start Ollama with persistent model storage, or
+point `EMBEDDINGS_URL` at a remote Ollama without that profile. Separately set
+`SEMANTIC_SEARCH_ENABLED=true` to enable the API and website mode; its default is false.
+Model download, pgvector activation, a matching model digest and imported vectors are
+explicit preparation steps. Missing semantic infrastructure never blocks lexical search
+or normal server readiness. See the [complete setup and existing-volume upgrade procedure](../semantic-search.md#docker-and-remote-ollama).
 
 Allow inbound TCP traffic to the DICT port in the host firewall for remote clients.

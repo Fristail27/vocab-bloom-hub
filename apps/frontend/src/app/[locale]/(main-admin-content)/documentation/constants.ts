@@ -18,6 +18,8 @@ export enum ApiEndpointKeyE {
   search_datasets_get = 'search_datasets_get',
   search_get = 'search_get',
   search_detailed_get = 'search_detailed_get',
+  search_semantic_get = 'search_semantic_get',
+  search_semantic_status = 'search_semantic_status',
   word = 'word',
   words_batch = 'words_batch',
   word_meanings = 'word_meanings',
@@ -215,6 +217,36 @@ const SEARCH_DETAILED_PARAMS: ApiParamDocT[] = [
 ];
 
 export const DOCUMENTED_ENDPOINTS: ApiEndpointDocT[] = [
+  {
+    key: ApiEndpointKeyE.search_semantic_get,
+    slug: 'search-semantic',
+    method: 'GET',
+    path: '/api/v1/search/semantic',
+    clientPath: '/v1/search/semantic',
+    responseType: 'PublicSemanticSearchV1ResT',
+    params: [
+      { name: 'query', type: 'string', control: ParamControlE.text, required: true, min: 1, max: 1000 },
+      SELECTED_DATASET_PARAM,
+      {
+        name: 'limit',
+        type: 'number',
+        control: ParamControlE.number,
+        required: false,
+        defaultValue: 10,
+        min: 1,
+        max: 20,
+      },
+    ],
+  },
+  {
+    key: ApiEndpointKeyE.search_semantic_status,
+    slug: 'search-semantic-status',
+    method: 'GET',
+    path: '/api/v1/search/semantic/status',
+    clientPath: '/v1/search/semantic/status',
+    responseType: 'PublicSemanticStatusV1ResT',
+    params: [],
+  },
   {
     key: ApiEndpointKeyE.freedictionaryapi_entries,
     slug: 'freedictionaryapi-entries',

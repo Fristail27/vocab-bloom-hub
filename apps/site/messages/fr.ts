@@ -286,6 +286,18 @@ export default {
     list: 'Liste des liens',
   },
   word: {
+    search_mode: 'Mode de recherche',
+    search_by_spelling: 'Par orthographe',
+    search_by_meaning: 'Par sens',
+    semantic_hint: 'Décrivez le sens pour trouver les sens existants les plus proches.',
+    semantic_dataset_hint: 'La recherche par sens utilise un seul dictionnaire à la fois.',
+    semantic_placeholder: 'Un scientifique qui étudie les oiseaux',
+    semantic_label: 'Décrivez un sens',
+    semantic_unavailable:
+      'La recherche par sens est indisponible. Vous pouvez choisir la recherche par orthographe.',
+    semantic_results: 'Sens proches',
+    semantic_modified: 'Modifié sur cette instance',
+
     index_title: 'Mots',
     index_intro:
       "Le dictionnaire en pages : un mot-vedette avec chaque catégorie grammaticale, ses formes, sens, exemples et traductions — ce que l'API répond, en version lisible.",

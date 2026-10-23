@@ -8,11 +8,17 @@ server does to its schema, how to back it up, how big it gets.
 |                              | PostgreSQL                                                                                                                                                             | SQLite                                                                                          |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | When                         | Every real instance; the only database `NODE_ENV=production` accepts                                                                                                   | Development and tests only                                                                      |
-| Version                      | 14 or newer; the bundled one is `postgres:17-alpine`                                                                                                                   | better-sqlite3, bundled with the server                                                         |
+| Version                      | 14 or newer; bundled PostgreSQL 17 Alpine with optional pgvector                                                                                                       | better-sqlite3, bundled with the server                                                         |
 | Extension                    | `pg_trgm` (the typo-tolerant search); the server creates it on the first start, so the database user needs `CREATE` on the database — every managed Postgres allows it | —                                                                                               |
 | Schema                       | Migrations, applied by the server on every start                                                                                                                       | Recreated from the entities on every start (`synchronize`)                                      |
 | Speed on the full dictionary | 5–30 ms per read                                                                                                                                                       | ~1 s per search: no trigram index, no byte-order index                                          |
 | Choose it with               | `DATABASE_URL=postgres://user:password@host:5432/vocab_bloom`                                                                                                          | no `DATABASE_URL` (a `dev.sqlite` at the repository root), or `DATABASE_URL=sqlite:./my.sqlite` |
+
+The bundled image also includes pgvector files for optional semantic search. Activation is
+explicit (`CREATE EXTENSION vector`), and ordinary startup, spelling search and vector
+transfers do not require it. See [semantic deployment](./semantic-search.md#postgresql-extension-and-existing-data)
+for existing-volume upgrades and external PostgreSQL setup. The timings above describe
+ordinary reads, not semantic scans.
 
 ## Two ways to run Postgres
 
@@ -20,17 +26,17 @@ The server never starts a database of its own: it connects to whatever `DATABASE
 So the first decision of an install is where that Postgres comes from. There are two answers,
 and the whole difference between them is one line in `.env`.
 
-|                        | Inside `docker compose` (the bundled database)                                         | A separate database                                                                        |
-| ---------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| What it is             | A `postgres:17-alpine` container started by the same `docker compose up` as the server | A Postgres you run yourself: managed (RDS, Cloud SQL, Neon, …), on the host, on another VM |
-| How to choose it       | `COMPOSE_PROFILES=db` in `.env` — the template's default                               | remove the profile (`COMPOSE_PROFILES=`), set `DATABASE_URL` to your database              |
-| Where the data lives   | the named volume `postgres-data` on the Docker host                                    | wherever that database keeps it                                                            |
-| Backups, upgrades, RAM | yours, with `docker compose exec postgres pg_dump …` ([Backups](#backups))             | the provider's, or yours on that host                                                      |
-| Good for               | one server, quick start, a home or team instance, no other database around             | an existing Postgres, a company setup with managed backups, several apps on one database   |
+|                        | Inside `docker compose` (the bundled database)                                        | A separate database                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| What it is             | A `vocab-bloom-hub-postgres` container (PostgreSQL 17 Alpine) started with the server | A Postgres you run yourself: managed (RDS, Cloud SQL, Neon, …), on the host, on another VM |
+| How to choose it       | `COMPOSE_PROFILES=db` in `.env` — the template's default                              | remove the profile (`COMPOSE_PROFILES=`), set `DATABASE_URL` to your database              |
+| Where the data lives   | the named volume `postgres-data` on the Docker host                                   | wherever that database keeps it                                                            |
+| Backups, upgrades, RAM | yours, with `docker compose exec postgres pg_dump …` ([Backups](#backups))            | the provider's, or yours on that host                                                      |
+| Good for               | one server, quick start, a home or team instance, no other database around            | an existing Postgres, a company setup with managed backups, several apps on one database   |
 
 ### 1. Inside docker compose (the default)
 
-`docker-compose.yml` ships a Postgres service, `postgres:17-alpine`, behind the compose
+`docker-compose.yml` ships `ghcr.io/fristail27/vocab-bloom-hub-postgres:${VBH_TAG}` behind the compose
 profile `db`. With `COMPOSE_PROFILES=db` in `.env` (the template's default) `docker compose up`
 starts three containers — `postgres`, `server`, `frontend` — and the server gets a
 `DATABASE_URL` assembled from the same `.env`:

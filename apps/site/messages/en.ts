@@ -281,6 +281,17 @@ export default {
     list: 'Connection list',
   },
   word: {
+    search_mode: 'Search mode',
+    search_by_spelling: 'By spelling',
+    search_by_meaning: 'By meaning',
+    semantic_hint: 'Describe the meaning; results show the closest existing senses.',
+    semantic_dataset_hint: 'Meaning search uses one dictionary at a time.',
+    semantic_placeholder: 'A scientist who studies birds',
+    semantic_label: 'Describe a meaning',
+    semantic_unavailable: 'Meaning search is unavailable. You can select spelling search.',
+    semantic_results: 'Closest meanings',
+    semantic_modified: 'Modified on this instance',
+
     index_title: 'Words',
     index_intro:
       'The dictionary as pages: a headword with every part of speech, its forms, meanings, examples and translations — what the API answers, readable.',

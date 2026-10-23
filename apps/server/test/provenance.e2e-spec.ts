@@ -1,3 +1,4 @@
+import { embeddingInputHash, embeddingProfileId } from '../src/core/embeddings/profile';
 import type {
   ReconciliationItemT,
   ReconciliationSummaryT,
@@ -406,7 +407,67 @@ describe('word provenance and independent forks (#556)', () => {
   });
 
   pg('forks a fork without activation and keeps the lineage after the parent is deleted', async () => {
+    const connection = app.get(DataSource);
+    const vectorProfile = embeddingProfileId({
+      model: 'fixture',
+      revision: 'fixed',
+      dimensions: 3,
+      normalization: 'l2',
+      document_format: 'meaning-v1',
+      query_format: 'query-v1',
+    });
+    await connection.query(
+      `INSERT INTO public.en_embedding_profiles VALUES ($1, 'fixture', 'fixed', 3, 'l2', 'meaning-v1', 'query-v1')`,
+      [vectorProfile],
+    );
+    await connection.query(
+      `INSERT INTO public.en_meaning_embeddings VALUES ($1, $2, 3, $3, '{1,0,0}'::real[])`,
+      [vectorProfile, cedar.meanings[0].id, embeddingInputHash('fixture')],
+    );
+    const currentCedar = await read('default', cedar.id);
+    const sense = currentCedar.meanings[0];
+    const input = embeddingInputHash(`title: cedar (noun) | text: ${sense.title}. ${sense.definition}`);
+    const preparedProfiles: string[] = [];
+    for (const revision of ['a', 'b', 'c']) {
+      const metadata = {
+        model: 'fixture:latest',
+        revision: revision.repeat(64),
+        dimensions: 3,
+        normalization: 'l2' as const,
+        document_format: 'meaning-v1',
+        query_format: 'search-query-v1',
+      };
+      const id = embeddingProfileId(metadata);
+      preparedProfiles.push(id);
+      await connection.query(
+        `INSERT INTO public.en_embedding_profiles VALUES ($1,$2,$3,3,'l2','meaning-v1','search-query-v1')`,
+        [id, metadata.model, metadata.revision],
+      );
+      await connection.query(`INSERT INTO public.en_meaning_embeddings VALUES ($1,$2,3,$3,'{1,0,0}'::real[])`, [
+        id,
+        sense.id,
+        revision === 'c' ? embeddingInputHash('old input') : input,
+      ]);
+    }
     await fork('default', 'first_fork');
+    // Dedicated transfer preserves both current generations, never stale or unknown formats.
+    expect(
+      (
+        await connection.query('SELECT profile_id FROM ds_first_fork.en_meaning_embeddings ORDER BY profile_id')
+      ).map((r: { profile_id: string }) => r.profile_id),
+    ).toEqual(preparedProfiles.slice(0, 2).sort());
+    expect(
+      await connection.query('SELECT * FROM ds_first_fork.en_embedding_profiles WHERE id=$1', [vectorProfile]),
+    ).toEqual([]);
+    expect(
+      await connection.query(
+        'SELECT count(*)::int AS count FROM public.en_meaning_embeddings WHERE profile_id=$1',
+        [vectorProfile],
+      ),
+    ).toEqual([{ count: 1 }]);
+    await connection.query('DELETE FROM public.en_embedding_profiles WHERE id=$1', [vectorProfile]);
+    for (const id of preparedProfiles)
+      await connection.query('DELETE FROM public.en_embedding_profiles WHERE id=$1', [id]);
     const first = await read('first_fork', cedar.id);
     expect(first.origins).toHaveLength(1);
     expect(first.origins![0]).toMatchObject({
@@ -429,6 +490,9 @@ describe('word provenance and independent forks (#556)', () => {
     await api().patch('/api/en/datasets/first_fork').set(auth).send({ origins: null }).expect(400);
     await fork('first_fork', 'second_fork');
     await api().delete('/api/en/datasets/first_fork').set(auth).expect(200);
+    expect(
+      await connection.query('SELECT count(*)::int AS count FROM ds_second_fork.en_meaning_embeddings'),
+    ).toEqual([{ count: 2 }]);
     const list = await api().get('/api/en/datasets').set(auth).expect(200);
     expect(list.body.active).toBe('default');
     const second = list.body.datasets.find((dataset: { name: string }) => dataset.name === 'second_fork');
@@ -452,6 +516,11 @@ describe('word provenance and independent forks (#556)', () => {
 
   pg('round-trips word and dataset provenance and inherited history through an export', async () => {
     const before = await read('second_fork', cedar.id);
+    const vectorsBefore = await app
+      .get(DataSource)
+      .query(
+        'SELECT profile_id, input_hash, embedding FROM ds_second_fork.en_meaning_embeddings ORDER BY profile_id',
+      );
     const datasetBefore = await app.get(DatasetsService).find('second_fork');
     const historyBefore = (
       await api()
@@ -500,6 +569,7 @@ describe('word provenance and independent forks (#556)', () => {
     await target.query("SELECT setval(pg_get_serial_sequence('en_etymologies', 'id'), 1000)");
     await target.query("SELECT setval(pg_get_serial_sequence('en_pronunciations', 'id'), 1000)");
     await target.query("SELECT setval(pg_get_serial_sequence('en_pronunciation_audio', 'id'), 2000)");
+    await target.query("SELECT setval(pg_get_serial_sequence('en_meanings', 'id'), 3000)");
     const imported = await api()
       .post('/api/en/dictionary/import/upload')
       .set(auth)
@@ -513,6 +583,15 @@ describe('word provenance and independent forks (#556)', () => {
       .set(auth)
       .expect(200);
     const restored = await read('second_fork', search.body[0].id as number);
+    expect(restored.meanings[0].id).not.toBe(before.meanings[0].id);
+    expect(
+      await target.query(
+        'SELECT profile_id, input_hash, embedding FROM en_meaning_embeddings ORDER BY profile_id',
+      ),
+    ).toEqual(vectorsBefore);
+    expect(await target.query('SELECT DISTINCT meaning_id FROM en_meaning_embeddings')).toEqual([
+      { meaning_id: restored.meanings[0].id },
+    ]);
     expect(restored.origins).toEqual(before.origins);
     expect(portablePronunciations(restored.pronunciations)).toEqual(
       portablePronunciations(before.pronunciations),

@@ -121,7 +121,10 @@ export class EnImportDictionaryController {
   @ApiDatasetQuery()
   @Get('export')
   async exportDictionary(@Query() query: ExportDictionaryQueryDTO, @Res() res: Response): Promise<void> {
-    return this.enImportDictionaryService.exportDictionary(res, { editedVersion: query.edited_version });
+    return this.enImportDictionaryService.exportDictionary(res, {
+      editedVersion: query.edited_version,
+      embeddingsOnly: query.embeddings_only === 'true',
+    });
   }
 
   @UseGuards(AdminGuard)

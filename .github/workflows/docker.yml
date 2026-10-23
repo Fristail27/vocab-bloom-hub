@@ -1,9 +1,10 @@
 name: docker-images
 
-# Builds the server, frontend and site images and publishes them to GHCR (issue #317):
+# Builds the server, frontend, site and PostgreSQL images and publishes them to GHCR (issue #317):
 #   ghcr.io/fristail27/vocab-bloom-hub-server
 #   ghcr.io/fristail27/vocab-bloom-hub-frontend
 #   ghcr.io/fristail27/vocab-bloom-hub-site
+#   ghcr.io/fristail27/vocab-bloom-hub-postgres
 # Tags: every push to main → `main` + `sha-<short sha>` (development builds);
 # a release tag v1.2.3 → `1.2.3`, `1.2` and `latest`. Pull requests only build
 # (amd64, no push) so a broken Dockerfile fails the check.
@@ -19,6 +20,7 @@ on:
       - apps/server/Dockerfile
       - apps/frontend/Dockerfile
       - apps/site/Dockerfile
+      - docker/postgres/Dockerfile
       - .dockerignore
       - .github/workflows/docker.yml
   workflow_dispatch:
@@ -51,7 +53,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: [server, frontend, site]
+        image: [server, frontend, site, postgres]
         # pull requests: one platform is enough to prove the Dockerfile builds
         platform: ${{ fromJSON(github.event_name == 'pull_request' && '["linux/amd64"]' || '["linux/amd64", "linux/arm64"]') }}
 
@@ -67,6 +69,7 @@ jobs:
           # the per-image description; the same text as the Dockerfile's LABEL,
           # which metadata-action would otherwise replace with the repository's
           case '${{ matrix.image }}' in
+            postgres) description='Vocab Bloom Hub PostgreSQL 17 Alpine with pgvector' ;;
             server) description='Vocab Bloom Hub API (NestJS)' ;;
             frontend) description='Vocab Bloom Hub admin UI (Next.js)' ;;
             site) description='Vocab Bloom Hub website (Next.js): docs, API reference, playground, word pages' ;;
@@ -83,7 +86,7 @@ jobs:
           images: ${{ steps.image.outputs.name }}
           labels: |
             org.opencontainers.image.title=Vocab Bloom Hub ${{ matrix.image }}
-            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.licenses=${{ matrix.image == 'postgres' && 'PostgreSQL' || 'MIT' }}
             org.opencontainers.image.description=${{ steps.image.outputs.description }}
 
       - name: Set up Docker Buildx
@@ -102,7 +105,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: apps/${{ matrix.image }}/Dockerfile
+          file: ${{ matrix.image == 'postgres' && 'docker/postgres/Dockerfile' || format('apps/{0}/Dockerfile', matrix.image) }}
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           # the frontend and the site bake the browser-side API base in; the
@@ -151,7 +154,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        image: [server, frontend, site]
+        image: [server, frontend, site, postgres]
 
     steps:
       - name: Image name
@@ -162,6 +165,7 @@ jobs:
           # the per-image description; the same text as the Dockerfile's LABEL,
           # which metadata-action would otherwise replace with the repository's
           case '${{ matrix.image }}' in
+            postgres) description='Vocab Bloom Hub PostgreSQL 17 Alpine with pgvector' ;;
             server) description='Vocab Bloom Hub API (NestJS)' ;;
             frontend) description='Vocab Bloom Hub admin UI (Next.js)' ;;
             site) description='Vocab Bloom Hub website (Next.js): docs, API reference, playground, word pages' ;;
@@ -194,7 +198,7 @@ jobs:
           # description); `imagetools create` accepts index-level annotations only
           annotations: |
             org.opencontainers.image.title=Vocab Bloom Hub ${{ matrix.image }}
-            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.licenses=${{ matrix.image == 'postgres' && 'PostgreSQL' || 'MIT' }}
             org.opencontainers.image.description=${{ steps.image.outputs.description }}
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: index
