@@ -1,13 +1,19 @@
-import { EnWordFormsE } from '../../../types';
+import { EnPartOfSpeechE, EnWordFormsE } from '../../../types';
 import { BadRequestException } from '@nestjs/common';
 import { createReadStream } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { EntityManager, In, MoreThan } from 'typeorm';
-import type { EmbeddingManifestT, MeaningEmbeddingLineT } from '../../../types/embeddings';
+import type {
+  EmbeddingManifestT,
+  MeaningEmbeddingLineT,
+  MeaningEmbeddingNaturalLineT,
+  MeaningEmbeddingImportLineT,
+} from '../../../types/embeddings';
 import { EnMeaning } from '../../modules/EnModule/entities/en_meaning.entity';
 import { EnEmbeddingProfile } from '../../modules/EnModule/entities/en_embedding_profile.entity';
 import { EnMeaningEmbedding } from '../../modules/EnModule/entities/en_meaning_embedding.entity';
+import { identifyRows } from '../../modules/EnModule/modules/EnReconciliation/snapshot';
 import { embeddingInputHash, embeddingProfileId, embeddingVector, type EmbeddingProfileT } from './profile';
 
 export const EMBEDDING_DOCUMENT_FORMAT = 'meaning-v1';
@@ -82,6 +88,7 @@ export async function lockEmbeddingImport(em: EntityManager): Promise<void> {
 }
 
 async function meaningsByIdentity(em: EntityManager, ids: string[]): Promise<Map<string, EnMeaning>> {
+  if (!ids.length) return new Map();
   const meanings = await em.find(EnMeaning, {
     where: { sync_id: In(ids) },
     relations: { word: { word: true } },
@@ -94,21 +101,91 @@ async function meaningsByIdentity(em: EntityManager, ids: string[]): Promise<Map
   return result;
 }
 
+function naturalKey(line: Pick<MeaningEmbeddingNaturalLineT, 'word' | 'part_of_speech' | 'sort_order'>) {
+  return JSON.stringify([line.word, line.part_of_speech, line.sort_order]);
+}
+
+function importLine(raw: unknown): MeaningEmbeddingImportLineT {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return invalidEmbeddings();
+  const line = raw as MeaningEmbeddingImportLineT;
+  const fields = Object.keys(line).sort().join(',');
+  if (typeof line.profile_id !== 'string' || typeof line.input_hash !== 'string') return invalidEmbeddings();
+  if ('meaning_sync_id' in line) {
+    if (
+      fields !== 'embedding,input_hash,meaning_sync_id,profile_id' ||
+      typeof line.meaning_sync_id !== 'string' ||
+      !UUID.test(line.meaning_sync_id)
+    )
+      return invalidEmbeddings();
+  } else if (
+    fields !== 'embedding,input_hash,part_of_speech,profile_id,sort_order,word' ||
+    typeof line.word !== 'string' ||
+    !line.word.trim() ||
+    !Object.values(EnPartOfSpeechE).includes(line.part_of_speech) ||
+    !Number.isSafeInteger(line.sort_order) ||
+    line.sort_order < 1 ||
+    line.sort_order > 2_147_483_647
+  )
+    return invalidEmbeddings();
+  return line;
+}
+
+async function meaningsByNaturalKey(em: EntityManager, lines: MeaningEmbeddingNaturalLineT[]) {
+  const result = new Map<string, EnMeaning | null>();
+  if (!lines.length) return result;
+  const query = em
+    .createQueryBuilder(EnMeaning, 'meaning')
+    .innerJoinAndSelect('meaning.word', 'word')
+    .innerJoinAndSelect('word.word', 'entry');
+  for (const [i, line] of lines.entries())
+    query.orWhere(
+      `(entry.word = :word${i} AND word.part_of_speech = :pos${i} AND meaning.sort_order = :order${i} AND word.form_of_word = :baseForm)`,
+      {
+        [`word${i}`]: line.word,
+        [`pos${i}`]: line.part_of_speech,
+        [`order${i}`]: line.sort_order,
+        baseForm: EnWordFormsE.base_form,
+      },
+    );
+  const meanings = await query.getMany();
+  for (const meaning of meanings) {
+    const key = naturalKey({
+      word: meaning.word.word.word,
+      part_of_speech: meaning.word.part_of_speech,
+      sort_order: meaning.sort_order,
+    });
+    // An input hash validates content; it must not disambiguate an ambiguous identity.
+    result.set(key, result.has(key) ? null : meaning);
+  }
+  return result;
+}
+
 export async function writeEmbeddingLines(
   em: EntityManager,
   profiles: Map<string, EmbeddingProfileT>,
-  lines: MeaningEmbeddingLineT[],
+  lines: MeaningEmbeddingImportLineT[],
   skipChanged = false,
+  seen = new Set<string>(),
 ): Promise<void> {
   const meanings = await meaningsByIdentity(
     em,
-    lines.map((line) => line.meaning_sync_id),
+    lines.filter((line) => 'meaning_sync_id' in line).map((line) => line.meaning_sync_id),
+  );
+  const naturalMeanings = await meaningsByNaturalKey(
+    em,
+    lines.filter((line): line is MeaningEmbeddingNaturalLineT => !('meaning_sync_id' in line)),
   );
   const rows = [];
   for (const line of lines) {
     const profile = profiles.get(line.profile_id);
-    if (!profile || !UUID.test(line.meaning_sync_id) || !HEX.test(line.input_hash)) return invalidEmbeddings();
-    const meaning = meanings.get(line.meaning_sync_id);
+    if (
+      !profile ||
+      ('meaning_sync_id' in line && !UUID.test(line.meaning_sync_id)) ||
+      !HEX.test(line.input_hash)
+    )
+      return invalidEmbeddings();
+    const meaning =
+      'meaning_sync_id' in line ? meanings.get(line.meaning_sync_id) : naturalMeanings.get(naturalKey(line));
     if (
       !meaning?.word?.word ||
       meaning.word.form_of_word !== EnWordFormsE.base_form ||
@@ -117,6 +194,10 @@ export async function writeEmbeddingLines(
       if (skipChanged) continue;
       throw new BadRequestException('embeddings_content_mismatch');
     }
+    // Detect aliases (UUID and natural key) and duplicates across file chunks too.
+    const key = `${line.profile_id}:${meaning.id}`;
+    if (seen.has(key)) return invalidEmbeddings();
+    seen.add(key);
     let embedding: number[];
     try {
       embedding = embeddingVector(line.embedding, profile.dimensions);
@@ -155,39 +236,26 @@ export async function importMeaningEmbeddings(
     const seen = new Set<string>();
     const stream = createReadStream(file, { encoding: 'utf8' });
     const reader = createInterface({ input: stream, crlfDelay: Infinity });
-    let batch: MeaningEmbeddingLineT[] = [];
+    let batch: MeaningEmbeddingImportLineT[] = [];
     let count = 0;
     try {
       for await (const text of reader) {
         if (!text.trim()) continue;
         if (text.length > 100_000) return invalidEmbeddings();
-        let line: MeaningEmbeddingLineT;
+        let line: MeaningEmbeddingImportLineT;
         try {
-          line = JSON.parse(text);
+          line = importLine(JSON.parse(text));
         } catch {
           return invalidEmbeddings();
         }
-        if (
-          !line ||
-          typeof line !== 'object' ||
-          Array.isArray(line) ||
-          Object.keys(line).sort().join(',') !== 'embedding,input_hash,meaning_sync_id,profile_id' ||
-          typeof line.meaning_sync_id !== 'string' ||
-          typeof line.profile_id !== 'string' ||
-          typeof line.input_hash !== 'string'
-        )
-          return invalidEmbeddings();
-        const key = `${line.profile_id}:${line.meaning_sync_id}`;
-        if (seen.has(key)) return invalidEmbeddings();
-        seen.add(key);
         count++;
         batch.push(line);
         if (batch.length === BATCH) {
-          await writeEmbeddingLines(em, profiles, batch);
+          await writeEmbeddingLines(em, profiles, batch, false, seen);
           batch = [];
         }
       }
-      await writeEmbeddingLines(em, profiles, batch);
+      await writeEmbeddingLines(em, profiles, batch, false, seen);
       if (!Number.isSafeInteger(expected) || count !== expected) return invalidEmbeddings();
     } finally {
       reader.close();
@@ -197,7 +265,12 @@ export async function importMeaningEmbeddings(
 }
 
 /** Bounded pages, portable IDs, and only vectors of the current document text. */
-export async function* currentEmbeddingLines(em: EntityManager, profile: EnEmbeddingProfile, wordId?: number) {
+export async function* currentEmbeddingLines(
+  em: EntityManager,
+  profile: EnEmbeddingProfile,
+  wordId?: number,
+  assignMissingIdentities = false,
+) {
   if (!supportedEmbeddingProfile(profile)) return;
   let after = 0;
   for (;;) {
@@ -212,6 +285,14 @@ export async function* currentEmbeddingLines(em: EntityManager, profile: EnEmbed
       relations: { meaning: { word: { word: true } } },
     });
     if (!rows.length) break;
+    // A vector-only export may be the first export of a legacy meaning. Use the same
+    // persistent identities as dictionary snapshots, without changing content timestamps.
+    if (assignMissingIdentities)
+      await identifyRows(
+        em,
+        EnMeaning,
+        rows.map((row) => row.meaning),
+      );
     for (const row of rows) {
       const m = row.meaning;
       if (
@@ -242,7 +323,7 @@ export async function exportMeaningEmbeddings(em: EntityManager, file: string) {
   try {
     for (const profile of profiles) {
       let present = false;
-      for await (const line of currentEmbeddingLines(em, profile)) {
+      for await (const line of currentEmbeddingLines(em, profile, undefined, true)) {
         if (!present) {
           used.push(profile);
           present = true;
