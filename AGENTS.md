@@ -182,6 +182,9 @@ The semantic API/site mode is separate from lexical search, guarded by
 The model is used at runtime only to embed new queries. See `docs/semantic-search.md`.
 The optional `embeddings` Compose service uses Ollama with a named model volume and a
 no-inference `ollama show` healthcheck. Provision models explicitly; no startup pulls.
+The bundled model service forces CPU/RAM with `CUDA_VISIBLE_DEVICES=-1`,
+`ROCR_VISIBLE_DEVICES=-1` and `OLLAMA_VULKAN=0`; GPU overrides must re-enable the
+corresponding backend as well as exposing devices.
 Compose defaults `EMBEDDINGS_URL` to `http://embeddings:11434`, native runs to localhost;
 remote URLs need no model profile. No server dependency on model health. The bundled
 `docker/postgres/Dockerfile` adds pgvector to PostgreSQL 17 Alpine without changing the
