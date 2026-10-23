@@ -283,7 +283,9 @@ needs every `package.json`; the frontend and the site import types from the serv
   the OpenAPI document the pages are rendered from. `HEALTHCHECK` on `GET /en`.
 - **postgres** — pgvector 0.8.1 compiled from a checksum-verified source archive on
   `postgres:17-alpine`; the runtime adds only extension files and their license. No automatic
-  `CREATE EXTENSION`, model downloads or major-version/OS-family migration.
+  `CREATE EXTENSION` in the database container, model downloads or major-version/OS-family migration.
+  API startup attempts pgvector activation when `SEMANTIC_SEARCH_ENABLED=true`; see
+  [semantic deployment](../semantic-search.md#postgresql-extension-and-existing-data).
 
 > [!IMPORTANT]
 > **`NEXT_PUBLIC_BASE_API_URL` is a build argument**: `next build` inlines it into the browser

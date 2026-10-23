@@ -14,9 +14,10 @@ server does to its schema, how to back it up, how big it gets.
 | Speed on the full dictionary | 5–30 ms per read                                                                                                                                                       | ~1 s per search: no trigram index, no byte-order index                                          |
 | Choose it with               | `DATABASE_URL=postgres://user:password@host:5432/vocab_bloom`                                                                                                          | no `DATABASE_URL` (a `dev.sqlite` at the repository root), or `DATABASE_URL=sqlite:./my.sqlite` |
 
-The bundled image also includes pgvector files for optional semantic search. Activation is
-explicit (`CREATE EXTENSION vector`), and ordinary startup, spelling search and vector
-transfers do not require it. See [semantic deployment](./semantic-search.md#postgresql-extension-and-existing-data)
+The bundled image also includes pgvector files for optional semantic search. API startup attempts activation when
+`SEMANTIC_SEARCH_ENABLED=true`, on new and existing databases. Missing extension packages
+or privileges produce a warning without blocking startup. With the flag disabled, ordinary
+startup, spelling search and vector transfers do not require it. See [semantic deployment](./semantic-search.md#postgresql-extension-and-existing-data)
 for existing-volume upgrades and external PostgreSQL setup. The timings above describe
 ordinary reads, not semantic scans.
 

@@ -386,7 +386,8 @@ explicit pull succeeds**. Start with `up -d`, provision the model, then use `up 
 if desired. A healthy container does not promise a matching digest, valid vectors or working
 inference; the semantic API checks those on every query. The server has no dependency on
 this service, so unavailable inference does not prevent startup, readiness, lexical search
-or vector import/export. Nothing pulls models or installs the extension automatically.
+or vector import/export. Models are never pulled automatically. When semantic search is
+enabled, API startup attempts to activate pgvector as described below.
 
 The bundled service explicitly forces CPU execution and system RAM with
 `CUDA_VISIBLE_DEVICES=-1`, `ROCR_VISIBLE_DEVICES=-1` and `OLLAMA_VULKAN=0`. These values
@@ -432,16 +433,25 @@ the flag false and recreate the server; the model profile and stored vectors can
 `vocab-bloom-hub-postgres` builds on the same `postgres:17-alpine` family as the previous
 bundled database, retaining `/var/lib/postgresql/data` and `postgres-data`. It adds pgvector
 0.8.1 from a checksum-verified source archive, compiled without host-specific CPU flags.
-The extension files are available, but no database is changed merely by starting the image.
-Enable pgvector once in the application's database, using the database owner/admin account:
+The extension files are available, but starting the database image alone does not activate
+them. With `SEMANTIC_SEARCH_ENABLED=true`, API startup automatically runs
+`CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public` before dictionary migrations.
+This works for a fresh database and an existing volume; no manual SQL is normally needed
+with the bundled database credentials. Concurrent API starts serialize activation. Existing
+extensions keep their version and schema; startup never runs `ALTER EXTENSION UPDATE`.
+
+When the flag is false/unset, startup makes no attempt to activate pgvector. If activation
+fails because the package or database privileges are missing, its transaction is rolled back
+and a warning is logged; ordinary startup and lexical reads continue. An administrator can
+then enable it manually:
 
 ```bash
 docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;"'
 ```
 
-The dataset schemas share that extension. Existing extensions in another schema are supported;
-`IF NOT EXISTS` leaves them in place. For external PostgreSQL, have its administrator install
-the matching server package and run the same SQL in the target database; see the
+The dataset schemas share that extension. Existing extensions in another schema are supported.
+For external PostgreSQL, have its administrator install the matching server package and,
+if the application user cannot create extensions, run the same SQL in the target database; see the
 [pgvector installation guide](https://github.com/pgvector/pgvector#installation).
 Without it, storage/transfers and lexical search still work; enabled semantic search returns
 `semantic_storage_unavailable`. SQLite does not provide semantic retrieval.
