@@ -8,6 +8,7 @@ import {
 } from '../../core/constants/datasets';
 import { DATASET_MIGRATIONS_TABLE, datasetMigrations } from './dataset-migrations';
 import { migrations } from './migrations';
+import { preparePgvector } from './pgvector-bootstrap';
 
 // The database side of the datasets (issue #527), below Nest: what has to
 // happen before the application's connection exists — the shared migrations
@@ -121,6 +122,7 @@ export const prepareDatabase = async (): Promise<string> => {
   for (let attempt = 1; ; attempt += 1) {
     try {
       await withConnection({ migrations }, async (dataSource) => {
+        await preparePgvector(dataSource);
         const ran = await dataSource.runMigrations();
         if (ran.length) logger.log(`Shared migrations applied: ${ran.map((m) => m.name).join(', ')}`);
         const [{ exists }] = (await dataSource.query(

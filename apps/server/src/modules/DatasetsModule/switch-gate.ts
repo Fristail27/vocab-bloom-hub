@@ -1,8 +1,17 @@
+import { Logger } from '@nestjs/common';
 import type { NextFunction, Request, Response } from 'express';
 import { requestPath } from '../../core/utils/public-api';
 
 /** How long a switch waits for the requests under way before it goes ahead without them */
 export const SWITCH_DRAIN_TIMEOUT_MS = 5000;
+
+type RequestStateT = () => {
+  method: string;
+  path: string;
+  ageMs: number;
+  destroyed: boolean;
+  writableFinished: boolean;
+};
 
 /**
  * Keeps requests and a switch of the active dataset apart (issue #527).
@@ -15,6 +24,8 @@ export class SwitchGate {
   private inFlight = 0;
   private held: Promise<void> | null = null;
   private onIdle: (() => void) | null = null;
+  private readonly logger = new Logger(SwitchGate.name);
+  private readonly requests = new Set<RequestStateT>();
 
   /** Requests being handled right now */
   get busy(): number {
@@ -22,13 +33,15 @@ export class SwitchGate {
   }
 
   /** A request comes in: after the switch under way, when there is one */
-  async enter(): Promise<void> {
+  async enter(request?: RequestStateT): Promise<void> {
     // another switch may have begun while this one was awaited
     while (this.held) await this.held;
     this.inFlight += 1;
+    if (request) this.requests.add(request);
   }
 
-  leave(): void {
+  leave(request?: RequestStateT): void {
+    if (request) this.requests.delete(request);
     this.inFlight = Math.max(0, this.inFlight - 1);
     if (this.inFlight === 0) this.onIdle?.();
   }
@@ -63,7 +76,14 @@ export class SwitchGate {
         this.onIdle = null;
         resolve(this.inFlight);
       };
-      const timer = setTimeout(done, timeoutMs);
+      const timer = setTimeout(() => {
+        this.logger.warn({
+          message: 'Timed out waiting for dataset requests to finish',
+          busy: this.inFlight,
+          requests: [...this.requests].map((read) => read()),
+        });
+        done();
+      }, timeoutMs);
       timer.unref();
       this.onIdle = done;
     });
@@ -80,6 +100,9 @@ const RECONCILIATION_PROGRESS_ROUTE = /^\/api\/en\/datasets\/[^/]+\/reconciliati
 export const switchGateMiddleware =
   (gate: SwitchGate) =>
   (req: Request, res: Response, next: NextFunction): void => {
+    // An earlier middleware may finish after the connection has already closed.
+    // Its finish/close event will not fire again for listeners registered here.
+    if (res.destroyed || res.writableFinished) return;
     if (
       ACTIVATE_ROUTE.test(requestPath(req)) ||
       (req.method === 'GET' && RECONCILIATION_PROGRESS_ROUTE.test(requestPath(req))) ||
@@ -88,16 +111,25 @@ export const switchGateMiddleware =
       return next();
     let entered = false;
     let closed = false;
+    const startedAt = Date.now();
+    // Only method/path and response state, never credentials, query strings or bodies.
+    const request = () => ({
+      method: req.method,
+      path: requestPath(req),
+      ageMs: Date.now() - startedAt,
+      destroyed: res.destroyed,
+      writableFinished: res.writableFinished,
+    });
     // a client that gave up while waiting never entered and must not leave
     const finished = () => {
       if (closed) return;
       closed = true;
-      if (entered) gate.leave();
+      if (entered) gate.leave(request);
     };
     res.once('finish', finished);
     res.once('close', finished);
-    void gate.enter().then(() => {
-      if (closed) return gate.leave();
+    void gate.enter(request).then(() => {
+      if (closed) return gate.leave(request);
       entered = true;
       next();
     });

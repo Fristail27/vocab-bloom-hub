@@ -1,5 +1,6 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import { EventEmitter } from 'node:events';
+import { Logger } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { SwitchGate, switchGateMiddleware } from '../switch-gate';
 
@@ -89,6 +90,23 @@ describe('SwitchGate', () => {
 });
 
 describe('switchGateMiddleware', () => {
+  it.each(['destroyed', 'writableFinished'] as const)(
+    'does not retain a response that was already %s before middleware ran',
+    async (state) => {
+      const gate = new SwitchGate();
+      const res = Object.assign(new EventEmitter(), { [state]: true });
+      const next = jest.fn();
+      switchGateMiddleware(gate)(
+        { originalUrl: '/api/en/changes', method: 'GET' } as Request,
+        res as unknown as Response,
+        next,
+      );
+      await tick();
+      expect(gate.busy).toBe(0);
+      expect(next).not.toHaveBeenCalled();
+    },
+  );
+
   const call = (gate: SwitchGate, path: string, method = 'GET') => {
     const res = new EventEmitter();
     const next = jest.fn();
@@ -142,6 +160,32 @@ describe('switchGateMiddleware', () => {
     expect(gate.busy).toBe(1);
     second.res.emit('finish');
     expect(gate.busy).toBe(0);
+  });
+
+  it('reports only pending request paths when draining times out', async () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const gate = new SwitchGate();
+    const completed = call(gate, '/api/en/changes');
+    const pending = call(gate, '/api/v1/search?search=private-query');
+    try {
+      await tick();
+      completed.res.emit('finish');
+      await gate.hold(async () => undefined, 10);
+      expect(warn).toHaveBeenCalledWith({
+        message: 'Timed out waiting for dataset requests to finish',
+        busy: 1,
+        requests: [
+          expect.objectContaining({ method: 'GET', path: '/api/v1/search', ageMs: expect.any(Number) }),
+        ],
+      });
+      pending.res.emit('close');
+      warn.mockClear();
+      await gate.hold(async () => undefined, 10);
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      pending.res.emit('close');
+      warn.mockRestore();
+    }
   });
 
   it('does not count the publication request itself', async () => {

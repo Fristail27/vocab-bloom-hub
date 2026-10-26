@@ -102,7 +102,7 @@
   },
   "resolutions": {
     "@next/eslint-plugin-next/fast-glob": "npm:tinyglobby@0.2.17",
-    "multer@npm:2.2.0": "2.4.0",
+    "multer@npm:2.4.0": "2.5.0",
     "js-yaml@npm:4.3.1": "4.3.2",
     "concurrently/shell-quote": "1.12.0",
     "nwsapi": "2.2.23"
