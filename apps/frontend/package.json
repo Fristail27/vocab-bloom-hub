@@ -44,32 +44,32 @@
   "dependencies": {
     "@ant-design/cssinjs": "^2.1.2",
     "@ant-design/nextjs-registry": "^1.3.0",
-    "antd": "^6.6.7",
+    "antd": "^6.7.0",
     "js-cookie": "^3.0.8",
-    "next": "16.4.2",
+    "next": "16.4.6",
     "next-intl": "^4.14.9",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "sass": "^1.106.1"
+    "sass": "^1.108.1"
   },
   "devDependencies": {
-    "@storybook/addon-docs": "^10.6.3",
-    "@storybook/addon-vitest": "^10.6.3",
-    "@storybook/nextjs-vite": "^10.6.3",
+    "@storybook/addon-docs": "^10.6.7",
+    "@storybook/addon-vitest": "^10.6.7",
+    "@storybook/nextjs-vite": "^10.6.7",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@types/js-cookie": "^3.0.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@vitest/browser-playwright": "^5.0.5",
-    "dotenv-cli": "^11.0.0",
-    "msw": "^3.0.3",
+    "@vitest/browser-playwright": "^5.1.0",
+    "dotenv-cli": "^11.1.0",
+    "msw": "^3.0.4",
     "msw-storybook-addon": "^3.0.3",
-    "playwright": "^1.64.1",
-    "storybook": "^10.6.3",
+    "playwright": "^1.65.0",
+    "storybook": "^10.6.7",
     "typescript": "^6.0.3",
     "vite": "^8",
-    "vitest": "^5.0.5"
+    "vitest": "^5.1.0"
   }
 }
