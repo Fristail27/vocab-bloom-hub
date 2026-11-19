@@ -203,7 +203,7 @@ export const PaginationAndSearch: Story = {
     const dialog = await openReview(canvasElement, globals);
     await dialog.findByText('lamp', { exact: true });
     await waitFor(() => expect(dialog.getByRole('button', { name: t.cancel })).toBeEnabled());
-    await userEvent.click(dialog.getByTitle('2'));
+    await userEvent.click(dialog.getByRole('button', { name: 'Page 2' }));
     await waitFor(() => expect(dialog.getByText('sample-30', { exact: true })).toBeVisible());
     await expect(dialog.queryByText('lamp', { exact: true })).not.toBeInTheDocument();
     const input = dialog.getByRole('searchbox', { name: t.search });
