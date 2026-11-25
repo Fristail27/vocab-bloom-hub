@@ -54,7 +54,7 @@ export const newestChangeOn = (dataSource: DataSource | EntityManager): Promise<
  */
 @Injectable()
 export class DictionaryLastModifiedService {
-  private cache: { value: Date | null; fetchedAt: number } | null = null;
+  private cache: { owner: number | undefined; value: Date | null; fetchedAt: number } | null = null;
 
   private readonly repositories: Repository<TimestampedT>[];
 
@@ -73,7 +73,8 @@ export class DictionaryLastModifiedService {
 
   /** null for an empty dictionary */
   async getLastModified(): Promise<Date | null> {
-    if (this.cache && Date.now() - this.cache.fetchedAt < LAST_MODIFIED_TTL_MS) {
+    const owner = this.datasets?.getActive()?.id;
+    if (this.cache && this.cache.owner === owner && Date.now() - this.cache.fetchedAt < LAST_MODIFIED_TTL_MS) {
       return this.cache.value;
     }
     const activatedAt = this.datasets?.getActive()?.activated_at;
@@ -85,7 +86,7 @@ export class DictionaryLastModifiedService {
         termsAt ? new Date(termsAt) : null,
       ]),
     );
-    this.cache = { value, fetchedAt: Date.now() };
+    this.cache = { owner, value, fetchedAt: Date.now() };
     return value;
   }
 

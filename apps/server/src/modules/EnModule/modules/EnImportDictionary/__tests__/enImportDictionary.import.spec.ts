@@ -5,7 +5,7 @@ import '../../../__tests__/helpers/clearDatabaseUrl';
 
 import { afterAll, afterEach, beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { type Response as ExpressResponse } from 'express';
 import { createWriteStream, existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
@@ -593,12 +593,13 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
     const trackedImporter = (close: () => Promise<void>) => {
       const status = new ImportStatusService();
       const dataset = Object.assign(new Dataset(), OWN_DATASET_PROVENANCE, { name: 'default' });
-      const recordImport = jest.fn<DatasetsService['recordImport']>().mockResolvedValue(undefined);
+      const recordImport = jest.fn<DatasetsService['recordImport']>().mockResolvedValue(dataset);
       const datasets = {
         getActive: () => dataset,
         resolveTarget: async () => dataset,
         connect: async () => ({ dataset, manager: ds.manager, close }),
         recordImport,
+        reconciliationCommitted: jest.fn(),
       } as unknown as DatasetsService;
       const importer = new EnImportDictionaryService(
         ds.getRepository(EnWord),
@@ -610,6 +611,18 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
       );
       return { importer, status, recordImport };
     };
+
+    it('rolls back all imported content when recording the version fails, then permits a retry', async () => {
+      const { importer, status, recordImport } = trackedImporter(async () => {});
+      recordImport.mockRejectedValueOnce(new Error('version write failed'));
+      await expect(runImport(true, importer)).rejects.toThrow('version write failed');
+      expect(status.snapshot()).toMatchObject({ running: false, error: 'version write failed' });
+      expect(await ds.getRepository(EnEntry).count()).toBe(0);
+      expect(await ds.getRepository(EnMeaning).count()).toBe(0);
+      await runImport(true, importer);
+      expect(await ds.getRepository(EnEntry).count()).toBeGreaterThan(0);
+      expect(status.snapshot()).toMatchObject({ running: false, dataset_version: '0.2.0' });
+    });
 
     it('reports completion only after the audit, target cleanup and import slot release', async () => {
       const auditing = deferred();
@@ -667,7 +680,11 @@ describe('EnImportDictionaryService NDJSON import (issue #87)', () => {
       // After cleanup the next run can claim its target and record its version.
       await runImport(true, importer);
       expect(recordImport).toHaveBeenCalledTimes(2);
-      expect(recordImport).toHaveBeenLastCalledWith('default', expect.objectContaining({ version: '0.2.0' }));
+      expect(recordImport).toHaveBeenLastCalledWith(
+        'default',
+        expect.objectContaining({ version: '0.2.0' }),
+        expect.any(EntityManager),
+      );
     });
 
     it('holds the import slot during cleanup after a failure and then allows retrying', async () => {

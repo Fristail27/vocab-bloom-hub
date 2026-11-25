@@ -144,7 +144,8 @@ export class CreateDatasetReqDTO implements CreateDatasetReqT {
   origins?: OriginT[];
 
   @ApiProperty({
-    description: 'Lower-case latin, digits and `_`; the tail of the schema and the `source` of the data',
+    description:
+      'Lowercase Latin letters, digits and underscores. This name identifies the dataset and its public source.',
   })
   @IsString()
   @Matches(DATASET_NAME_PATTERN, { message: 'dataset_name_invalid' })

@@ -45,7 +45,11 @@ export const findSeqScans = (
 ): SeqScanT[] => {
   const found: SeqScanT[] = [];
   walkPlan(plan, (node) => {
-    if (node['Node Type'] === 'Seq Scan' && node['Relation Name'] && tables.includes(node['Relation Name'])) {
+    if (
+      node['Node Type'] === 'Seq Scan' &&
+      node['Relation Name'] &&
+      tables.includes(node['Relation Name'].replace(/^dictionary_/, ''))
+    ) {
       found.push({ relation: node['Relation Name'], sql });
     }
   });

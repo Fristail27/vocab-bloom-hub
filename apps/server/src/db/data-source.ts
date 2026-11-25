@@ -12,7 +12,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 import { DataSource } from 'typeorm';
-import { DB_ENTITIES } from './typeorm-options';
+import { REGISTRY_ENTITIES } from './typeorm-options';
 import { migrations } from './migrations';
 
 // CLI-only DataSource for the typeorm migration commands (yarn migration:*).
@@ -20,6 +20,7 @@ import { migrations } from './migrations';
 export default new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL,
-  entities: DB_ENTITIES,
+  // Dictionary entities map views. Generate diffs only for ordinary registry tables.
+  entities: REGISTRY_ENTITIES,
   migrations,
 });

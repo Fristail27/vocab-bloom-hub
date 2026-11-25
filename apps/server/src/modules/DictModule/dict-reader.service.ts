@@ -1,3 +1,4 @@
+import { withRequestDefault } from '../../core/utils/active-dataset';
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { DatasetsService, titleOf } from '../DatasetsModule/datasets.service';
@@ -25,7 +26,7 @@ export class DictReaderService {
   async read<T>(work: () => Promise<T>): Promise<T> {
     await this.datasets.gate.enter();
     try {
-      return await work();
+      return await withRequestDefault(this.datasets.getActive(), work);
     } finally {
       this.datasets.gate.leave();
     }

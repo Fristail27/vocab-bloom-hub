@@ -1,3 +1,4 @@
+import { enableDictionaryScope } from '../src/db/shared-dictionary/connection';
 import { randomUUID } from 'node:crypto';
 import { readFile, writeFile, mkdtemp, rm } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
@@ -142,6 +143,7 @@ prototype('saved prototype through the real import, semantic API and export', ()
     process.env.DATABASE_URL = url.toString();
     await prepareDatabase();
     ds = await new DataSource({ type: 'postgres', url: url.toString(), entities: DB_ENTITIES }).initialize();
+    enableDictionaryScope(ds);
     await ds.query('CREATE EXTENSION vector');
     dir = await mkdtemp(join(tmpdir(), 'vbh-prototype-'));
     const words = new Map<number, EnWord>();
@@ -261,7 +263,7 @@ prototype('saved prototype through the real import, semantic API and export', ()
     }
     expect(inferenceCalls).toBe(queries.length + 5);
     const [initialSizes] =
-      await ds.query(`SELECT pg_total_relation_size('en_meaning_embeddings')::float8 AS vector_table_bytes,
+      await ds.query(`SELECT pg_total_relation_size('dictionary_en_meaning_embeddings')::float8 AS vector_table_bytes,
       pg_database_size(current_database())::float8 AS fixture_database_bytes`);
     process.env.SEMANTIC_SEARCH_ENABLED = 'false';
     await new Promise<void>((done) => model.close(() => done()));
@@ -304,7 +306,7 @@ prototype('saved prototype through the real import, semantic API and export', ()
     expect(await fingerprint()).toEqual(before);
     const reimportMs = performance.now() - reimportStarted;
     const [afterRoundtripSizes] =
-      await ds.query(`SELECT pg_total_relation_size('en_meaning_embeddings')::float8 AS vector_table_bytes,
+      await ds.query(`SELECT pg_total_relation_size('dictionary_en_meaning_embeddings')::float8 AS vector_table_bytes,
       pg_database_size(current_database())::float8 AS fixture_database_bytes`);
     const report = {
       measured_at: new Date().toISOString(),

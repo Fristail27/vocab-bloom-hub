@@ -160,7 +160,7 @@ describe('local content review', () => {
     try {
       await fixture(other);
       await withDatasetScope(
-        { dataset: { name: 'other', source: 'other', own: true }, dataSource: other },
+        { dataset: { id: 2, name: 'other', source: 'other', own: true }, dataSource: other },
         () => mark(Scope.definition),
       );
       expect((await states())[0].status).toBe(Status.unchecked);
@@ -168,7 +168,11 @@ describe('local content review', () => {
       const runner = other.createQueryRunner();
       await runner.startTransaction();
       await withDatasetScope(
-        { dataset: { name: 'other', source: 'other', own: true }, dataSource: db, manager: runner.manager },
+        {
+          dataset: { id: 2, name: 'other', source: 'other', own: true },
+          dataSource: db,
+          manager: runner.manager,
+        },
         () => service.set(Scope.definition, data.meaning.id, { checked: false, expected: '' }),
       );
       await runner.rollbackTransaction();

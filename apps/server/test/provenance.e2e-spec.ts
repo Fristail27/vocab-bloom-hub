@@ -11,7 +11,6 @@ import {
   ReconciliationIdentity,
   ReconciliationRevision,
 } from '../src/modules/EnModule/modules/EnReconciliation/entities';
-import { runDatasetMigrations } from '../src/db/datasets';
 import { DataSource } from 'typeorm';
 import { DATASET_FILE_NAMES } from '../src/modules/EnModule/modules/EnImportDictionary/constants';
 import { portableManifest } from '../src/modules/EnModule/modules/EnImportDictionary/utils/parseManifest';
@@ -29,6 +28,10 @@ import { EnPartOfSpeechE } from '../types';
 describe('word provenance and independent forks (#556)', () => {
   let app: INestApplication<App>;
   const auth = { Authorization: '' };
+  const reader = async (name: string) => {
+    const datasets = app.get(DatasetsService);
+    return datasets.reader(await datasets.find(name));
+  };
   const api = () => request(app.getHttpServer());
   const pg = checkIsPostgres() ? it : it.skip;
   let cedar: EnWordT;
@@ -257,6 +260,97 @@ describe('word provenance and independent forks (#556)', () => {
     cedar = restored;
   });
 
+  pg('isolates parallel API edits to the same spelling and local word ID', async () => {
+    const names = ['parallel_left', 'parallel_right'];
+    const word = 'parallelword';
+    const visible = (name: string, open: boolean) =>
+      api().patch(`/api/en/datasets/${name}/visibility`).set(auth).send({ is_public: open }).expect(200);
+    for (const name of names) {
+      await create(name);
+      await visible(name, true);
+    }
+    const created = await Promise.all(
+      names.map((name) =>
+        api()
+          .post('/api/en/add/word')
+          .query({ dataset: name })
+          .set(auth)
+          .send({
+            word,
+            part_of_speech: 'noun',
+            form_of_word: 'base_form',
+            generated: false,
+            description: name,
+          })
+          .expect(201),
+      ),
+    );
+    const id = created[0].body.id as number;
+    expect(created[1].body.id).toBe(id);
+    const edit = (name: string) =>
+      api()
+        .patch(`/api/en/common-info/${id}`)
+        .query({ dataset: name })
+        .set(auth)
+        .send({ description: 'edited ' + name })
+        .expect(200);
+    const [reads] = await Promise.all([
+      Promise.all(names.map((name) => read(name, id))),
+      Promise.all(names.map(edit)),
+    ]);
+    reads.forEach((row, i) => expect([names[i], 'edited ' + names[i]]).toContain(row.description));
+    for (const name of names) expect((await read(name, id)).description).toBe('edited ' + name);
+    const groups = async () =>
+      (
+        (await api().get(`/api/v1/words/${word}/datasets`).expect(200)).body.data as Array<{
+          dataset: string;
+          entries: Array<{ id: number; description: string }>;
+        }>
+      ).filter((row) => row.entries.length);
+    expect((await groups()).map((row) => row.dataset)).toEqual(names);
+    await visible(names[0], false);
+    expect((await groups()).map((row) => row.dataset)).toEqual([names[1]]);
+    await api().delete(`/api/en/datasets/${names[0]}`).set(auth).expect(200);
+    expect((await groups())[0].entries[0]).toMatchObject({ id, description: 'edited ' + names[1] });
+    await api().delete(`/api/en/datasets/${names[1]}`).set(auth).expect(200);
+  });
+
+  pg('stages a second import privately and preserves the first import on failure', async () => {
+    const name = 'staged_import';
+    await create(name);
+    const dataset = await reader(name);
+    const upload = (lines: string[]) =>
+      api()
+        .post('/api/en/dictionary/import/upload')
+        .set(auth)
+        .field('dataset', name)
+        .attach('words', Buffer.from(lines.join('\n') + '\n'), 'words.jsonl');
+    const line = (description: string) =>
+      JSON.stringify({
+        word: 'juniper',
+        part_of_speech: 'noun',
+        generated: false,
+        forms: [],
+        meanings: [],
+        short_translations: [],
+        description,
+      });
+    const original = await upload([line('original')]).expect(201);
+    expect(original.text).not.toContain('"error"');
+    const prepared = await upload([line('incoming')]).expect(201);
+    const { reconciliation_plan: plan } = JSON.parse(prepared.text.trim().split('\n').at(-1)!);
+    expect(plan).toEqual(expect.any(String));
+    expect(await dataset.query('SELECT description FROM en_words')).toEqual([{ description: 'original' }]);
+    expect(await dataset.query('SELECT id FROM reconciliation_plans')).toEqual([{ id: plan }]);
+    const failed = await upload([line('discard'), '{invalid']).expect(201);
+    expect(failed.text).not.toContain('reconciliation_plan');
+    const status = await api().get('/api/en/dictionary/import/status').set(auth).expect(200);
+    expect(status.body).toMatchObject({ running: false, error: expect.any(String) });
+    expect(await dataset.query('SELECT description FROM en_words')).toEqual([{ description: 'original' }]);
+    expect(await dataset.query('SELECT id FROM reconciliation_plans')).toEqual([{ id: plan }]);
+    expect(await dataset.query("SELECT id FROM public.datasets WHERE source='import'")).toEqual([]);
+  });
+
   pg('copies a word into an inactive own dataset, preserving content and inherited history', async () => {
     await create('copied_words');
     const unrelated = await api()
@@ -453,11 +547,15 @@ describe('word provenance and independent forks (#556)', () => {
     // Dedicated transfer preserves both current generations, never stale or unknown formats.
     expect(
       (
-        await connection.query('SELECT profile_id FROM ds_first_fork.en_meaning_embeddings ORDER BY profile_id')
+        await (
+          await reader('first_fork')
+        ).query('SELECT profile_id FROM en_meaning_embeddings ORDER BY profile_id')
       ).map((r: { profile_id: string }) => r.profile_id),
     ).toEqual(preparedProfiles.slice(0, 2).sort());
     expect(
-      await connection.query('SELECT * FROM ds_first_fork.en_embedding_profiles WHERE id=$1', [vectorProfile]),
+      await (
+        await reader('first_fork')
+      ).query('SELECT * FROM en_embedding_profiles WHERE id=$1', [vectorProfile]),
     ).toEqual([]);
     expect(
       await connection.query(
@@ -483,15 +581,15 @@ describe('word provenance and independent forks (#556)', () => {
     expect(first.meanings[0].quotes).toEqual(cedar.meanings[0].quotes);
     expect((await read('first_fork', first.forms[0].id)).origins).toEqual(first.origins);
     // Check the stored payload as well as the API: no display/projection deduplication.
-    const stored = await app
-      .get(DataSource)
-      .query('SELECT "origins" FROM "ds_first_fork"."en_words" WHERE "id" = $1', [cedar.id]);
+    const stored = await (
+      await reader('first_fork')
+    ).query('SELECT "origins" FROM "en_words" WHERE "id" = $1', [cedar.id]);
     expect(JSON.parse(stored[0].origins)).toEqual(first.origins);
     await api().patch('/api/en/datasets/first_fork').set(auth).send({ origins: null }).expect(400);
     await fork('first_fork', 'second_fork');
     await api().delete('/api/en/datasets/first_fork').set(auth).expect(200);
     expect(
-      await connection.query('SELECT count(*)::int AS count FROM ds_second_fork.en_meaning_embeddings'),
+      await (await reader('second_fork')).query('SELECT count(*)::int AS count FROM en_meaning_embeddings'),
     ).toEqual([{ count: 2 }]);
     const list = await api().get('/api/en/datasets').set(auth).expect(200);
     expect(list.body.active).toBe('default');
@@ -516,11 +614,9 @@ describe('word provenance and independent forks (#556)', () => {
 
   pg('round-trips word and dataset provenance and inherited history through an export', async () => {
     const before = await read('second_fork', cedar.id);
-    const vectorsBefore = await app
-      .get(DataSource)
-      .query(
-        'SELECT profile_id, input_hash, embedding FROM ds_second_fork.en_meaning_embeddings ORDER BY profile_id',
-      );
+    const vectorsBefore = await (
+      await reader('second_fork')
+    ).query('SELECT profile_id, input_hash, embedding FROM en_meaning_embeddings ORDER BY profile_id');
     const datasetBefore = await app.get(DatasetsService).find('second_fork');
     const historyBefore = (
       await api()
@@ -566,10 +662,9 @@ describe('word provenance and independent forks (#556)', () => {
     await api().delete('/api/en/datasets/second_fork').set(auth).expect(200);
     await create('second_fork');
     const target = await app.get(DatasetsService).reader(await app.get(DatasetsService).find('second_fork'));
-    await target.query("SELECT setval(pg_get_serial_sequence('en_etymologies', 'id'), 1000)");
-    await target.query("SELECT setval(pg_get_serial_sequence('en_pronunciations', 'id'), 1000)");
-    await target.query("SELECT setval(pg_get_serial_sequence('en_pronunciation_audio', 'id'), 2000)");
-    await target.query("SELECT setval(pg_get_serial_sequence('en_meanings', 'id'), 3000)");
+    await target.query(`INSERT INTO dataset_counters (dataset_id, table_name, last_id)
+      SELECT dictionary_dataset_id(), name, high FROM (VALUES ('en_etymologies',1000),
+        ('en_pronunciations',1000),('en_pronunciation_audio',2000),('en_meanings',3000)) counter(name,high)`);
     const imported = await api()
       .post('/api/en/dictionary/import/upload')
       .set(auth)
@@ -735,9 +830,9 @@ describe('word provenance and independent forks (#556)', () => {
       const collectiveId = collective.body.data.find(
         (group: { dataset: string }) => group.dataset === 'detailed_terms',
       ).entries[0].id as number;
-      await app
-        .get(DataSource)
-        .query('UPDATE "ds_detailed_terms"."en_words" SET "origins" = NULL WHERE "id" = $1', [collectiveId]);
+      await (
+        await reader('detailed_terms')
+      ).query('UPDATE "en_words" SET "origins" = NULL WHERE "id" = $1', [collectiveId]);
       await fork('detailed_terms', 'mixed_origins_fork');
       const defaulted = await read('mixed_origins_fork', collectiveId);
       expect(defaulted.origins).toHaveLength(2);
@@ -792,7 +887,7 @@ describe('word provenance and independent forks (#556)', () => {
       const commit = runner.commitTransaction.bind(runner);
       let isFork = false;
       runner.query = (async (...args: Parameters<typeof query>) => {
-        if (args[0] === 'CREATE SCHEMA "ds_pending_fork"') isFork = true;
+        if (args[0].startsWith('INSERT INTO public."dictionary_en_entries"')) isFork = true;
         return query(...args);
       }) as typeof runner.query;
       runner.commitTransaction = async () => {
@@ -844,7 +939,7 @@ describe('word provenance and independent forks (#556)', () => {
     }
   });
 
-  pg('keeps an in-progress fork inaccessible and rolls back its schema after a copy failure', async () => {
+  pg('keeps an in-progress fork inaccessible and rolls back its data after a copy failure', async () => {
     const connection = app.get(DataSource);
     const original = connection.createQueryRunner.bind(connection);
     let reached!: () => void;
@@ -859,7 +954,7 @@ describe('word provenance and independent forks (#556)', () => {
       const runner = original(mode);
       const query = runner.query.bind(runner);
       runner.query = (async (...args: Parameters<typeof query>) => {
-        if (args[0].startsWith('INSERT INTO "ds_failed_fork"."en_entries"')) {
+        if (args[0].startsWith('INSERT INTO public."dictionary_en_entries"')) {
           reached();
           await proceed;
           throw new Error('Simulated storage failure during the copy');
@@ -885,56 +980,13 @@ describe('word provenance and independent forks (#556)', () => {
         await new Promise((resolve) => setTimeout(resolve, 25));
       }
       expect((await api().get('/api/en/datasets/failed_fork/fork-status').set(auth)).body.state).toBe('failed');
-      expect(await connection.query("SELECT 1 FROM pg_namespace WHERE nspname = 'ds_failed_fork'")).toEqual([]);
+      expect(await connection.query("SELECT 1 FROM datasets WHERE name='failed_fork'")).toEqual([]);
     } finally {
       release();
       spy.mockRestore();
     }
     await fork('default', 'failed_fork');
   });
-  pg(
-    'upgrades the previous migration name and stored scopes without overwriting source snapshots',
-    async () => {
-      await fork('default', 'upgrade_origins');
-      const connection = app.get(DataSource);
-      const legacy = { ...manual, scope: 'article', notices: ['Original article attribution.'] };
-      await connection.query('UPDATE "ds_upgrade_origins"."en_words" SET "origins" = $1 WHERE "id" = $2', [
-        JSON.stringify([legacy]),
-        cedar.id,
-      ]);
-      await connection.query('UPDATE "public"."datasets" SET "origins" = $1 WHERE "name" = $2', [
-        JSON.stringify([legacy]),
-        'upgrade_origins',
-      ]);
-      await connection.query(
-        'UPDATE "ds_upgrade_origins"."en_changes" SET "inherited_from" = $1, "diff" = $2',
-        [JSON.stringify(legacy), JSON.stringify({ origins: { before: [legacy], after: [legacy] } })],
-      );
-      await connection.query(
-        `UPDATE "ds_upgrade_origins"."dataset_migrations" SET "name" = 'AddArticleOrigins1790200000000' WHERE "name" = 'AddWordOrigins1790200000000'`,
-      );
-      await connection.query(
-        `DELETE FROM "ds_upgrade_origins"."dataset_migrations" WHERE "name" = 'NormalizeWordOrigins1790200001000'`,
-      );
-      expect(await runDatasetMigrations('ds_upgrade_origins')).toEqual([
-        'AddWordOrigins1790200000000',
-        'NormalizeWordOrigins1790200001000',
-      ]);
-      const expected = { ...legacy, scope: 'word' };
-      expect((await read('upgrade_origins', cedar.id)).origins).toEqual([expected]);
-      const [dataset] = await connection.query('SELECT "origins" FROM "public"."datasets" WHERE "name" = $1', [
-        'upgrade_origins',
-      ]);
-      expect(JSON.parse(dataset.origins)).toEqual([expected]);
-      const history = await connection.query(
-        'SELECT "diff", "inherited_from" FROM "ds_upgrade_origins"."en_changes"',
-      );
-      expect(history.length).toBeGreaterThan(0);
-      expect(history[0].diff.origins.before).toEqual([expected]);
-      expect(JSON.parse(history[0].inherited_from)).toEqual(expected);
-      expect(await runDatasetMigrations('ds_upgrade_origins')).toEqual([]);
-    },
-  );
   pg('reserves a fork before preflight and reports completion only after releasing its lock', async () => {
     const service = app.get(DatasetsService);
     const audit = app.get(AuditService);

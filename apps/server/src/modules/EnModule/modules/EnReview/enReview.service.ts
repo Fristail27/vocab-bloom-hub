@@ -117,10 +117,16 @@ export class EnReviewService {
           .execute();
       }
       const checked_at = new Date();
-      await em.upsert(EnContentReview, { scope, identity, content: row.content, checked_at }, [
-        'scope',
-        'identity',
-      ]);
+      await em
+        .createQueryBuilder()
+        .insert()
+        .into(EnContentReview)
+        .values({ scope, identity, content: row.content, checked_at })
+        .orUpdate(
+          ['content', 'checked_at'],
+          [...(em.connection.options.type === 'postgres' ? ['dataset_id'] : []), 'scope', 'identity'],
+        )
+        .execute();
       return { ...value, status: ReviewStatusE.checked, checked_at: checked_at.toISOString() };
     });
   }

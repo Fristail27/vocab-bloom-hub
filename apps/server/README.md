@@ -27,9 +27,8 @@ Swagger is served at `/api`. See [environment](../../docs/environment.md),
 ## Datasets and sources
 
 The catalog contains the project's dataset, English Wiktionary, Open English WordNet,
-Princeton WordNet 3.1 and OpenGloss 2.4. On PostgreSQL each dataset has its own schema;
-one is active, while the all-datasets word read returns separate groups from every installed
-one. Admin requests can edit another dataset using `?dataset=<name>`.
+Princeton WordNet 3.1 and OpenGloss 2.4. PostgreSQL stores dictionary records in shared tables keyed by dataset ID.
+One dataset is active, and the all-datasets word read returns a group for each open dataset. Admin requests can edit another dataset using `?dataset=<name>`.
 
 Source installation downloads catalog URLs on the server or accepts manual uploads, then
 converts and imports through the shared import slot. OpenGloss requires three senses and
@@ -55,7 +54,7 @@ and [the export format](../../docs/offline-import.md#provenance-export-format).
 | `src/modules/DatasetsModule/`                      | Registry, connections, activation, terms and forks            |
 | `src/modules/PublicApiModule/`                     | Explicit public projections, caching and rate limits          |
 | `src/converters/`                                  | Wiktionary, WordNet and OpenGloss adapters and dataset writer |
-| `src/db/migrations/`, `src/db/dataset-migrations/` | Shared and per-dataset migrations                             |
+| `src/db/migrations/`, `src/db/dataset-migrations/` | Shared migrations and historical upgrade inputs               |
 | `test/`                                            | HTTP suites and PostgreSQL integration checks                 |
 
 The public contract is documented in [API surfaces](../../docs/api.md).

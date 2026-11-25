@@ -1,30 +1,44 @@
-import { randomUUID } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DataSource, EntityManager } from 'typeorm';
 import { DB_ENTITIES } from '../../../../db/typeorm-options';
-import { datasetMigrations } from '../../../../db/dataset-migrations';
-import { searchPathOf } from '../../../../db/datasets';
+import { randomUUID } from 'node:crypto';
+import { transactionDictionaries } from '../../../../db/shared-dictionary/connection';
 
-/** Staging is never registered as a dataset and cannot be opened by public readers. */
+/** Incoming content is private until its reconciliation plan has been prepared. */
 export async function stageDictionary(
   connection: DataSource,
-): Promise<{ manager: EntityManager; close: () => Promise<void> }> {
+  destination: number,
+): Promise<{
+  manager: EntityManager;
+  destination?: EntityManager;
+  publish?: () => Promise<void>;
+  close: () => Promise<void>;
+}> {
   if (connection.options.type === 'postgres') {
     const runner = connection.createQueryRunner();
-    await runner.connect();
-    await runner.startTransaction();
     try {
-      const schema = `ds_stage_${randomUUID().replaceAll('-', '')}`;
-      await runner.query(`CREATE SCHEMA "${schema}"`);
-      await runner.query(`SET LOCAL search_path TO ${searchPathOf(schema)}`);
-      for (const Migration of datasetMigrations) await new Migration().up(runner);
+      await runner.startTransaction('REPEATABLE READ');
+      const [{ id }] = await runner.query(
+        `INSERT INTO public.datasets
+        (name, source, own, license, license_url, attribution, is_public)
+        VALUES ($1, 'import', true, '', '', '', false) RETURNING id`,
+        ['stage_' + randomUUID().replaceAll('-', '')],
+      );
+      const managerFor = transactionDictionaries(runner);
       return {
-        manager: runner.manager,
+        manager: managerFor(id),
+        destination: managerFor(destination),
+        publish: async () => {
+          // The same commit publishes the prepared plan and removes the entire
+          // private import. No other session can ever observe the registry row.
+          await runner.query('DELETE FROM public.datasets WHERE id=$1', [id]);
+          await runner.commitTransaction();
+        },
         close: async () => {
           try {
-            await runner.rollbackTransaction();
+            if (runner.isTransactionActive) await runner.rollbackTransaction();
           } finally {
             await runner.release();
           }
@@ -32,7 +46,7 @@ export async function stageDictionary(
       };
     } catch (error) {
       try {
-        await runner.rollbackTransaction();
+        if (runner.isTransactionActive) await runner.rollbackTransaction();
       } finally {
         await runner.release();
       }

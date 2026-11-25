@@ -47,7 +47,7 @@ describe('DictionaryBootstrapService (issue #268)', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
-    setActiveDataset({ name: 'default', source: 'vocab-bloom-hub' });
+    setActiveDataset({ id: 1, name: 'default', source: 'vocab-bloom-hub' });
   });
 
   it('imports from HuggingFace when no dataset version is recorded', async () => {
@@ -69,7 +69,7 @@ describe('DictionaryBootstrapService (issue #268)', () => {
 
   // issue #527: the project's own data never lands in a dataset of another source
   it('does nothing when the active dataset is not the default one, whatever its version', async () => {
-    setActiveDataset({ name: 'wiktionary', source: 'wiktionary' });
+    setActiveDataset({ id: 1, name: 'wiktionary', source: 'wiktionary' });
     findOne.mockRejectedValue(new NotFoundException());
     await expect(service.run()).resolves.toBe('skipped');
     expect(findOne).not.toHaveBeenCalled();

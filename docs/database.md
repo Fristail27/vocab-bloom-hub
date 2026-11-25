@@ -150,55 +150,39 @@ yarn workspace server migration:revert    # undo the last one — development on
 Writing a migration, the troubleshooting of a failed one and the full workflow are in
 [`migrations.md`](./migrations.md).
 
-## Datasets: a schema each
+## Shared dictionary tables
 
-An instance can hold several dictionaries, one of them served ([`datasets.md`](./datasets.md)).
-In the database a dataset is a **schema** — a namespace of tables inside the one database:
+PostgreSQL assigns each installed dictionary a stable integer in `public.datasets.id`.
+The tables named `public.dictionary_*` hold rows for every dictionary. For example,
+the primary key of a word is `(dataset_id, id)`. A meaning refers to its word by
+`(dataset_id, word)`. Two dictionaries can both publish word 42 and have different
+definitions, sources and edit histories. `dataset_counters` allocates numeric IDs
+independently for each dictionary and table.
 
-| Schema      | What lives there                                                                                                                                                                                                 |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `public`    | the shared tables (`settings`, `datasets`, `audit_log`, `migrations`), the enum types, the `pg_trgm` extension — and the dictionary tables of the `default` dataset, where they always were                      |
-| `ds_<name>` | the dictionary tables of the dataset `<name>` with their indexes, the history of its edits (`en_changes`), its moderation queue (`suggestions`) and its own journal of applied migrations (`dataset_migrations`) |
+The API resolves a dataset name and pins its ID for an operation. Each transaction on
+the application pool sets `vbh.dataset_id` locally. Updatable views such as `en_words`
+filter by that ID and enforce it on writes. An unset ID yields an empty view.
+All named readers, writers and the default dictionary use the same `DB_POOL_SIZE` budget.
+Activation changes the default in the registry settings. Each HTTP request and DICT
+command retains the default it started with. Publication and vector import take database
+locks for the affected dataset.
 
-- **The tables are the same in every schema**, so are the queries: the connection of the server
-  carries `search_path = ds_<name>, public`, and `en_words` resolves to the table of the active
-  dataset. External tools that read `public.en_words` keep reading the `default` dataset.
-- **Sources and licenses are part of the data.** The shared registry keeps dataset origins,
-  description, version and `terms_updated_at`; base words keep their origins in `en_words`,
-  and `en_changes.contribution` records the terms of actual edits. Public word licenses are
-  derived from those snapshots, not from a cross-schema join to the current parent.
-- **A fork is another full schema**, copied in a consistent transaction with sources and
-  history. It consumes its own space and becomes visible after commit. Later parent changes
-  do not propagate to it. OpenGloss uses `ds_opengloss` with the same tables and indexes.
-- **A switch re-opens the pool** with another `search_path`. It waits for the requests under
-  way to finish (five seconds at most) and the requests that arrive meanwhile wait for it — a
-  few tens of milliseconds, nobody is answered with an error.
-- **An import into another dataset** uses a pool of its own, four connections at most, for as
-  long as it runs: count them in when `DB_POOL_SIZE` is close to the connection limit.
-- **A dataset that is not the active one is read through a pool of its own** too, four
-  connections at most: opened by the first public read of every dataset
-  ([`datasets.md`](./datasets.md#reading-every-dataset-at-once)), kept, its idle connections
-  closed after `DB_POOL_IDLE_TIMEOUT`, and gone when the dataset is deleted or activated.
-- **A dataset is deleted with `DROP SCHEMA … CASCADE`**: instant, whatever its size, and the
-  space is returned at once.
-- **`pg_dump` of the database takes every schema**: a backup holds all the datasets and the
-  registry, a restore brings back the instance with the same one active. One dataset alone:
-  `pg_dump -Fc -n ds_<name>` — the dump holds the tables, the row in `datasets` does not travel
-  with it.
-- **Size**: a dataset takes what its rows take, there is no shared part. Open English WordNet
-  2025 is 170 MB with its indexes, the English Wiktionary 1.4 GB
-  ([`datasets.md`](./datasets.md#public-sources)).
+An installation creates a registry row. Deleting it cascades to its owned content,
+history, suggestions, reviews, vectors and reconciliation state. A fork copies
+transferable content in one PostgreSQL snapshot and becomes visible at commit.
+A whole-database backup includes all dictionaries and instance settings. To transfer
+one dictionary between instances, use the native dataset export in the admin UI.
 
-> [!WARNING]
-> **Connection poolers.** The `search_path` travels as a startup option of the connection
-> (`options=-c search_path=…`). A pooler between the server and Postgres has to pass it
-> through: one that drops it (PgBouncer with `options` in `ignore_startup_parameters`) would
-> leave the server on `public`, serving the wrong dataset. The server checks `current_schema()`
-> at start and after every switch and refuses to go on from the wrong schema; it checks the
-> connection of a dataset that is read next to the active one the same way, and that read
-> fails. Connect the
-> server to Postgres directly, or make sure the pooler hands the option on. With the `default`
-> dataset active no option is sent and any pooler works as before.
+For a manual read, select the registry ID and read in the same transaction:
+
+```sql
+BEGIN;
+SELECT set_config('vbh.dataset_id', id::text, true) FROM public.datasets WHERE name = 'default';
+SELECT id, word FROM public.en_words ORDER BY id LIMIT 10;
+COMMIT;
+```
+
+For maintenance and recovery, see [upgrading a database with dataset schemas](./migrations.md#upgrading-a-database-with-dataset-schemas).
 
 ## Backups
 

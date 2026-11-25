@@ -236,7 +236,7 @@ export default {
     [ErrorCodes.dataset_terms_fixed]: 'The terms of a dataset of the catalog are the ones of its source',
     [ErrorCodes.dataset_license_invalid]:
       'Choose a license of the list, or give the name, the link and the text of your own',
-    [ErrorCodes.datasets_not_supported]: 'This database has no schemas: several datasets need Postgres',
+    [ErrorCodes.datasets_not_supported]: 'Managing multiple datasets requires PostgreSQL.',
     [ErrorCodes.dataset_not_found]: 'The dataset was not found',
     [ErrorCodes.dataset_name_invalid]: 'This instance knows no dataset of that name',
     [ErrorCodes.dataset_source_invalid]:
@@ -483,7 +483,7 @@ export default {
     public_note:
       'Only open datasets are public: {method} reads each under its own license. New datasets and forks start closed.',
     not_supported:
-      'This instance runs on SQLite, which has no schemas: it holds the default dataset only. Installing, activating and deleting datasets needs a Postgres database.',
+      'This SQLite instance holds the default dataset. Use PostgreSQL to install, activate and delete additional datasets.',
     status_active: 'active',
     status_installed: 'installed',
     status_not_installed: 'not installed',

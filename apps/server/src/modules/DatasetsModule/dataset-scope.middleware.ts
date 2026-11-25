@@ -30,17 +30,7 @@ const takeDatasetParam = (req: Request): string | null => {
   return named;
 };
 
-/**
- * The dataset an admin request of the dictionary works on (issue #540):
- * `?dataset=<name>` on a route of `/api/en/*`, the active dataset without
- * it. A dataset that is not the active one is reached through the
- * connection DatasetsService keeps on its schema, and the request runs
- * inside a scope that carries it — the edit services take their
- * repositories from the scope. Runs after the switch gate: a switch of the
- * active dataset never happens between the choice of the connection and
- * its use. A request without the admin's token is left to the guard of its
- * route, which refuses it before anything is looked up.
- */
+/** Pin an explicitly selected dictionary after authenticating the administrator. */
 export const datasetScopeMiddleware =
   (datasets: DatasetsService) =>
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -52,7 +42,7 @@ export const datasetScopeMiddleware =
 
     try {
       const dataset = await datasets.find(named);
-      if (dataset.name === datasets.getActive().name) return next();
+      if (dataset.id === datasets.getActive().id) return next();
       const dataSource = await datasets.reader(dataset);
       // an edit of a dataset that is not served changes what the reads of every dataset answer
       if (req.method !== 'GET' && req.method !== 'HEAD') {

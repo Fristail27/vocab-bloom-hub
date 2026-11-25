@@ -89,7 +89,7 @@ describe('selected and grouped public search (#652)', () => {
       await add('receive', OTHER);
       await add('confidential', CLOSED);
       // A different edit history for the same local IDs proves modified is scoped too.
-      await (await datasets.reader(await datasets.find(OTHER))).getRepository(EnChange).clear();
+      await (await datasets.reader(await datasets.find(OTHER))).getRepository(EnChange).deleteAll();
     }
   });
 

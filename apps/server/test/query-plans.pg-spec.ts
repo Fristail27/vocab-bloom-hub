@@ -21,8 +21,7 @@ import { EnAreaVariantsE, EnPartOfSpeechE, EnWordFormsE } from '../types';
  *
  * The substring search tiers and the fuzzy tier are covered too: since
  * #278 the trigram GIN index serves their LIKEs and the `%` operator. The
- * only statements skipped on purpose are the Last-Modified lookups
- * (`ORDER BY updateAt DESC LIMIT 1`), run at most once a minute behind a cache.
+ * Last-Modified lookups have their own index-path check below.
  */
 const GUARDED_GROUPS: ScenarioT['group'][] = ['search', 'word', 'list', 'random'];
 
@@ -42,6 +41,22 @@ describe('query plans of the public reads (Postgres, issue #279)', () => {
   const recorder = new QueryRecorder();
   const auth = { Authorization: '' };
   const server = () => app.getHttpServer();
+
+  it('uses a dataset and timestamp index for Last-Modified lookups', async () => {
+    for (const table of [
+      'en_entries',
+      'en_words',
+      'en_meanings',
+      'en_meanings_translations',
+      'en_short_translations',
+    ]) {
+      const plan = await explainOn(runner, {
+        sql: `SELECT "updateAt" FROM "${table}" ORDER BY "updateAt" DESC LIMIT 1`,
+        parameters: [],
+      });
+      expect(JSON.stringify(plan)).toContain(`dictionary_${table}_updated_at_idx`);
+    }
+  });
   let scenarios: ScenarioT[] = [];
 
   beforeAll(async () => {

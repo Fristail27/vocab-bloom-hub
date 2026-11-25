@@ -16,24 +16,17 @@ if (adminUrl?.startsWith('postgres')) {
   // Starting the app runs the whole migration set per file — far past the 5s default
   jest.setTimeout(120_000);
 
-  // every table but the migration journals, emptied right after the data
-  // source (and the migrations it runs) came up. `dataset_migrations` is the
-  // journal of the dictionary tables of `public` (issue #527): emptied, the
-  // next boot would build those tables a second time
+  // Reset shared data and local ID counters together, preserving migration history.
   const truncateAll = async (dataSource: DataSource): Promise<void> => {
     const tables = (await dataSource.query(
-      `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename NOT IN ('migrations', 'dataset_migrations')`,
+      `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> 'migrations'`,
     )) as Array<{ tablename: string }>;
     if (tables.length === 0) return;
     const list = tables.map((t) => `"${t.tablename}"`).join(', ');
     await dataSource.query(`TRUNCATE ${list} RESTART IDENTITY CASCADE`);
   };
 
-  // Only the application's connection starts a boot from empty tables, and
-  // only once: the short-lived connections that run the migrations ahead of
-  // it carry no entities, the connection an import opens on another dataset
-  // carries no migrations, and a switch of the active dataset re-initializes
-  // the same DataSource — none may wipe what the boot has built (issue #527)
+  // Only the application connection has both entity metadata and migrations.
   const emptied = new WeakSet<DataSource>();
   const initialize = DataSource.prototype.initialize;
   const some = (list: unknown): boolean => (Array.isArray(list) ? list.length > 0 : Boolean(list));
@@ -65,11 +58,6 @@ if (adminUrl?.startsWith('postgres')) {
     await worker.connect();
     try {
       await worker.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
-      // the schemas of the datasets a previous file created (issue #527)
-      const datasets = await worker.query<{ nspname: string }>(
-        `SELECT nspname FROM pg_namespace WHERE nspname LIKE 'ds\\_%'`,
-      );
-      for (const { nspname } of datasets.rows) await worker.query(`DROP SCHEMA "${nspname}" CASCADE`);
     } finally {
       await worker.end();
     }

@@ -1,3 +1,5 @@
+import { withRequestDefault } from '../../core/utils/active-dataset';
+import type { Request, Response, NextFunction } from 'express';
 import { DictModule } from '../DictModule/dict.module';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -44,8 +46,6 @@ import { getLoggerParams } from '../../core/logging/logger';
     // (AppThrottlerGuard) is attached to login, the legacy search aliases and
     // the whole public prefix (PUBLIC_API_RATE_LIMIT).
     ThrottlerModule.forRoot({ throttlers: [{ ttl: 60_000, limit: 100 }] }),
-    // the migrations of `public` and of every dataset schema run first, and
-    // answer the schema of the active dataset (issue #527)
     TypeOrmModule.forRootAsync(typeOrmRoot),
     DatasetsModule,
     ConfigModule.forRoot({
@@ -71,12 +71,14 @@ export class AppModule implements NestModule {
     // version header on the public prefix and the PUBLIC_API_ENABLED /
     // ADMIN_API_ENABLED switches; runs before routing so 404s are covered too
     consumer.apply(apiSurfaceMiddleware).forRoutes('*');
-    // a switch of the active dataset re-opens the database connection: the
-    // requests wait for it and it waits for them (issue #527)
+    // Reconciliation publication drains existing requests before updating the dictionary.
     consumer.apply(switchGateMiddleware(this.datasets.gate)).forRoutes('*');
-    // the dataset an admin request of the dictionary works on, when it names
-    // one that is not active (issue #540); inside the gate, so no switch
-    // comes between the choice of its connection and the request
+    // A concurrent activation affects requests starting after it commits.
+    consumer
+      .apply((_req: Request, _res: Response, next: NextFunction) =>
+        withRequestDefault(this.datasets.getActive(), next),
+      )
+      .forRoutes('*');
     consumer.apply(datasetScopeMiddleware(this.datasets)).forRoutes('*');
   }
 }

@@ -245,8 +245,7 @@ export default {
       'Die Bedingungen eines Datensatzes aus dem Katalog sind die seiner Quelle',
     [ErrorCodes.dataset_license_invalid]:
       'Wählen Sie eine Lizenz aus der Liste oder geben Sie Name, Link und Text Ihrer eigenen an',
-    [ErrorCodes.datasets_not_supported]:
-      'Diese Datenbank hat keine Schemas: mehrere Datensätze brauchen Postgres',
+    [ErrorCodes.datasets_not_supported]: 'Für mehrere Datensätze ist PostgreSQL erforderlich.',
     [ErrorCodes.dataset_not_found]: 'Der Datensatz wurde nicht gefunden',
     [ErrorCodes.dataset_name_invalid]: 'Diese Instanz kennt keinen Datensatz mit diesem Namen',
     [ErrorCodes.dataset_source_invalid]:
@@ -495,7 +494,7 @@ export default {
     public_note:
       'Nur offene Datasets sind öffentlich: {method} liest jedes unter seiner eigenen Lizenz. Neue Datasets und Forks sind zunächst geschlossen.',
     not_supported:
-      'Diese Instanz läuft auf SQLite, das keine Schemas kennt: Sie enthält nur den Standarddatensatz. Zum Installieren, Aktivieren und Löschen von Datensätzen ist eine Postgres-Datenbank nötig.',
+      'Diese SQLite-Instanz enthält den Standarddatensatz. Für die Installation, Aktivierung und Löschung weiterer Datensätze ist PostgreSQL erforderlich.',
     status_active: 'aktiv',
     status_installed: 'installiert',
     status_not_installed: 'nicht installiert',

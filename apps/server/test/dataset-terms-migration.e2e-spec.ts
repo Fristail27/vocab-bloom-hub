@@ -16,7 +16,11 @@ pg('upgrades dataset terms from both earlier provenance schemas without losing s
     type: 'postgres',
     url: process.env.DATABASE_URL,
     entities: [],
-    migrations: migrations.filter((migration) => migration !== AddDatasetTermsUpdatedAt1790200002000),
+    migrations: migrations.filter(
+      (migration) =>
+        migration !== AddDatasetTermsUpdatedAt1790200002000 &&
+        !migration.name.startsWith('ShareDictionaryTables'),
+    ),
   });
   // Read through the entity after the real startup migrations, just as
   // DatasetsService.onModuleInit does. No migrations on this read connection.
@@ -40,18 +44,20 @@ pg('upgrades dataset terms from both earlier provenance schemas without losing s
     );
     expect(columns).toEqual([]);
 
-    await expect(prepareDatabase()).resolves.toBe('public');
+    await expect(prepareDatabase()).resolves.toBeUndefined();
     await reader.initialize();
     const read = () => reader.getRepository(Dataset).findOneByOrFail({ name: 'default' });
     expect(await read()).toMatchObject({ description, origins, terms_updated_at: null });
-    expect(await legacy.query(`SELECT "word" FROM "public"."en_entries"`)).toEqual([{ word: 'legacy-word' }]);
+    expect(await legacy.query(`SELECT "word" FROM "public"."dictionary_en_entries"`)).toEqual([
+      { word: 'legacy-word' },
+    ]);
 
     // An intermediate build created the column inside AddDatasetOrigins.
     // Only the new migration is pending; its existing timestamp must survive.
     const updatedAt = new Date('2026-10-02T12:00:00.000Z');
     await legacy.query(`UPDATE "public"."datasets" SET "terms_updated_at" = $1`, [updatedAt]);
     await legacy.query(`DELETE FROM "public"."migrations" WHERE "name" = $1`, [repair.name]);
-    await expect(prepareDatabase()).resolves.toBe('public');
+    await expect(prepareDatabase()).resolves.toBeUndefined();
     expect(await read()).toMatchObject({ description, origins, terms_updated_at: updatedAt });
     expect(
       await legacy.query(`SELECT "name" FROM "public"."migrations" WHERE "name" = $1`, [repair.name]),

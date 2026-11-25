@@ -13,7 +13,7 @@ import { CreateDatasetReqDTO, UpdateDatasetReqDTO } from './dto/DatasetTermsReq.
  * from a file of its source (EnDatasetInstall) and its terms are the
  * catalog's. Next to them, the datasets of the instance's own (issue #540):
  * created empty, under the terms the owner states. Creating, installing,
- * activating and deleting need a driver with schemas — on SQLite they answer
+ * activating and deleting require PostgreSQL — on SQLite they answer
  * 409 `datasets_not_supported`.
  */
 @ApiTags('Datasets')

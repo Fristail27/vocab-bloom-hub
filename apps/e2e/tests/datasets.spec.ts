@@ -43,7 +43,7 @@ test.describe('datasets', () => {
   }) => {
     await page.goto('/en/managing/datasets');
 
-    await expect(page.getByTestId('datasets-unsupported')).toContainText('needs a Postgres database');
+    await expect(page.getByTestId('datasets-unsupported')).toContainText('Use PostgreSQL to install');
     // an installed dataset is read by the public API before it is activated (issue #528)
     await expect(page.getByTestId('datasets-public-note')).toContainText(
       'Only open datasets are public: GET /api/v1/words/{word}/datasets',

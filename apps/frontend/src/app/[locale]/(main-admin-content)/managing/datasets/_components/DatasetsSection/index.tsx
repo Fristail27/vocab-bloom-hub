@@ -32,8 +32,8 @@ type TermsDialogT = { dataset?: DatasetT | undefined; parent?: DatasetT | undefi
  * terms it comes under, and the datasets of the instance's own under them.
  * A card activates its dataset, opens its words for editing, imports into
  * it, exports it, installs or updates it from the file of its source and —
- * for a dataset of the owner's — corrects its terms. On a driver without
- * schemas (SQLite) the cards are shown and nothing can be installed or
+ * for a dataset of the owner's — corrects its terms. On SQLite
+ * the cards are shown and nothing can be installed or
  * created; the one dataset is still imported and exported.
  */
 export const DatasetsSection: React.FC<DatasetsSectionP> = ({ initial }) => {

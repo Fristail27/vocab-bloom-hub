@@ -99,7 +99,7 @@ test.describe('import, export and history', () => {
     expect(((await check.json()) as { hasWord: boolean }).hasWord).toBe(true);
   });
 
-  test('the export streams its progress and downloads the archive', async ({ page }) => {
+  test('the export streams its progress and downloads the archive', async ({ page }, testInfo) => {
     await openExport(page);
 
     const downloading = page.waitForEvent('download');
@@ -107,7 +107,8 @@ test.describe('import, export and history', () => {
 
     const download = await downloading;
     expect(download.suggestedFilename()).toBe('vocab-bloom-hub-en-export.zip');
-    const path = await download.path();
+    const path = testInfo.outputPath(download.suggestedFilename());
+    await download.saveAs(path);
     expect(statSync(path).size).toBeGreaterThan(0);
 
     await expect(page.getByText('100.00%')).toBeVisible({ timeout: 30_000 });

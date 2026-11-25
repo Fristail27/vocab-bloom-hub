@@ -1,3 +1,5 @@
+import { ShareDictionaryTables1795600000000 } from './1795600000000-ShareDictionaryTables';
+import { IndexDictionaryUpdatedAt1795700000000 } from './1795700000000-IndexDictionaryUpdatedAt';
 import { AddDatasetVisibility1792000000000 } from './1792000000000-AddDatasetVisibility';
 import { AddDatasetOrigins1790200000000 } from './1790200000000-AddDatasetOrigins';
 import { AddDatasetTermsUpdatedAt1790200002000 } from './1790200002000-AddDatasetTermsUpdatedAt';
@@ -25,10 +27,7 @@ import { AddOwnDatasetMark1790100000000 } from './1790100000000-AddOwnDatasetMar
 // runtime TypeORM options read this array. An explicit list (instead of a
 // path glob) resolves identically from ts-node and from the compiled dist.
 //
-// These are the shared migrations (issue #527): they run once, in `public` —
-// the settings, the registry of datasets, the journal, the enum types every
-// dataset uses. A change to a dictionary table belongs to
-// ../dataset-migrations, which runs in every dataset schema.
+// All structural changes, including dictionary tables, run once per installation.
 export const migrations = [
   Baseline1786903614082,
   AddMeaningSynonyms1787504717645,
@@ -52,4 +51,6 @@ export const migrations = [
   AddDatasetOrigins1790200000000,
   AddDatasetTermsUpdatedAt1790200002000,
   AddDatasetVisibility1792000000000,
+  ShareDictionaryTables1795600000000,
+  IndexDictionaryUpdatedAt1795700000000,
 ];

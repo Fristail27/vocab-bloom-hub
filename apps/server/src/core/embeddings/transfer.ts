@@ -82,9 +82,7 @@ export function supportedEmbeddingProfile(profile: EnEmbeddingProfile): boolean 
 /** Lock the input columns and vector tables in a stable order through publication. */
 export async function lockEmbeddingImport(em: EntityManager): Promise<void> {
   if (em.connection.options.type === 'postgres')
-    await em.query(
-      'LOCK TABLE en_entries, en_words, en_meanings, en_embedding_profiles, en_meaning_embeddings IN SHARE ROW EXCLUSIVE MODE',
-    );
+    await em.query('SELECT pg_advisory_xact_lock(691, public.dictionary_dataset_id())');
 }
 
 async function meaningsByIdentity(em: EntityManager, ids: string[]): Promise<Map<string, EnMeaning>> {
@@ -212,7 +210,17 @@ export async function writeEmbeddingLines(
       embedding,
     });
   }
-  if (rows.length) await em.upsert(EnMeaningEmbedding, rows, ['profile_id', 'meaning_id']);
+  if (rows.length)
+    await em
+      .createQueryBuilder()
+      .insert()
+      .into(EnMeaningEmbedding)
+      .values(rows)
+      .orUpdate(
+        ['dimensions', 'input_hash', 'embedding'],
+        [...(em.connection.options.type === 'postgres' ? ['dataset_id'] : []), 'profile_id', 'meaning_id'],
+      )
+      .execute();
 }
 
 /** All chunks belong to one transaction: a malformed last line rolls back the entire file. */

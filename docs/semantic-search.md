@@ -180,7 +180,7 @@ checks array size/shape, nulls, NaN/infinity and hash syntax. Application valida
 checks L2 normalization. SQLite enforces shape/size, hashes and foreign keys; the same
 application validation is required for vector values and normalization.
 
-The migration runs in every dataset schema, including new and staging schemas, **without
+The shared tables store vectors and profiles under each dataset ID, **without
 installing or requiring pgvector**. This keeps startup and vector import/export
 usable when semantic search is disabled. It also avoids recording a skipped optional
 migration as completed: adding the extension later does not require recreating data.
@@ -193,7 +193,7 @@ An approximate index implementation would need the same cast and profile filter,
 -- Example for one verified 768-dimensional profile, not automatic startup DDL.
 -- Qualify vector and its operator class with the actual extension schema.
 CREATE INDEX example_meaning_vectors
-ON en_meaning_embeddings USING hnsw
+ON public.dictionary_en_meaning_embeddings USING hnsw
   ((embedding::public.vector(768)) public.vector_cosine_ops)
 WHERE profile_id = '<verified profile ID>';
 ```
@@ -208,7 +208,8 @@ See [pgvector's array storage and expression-index guidance](https://github.com/
 
 The `meaning-embeddings.pg-spec.ts` suite creates and drops its own database using the
 provided PostgreSQL connection's database-creation privileges. It checks migrations without
-the extension, separate dataset schemas, constraints, cascade deletion and rollback/reapply.
+the extension and the historical embedding migrations. The shared-table upgrade suite verifies
+vectors for overlapping meaning IDs, owner constraints and cascade deletion.
 With `TEST_PGVECTOR=true`, it additionally installs pgvector in that temporary database,
 checks cosine search over `real[]`, and verifies HNSW index selection. No model is needed.
 
@@ -219,8 +220,7 @@ DATABASE_URL=postgres://... TEST_PGVECTOR=true yarn workspace server test:postgr
 
 CI keeps the existing plain-PostgreSQL suites and builds the bundled PostgreSQL 17 Alpine
 image with pgvector 0.8.1 for the focused semantic job. SQLite unit tests cover entity
-synchronization and persistence. Dataset tests compare the migrated `public` and new dataset
-tables. The deployment smoke test reuses a disposable stock-Alpine-17 volume with the new
+synchronization and persistence. Dataset tests exercise existing and freshly created dictionaries in shared storage. The deployment smoke test reuses a disposable stock-Alpine-17 volume with the new
 image, checks preserved rows and explicit extension activation, and exercises the real Ollama
 container without downloading weights. Compose tests cover the independent flag/profile matrix.
 
@@ -312,7 +312,7 @@ It transfers supported profiles in bounded batches and resolves `meaning_sync_id
 receiving content; equal numeric IDs alone are never proof of compatibility. Stale vectors
 and unknown preprocessing/profile identities are omitted. Each model generation remains
 separate. A successful fork has independent vector rows: removing its parent has no effect.
-The same transaction publishes the schema and registry; failure leaves no partial fork.
+The same transaction publishes the copied rows and registry; failure leaves no partial fork.
 
 Reconciliation can rebuild nested meaning rows even for an unrelated word edit. It retains
 current local vectors for that word before rewriting and restores only those whose portable
@@ -449,7 +449,7 @@ then enable it manually:
 docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;"'
 ```
 
-The dataset schemas share that extension. Existing extensions in another schema are supported.
+All datasets share that extension. Existing extensions in another schema are supported.
 For external PostgreSQL, have its administrator install the matching server package and,
 if the application user cannot create extensions, run the same SQL in the target database; see the
 [pgvector installation guide](https://github.com/pgvector/pgvector#installation).

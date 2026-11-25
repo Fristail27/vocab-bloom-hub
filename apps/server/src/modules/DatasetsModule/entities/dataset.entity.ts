@@ -5,7 +5,7 @@ const timestamp = (): 'timestamptz' | 'datetime' => (checkIsPostgres() ? 'timest
 
 /**
  * The registry of the instance's dictionary datasets (issue #527): one row
- * per dataset with the schema its tables live in and the terms of its data.
+ * per dataset with its permanent storage identity and the terms of its data.
  * A row marked `own` is a dataset of the instance's own (issue #540), whose
  * terms are the ones its owner stated.
  * Operational data of this instance, in `public` with the settings — never
@@ -37,10 +37,6 @@ export class Dataset {
 
   @Column({ type: 'varchar', length: 40, unique: true })
   name!: string;
-
-  // the Postgres schema of the dataset's tables; `public` for the default one
-  @Column({ type: 'varchar', length: 63, unique: true })
-  schema!: string;
 
   @Column({ type: 'varchar', length: 64 })
   source!: string;

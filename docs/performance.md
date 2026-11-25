@@ -5,6 +5,21 @@ How the API behaves on the real data volume — ~298k `en_entries`, ~327k
 languages), ~509k synonym and ~183k antonym links — what was done about it, and how to measure
 it again.
 
+## Shared dictionary storage
+
+The #691 upgrade was exercised on PostgreSQL 17 with two copies of a lexical corpus.
+Each contained 107,765 distinct spellings including inflected forms, 115,274 word rows and
+161,343 meanings. `yarn workspace server bench --explain` ran all 35 scenarios. Exact,
+prefix and fuzzy searches used indexes on the populated tables. The planner used
+sequential scans for some bulk statistics and empty translation or link tables.
+The corpus contained headwords and meanings from the 0.2.0 dataset. The benchmark added
+a past-tense form and filter values for the random-word cases.
+
+The pgvector test exercised exact ranking on 5,000 meanings with 768-dimensional vectors.
+All 132 saved queries matched the expected ranking. The test also checked export and reimport.
+Query vectors came from the fixture, so these measurements cover database ranking and API
+projection. See [semantic search verification](./semantic-search.md#verification-and-deployment-boundary).
+
 ## Targets and where things stand
 
 | Read (public API)                                  | Target (p95) | Postgres now | Note                                            |

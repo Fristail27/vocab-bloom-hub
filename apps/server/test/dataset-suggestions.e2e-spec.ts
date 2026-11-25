@@ -233,7 +233,7 @@ describe('suggestions belong to the viewed dataset (#651)', () => {
     });
 
     it.each([undefined, 'reader_words'])(
-      'pins target %s while activation waits for a submission',
+      'pins target %s across a concurrent change of the default dataset',
       async (target) => {
         const beforeActive = await active.getRepository(Suggestion).count();
         const beforeSelected = await selected.getRepository(Suggestion).count();
@@ -264,11 +264,10 @@ describe('suggestions belong to the viewed dataset (#651)', () => {
         const holding = new Promise<void>((resolve) => {
           held = resolve;
         });
-        const gate = datasets.gate;
-        const hold = gate.hold.bind(gate);
-        const spy = jest.spyOn(gate, 'hold').mockImplementation((work, timeout) => {
+        const activate = datasets.activate.bind(datasets);
+        const spy = jest.spyOn(datasets, 'activate').mockImplementation((name) => {
           held();
-          return hold(work, timeout);
+          return activate(name);
         });
         const activation = request(server())
           .post('/api/en/datasets/reader_words/activate')
@@ -277,6 +276,7 @@ describe('suggestions belong to the viewed dataset (#651)', () => {
           .then((response) => response);
         try {
           await holding;
+          if (!target) await activation;
           resume();
           const response = await submission;
           await activation;

@@ -12,10 +12,10 @@ a word can retain [several sources and licenses](#multiple-origins-and-word-lice
 | Needs               | PostgreSQL. On SQLite (development) there is the default dataset only and the page says so                                                    |
 | Where               | Admin → **Managing → Datasets**; `/api/en/datasets` of the admin API                                                                          |
 | Which datasets      | the ones the code knows — a closed catalog, with the license and the attribution of each stated in it — and the owner's own                   |
-| A dataset is        | a Postgres schema with the dictionary tables in it, plus a row in the registry                                                                |
-| The default dataset | `default`, the tables in `public` an instance always had. It cannot be deleted                                                                |
-| Switching           | a click; the server re-opens its database connection on the other schema — no restart, no failed request                                      |
-| Upgrading to this   | nothing to do: the migration registers the existing dictionary as `default` and leaves it in place                                            |
+| A dataset is        | a registry row that owns dictionary records in shared PostgreSQL tables                                                                       |
+| The default dataset | `default`, the original dictionary registered at installation. It cannot be deleted                                                           |
+| Switching           | a click changes the default for new requests                                                                                                  |
+| Upgrading to this   | [stop writes, back up and rehearse the shared-table migration](./migrations.md#upgrading-a-database-with-dataset-schemas)                     |
 | Editing             | every dataset, [served or not](#the-dataset-that-is-edited); what was changed is kept as [a history](#editing-a-dataset-the-history-of-edits) |
 
 ## The catalog
@@ -110,7 +110,7 @@ On the card of a dataset that is not installed, **How to install** opens its ins
 2. **Upload files manually** is the fallback for a server without internet access or a failed
    download. Download from the direct links or source pages, attach each file to its slot without
    unpacking it, then press _Start_. Both modes validate the same files and import the same data
-   into a separate schema. **The active dataset keeps serving meanwhile.**
+   into the selected dictionary. **The active dataset keeps serving meanwhile.**
 3. **Activate it** on its card when the installation is done to serve it through the main API.
    Installed datasets are already visible through the all-datasets read and word-page tabs;
    activation changes which dataset the ordinary reads and search serve.
@@ -186,7 +186,7 @@ curl -b cookies.txt -X DELETE http://localhost:3010/api/en/datasets/wordnet     
 | `POST /api/en/datasets/{name}/install`          | installs or updates from the file of the source. `400 dataset_source_invalid` for another file                                                                 |
 | `POST /api/en/datasets/{name}/install/download` | downloads the required catalog files and installs or updates them; optional JSON `pronunciations: true` includes CMUdict for WordNet. No custom URLs accepted. |
 | `POST /api/en/datasets/{name}/activate`         | makes it the one the instance serves                                                                                                                           |
-| `DELETE /api/en/datasets/{name}`                | drops the dataset with its schema. `409 dataset_is_active` / `dataset_is_default`                                                                              |
+| `DELETE /api/en/datasets/{name}`                | deletes the registry row and its owned data. `409 dataset_is_active` / `dataset_is_default`                                                                    |
 
 Downloads make up to three attempts for interrupted transfers and stop an attempt after 60 seconds
 without data. Temporary downloads are deleted on success or failure.
@@ -298,12 +298,10 @@ a public source, where they would be served under the name and the license of so
 }
 ```
 
-- `name` is lower-case latin, digits and `_`, 2 to 40 characters; it becomes the schema
-  `ds_<name>` and **the `source` of the data in the public API**. The names of the catalog — of
+- `name` is lower-case latin, digits and `_`, 2 to 40 characters; it becomes **the `source` of the data in the public API**. The names of the catalog — of
   its datasets and of its sources — are refused (`409 dataset_name_reserved`), and so is a name
   that is taken (`409 dataset_already_exists`).
-- The dataset is created **empty**: a schema with the dictionary tables and the dataset
-  migrations, a row in the registry. It is filled by choosing it as
+- The dataset is created **empty**: a registry row with its own ID. It is filled by choosing it as
   [the dataset that is edited](#the-dataset-that-is-edited), or by an import of an export of it.
 - Any number of them. Activating and deleting work as for a dataset of the catalog.
 
@@ -449,9 +447,7 @@ while the public API and the website go on serving the active one.
 
 **In the API.** The admin routes of the dictionary (`/api/en/*` but `/api/en/datasets`,
 `/api/en/dictionary/import` and `/api/en/audit`) take an optional `?dataset=<name>`. Without it
-they work on the active dataset, as before; with another dataset they work on it through a
-connection on its schema — the one the [read of every dataset](#reading-every-dataset-at-once)
-keeps — and no statement names two schemas. The search of the admin UI is
+they work on the active dataset, as before; the selector pins the named registry ID for the operation. The search of the admin UI is
 `GET /api/en/search`, the flat search of the public API on the dataset the request names; the
 public search defaults to the active dataset and accepts a public `dataset` selector (#652). A name that is no dataset answers
 `400 dataset_name_invalid`, a dataset the instance does not hold `404 dataset_not_found`.
@@ -497,13 +493,8 @@ The public API serves the active dataset. One read answers from all open dataset
 ([`api.md`](./api.md#a-headword-in-every-dataset)). Nothing is activated for it and nothing is
 merged: an entry stays in the group of its dataset, under the license of its source.
 
-- **A connection per dataset.** A dataset that is not the active one is read through a small
-  pool of its own (four connections at most, closed when idle like the ones of the application's
-  pool), opened by the first such read and kept until the dataset is deleted or becomes the
-  active one. With `N` datasets an instance may hold `DB_POOL_SIZE + 4 × (N − 1)` connections
-  for its reads; count them against the connection limit of a managed Postgres.
-- **No statement names two schemas**: each group is a read of one dataset, the ones the active
-  dataset is answered with.
+- **One connection pool serves every dataset.** Each group carries the source and terms
+  of its pinned registry row. Installing more dictionaries uses the same pool budget.
 - **The list and unselected search use the active dataset.** Selected and grouped search
   use named public datasets ([contract](./api.md#selected-and-grouped-search-652)). Reader
   reports can name the viewed dataset; omission targets the active one. IDs remain local.
@@ -541,13 +532,8 @@ merged: an entry stays in the group of its dataset, under the license of its sou
 - **Only open datasets are public.** New installations and forks stay closed while the admin
   prepares their data. Open them explicitly when ready for readers; closing hides their entries
   and history without removing them. See [opening and closing](#opening-and-closing-a-dataset).
-- **A connection that is not on its schema is refused.** A connection pooler that drops the
-  `search_path` startup option would leave the connection of a dataset on `public`, and the
-  default dataset would be answered under the terms of another. The server checks
-  `current_schema()` when it opens the connection: the read fails with `500` and the log names
-  the dataset ([`database.md`](./database.md#datasets-a-schema-each)).
-- **`Last-Modified` costs a lookup per dataset**: the newest change of five tables in every
-  schema, a sort without an index, at most once a minute and only while these routes are read
+- **`Last-Modified` costs a lookup per dataset**: the newest change of five tables for every
+  dataset, a sort without an index, at most once a minute and only while these routes are read
   ([`performance.md`](./performance.md)).
 
 ### Checking shared word links
@@ -582,8 +568,7 @@ own. The licenses allow it, and each asks for something in return:
 
 What the instance does about it:
 
-- **Every edit leaves a row in the history of its dataset** — the table `en_changes`, in the
-  schema of the dataset, next to the entries it is about. A row holds what was edited (the
+- **Every edit leaves a row in the history of its dataset** — the scoped `en_changes` view. A row holds what was edited (the
   entry, a form, a meaning, a translation), what was done (added, changed, deleted) and **the
   values before and after**, field by field; a record that was added or deleted is kept whole.
   Rows name an entry by its spelling and part of speech, never by an id: ids change when a
@@ -665,10 +650,9 @@ installation cannot mix at all: the file of a source goes into the dataset of th
 under the license it has now, and nothing else.
 
 > [!WARNING]
-> **One server process per database.** A switch re-opens the connection of the process that
-> handled the request; another server process on the same database keeps serving the dataset it
-> started with until it is restarted. Run one, as the deployment guide asks
-> ([`deployment/README.md`](./deployment/README.md)), or restart the others after a switch.
+> Run one serving API process per database. The active registry row, HTTP validators,
+> import slot and reconciliation gate are cached or coordinated in that process.
+> [Deployment](./deployment/README.md).
 
 ## Public sources
 
@@ -696,28 +680,17 @@ the folder they write is a dataset like an export.
 
 ## On SQLite
 
-SQLite has no schemas, and it is the database of development only: the instance holds the
+SQLite supports the development workflow: the instance holds the
 default dataset, the datasets page shows the catalog and every instruction, and nothing can be
 installed or created — the page says why, and the switch of the dataset that is edited lists the
 one dataset. A dataset of a public source, and one of the owner's, needs PostgreSQL.
 
 ## In the database
 
-```
-public                 settings, datasets, audit_log, migrations, dataset_migrations,
-                       the enum types — and the tables of the `default` dataset
-ds_wiktionary          en_entries, en_words, en_meanings, …, en_changes, suggestions,
-                       dataset_migrations
-ds_wordnet             the same tables, other rows
-ds_opengloss           the same tables, converted OpenGloss words and their origins
-ds_my_words            a dataset of the instance's own: the same tables
-```
-
-The connection of the server carries `search_path = ds_<name>, public`: the dictionary tables
-resolve to the active dataset, the shared tables to `public`. How the schemas are migrated,
-backed up and what a connection pooler has to pass through:
-[`database.md`](./database.md#datasets-a-schema-each) and
-[`migrations.md`](./migrations.md#shared-and-dataset-migrations).
+`public.datasets.id` owns rows in shared tables. The request's registry ID scopes reads,
+writes and local foreign keys. An existing word ID and a portable merge identity can both
+occur in another dataset. See [Shared dictionary tables](./database.md#shared-dictionary-tables)
+and [the upgrade procedure](./migrations.md#upgrading-a-database-with-dataset-schemas).
 
 ## Not there yet
 
@@ -811,9 +784,9 @@ On an installed dataset's card, **Create fork** makes a complete independent own
 PostgreSQL. Set a unique name, title, description, and terms for contributions. Content,
 relationships, origins, notices, and history are copied in one consistent database snapshot.
 Progress reports copied tables. The new dataset appears only after the transaction commits;
-a failed operation rolls back its schema and can be retried. It is not activated automatically.
+a failed operation rolls back the registry row and all copies and can be retried. It is not activated automatically.
 Progress is held in memory; after a server restart, consult the dataset list for a completed
-fork. An interrupted, uncommitted fork leaves no registered dataset or partial schema.
+fork. An interrupted, uncommitted fork leaves no registered dataset or partial copy.
 
 A fork states its immediate parent and retains earlier origins. Parent updates, renames, and
 deletion do not alter the saved chain. A fork can be updated from its parent through the comparison workflow below; synchronization
@@ -949,18 +922,17 @@ completeness is treated as partial. Conversion warnings remain separate from con
 
 ### Storage and operation
 
-Synchronization tables are per dataset and managed by a dataset migration. Preparation stores
+Synchronization records are keyed by dataset ID in shared tables. Preparation stores
 serialized baseline/local/incoming records and a plan, walking articles in batches. Plan pages
 contain 25 articles. Snapshot reads, identity assignment, snapshot copies and comparison writes
 use batches of 100, rather than separate database round trips per article. Reference validation
 indexes headwords, forms and phrasal links once; it retains only the endpoint metadata in memory.
 Preparation still reads the complete datasets and their reachable snapshot history, so its time
-depends on their size and database performance. Provision additional space for incoming conversion files, a staging
-schema/database, retained snapshots, the result transaction, and PostgreSQL WAL. Snapshots and
+depends on their size and database performance. Provision additional space for incoming conversion files, private
+staging rows or a staging database, retained snapshots, the result transaction, and PostgreSQL WAL. Snapshots and
 saved operation decisions are retained conservatively; they are not expired automatically.
 
-On PostgreSQL, source files import into an uncommitted private schema that is rolled back
-when preparation finishes or fails. Apply drains this instance's requests through `SwitchGate`
+On PostgreSQL, source files import into an uncommitted private dataset. The preparation transaction deletes those rows before committing the plan. Failure rolls back the private import and the plan together. Apply drains this instance's requests through `SwitchGate`
 and takes database write locks before checking the current revision. Keep the existing
 single-serving-process deployment rule for coherent multi-query reads. SQLite uses a temporary
 database file for source updates. Parent updates and cross-dataset merges require PostgreSQL.

@@ -1,3 +1,4 @@
+import { Dataset } from '../DatasetsModule/entities/dataset.entity';
 import { savePronunciations, primaryIPA } from './utils/pronunciations';
 import { saveEtymologies } from './utils/etymologies';
 import { alternativeSpellings, replaceAlternatives } from './utils/entryAlternatives';
@@ -229,10 +230,16 @@ export class EnService {
     if (!currentDataset().own || !this.wordCopy || body.copy_source.dataset === currentDataset().name) {
       throw new ConflictException(ErrorCodes.copy_requires_own_dataset);
     }
-    return this.wordCopy.withSource(body.copy_source, (snapshot) => this.createWord(body, snapshot));
+    return this.wordCopy.withSource(body.copy_source, (snapshot, manager) =>
+      this.createWord(body, snapshot, manager),
+    );
   }
 
-  private async createWord(body: AddWordReqDTO, copied?: CopiedWordT): Promise<AddResT> {
+  private async createWord(
+    body: AddWordReqDTO,
+    copied?: CopiedWordT,
+    manager?: EntityManager,
+  ): Promise<AddResT> {
     this.assertNotGenerated(body.generated);
     let type = EnEntryTypesE.word;
     if (body.part_of_speech === EnPartOfSpeechE.phrase) {
@@ -241,7 +248,11 @@ export class EnService {
     if (body.part_of_speech === EnPartOfSpeechE.grammar_pattern) {
       type = EnEntryTypesE.grammar_pattern;
     }
-    const dataset = this.datasets ? await this.datasets.find(currentDataset().name) : null;
+    const dataset = manager
+      ? await manager.findOneByOrFail(Dataset, { id: currentDataset().id })
+      : this.datasets
+        ? await this.datasets.find(currentDataset().name)
+        : null;
     let origins = copied?.origins ?? (dataset ? defaultOrigins(dataset) : []);
     if (body.origins) {
       assertOriginsEdit(copied?.origins ?? [], body.origins);
@@ -267,7 +278,7 @@ export class EnService {
         }),
       }));
     }
-    const baseWord = await this.dataSource.transaction(async (em) => {
+    const baseWord = await (manager ?? this.dataSource).transaction(async (em) => {
       const baseEntry = await this.getOrAddEntry(em, body.word, type);
       const baseWord = await this.addWordRow(em, baseEntry, body);
       await em.getRepository(EnWord).update(baseWord.id, { origins });

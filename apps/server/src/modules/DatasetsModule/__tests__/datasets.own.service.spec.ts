@@ -3,18 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals
 import { DataSource } from 'typeorm';
 import { ErrorCodes } from '../../../../core/constants/error_codes';
 import { AuditActionE, AuditEntityTypeE, CreateDatasetReqT } from '../../../../types';
-import { createDatasetSchema } from '../../../db/datasets';
 import { Settings } from '../../SettingsModule/entities/settings.entity';
 import { DatasetsService } from '../datasets.service';
 import { Dataset } from '../entities/dataset.entity';
 import { DATASET_VERSION_SETTINGS_FIELD } from '../../EnModule/modules/EnImportDictionary/constants';
-
-// the schemas are Postgres (test:postgres); here the registry and the rules
-jest.mock('../../../db/datasets', () => ({
-  ...(jest.requireActual('../../../db/datasets') as object),
-  createDatasetSchema: jest.fn(async () => undefined),
-  dropDatasetSchema: jest.fn(async () => undefined),
-}));
 
 const MY_TEXT = 'Permission is granted to read these words aloud.';
 
@@ -56,7 +48,6 @@ describe('DatasetsService: the datasets of the instance’s own', () => {
 
   beforeEach(async () => {
     record.mockClear();
-    (createDatasetSchema as jest.Mock).mockClear();
     dataSource = new DataSource({
       type: 'better-sqlite3',
       database: ':memory:',
@@ -74,7 +65,6 @@ describe('DatasetsService: the datasets of the instance’s own', () => {
   it('creates an empty dataset under a license of the list, named as its own source', async () => {
     const created = await service.create(standard);
 
-    expect(createDatasetSchema).toHaveBeenCalledWith('ds_my_words');
     expect(created).toEqual(
       expect.objectContaining({
         name: 'my_words',
@@ -172,7 +162,6 @@ describe('DatasetsService: the datasets of the instance’s own', () => {
     );
     await service.create(standard);
     await expect(service.create(standard)).rejects.toThrow(ErrorCodes.dataset_already_exists);
-    expect(createDatasetSchema).toHaveBeenCalledTimes(1);
   });
 
   it('refuses a license that is neither one of the list nor a complete one of the owner’s', async () => {
@@ -190,7 +179,6 @@ describe('DatasetsService: the datasets of the instance’s own', () => {
         ErrorCodes.dataset_license_invalid,
       );
     }
-    expect(createDatasetSchema).not.toHaveBeenCalled();
   });
 
   it('corrects the title and the attribution, and journals what changed', async () => {
@@ -296,7 +284,6 @@ describe('DatasetsService: the datasets of the instance’s own', () => {
     await rows.save(
       rows.create({
         name: 'wiktionary',
-        schema: 'ds_wiktionary',
         own: true,
         source: 'wiktionary',
         title: 'My Wiktionary notes',
@@ -329,7 +316,6 @@ describe('DatasetsService: the datasets of the instance’s own', () => {
       expect.objectContaining({ title: 'Mine', own: true }),
     );
     await expect(again.install('wiktionary')).rejects.toThrow(ErrorCodes.dataset_already_exists);
-    expect(createDatasetSchema).not.toHaveBeenCalled();
   });
   it('keeps new datasets closed, persists visibility and journals only actual changes', async () => {
     const created = await service.create(standard);

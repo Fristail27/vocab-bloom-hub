@@ -60,8 +60,7 @@ export class ImportDictionaryReq {
   update?: boolean | undefined;
 
   // The dataset of the instance to import into (issue #527): the active one
-  // when absent. A name that is not registered yet creates the dataset — a
-  // schema of its own — and the active dataset keeps serving meanwhile.
+  // when absent. A new catalog target is registered before importing its content.
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()

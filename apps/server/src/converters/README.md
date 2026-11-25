@@ -8,7 +8,7 @@ API and the website need to know nothing about the source.
 **An admin does not run a converter.** On the datasets page, **Download on the server** fetches
 the catalog's source files (`POST /api/en/datasets/{name}/install/download`, JSON `{}`).
 **Upload files manually** is the fallback (`POST /api/en/datasets/{name}/install`). Both convert
-and import into the dataset's own schema ([`docs/datasets.md`](../../../../docs/datasets.md)).
+and import into the selected dataset ([`docs/datasets.md`](../../../../docs/datasets.md)).
 The command line below is the same code without an
 instance — for working on a converter, or for making a dataset on another machine:
 

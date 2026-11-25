@@ -79,6 +79,10 @@ describe('datasets of the instance’s own (Postgres, issue #540)', () => {
 
   const rateLimit = process.env.PUBLIC_API_RATE_LIMIT;
 
+  const reader = async (name: string) => {
+    const datasets = app.get(DatasetsService);
+    return datasets.reader(await datasets.find(name));
+  };
   beforeAll(async () => {
     process.env.PUBLIC_API_RATE_LIMIT = '100000/60';
     const username = process.env.ADMIN_USERNAME as string;
@@ -111,7 +115,6 @@ describe('datasets of the instance’s own (Postgres, issue #540)', () => {
     await request(server()).post('/api/en/datasets/default/activate').set(auth);
     for (const name of [MINE, HOUSE, EMPTY]) {
       await request(server()).delete(`/api/en/datasets/${name}`).set(auth);
-      await dataSource.query(`DROP SCHEMA IF EXISTS "ds_${name}" CASCADE`);
     }
     await app.close();
   });
@@ -153,13 +156,7 @@ describe('datasets of the instance’s own (Postgres, issue #540)', () => {
       ]),
     );
 
-    const tables = (await dataSource.query(
-      `SELECT table_name FROM information_schema.tables WHERE table_schema = $1 ORDER BY 1`,
-      [`ds_${MINE}`],
-    )) as Array<{ table_name: string }>;
-    expect(tables.map((row) => row.table_name)).toEqual(
-      expect.arrayContaining(['en_entries', 'en_words', 'en_changes', 'suggestions', 'dataset_migrations']),
-    );
+    expect(await (await reader(MINE)).query('SELECT * FROM en_words')).toEqual([]);
 
     // twice is refused; a name of the catalog is not taken
     const again = await request(server())
@@ -184,9 +181,11 @@ describe('datasets of the instance’s own (Postgres, issue #540)', () => {
       .set(auth)
       .send({ is_public: true })
       .expect(200);
-    await dataSource.query(`INSERT INTO "ds_${MINE}"."en_entries" ("word") VALUES ($1)`, [HEADWORD]);
-    await dataSource.query(
-      `INSERT INTO "ds_${MINE}"."en_words" ("word", "part_of_speech", "form_of_word", "description", "generated")
+    await (await reader(MINE)).query(`INSERT INTO "en_entries" ("word") VALUES ($1)`, [HEADWORD]);
+    await (
+      await reader(MINE)
+    ).query(
+      `INSERT INTO "en_words" ("word", "part_of_speech", "form_of_word", "description", "generated")
        VALUES ($1, 'noun', 'base_form', 'a word of the owner', false)`,
       [HEADWORD],
     );
@@ -336,9 +335,7 @@ describe('datasets of the instance’s own (Postgres, issue #540)', () => {
 
     // written where it was asked, and nowhere else
     expect(
-      await dataSource.query(`SELECT count(*)::int AS n FROM "ds_${MINE}"."en_words" WHERE "word" = $1`, [
-        EDITED,
-      ]),
+      await (await reader(MINE)).query(`SELECT count(*)::int AS n FROM "en_words" WHERE "word" = $1`, [EDITED]),
     ).toEqual([{ n: 1 }]);
     expect(await dataSource.query(`SELECT count(*)::int AS n FROM "public"."en_words"`)).toEqual(activeWords);
     expect((await list()).active).toBe('default');
@@ -397,7 +394,9 @@ describe('datasets of the instance’s own (Postgres, issue #540)', () => {
     expect(activeHistory.body.items).toEqual([]);
 
     // …and so is the queue of suggestions
-    await dataSource.query(`INSERT INTO "ds_${MINE}"."suggestions" ("headword", "message") VALUES ($1, $2)`, [
+    await (
+      await reader(MINE)
+    ).query(`INSERT INTO "suggestions" ("headword", "message") VALUES ($1, $2)`, [
       EDITED,
       'a report on a word of the owner',
     ]);
@@ -408,9 +407,7 @@ describe('datasets of the instance’s own (Postgres, issue #540)', () => {
 
     await request(server()).delete(`/api/en/${id}`).query(inMine).set(auth).expect(200);
     expect(
-      await dataSource.query(`SELECT count(*)::int AS n FROM "ds_${MINE}"."en_words" WHERE "word" = $1`, [
-        EDITED,
-      ]),
+      await (await reader(MINE)).query(`SELECT count(*)::int AS n FROM "en_words" WHERE "word" = $1`, [EDITED]),
     ).toEqual([{ n: 0 }]);
     expect(await dataSource.query(`SELECT count(*)::int AS n FROM "public"."en_words"`)).toEqual(activeWords);
   });
@@ -457,9 +454,9 @@ describe('datasets of the instance’s own (Postgres, issue #540)', () => {
       .expect(201);
     expect(back.text).toContain('"stage":5');
     expect(
-      await dataSource.query(`SELECT count(*)::int AS n FROM "ds_${MINE}"."en_words" WHERE "word" = $1`, [
-        HEADWORD,
-      ]),
+      await (
+        await reader(MINE)
+      ).query(`SELECT count(*)::int AS n FROM "en_words" WHERE "word" = $1`, [HEADWORD]),
     ).toEqual([{ n: 1 }]);
     await released();
 

@@ -13,14 +13,13 @@ dictionary update differs from a code update. The upgrade itself, step by step:
 
 The **database behind `DATABASE_URL`** is the only state of an instance:
 
-- the dictionary — imported entries and every edit made in the admin UI; on an instance with
-  several datasets ([`datasets.md`](./datasets.md)), every one of them, each in a schema of its
-  own inside the same database;
-- the registry of the datasets (`datasets`) with the terms of each, and which one is active;
-- the `settings` table, including `en_dataset_version`, a mirror of the version of the active
-  dataset (the registry is what `GET /api/v1/meta` reports);
-- the `migrations` table — which schema migrations have been applied — and the
-  `dataset_migrations` of every dataset.
+- shared dictionary tables containing every dataset's entries, edits, reviews, suggestions,
+  reconciliation state and embeddings. Each row belongs to a registry ID;
+- the `datasets` registry containing the terms and visibility of each dictionary, and
+  `dataset_counters` preserving the next local IDs;
+- the `settings` table containing the active dataset name and its mirrored
+  `en_dataset_version`;
+- the `migrations` journal for the installation. A full database dump includes all of this state.
 
 Both processes (server and frontend) are stateless: the only files the server writes are
 temporary (under the system temp directory, while an import or export runs). A backup of the
@@ -85,8 +84,9 @@ database backup when you want to be able to _go back_. The data terms of an expo
 > database and how to get back.
 
 On start the server applies every pending migration shipped with its version, then serves
-requests ([`database.md`](./database.md#the-schema-migrations)). Deploying is
-therefore just: ship the new version and restart. Two consequences follow:
+requests ([`database.md`](./database.md#the-schema-migrations)). An installation upgrading from per-dataset PostgreSQL schemas needs a maintenance window and
+a verified backup. Rehearse the migration, including disk space and recovery, before deploying.
+[Shared dictionary upgrade](./migrations.md#upgrading-a-database-with-dataset-schemas).
 
 1. **The database becomes bound to the new version.** Once a migration has run, the previous
    version of the code no longer matches the schema and is not expected to work against it.

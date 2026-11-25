@@ -15,11 +15,8 @@ import { AddChanges1789700000000 } from './1789700000000-AddChanges';
 import { AddSuggestionAuthor1789800000000 } from './1789800000000-AddSuggestionAuthor';
 import { ChangesCarryValues1789900000000 } from './1789900000000-ChangesCarryValues';
 
-// The migrations of one dataset's tables (issue #527), run in every dataset
-// schema at start and when a dataset is created — `public` included, where
-// the baseline is marked as applied. They name no schema: the connection's
-// search_path decides where they land. A change to a dictionary table goes
-// here, not into ../migrations (docs/migrations.md).
+// Frozen legacy migrations replayed by the shared-table upgrade when a dictionary
+// was last opened by an older release. New structural changes go in ../migrations.
 import { AddEntryAlternatives1791400000000 } from './1791400000000-AddEntryAlternatives';
 
 export const datasetMigrations = [

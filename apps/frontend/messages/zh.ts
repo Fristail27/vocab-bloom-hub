@@ -226,7 +226,7 @@ export default {
     [ErrorCodes.dataset_already_exists]: '已存在同名的数据集',
     [ErrorCodes.dataset_terms_fixed]: '目录中数据集的条款就是其来源的条款',
     [ErrorCodes.dataset_license_invalid]: '请从列表中选择一个许可，或填写您自己许可的名称、链接和文本',
-    [ErrorCodes.datasets_not_supported]: '此数据库没有模式：多个数据集需要 Postgres',
+    [ErrorCodes.datasets_not_supported]: '管理多个数据集需要 PostgreSQL。',
     [ErrorCodes.dataset_not_found]: '未找到该数据集',
     [ErrorCodes.dataset_name_invalid]: '此实例没有这个名称的数据集',
     [ErrorCodes.dataset_source_invalid]: '该文件不是此数据集的来源所发布的文件：请按说明重新下载',
@@ -463,8 +463,7 @@ export default {
     intro:
       '此实例可以容纳的词典数据集。每个数据集有自己的词条，并沿用其来源的许可；同一时间只启用一个——API 和网站提供的就是它。数据集从不混合。',
     public_note: '只有开放的数据集可公开访问：{method} 按各自许可证读取数据。新数据集和分支默认关闭。',
-    not_supported:
-      '此实例运行在没有模式的 SQLite 上：只有默认数据集。安装、启用和删除数据集需要 Postgres 数据库。',
+    not_supported: '此 SQLite 实例仅包含默认数据集。安装、启用和删除其他数据集需要 PostgreSQL。',
     status_active: '已启用',
     status_installed: '已安装',
     status_not_installed: '未安装',

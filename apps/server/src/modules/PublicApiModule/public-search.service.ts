@@ -1,3 +1,4 @@
+import { ErrorCodes } from '../../../core/constants/error_codes';
 import { Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { EnSearchService } from '../EnModule/modules/EnSearch/enSearch.service';
 import { DatasetsService } from '../DatasetsModule/datasets.service';
@@ -44,25 +45,30 @@ export class PublicSearchService {
   private async read<T>(
     name: string,
     work: (dataset: Dataset) => Promise<T>,
+    expectedId?: number,
   ): Promise<{ body: T; date: Date | null }> {
-    return this.datasets.withPublicRead(name, async (dataset) => {
-      const body = await work(dataset);
-      const scope = currentDatasetScope()!;
-      const revision = this.revision;
-      let content = this.contentDates.get(dataset.id);
-      if (!content || Date.now() - content.fetchedAt >= LAST_MODIFIED_TTL_MS) {
-        content = { value: await newestChangeOn(scope.manager!), fetchedAt: Date.now() };
-        if (revision === this.revision) this.contentDates.set(dataset.id, content);
-      }
-      const date = newestOf([
-        content.value,
-        dataset.createdAt,
-        dataset.terms_updated_at,
-        dataset.visibility_updated_at,
-        dataset.activated_at,
-      ]);
-      return { body, date };
-    });
+    return this.datasets.withPublicRead(
+      name,
+      async (dataset) => {
+        const body = await work(dataset);
+        const scope = currentDatasetScope()!;
+        const revision = this.revision;
+        let content = this.contentDates.get(dataset.id);
+        if (!content || Date.now() - content.fetchedAt >= LAST_MODIFIED_TTL_MS) {
+          content = { value: await newestChangeOn(scope.manager!), fetchedAt: Date.now() };
+          if (revision === this.revision) this.contentDates.set(dataset.id, content);
+        }
+        const date = newestOf([
+          content.value,
+          dataset.createdAt,
+          dataset.terms_updated_at,
+          dataset.visibility_updated_at,
+          dataset.activated_at,
+        ]);
+        return { body, date };
+      },
+      expectedId,
+    );
   }
 
   private async single<T extends object>(name: string | undefined, work: () => Promise<T>): Promise<T> {
@@ -111,16 +117,19 @@ export class PublicSearchService {
     // IDs and pagination stay inside each dataset's existing search service.
     for (const dataset of selected) {
       try {
-        const { body, date } = await this.read(dataset.name, async (current) => {
-          const { items, ...meta } = await this.search.searchDetailed(query);
-          return { ...(await this.meta.termsOf(current)), status: 'ok' as const, data: items, meta };
-        });
+        const { body, date } = await this.read(
+          dataset.name,
+          async (current) => {
+            const { items, ...meta } = await this.search.searchDetailed(query);
+            return { ...(await this.meta.termsOf(current)), status: 'ok' as const, data: items, meta };
+          },
+          dataset.id,
+        );
         data.push(body);
         dates.push(date);
       } catch (error) {
         // A target closed/deleted during selection must not be named in an error group.
         if (error instanceof NotFoundException) throw error;
-        await this.datasets.selectPublic([dataset.name]);
         data.push({
           ...(await this.meta.termsOf(dataset)),
           status: 'unavailable',
@@ -129,7 +138,9 @@ export class PublicSearchService {
       }
     }
     // Recheck visibility after the reads as well, before exposing group terms.
-    await this.datasets.selectPublic(query.datasets);
+    const current = await this.datasets.selectPublic(query.datasets);
+    if (current.some((dataset, i) => dataset.id !== selected[i].id))
+      throw new NotFoundException(ErrorCodes.dataset_not_found);
     const partial = data.some((group) => group.status === 'unavailable');
     return cacheSearch({ data, meta: { datasets: data.length, partial } }, newestOf(dates), partial);
   }
