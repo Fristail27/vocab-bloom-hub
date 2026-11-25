@@ -22,6 +22,13 @@ test.describe('authentication', () => {
     expect(headers['permissions-policy']).toContain('camera=()');
   });
 
+  test('serves button styles in the initial login HTML', async ({ request }) => {
+    const res = await request.get('/en/login');
+    expect(res.ok()).toBe(true);
+    const html = await res.text();
+    expect(/<style\b[^>]*>[^<]*\.ant-btn\b/.test(html)).toBe(true);
+  });
+
   test('rejects API requests without a token', async ({ request }) => {
     const res = await request.get(`${API_URL}/en/check-word/run?partOfSpeech=verb`);
     expect(res.status()).toBe(401);

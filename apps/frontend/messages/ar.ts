@@ -230,8 +230,7 @@ export default {
     [ErrorCodes.datasets_not_supported]: 'قاعدة البيانات هذه بلا مخططات: تعدّد مجموعات البيانات يتطلب Postgres',
     [ErrorCodes.dataset_not_found]: 'لم يُعثر على مجموعة البيانات',
     [ErrorCodes.dataset_name_invalid]: 'لا يعرف هذا المثيل مجموعة بيانات بهذا الاسم',
-    [ErrorCodes.dataset_source_invalid]:
-      'الملف ليس ما يوزّعه مصدر هذه المجموعة: نزّله من جديد كما في التعليمات',
+    [ErrorCodes.dataset_source_invalid]: 'الملف ليس ما يوزّعه مصدر هذه المجموعة: نزّله من جديد كما في التعليمات',
     [ErrorCodes.dataset_not_installable]: 'تُحمَّل هذه المجموعة من صفحة الاستيراد، لا من ملف مصدر',
     [ErrorCodes.generated_not_allowed]:
       'مجموعة بيانات من مصدر عام تضمّ ما كتبه الناس: لا يمكن أن يُضاف إليها مدخل ولّده نموذج',
@@ -718,8 +717,7 @@ export default {
     next: 'التالي',
     back: 'رجوع',
     source_table: 'الجدول المصدر',
-    source_hint:
-      'يصبح كل صف من الجدول طلبًا واحدًا. تحمل المعاني والترجمات أيضًا الكلمة وقسم الكلام الخاص بها.',
+    source_hint: 'يصبح كل صف من الجدول طلبًا واحدًا. تحمل المعاني والترجمات أيضًا الكلمة وقسم الكلام الخاص بها.',
     source_words: 'الكلمات',
     source_meanings: 'المعاني',
     source_translations: 'ترجمات المعاني',
