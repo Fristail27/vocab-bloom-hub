@@ -440,12 +440,10 @@ test.describe('word pages', () => {
     await expect(page).toHaveURL(/\?q=sprint$/);
 
     // read the query the switch actually links to, before following it
-    const href = await page
-      .locator('header')
-      .getByRole('link', { name: 'ru', exact: true })
-      .getAttribute('href');
-
-    expect(href).toContain('q=sprint');
+    await expect(page.locator('header').getByRole('link', { name: 'ru', exact: true })).toHaveAttribute(
+      'href',
+      /[?&]q=sprint(?:&|$)/,
+    );
   });
 
   // A query with a space and a non-ASCII character must survive the switch.

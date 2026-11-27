@@ -13,7 +13,10 @@ const CORS_HEADERS = {
 // per row goes to the external URL from the browser, the mapped answers are
 // downloaded as a jsonl file. The external endpoint is stubbed with a route.
 test.describe('bulk request', () => {
-  test('runs one request per selected row and downloads the mapped results', async ({ page, request }) => {
+  test('runs one request per selected row and downloads the mapped results', async ({
+    page,
+    request,
+  }, testInfo) => {
     await seedWord(request, 'traverse');
 
     // the default DeepSeek URL, answered locally — including the CORS
@@ -49,7 +52,9 @@ test.describe('bulk request', () => {
     const download = await downloading;
     expect(download.suggestedFilename()).toBe('vocab-bloom-hub-bulk-request-results.jsonl');
 
-    const line = readFileSync(await download.path(), 'utf8').trim();
+    const path = testInfo.outputPath(download.suggestedFilename());
+    await download.saveAs(path);
+    const line = readFileSync(path, 'utf8').trim();
     expect(line).toContain('"word":"traverse"');
     expect(line).toContain('"quality":"ok"');
   });

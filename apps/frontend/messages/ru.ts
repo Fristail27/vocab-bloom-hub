@@ -235,7 +235,7 @@ export default {
     [ErrorCodes.dataset_terms_fixed]: 'Условия датасета из каталога — это условия его источника',
     [ErrorCodes.dataset_license_invalid]:
       'Выберите лицензию из списка или укажите название, ссылку и текст своей',
-    [ErrorCodes.datasets_not_supported]: 'В этой базе нет схем: для нескольких датасетов нужен Postgres',
+    [ErrorCodes.datasets_not_supported]: 'Для работы с несколькими датасетами нужен PostgreSQL.',
     [ErrorCodes.dataset_not_found]: 'Датасет не найден',
     [ErrorCodes.dataset_name_invalid]: 'Экземпляр не знает датасета с таким именем',
     [ErrorCodes.dataset_source_invalid]:
@@ -482,7 +482,7 @@ export default {
     public_note:
       'Публичны только открытые датасеты: {method} читает каждый под его лицензией. Новые датасеты и форки создаются закрытыми.',
     not_supported:
-      'Этот экземпляр работает на SQLite, где нет схем: в нём только датасет по умолчанию. Чтобы устанавливать, активировать и удалять датасеты, нужна база Postgres.',
+      'На SQLite доступен только датасет по умолчанию. Для установки, активации и удаления других датасетов нужен PostgreSQL.',
     status_active: 'активен',
     status_installed: 'установлен',
     status_not_installed: 'не установлен',

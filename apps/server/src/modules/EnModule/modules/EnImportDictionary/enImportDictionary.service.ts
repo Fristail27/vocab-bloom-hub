@@ -1,3 +1,4 @@
+import { Dataset } from '../../../DatasetsModule/entities/dataset.entity';
 import { exportMeaningEmbeddings, importMeaningEmbeddings } from '../../../../core/embeddings/transfer';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { ReconciliationStore } from '../EnReconciliation/store';
@@ -259,9 +260,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     return scoped(this.activeEnWordsRep);
   }
 
-  // The dataset the running import writes into (issue #527): the active one
-  // through the application's connection, another one through a connection
-  // on its schema. One import runs at a time, so one field is enough.
+  // ImportStatusService admits one import at a time and its registry owner stays pinned.
   private target: DatasetConnectionT | null = null;
   private readonly importing = new AsyncLocalStorage<EntityManager>();
   private readonly exporting = new AsyncLocalStorage<EntityManager>();
@@ -1662,8 +1661,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     trigger: ImportTriggerE,
     options?: { update?: boolean; dataset?: string | undefined },
   ): Promise<void> {
-    // a dataset that is not the active one needs a driver with schemas: refused
-    // before the slot is taken, like a bad source
+    // SQLite supports only the default dictionary.
     if (options?.dataset && this.datasets && options.dataset !== this.datasets.getActive().name) {
       if (!this.datasets.supported) throw new ConflictException(ErrorCodes.datasets_not_supported);
     }
@@ -1681,11 +1679,11 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       : undefined;
     let outcome: Parameters<ImportStatusService['end']>[0] = {};
     let preparedPlan: string | undefined;
+    let stage: Awaited<ReturnType<typeof stageDictionary>> | undefined;
     let opened: DatasetSource | undefined;
     let sourceStarted = false;
     try {
-      // the dataset the import names is created on first use — a schema of
-      // its own — and filled through a connection of its own (issue #527)
+      // Register catalog datasets on first use and retain the target through cleanup.
       const dataset = await this.datasets?.resolveTarget(options?.dataset);
       this.target = dataset && this.datasets ? await this.datasets.connect(dataset) : null;
       if (typeof source === 'function') {
@@ -1705,13 +1703,13 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       this.preparingReconciliation = Boolean(this.reconciliation && dataset && !empty && !vectorsOnly);
       if (this.preparingReconciliation && this.target) {
         const original = this.target;
-        const stage = await stageDictionary(original.manager.connection);
+        stage = await stageDictionary(original.manager.connection, original.dataset.id);
         this.target = {
           ...stage,
           dataset: original.dataset,
           close: async () => {
             try {
-              await stage.close();
+              await stage!.close();
             } finally {
               await original.close();
             }
@@ -1726,6 +1724,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         tracked,
         this.preparingReconciliation ? undefined : updateCtx,
         sourceStarted,
+        empty,
       );
       if (this.preparingReconciliation && dataset && this.reconciliation) {
         tracked.write({ stage: EnDictionaryImportPhasesE.preparing_update, percent: 0 });
@@ -1736,12 +1735,12 @@ export class EnImportDictionaryService implements OnModuleDestroy {
             datasetVersion,
             this.incomingComplete,
             this.incomingAdapter,
+            stage?.destination ? { manager: stage.destination, dataset } : undefined,
           )
         ).id;
+        await stage?.publish?.();
       } else {
         outcome = { dataset_version: datasetVersion };
-        if (empty && dataset && this.reconciliation && !vectorsOnly)
-          await this.reconciliation.rememberSource(dataset.name, this.incomingAdapter);
       }
       if (!preparedPlan)
         await this.auditService?.record({
@@ -1808,6 +1807,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
     progress: ImportProgressSink,
     updateCtx?: UpdateModeContextT,
     sourceStarted = false,
+    empty = false,
   ): Promise<string | undefined> {
     this.incomingComplete =
       manifest?.snapshot?.complete === true &&
@@ -1930,9 +1930,42 @@ export class EnImportDictionaryService implements OnModuleDestroy {
         }
         await saveEmbeddings();
       };
-      // With derived data attached, content and vectors become visible together.
-      if (manifest?.embeddings) await this.db.transaction((em) => this.importing.run(em, saveContent));
-      else await saveContent();
+      const filled = this.target?.dataset;
+      const datasets = this.datasets;
+      if (filled && datasets && !this.preparingReconciliation) {
+        const saved = await this.db.transaction((em) =>
+          this.importing.run(em, async () => {
+            if (empty && this.reconciliation && em.connection.options.type === 'postgres') {
+              await em.query('SELECT pg_advisory_xact_lock(691, $1)', [filled.id]);
+              // An editor could have written the first word after importFrom inspected the target.
+              if (
+                (await em.exists(EnEntry)) ||
+                (await em.exists(EnChange)) ||
+                (await em.exists(ReconciliationBaseline))
+              )
+                throw new ConflictException(ErrorCodes.datasets_busy);
+            }
+            await saveContent();
+            const updated = await datasets.recordImport(
+              filled.name,
+              {
+                version: this.provenanceFormat ? (datasetVersion ?? null) : datasetVersion,
+                provenance: manifest?.provenance,
+              },
+              em,
+            );
+            if (empty)
+              await this.reconciliation?.rememberSource(updated.name, this.incomingAdapter, {
+                dataset: updated,
+                manager: em,
+              });
+            return updated;
+          }),
+        );
+        datasets.reconciliationCommitted(saved);
+      } else if (manifest?.embeddings) {
+        await this.db.transaction((em) => this.importing.run(em, saveContent));
+      } else await saveContent();
     } catch (error) {
       this.metrics?.transferFinished('import', 'failure');
       throw error;
@@ -1940,22 +1973,7 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       this.pendingAlternatives.clear();
     }
 
-    // What the import left on the dataset it filled (issue #527): the
-    // version — before the last chunk, so a client that reads the registry
-    // on it finds it
-    const filled = this.target?.dataset;
-    if (filled && this.datasets && !this.preparingReconciliation) {
-      await this.datasets.recordImport(filled.name, {
-        version: this.provenanceFormat ? (datasetVersion ?? null) : datasetVersion,
-        provenance: manifest?.provenance,
-      });
-    }
-
-    const intoActive = !filled || !this.datasets || filled.name === this.datasets.getActive().name;
-    if (datasetVersion && intoActive && !this.preparingReconciliation) {
-      // Remember which dataset version the served dictionary now holds (the
-      // registry keeps it for every dataset); a failure here must not fail
-      // an already completed import
+    if (datasetVersion && !this.datasets && !this.preparingReconciliation) {
       await this.settingsService.upsert(DATASET_VERSION_SETTINGS_FIELD, datasetVersion).catch((error) => {
         this.logger.warn(
           `Failed to store the imported dataset version: ${error instanceof Error ? error.message : String(error)}`,
@@ -2249,7 +2267,11 @@ export class EnImportDictionaryService implements OnModuleDestroy {
       // build that exports it; a dataset of another source keeps its own
       // the dataset the request works on (issue #540): the active one, or the one the admin UI names
       const scope = currentDatasetScope();
-      const exported = scope ? await this.datasets?.find(scope.dataset.name) : this.datasets?.getActive();
+      const exporting = this.exporting.getStore();
+      const exported =
+        exporting && this.datasets
+          ? await exporting.findOneByOrFail(Dataset, { id: scope?.dataset.id ?? this.datasets.getActive().id })
+          : this.datasets?.getActive();
       const isProjects = !exported || exported.source === OWN_DATASET_SOURCE;
       // what was changed or added on this instance (issue #531): the copy
       // differs from its source by these entries, and says so — in the

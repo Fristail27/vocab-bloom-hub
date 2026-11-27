@@ -242,8 +242,7 @@ export default {
       'Les conditions d’un jeu de données du catalogue sont celles de sa source',
     [ErrorCodes.dataset_license_invalid]:
       'Choisissez une licence de la liste, ou indiquez le nom, le lien et le texte de la vôtre',
-    [ErrorCodes.datasets_not_supported]:
-      'Cette base de données n’a pas de schémas : plusieurs jeux de données nécessitent Postgres',
+    [ErrorCodes.datasets_not_supported]: 'La gestion de plusieurs jeux de données nécessite PostgreSQL.',
     [ErrorCodes.dataset_not_found]: 'Jeu de données introuvable',
     [ErrorCodes.dataset_name_invalid]: 'Cette instance ne connaît aucun jeu de données de ce nom',
     [ErrorCodes.dataset_source_invalid]:
@@ -493,7 +492,7 @@ export default {
     public_note:
       'Seuls les datasets ouverts sont publics : {method} lit chacun sous sa propre licence. Les nouveaux datasets et forks sont fermés par défaut.',
     not_supported:
-      'Cette instance fonctionne avec SQLite, qui n’a pas de schémas : elle ne contient que le jeu de données par défaut. Installer, activer et supprimer des jeux de données nécessite une base Postgres.',
+      'Cette instance SQLite contient le jeu de données par défaut. PostgreSQL permet d’installer, d’activer et de supprimer d’autres jeux de données.',
     status_active: 'actif',
     status_installed: 'installé',
     status_not_installed: 'non installé',

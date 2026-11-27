@@ -227,7 +227,7 @@ export default {
     [ErrorCodes.dataset_already_exists]: 'توجد بالفعل مجموعة بيانات بهذا الاسم',
     [ErrorCodes.dataset_terms_fixed]: 'شروط مجموعة البيانات من الفهرس هي شروط مصدرها',
     [ErrorCodes.dataset_license_invalid]: 'اختر رخصة من القائمة، أو أدخل اسم رخصتك ورابطها ونصّها',
-    [ErrorCodes.datasets_not_supported]: 'قاعدة البيانات هذه بلا مخططات: تعدّد مجموعات البيانات يتطلب Postgres',
+    [ErrorCodes.datasets_not_supported]: 'تتطلب إدارة مجموعات بيانات متعددة PostgreSQL.',
     [ErrorCodes.dataset_not_found]: 'لم يُعثر على مجموعة البيانات',
     [ErrorCodes.dataset_name_invalid]: 'لا يعرف هذا المثيل مجموعة بيانات بهذا الاسم',
     [ErrorCodes.dataset_source_invalid]: 'الملف ليس ما يوزّعه مصدر هذه المجموعة: نزّله من جديد كما في التعليمات',
@@ -471,7 +471,7 @@ export default {
     public_note:
       'مجموعات البيانات المفتوحة فقط متاحة للعامة: يقرأ {method} كل مجموعة بموجب ترخيصها. تبدأ المجموعات الجديدة والنسخ المتفرعة مغلقة.',
     not_supported:
-      'يعمل هذا المثيل على SQLite التي لا مخططات فيها: فيه المجموعة الافتراضية فقط. تثبيت المجموعات وتفعيلها وحذفها يتطلب قاعدة بيانات Postgres.',
+      'يحتوي مثيل SQLite هذا على مجموعة البيانات الافتراضية. استخدم PostgreSQL لتثبيت مجموعات بيانات أخرى وتفعيلها وحذفها.',
     status_active: 'نشطة',
     status_installed: 'مثبّتة',
     status_not_installed: 'غير مثبّتة',

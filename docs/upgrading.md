@@ -133,6 +133,12 @@ the old number, or `git checkout` of the old tag and a rebuild. A release withou
 rolls back by starting the previous build alone. Why a plain downgrade is not enough, and what
 a failed migration leaves behind: [`operations.md`](./operations.md#upgrading-the-code).
 
+## Upgrading to shared dictionary storage
+
+Stop writes and rehearse the migration on a restored backup. Check disk space for the copy,
+indexes and WAL before starting the upgraded instance. Existing local word IDs, registry
+terms and visibility survive the move. [Upgrade and recovery procedure](./migrations.md#upgrading-a-database-with-dataset-schemas).
+
 ## Upgrading to a version with datasets
 
 The first version that keeps several datasets ([`datasets.md`](./datasets.md)) migrates the

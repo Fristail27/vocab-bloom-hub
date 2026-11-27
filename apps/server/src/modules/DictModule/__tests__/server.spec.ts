@@ -97,7 +97,10 @@ describe('DICT TCP resource limits and lifecycle', () => {
   });
   it('does not let dataset switching close a reader during its command, and releases after errors', async () => {
     const gate = new SwitchGate();
-    const service = new DictReaderService({ gate } as DatasetsService, {} as PublicMetaService);
+    const service = new DictReaderService(
+      { gate, getActive: () => ({ id: 1, name: 'default' }) } as DatasetsService,
+      {} as PublicMetaService,
+    );
     const entered = deferred(),
       release = deferred();
     const reading = service.read(async () => {

@@ -100,8 +100,7 @@ Lookup reuses the native per-dataset headword reader: case-insensitive matching 
 case preference when several stored spellings differ only by case, and inflections resolving
 to base entries. Alternative-only spellings follow existing EnEntry links one hop. No fuzzy
 fallback is applied. `MATCH` returns stored spellings with entries or readable spelling links,
-not unrelated thesaurus placeholders. All reads use the dataset's own connection and enter the
-same switch gate as HTTP, so a dataset activation waits for an in-flight DICT command.
+not unrelated thesaurus placeholders. Each command pins its default dataset. Named readers use the shared pool and retain their dataset ID through activation.
 
 ## Commands and wire format
 

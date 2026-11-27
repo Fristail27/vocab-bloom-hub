@@ -158,4 +158,5 @@ space. The first-start import above fills only the project's dataset. See
 Back up the database, pull the new version, `yarn install --immutable`, `yarn build`, restart both
 processes: pending migrations run on the server's start. Rolling back is restoring that backup —
 once the new server has run its migrations, the previous version no longer matches the schema.
-The full procedure: [`../operations.md`](../operations.md#upgrading-the-code).
+The full procedure: [`../operations.md`](../operations.md#upgrading-the-code). For deployments upgrading from per-dataset schemas, schedule
+the [offline copy and verification](../migrations.md#upgrading-a-database-with-dataset-schemas).

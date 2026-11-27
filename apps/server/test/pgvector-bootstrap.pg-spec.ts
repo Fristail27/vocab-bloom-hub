@@ -43,7 +43,7 @@ import { preparePgvector } from '../src/db/pgvector-bootstrap';
       "SELECT oid, extversion, extnamespace::regnamespace::text AS schema FROM pg_extension WHERE extname='vector'",
     );
   it('enables pgvector during normal preparation of a fresh database', async () => {
-    await expect(prepareDatabase()).resolves.toBe('public');
+    await expect(prepareDatabase()).resolves.toBeUndefined();
     expect(await extension()).toEqual([expect.objectContaining({ schema: 'public', extversion: '0.8.1' })]);
   });
   it('handles concurrent activation and preserves existing data and the installed extension on restart', async () => {

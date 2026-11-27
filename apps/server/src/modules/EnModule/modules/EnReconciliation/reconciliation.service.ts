@@ -1,3 +1,4 @@
+import { transactionDictionaries } from '../../../../db/shared-dictionary/connection';
 import { stageEmbeddings, publishEmbeddings } from './embeddings';
 import { captureCurrent, commonAncestor, copyRevisionGraph } from './ancestry';
 import { randomUUID } from 'node:crypto';
@@ -22,7 +23,6 @@ import type {
 } from '../../../../../types/reconciliation';
 import { Dataset } from '../../../DatasetsModule/entities/dataset.entity';
 import { AuditLog } from '../../../AuditModule/entities/audit_log.entity';
-import { DICTIONARY_ENTITIES } from '../../entities/dictionary-entities';
 import { isHumanAuthoredDataset } from '../../../../../core/constants/dataset_catalog';
 import { withDatasetScope } from '../../../../core/utils/dataset-scope';
 import { ReconciliationStore } from './store';
@@ -207,7 +207,7 @@ export class ReconciliationService {
       }
       const sources =
         this.datasets.supported && dataset.own
-          ? (await this.datasets.installed())
+          ? (await this.datasets.installed(em))
               .filter((candidate) => candidate.name !== name)
               .map((candidate) => ({ name: candidate.name, title: candidate.title ?? candidate.name }))
           : [];
@@ -256,8 +256,9 @@ export class ReconciliationService {
   async rememberSource(
     name: string,
     adapter: { adapter: string; revision: number } | null = null,
+    destination?: { manager: EntityManager; dataset: Dataset },
   ): Promise<void> {
-    await this.on(name, async (store, em, dataset) => {
+    const remember = async (store: ReconciliationStore, em: EntityManager, dataset: Dataset) => {
       const lineage = this.sourceLineage(dataset);
       if (await em.existsBy(ReconciliationBaseline, { lineage })) return;
       const revision = await store.capture(
@@ -267,7 +268,10 @@ export class ReconciliationService {
         dictionaryRecords(em, dataset),
       );
       await store.establish(lineage, revision.id);
-    });
+    };
+    if (destination)
+      return remember(new ReconciliationStore(destination.manager), destination.manager, destination.dataset);
+    return this.on(name, remember);
   }
 
   async prepareSource(
@@ -276,8 +280,9 @@ export class ReconciliationService {
     version: string | undefined,
     complete: boolean,
     adapter: { adapter: string; revision: number } | null = null,
+    destination?: { manager: EntityManager; dataset: Dataset },
   ) {
-    return this.on(name, async (store, em, dataset) => {
+    const prepare = async (store: ReconciliationStore, em: EntityManager, dataset: Dataset) => {
       const lineage = this.sourceLineage(dataset);
       const baseline = await em.findOneBy(ReconciliationBaseline, { lineage });
       const previousAdapter = baseline ? (await store.revision(baseline.revision)).metadata.adapter : null;
@@ -314,7 +319,10 @@ export class ReconciliationService {
       await stageEmbeddings(em, incomingManager, plan.id);
       await this.dependencies(store, em, plan.id);
       return store.summary(plan.id);
-    });
+    };
+    return destination
+      ? prepare(new ReconciliationStore(destination.manager), destination.manager, destination.dataset)
+      : this.on(name, prepare);
   }
 
   async prepareParent(name: string, sourceName: string, allowTwoWay = false) {
@@ -342,11 +350,11 @@ export class ReconciliationService {
     const source = await this.datasets.find(sourceName);
     if (!destination.own || destination.language !== source.language)
       throw new ConflictException('reconciliation_source_incompatible');
-    const connection = await this.datasets.reader(source);
-    return await connection.transaction('REPEATABLE READ', async (sourceManager) => {
-      // Snapshot source content on one connection. Destination storage is separate;
-      // source edits after capture cannot change the pending plan.
-      return this.on(name, async (store, em, dataset) => {
+    return this.on(name, async (_store, destinationManager, dataset) => {
+      // The SQLite fixtures use independent databases for the two participating
+      // dictionaries. PostgreSQL can capture and prepare both in one transaction.
+      const prepare = async (sourceManager: EntityManager, em: EntityManager) => {
+        const store = new ReconciliationStore(em);
         const lineage = await persistentLineage(sourceManager, source);
         if (lineage === (await persistentLineage(em, dataset)))
           throw new ConflictException('reconciliation_same_dataset');
@@ -384,7 +392,15 @@ export class ReconciliationService {
         await this.dependencies(store, em, plan.id, preparationStage(progress, 'dependencies'));
         preparationStage(progress, 'finalizing');
         return store.summary(plan.id);
-      });
+      };
+      if (destinationManager.connection.options.type === 'postgres') {
+        const managerFor = transactionDictionaries(destinationManager.queryRunner!);
+        return prepare(managerFor(source.id), managerFor(dataset.id));
+      }
+      const connection = await this.datasets.reader(source);
+      return connection.transaction('REPEATABLE READ', (sourceManager) =>
+        prepare(sourceManager, destinationManager),
+      );
     });
   }
 
@@ -492,18 +508,7 @@ export class ReconciliationService {
             .setLock('pessimistic_write')
             .where('dataset.id = :id', { id: dataset.id })
             .getOneOrFail();
-          const tables = DICTIONARY_ENTITIES.map((entity) => em.connection.getMetadata(entity));
-          const all = [
-            ...tables,
-            ...tables.flatMap((meta) =>
-              meta.ownRelations
-                .filter((relation) => relation.isManyToManyOwner)
-                .map((relation) => relation.junctionEntityMetadata!),
-            ),
-          ];
-          await em.query(
-            `LOCK TABLE ${all.map((meta) => em.connection.driver.escape(meta.tableName)).join(', ')} IN EXCLUSIVE MODE`,
-          );
+          await em.query('SELECT pg_advisory_xact_lock(691, $1)', [dataset.id]);
         }
         const current = await store.capture(
           await persistentLineage(em, dataset),

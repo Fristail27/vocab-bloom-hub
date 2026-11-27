@@ -271,19 +271,29 @@ jobs:
       - name: Apply migrations
         run: yarn workspace server migration:run
 
-      # The newest migration must also come back down cleanly (issue #400)
-      - name: Migration revert smoke (down one, up again)
-        run: yarn workspace server migration:revert && yarn workspace server migration:run
+      - name: Verify the latest migration's rollback procedure
+        run: |
+          latest=$(psql "$DATABASE_URL" -Atc 'SELECT name FROM migrations ORDER BY id DESC LIMIT 1')
+          if [[ "$latest" == "ShareDictionaryTables1795600000000" ]]; then
+            if yarn workspace server migration:revert > "$RUNNER_TEMP/migration-revert.log" 2>&1; then
+              echo "The dictionary cutover must require restoring the pre-upgrade backup"
+              exit 1
+            fi
+            grep -F 'Restore the backup taken before the shared dictionary upgrade' "$RUNNER_TEMP/migration-revert.log"
+          else
+            yarn workspace server migration:revert
+          fi
+          yarn workspace server migration:run
 
-      - name: Postgres-only tests (query plans, trigram search)
-        run: yarn workspace server test:postgres
+      - name: Postgres tests and populated backup recovery
+        run: PATH="/usr/lib/postgresql/16/bin:$PATH" yarn workspace server test:postgres
+        env:
+          TEST_UPGRADE_BACKUP: 'true'
 
       # The whole e2e suite on the database operators actually run (issue
       # #400): setup-e2e.ts gives every jest worker its own database derived
       # from this URL and resets its schema per spec file
-      # The service's connection limit is shared by those databases. Each
-      # app also opens pools for its datasets, so run one app suite at a time
-      # to stay within the stock Postgres limit of 100 connections.
+      # Keep the application's pools across worker databases within the service connection limit.
       - name: Server e2e suite on Postgres
         run: yarn workspace server test:e2e --runInBand
         env:

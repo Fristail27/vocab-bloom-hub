@@ -534,7 +534,16 @@ export class ReconciliationStore {
         await this.capture(source.lineage, source.metadata, false, combined(), [], baselineProgress)
       ).id;
     }
-    await this.em.upsert(ReconciliationBaseline, { lineage: plan.lineage, revision: integrated }, ['lineage']);
+    await this.em
+      .createQueryBuilder()
+      .insert()
+      .into(ReconciliationBaseline)
+      .values({ lineage: plan.lineage, revision: integrated })
+      .orUpdate(
+        ['revision'],
+        [...(this.em.connection.options.type === 'postgres' ? ['dataset_id'] : []), 'lineage'],
+      )
+      .execute();
     await this.em.update(
       ReconciliationPlan,
       { id },

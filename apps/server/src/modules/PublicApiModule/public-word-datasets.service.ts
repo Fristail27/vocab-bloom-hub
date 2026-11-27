@@ -6,12 +6,7 @@ import { Dataset } from '../DatasetsModule/entities/dataset.entity';
 import { PublicMetaService } from './public-meta.service';
 import { HeadwordReader } from './utils/headword-reader';
 
-/**
- * A headword as every dataset of the instance has it (issue #528). Each
- * dataset is read on its own connection, by the reads the served dataset is
- * answered with, and answers a group of its own under its own terms: no
- * statement names two schemas, no entry leaves the group of its dataset.
- */
+/** One headword group per public dictionary, with the terms and local IDs of its registry owner. */
 @Injectable()
 export class PublicWordDatasetsService {
   constructor(

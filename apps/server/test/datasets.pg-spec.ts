@@ -6,7 +6,7 @@ import { DataSource } from 'typeorm';
 
 import { AppModule } from '../src/modules/AppModule/app.module';
 import { DatasetsService } from '../src/modules/DatasetsModule/datasets.service';
-import { prepareDatabase, runDatasetMigrations } from '../src/db/datasets';
+import { prepareDatabase } from '../src/db/datasets';
 import { createJwt } from '../core/utils/auth';
 import { hashLoginString } from '../core/utils/crypto';
 import {
@@ -28,7 +28,6 @@ import {
  */
 const NAME = 'wordnet_princeton';
 const IMPORTED = 'wordnet';
-const SCHEMA = `ds_${NAME}`;
 const HEADWORD = `zzpgspec${Date.now().toString(36)}`;
 
 const DICTIONARY_TABLES = [
@@ -58,7 +57,7 @@ const DICTIONARY_TABLES = [
   'reconciliation_items',
 ];
 
-describe('datasets in schemas (Postgres, issue #527)', () => {
+describe('shared dictionary tables (Postgres, issue #527)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
   const auth = { Authorization: '' };
@@ -67,55 +66,11 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
   const list = async (): Promise<DatasetsListT> =>
     (await request(server()).get('/api/en/datasets').set(auth).expect(200)).body as DatasetsListT;
 
-  // the structure of a table set, without the names that differ by design
-  // (the schema, the sequence's schema, the generated constraint names)
-  const columnsOf = async (schema: string) =>
-    dataSource.query(
-      `SELECT table_name, column_name, data_type, udt_schema, udt_name, is_nullable, character_maximum_length,
-              regexp_replace(coalesce(column_default, ''), '[a-z_0-9]+\\.(en_|suggestions)', '\\1') AS column_default
-         FROM information_schema.columns
-        WHERE table_schema = $1 AND table_name = ANY($2)
-        ORDER BY table_name, column_name`,
-      [schema, DICTIONARY_TABLES],
-    );
-  const indexesOf = async (schema: string): Promise<string[]> => {
-    const rows = (await dataSource.query(
-      `SELECT i.indexdef
-         FROM pg_indexes i
-        WHERE i.schemaname = $1 AND i.tablename = ANY($2)
-          AND NOT EXISTS (SELECT 1 FROM pg_constraint c
-                           JOIN pg_namespace n ON n.oid = c.connamespace
-                          WHERE n.nspname = i.schemaname AND c.conname = i.indexname)`,
-      [schema, DICTIONARY_TABLES],
-    )) as Array<{ indexdef: string }>;
-    return rows
-      .map(({ indexdef }) =>
-        indexdef
-          .replace(/^CREATE (UNIQUE )?INDEX "?[^ ]+"? ON /, 'INDEX $1ON ')
-          .replaceAll(`${schema}.`, '')
-          .replaceAll('public.', ''),
-      )
-      .sort();
-  };
-  const foreignKeysOf = async (schema: string): Promise<string[]> => {
-    const rows = (await dataSource.query(
-      `SELECT cl.relname AS "table", a.attname AS "column", fcl.relname AS "ref_table", fa.attname AS "ref_column",
-              c.confdeltype AS "on_delete", c.confupdtype AS "on_update"
-         FROM pg_constraint c
-         JOIN pg_namespace n ON n.oid = c.connamespace
-         JOIN pg_class cl ON cl.oid = c.conrelid
-         JOIN pg_class fcl ON fcl.oid = c.confrelid
-         JOIN pg_namespace fn ON fn.oid = fcl.relnamespace
-         JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
-         JOIN pg_attribute fa ON fa.attrelid = c.confrelid AND fa.attnum = c.confkey[1]
-        WHERE c.contype = 'f' AND n.nspname = $1 AND fn.nspname = $1 AND cl.relname = ANY($2)`,
-      [schema, DICTIONARY_TABLES],
-    )) as Array<Record<string, string>>;
-    return rows.map((row) => Object.values(row).join(' ')).sort();
-  };
-
   const rateLimit = process.env.PUBLIC_API_RATE_LIMIT;
-
+  const reader = async (name: string) => {
+    const datasets = app.get(DatasetsService);
+    return datasets.reader(await datasets.find(name));
+  };
   beforeAll(async () => {
     // the suite reads the public API more often in a minute than a client may
     process.env.PUBLIC_API_RATE_LIMIT = '100000/60';
@@ -155,7 +110,6 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
     await request(server()).post('/api/en/datasets/default/activate').set(auth);
     for (const name of [NAME, IMPORTED]) {
       await request(server()).delete(`/api/en/datasets/${name}`).set(auth);
-      await dataSource.query(`DROP SCHEMA IF EXISTS "ds_${name}" CASCADE`);
     }
     await app.close();
   });
@@ -167,18 +121,18 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
       expect.objectContaining({ name: 'default', is_default: true, license: 'CC-BY-4.0' }),
     );
 
-    const journal = (await dataSource.query(`SELECT "name" FROM "public"."dataset_migrations"`)) as Array<{
+    const journal = (await dataSource.query(`SELECT "name" FROM "public"."migrations"`)) as Array<{
       name: string;
     }>;
-    expect(journal.map((row) => row.name)).toContain('DatasetBaseline1789500000000');
+    expect(journal.map((row) => row.name)).toContain('ShareDictionaryTables1795600000000');
   });
 
-  it('installs a dataset as a schema with the dictionary tables and a migration journal of its own', async () => {
+  it('installs a dataset as an empty partition of the shared dictionary tables', async () => {
     const created = await app.get(DatasetsService).install(NAME);
     expect(created.is_public).toBe(false);
     await app.get(DatasetsService).setVisibility(NAME, true);
     expect(created).toEqual(
-      expect.objectContaining({ name: NAME, schema: SCHEMA, source: 'princeton-wordnet', version: null }),
+      expect.objectContaining({ name: NAME, source: 'princeton-wordnet', version: null }),
     );
     expect((await list()).datasets.find((dataset) => dataset.name === NAME)).toEqual(
       expect.objectContaining({
@@ -192,16 +146,11 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
       }),
     );
 
-    const tables = (await dataSource.query(
-      `SELECT table_name FROM information_schema.tables WHERE table_schema = $1 ORDER BY 1`,
-      [SCHEMA],
-    )) as Array<{ table_name: string }>;
-    expect(tables.map((row) => row.table_name)).toEqual([...DICTIONARY_TABLES, 'dataset_migrations'].sort());
-
-    // the shared tables are not repeated in a dataset
-    for (const shared of ['settings', 'datasets', 'audit_log', 'migrations']) {
-      expect(tables.map((row) => row.table_name)).not.toContain(shared);
-    }
+    const tables: { tablename: string }[] = await dataSource.query(
+      "SELECT tablename FROM pg_tables WHERE schemaname='public' AND starts_with(tablename,'dictionary_')",
+    );
+    expect(tables.map((row) => row.tablename.slice(11)).sort()).toEqual([...DICTIONARY_TABLES].sort());
+    expect(await (await reader(NAME)).query('SELECT * FROM en_entries')).toEqual([]);
 
     // installed twice is installed once; a name the catalog does not have is no dataset
     expect((await app.get(DatasetsService).install(NAME)).id).toBe(created.id);
@@ -233,363 +182,15 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
     }
   });
 
-  it('builds the same tables as `public` has: columns, indexes and foreign keys', async () => {
-    expect(await columnsOf(SCHEMA)).toEqual(await columnsOf('public'));
-    expect(await indexesOf(SCHEMA)).toEqual(await indexesOf('public'));
-    expect(await foreignKeysOf(SCHEMA)).toEqual(await foreignKeysOf('public'));
-  });
-
-  it('isolates reciprocal alternatives per schema and rolls their migration down/up', async () => {
-    const { replaceAlternatives } = await import('../src/modules/EnModule/utils/entryAlternatives');
-    const { AddEntryAlternatives1791400000000 } =
-      await import('../src/db/dataset-migrations/1791400000000-AddEntryAlternatives');
-    const runner = dataSource.createQueryRunner();
-    await runner.connect();
-    await runner.startTransaction();
-    try {
-      await runner.query(`SET LOCAL search_path TO "${SCHEMA}", public`);
-      await runner.query(`INSERT INTO en_entries (word) VALUES ('alt-test-a'), ('alt-test-b')`);
-      await replaceAlternatives(runner.manager, new Map([['alt-test-a', ['alt-test-b']]]));
-      expect(await runner.query('SELECT word, alternative FROM en_entry_alternatives ORDER BY word')).toEqual([
-        { word: 'alt-test-a', alternative: 'alt-test-b' },
-        { word: 'alt-test-b', alternative: 'alt-test-a' },
-      ]);
-      expect(
-        await runner.query(`SELECT * FROM public.en_entry_alternatives WHERE word = 'alt-test-a'`),
-      ).toEqual([]);
-      await runner.query(`DELETE FROM en_entries WHERE word = 'alt-test-b'`);
-      expect(await runner.query('SELECT * FROM en_entry_alternatives')).toEqual([]);
-      const migration = new AddEntryAlternatives1791400000000();
-      await migration.down(runner);
-      await migration.up(runner);
-      expect(await runner.query('SELECT * FROM en_entry_alternatives')).toEqual([]);
-    } finally {
-      await runner.rollbackTransaction();
-      await runner.release();
-    }
-  });
-
-  it('isolates pronunciations, cascades word deletion and rolls the migration down/up', async () => {
-    const { AddWordPronunciations1791700000000 } =
-      await import('../src/db/dataset-migrations/1791700000000-AddWordPronunciations');
-    const runner = dataSource.createQueryRunner();
-    await runner.connect();
-    await runner.startTransaction();
-    try {
-      await runner.query(`SET LOCAL search_path TO "${SCHEMA}", public`);
-      await runner.query(`INSERT INTO en_entries (word) VALUES ('pron-test')`);
-      const [word] = await runner.query(
-        `INSERT INTO en_words (word, part_of_speech, form_of_word) VALUES ('pron-test', 'noun', 'base_form') RETURNING id`,
-      );
-      await runner.query(
-        `INSERT INTO en_pronunciations (word, type, text, area_variant, sort_order) VALUES ($1, 'ipa', '/pron-test/', 'american', 0)`,
-        [word.id],
-      );
-      expect(await runner.query(`SELECT * FROM public.en_pronunciations WHERE text = '/pron-test/'`)).toEqual(
-        [],
-      );
-      await runner.query('DELETE FROM en_words WHERE id = $1', [word.id]);
-      expect(await runner.query('SELECT * FROM en_pronunciations WHERE word = $1', [word.id])).toEqual([]);
-      const { AddPronunciationAudio1791800000000 } =
-        await import('../src/db/dataset-migrations/1791800000000-AddPronunciationAudio');
-      const audioMigration = new AddPronunciationAudio1791800000000();
-      await audioMigration.down(runner);
-      const migration = new AddWordPronunciations1791700000000();
-      await migration.down(runner);
-      await migration.up(runner);
-      expect(await runner.query('SELECT * FROM en_pronunciations')).toEqual([]);
-      await audioMigration.up(runner);
-    } finally {
-      await runner.rollbackTransaction();
-      await runner.release();
-    }
-  });
-
-  it('isolates audio and its license snapshots, cascades cleanup and rolls the audio migration down/up', async () => {
-    const { AddPronunciationAudio1791800000000 } =
-      await import('../src/db/dataset-migrations/1791800000000-AddPronunciationAudio');
-    const runner = dataSource.createQueryRunner();
-    await runner.connect();
-    await runner.startTransaction();
-    try {
-      await runner.query(`SET LOCAL search_path TO "${SCHEMA}", public`);
-      await runner.query(`INSERT INTO en_entries (word) VALUES ('audio-test')`);
-      const [word] = await runner.query(
-        `INSERT INTO en_words (word, part_of_speech, form_of_word) VALUES ('audio-test', 'noun', 'base_form') RETURNING id`,
-      );
-      const [pronunciation] = await runner.query(
-        `INSERT INTO en_pronunciations (word, type, text, area_variant, sort_order) VALUES ($1, 'ipa', NULL, 'common', 0) RETURNING id`,
-        [word.id],
-      );
-      await runner.query(
-        `INSERT INTO en_pronunciation_audio (pronunciation, url, sort_order) VALUES ($1, 'https://example.org/audio-test.ogg', 0)`,
-        [pronunciation.id],
-      );
-      expect(
-        await runner.query(
-          `SELECT * FROM public.en_pronunciation_audio WHERE url = 'https://example.org/audio-test.ogg'`,
-        ),
-      ).toEqual([]);
-      expect(
-        (
-          await runner.query('SELECT licenses FROM en_pronunciation_audio WHERE pronunciation = $1', [
-            pronunciation.id,
-          ])
-        )[0].licenses,
-      ).toBe('[]');
-      await runner.query('DELETE FROM en_words WHERE id = $1', [word.id]);
-      expect(
-        await runner.query('SELECT * FROM en_pronunciation_audio WHERE pronunciation = $1', [pronunciation.id]),
-      ).toEqual([]);
-      const migration = new AddPronunciationAudio1791800000000();
-      await migration.down(runner);
-      await migration.up(runner);
-      expect(await runner.query('SELECT * FROM en_pronunciation_audio')).toEqual([]);
-    } finally {
-      await runner.rollbackTransaction();
-      await runner.release();
-    }
-  });
-
-  it('isolates etymologies, detaches deleted groups, and rolls the migration down/up', async () => {
-    const { AddWordEtymologies1791500000000 } =
-      await import('../src/db/dataset-migrations/1791500000000-AddWordEtymologies');
-    const runner = dataSource.createQueryRunner();
-    await runner.connect();
-    await runner.startTransaction();
-    try {
-      await runner.query(`SET LOCAL search_path TO "${SCHEMA}", public`);
-      await runner.query(`INSERT INTO en_entries (word) VALUES ('etym-test')`);
-      const [word] = await runner.query(
-        `INSERT INTO en_words (word, part_of_speech, form_of_word) VALUES ('etym-test', 'noun', 'base_form') RETURNING id`,
-      );
-      const [group] = await runner.query(
-        `INSERT INTO en_etymologies (word, number, text) VALUES ($1, 1, 'Invented origin') RETURNING id`,
-        [word.id],
-      );
-      await runner.query(
-        `INSERT INTO en_meanings (word, title, definition, sort_order, etymology_id) VALUES ($1, 'Invented meaning', 'Invented definition', 1, $2)`,
-        [word.id, group.id],
-      );
-      expect(await runner.query(`SELECT * FROM public.en_etymologies WHERE text = 'Invented origin'`)).toEqual(
-        [],
-      );
-      await runner.query('DELETE FROM en_etymologies WHERE id = $1', [group.id]);
-      expect(await runner.query('SELECT etymology_id FROM en_meanings WHERE word = $1', [word.id])).toEqual([
-        { etymology_id: null },
-      ]);
-      await runner.query(`INSERT INTO en_etymologies (word, number, text) VALUES ($1, 1, 'Another origin')`, [
-        word.id,
-      ]);
-      await runner.query('DELETE FROM en_words WHERE id = $1', [word.id]);
-      expect(await runner.query('SELECT * FROM en_etymologies WHERE word = $1', [word.id])).toEqual([]);
-      const migration = new AddWordEtymologies1791500000000();
-      await migration.down(runner);
-      await migration.up(runner);
-      expect(await runner.query('SELECT * FROM en_etymologies')).toEqual([]);
-    } finally {
-      await runner.rollbackTransaction();
-      await runner.release();
-    }
-  });
-
-  it('stores ordered quotations only in the selected dataset and rolls their column down/up', async () => {
-    const { AddMeaningQuotes1791600000000 } =
-      await import('../src/db/dataset-migrations/1791600000000-AddMeaningQuotes');
-    const runner = dataSource.createQueryRunner();
-    await runner.connect();
-    await runner.startTransaction();
-    try {
-      await runner.query(`SET LOCAL search_path TO "${SCHEMA}", public`);
-      await runner.query(`INSERT INTO en_entries (word) VALUES ('quote-test')`);
-      const [word] = await runner.query(
-        `INSERT INTO en_words (word, part_of_speech, form_of_word) VALUES ('quote-test', 'noun', 'base_form') RETURNING id`,
-      );
-      const quotes = [
-        { text: 'Invented quotation', reference: 'Invented reference', source_url: 'https://example.org/book' },
-        { text: 'Second', reference: null },
-      ];
-      await runner.query(
-        `INSERT INTO en_meanings (word, title, definition, sort_order, quotes) VALUES ($1, 'quote-test', 'Invented definition', 1, $2)`,
-        [word.id, JSON.stringify(quotes)],
-      );
-      expect(await runner.query(`SELECT * FROM public.en_meanings WHERE title = 'quote-test'`)).toEqual([]);
-      expect(
-        JSON.parse((await runner.query(`SELECT quotes FROM en_meanings WHERE title = 'quote-test'`))[0].quotes),
-      ).toEqual(quotes);
-      const migration = new AddMeaningQuotes1791600000000();
-      await migration.down(runner);
-      await migration.up(runner);
-      expect(
-        (await runner.query(`SELECT quotes FROM en_meanings WHERE title = 'quote-test'`))[0].quotes,
-      ).toBeNull();
-      expect((await runner.query(`SELECT title FROM en_meanings WHERE title = 'quote-test'`))[0].title).toBe(
-        'quote-test',
-      );
-    } finally {
-      await runner.rollbackTransaction();
-      await runner.release();
-    }
-  });
-
-  it('backfills reconciliation counts without inventing causal ancestry for older snapshots', async () => {
-    const { RefineReconciliation1792100001000 } =
-      await import('../src/db/dataset-migrations/1792100001000-RefineReconciliation');
-    const runner = dataSource.createQueryRunner();
-    await runner.connect();
-    await runner.startTransaction();
-    try {
-      await runner.query(`SET LOCAL search_path TO "${SCHEMA}", public`);
-      const migration = new RefineReconciliation1792100001000();
-      await migration.down(runner);
-      await runner.query(`INSERT INTO reconciliation_identity (key, lineage) VALUES ('self', 'legacy')`);
-      await runner.query(`INSERT INTO reconciliation_revisions (id, lineage, metadata, complete, sealed)
-        VALUES ('count-test-local', 'legacy', '{}', true, true)`);
-      await runner.query(`INSERT INTO reconciliation_plans (id, kind, status, lineage, local, incoming, created_at)
-        VALUES ('count-test', 'source', 'review', 'legacy', 'count-test-local', 'count-test-local', '2026-10-01')`);
-      const cases = [
-        {
-          headword: 'same',
-          local: { a: 1, b: 2 },
-          result: { present: true, value: { b: 2, a: 1 } },
-          effect: null,
-        },
-        { headword: 'changed', local: { a: 1 }, result: { present: true, value: { a: 2 } }, effect: 'changed' },
-        { headword: 'deleted', local: { a: 1 }, result: { present: false }, effect: 'deleted' },
-        { headword: 'added', result: { present: true, value: { a: 1 } }, effect: 'added' },
-        { headword: 'tombstone', local: null, result: { present: true, value: { a: 1 } }, effect: 'added' },
-        { headword: 'absent', result: { present: false }, effect: null },
-      ];
-      for (const row of cases) {
-        if ('local' in row)
-          await runner.query(
-            `INSERT INTO reconciliation_records (revision, headword, content, hash)
-            VALUES ('count-test-local', $1, $2, 'fixture')`,
-            [row.headword, JSON.stringify(row.local)],
-          );
-        await runner.query(
-          `INSERT INTO reconciliation_items (plan, headword, category, comparison, decisions, result, remaining)
-          VALUES ('count-test', $1, 'unchanged', '{}', '[]', $2, 0)`,
-          [row.headword, JSON.stringify(row.result)],
-        );
-      }
-      await migration.up(runner);
-      expect(
-        await runner.query(
-          `SELECT headword, effect FROM reconciliation_items WHERE plan = 'count-test' ORDER BY headword`,
-        ),
-      ).toEqual(
-        cases
-          .map(({ headword, effect }) => ({ headword, effect }))
-          .sort((a, b) => a.headword.localeCompare(b.headword)),
-      );
-      expect(await runner.query(`SELECT heads FROM reconciliation_identity WHERE key = 'self'`)).toEqual([
-        { heads: '[]' },
-      ]);
-      expect(
-        await runner.query(`SELECT parents FROM reconciliation_revisions WHERE id = 'count-test-local'`),
-      ).toEqual([{ parents: '[]' }]);
-    } finally {
-      await runner.rollbackTransaction();
-      await runner.release();
-    }
-  });
-
-  it('starts the history empty: an entry edited before is not guessed to differ from its source (issue #531)', async () => {
-    // the schema as the version before the history left it: no table, two entries, one of them edited
-    const { AddReconciliation1792100000000 } =
-      await import('../src/db/dataset-migrations/1792100000000-AddReconciliation');
-    const { RefineReconciliation1792100001000 } =
-      await import('../src/db/dataset-migrations/1792100001000-RefineReconciliation');
-    const rollback = dataSource.createQueryRunner();
-    await rollback.connect();
-    await rollback.startTransaction();
-    try {
-      await rollback.query(`SET LOCAL search_path TO "${SCHEMA}", public`);
-      await new RefineReconciliation1792100001000().down(rollback);
-      await new AddReconciliation1792100000000().down(rollback);
-      await rollback.query(
-        `DELETE FROM dataset_migrations WHERE name IN ('AddReconciliation1792100000000', 'RefineReconciliation1792100001000')`,
-      );
-      await rollback.commitTransaction();
-    } catch (error) {
-      await rollback.rollbackTransaction();
-      throw error;
-    } finally {
-      await rollback.release();
-    }
-    await dataSource.query(`DROP TABLE "${SCHEMA}"."en_changes"`);
-    await dataSource.query(`ALTER TABLE "${SCHEMA}"."en_words" DROP COLUMN "origins"`);
-    await dataSource.query(
-      `DELETE FROM "${SCHEMA}"."dataset_migrations" WHERE "name" IN ('AddChanges1789700000000', 'ChangesCarryValues1789900000000', 'AddWordOrigins1790200000000', 'NormalizeWordOrigins1790200001000', 'AddChangeContribution1790200003000')`,
-    );
-    await dataSource.query(
-      `INSERT INTO "${SCHEMA}"."en_entries" ("word", "user_modified") VALUES ($1, true), ($2, false)`,
-      [`${HEADWORD}edited`, `${HEADWORD}plain`],
-    );
-
-    try {
-      expect(await runDatasetMigrations(SCHEMA)).toEqual([
-        'AddChanges1789700000000',
-        'ChangesCarryValues1789900000000',
-        'AddWordOrigins1790200000000',
-        'NormalizeWordOrigins1790200001000',
-        'AddChangeContribution1790200003000',
-        'AddReconciliation1792100000000',
-        'RefineReconciliation1792100001000',
-      ]);
-      expect(await dataSource.query(`SELECT count(*)::int AS n FROM "${SCHEMA}"."en_changes"`)).toEqual([
-        { n: 0 },
-      ]);
-      // the entry is still kept through an update: that is what its flag says, and all it says
-      expect(
-        await dataSource.query(
-          `SELECT "word" FROM "${SCHEMA}"."en_entries" WHERE "user_modified" = true AND "word" LIKE $1`,
-          [`${HEADWORD}%`],
-        ),
-      ).toEqual([{ word: `${HEADWORD}edited` }]);
-      // applied once: a second start has nothing to run
-      expect(await runDatasetMigrations(SCHEMA)).toEqual([]);
-    } finally {
-      await dataSource.query(`DELETE FROM "${SCHEMA}"."en_entries" WHERE "word" LIKE $1`, [`${HEADWORD}%`]);
-    }
-  });
-
-  it('drops the rows without values an earlier build of the history wrote, and keeps the edits (issue #531)', async () => {
-    // the table as that build left it: a guess for an entry flagged `user_modified`, next to a recorded edit
-    await dataSource.query(
-      `DELETE FROM "${SCHEMA}"."dataset_migrations" WHERE "name" = 'ChangesCarryValues1789900000000'`,
-    );
-    await dataSource.query(`ALTER TABLE "${SCHEMA}"."en_changes" ALTER COLUMN "diff" DROP NOT NULL`);
-    await dataSource.query(
-      `INSERT INTO "${SCHEMA}"."en_changes" ("headword", "part_of_speech", "entity", "action", "diff", "origin")
-       VALUES ($1, NULL, 'word', 'update', NULL, 'legacy'),
-              ($1, 'noun', 'word', 'update', '{"description":{"before":"a","after":"b"}}', 'admin')`,
-      [`${HEADWORD}edited`],
-    );
-
-    try {
-      expect(await runDatasetMigrations(SCHEMA)).toEqual(['ChangesCarryValues1789900000000']);
-      expect(
-        await dataSource.query(`SELECT "headword", "origin", "part_of_speech" FROM "${SCHEMA}"."en_changes"`),
-      ).toEqual([{ headword: `${HEADWORD}edited`, origin: 'admin', part_of_speech: 'noun' }]);
-      await expect(
-        dataSource.query(
-          `INSERT INTO "${SCHEMA}"."en_changes" ("headword", "entity", "action", "origin") VALUES ('x', 'word', 'update', 'admin')`,
-        ),
-      ).rejects.toThrow(/null value in column "diff"/);
-    } finally {
-      await dataSource.query(`DELETE FROM "${SCHEMA}"."en_changes"`);
-    }
-  });
-
   it('serves the active dataset only: a word written to one is not in the other', async () => {
-    const before = await dataSource.query(`SELECT count(*)::int AS n FROM "public"."en_words"`);
+    const before = await (await reader('default')).query(`SELECT count(*)::int AS n FROM "en_words"`);
 
     const activated = await request(server()).post(`/api/en/datasets/${NAME}/activate`).set(auth).expect(200);
     expect(activated.body).toEqual(expect.objectContaining({ name: NAME, active: true }));
     expect((await list()).active).toBe(NAME);
-    expect(await dataSource.query('SELECT current_schema() AS s')).toEqual([{ s: SCHEMA }]);
+    expect(await dataSource.query('SELECT dictionary_dataset_id() AS id')).toEqual([
+      { id: (await app.get(DatasetsService).find(NAME)).id },
+    ]);
 
     // an empty dataset: nothing of the default one shows through
     await request(server()).get(`/api/v1/words/${HEADWORD}`).expect(404);
@@ -620,22 +221,21 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
       .expect(201);
     const found = await request(server()).get(`/api/v1/words/${HEADWORD}`).expect(200);
     expect(found.body.data[0].word).toBe(HEADWORD);
-    expect(await dataSource.query(`SELECT count(*)::int AS n FROM "${SCHEMA}"."en_words"`)).toEqual([{ n: 1 }]);
+    expect(await (await reader(NAME)).query(`SELECT count(*)::int AS n FROM "en_words"`)).toEqual([{ n: 1 }]);
     // the history of the edit lies with the dataset it was made in, and nowhere else (issue #531)
-    const changesBefore = await dataSource.query(
-      `SELECT count(*)::int AS n FROM "public"."en_changes" WHERE "headword" = $1`,
-      [HEADWORD],
-    );
+    const changesBefore = await (
+      await reader('default')
+    ).query(`SELECT count(*)::int AS n FROM "en_changes" WHERE "headword" = $1`, [HEADWORD]);
     expect(changesBefore).toEqual([{ n: 0 }]);
-    expect(
-      await dataSource.query(`SELECT "headword", "entity", "action" FROM "${SCHEMA}"."en_changes"`),
-    ).toEqual([{ headword: HEADWORD, entity: 'word', action: 'create' }]);
+    expect(await (await reader(NAME)).query(`SELECT "headword", "entity", "action" FROM "en_changes"`)).toEqual(
+      [{ headword: HEADWORD, entity: 'word', action: 'create' }],
+    );
 
     // …and back: the default dataset never saw the word, its rows are what they were
     await request(server()).post('/api/en/datasets/default/activate').set(auth).expect(200);
     expect(await dataSource.query('SELECT current_schema() AS s')).toEqual([{ s: 'public' }]);
     await request(server()).get(`/api/v1/words/${HEADWORD}`).expect(404);
-    expect(await dataSource.query(`SELECT count(*)::int AS n FROM "public"."en_words"`)).toEqual(before);
+    expect(await (await reader('default')).query(`SELECT count(*)::int AS n FROM "en_words"`)).toEqual(before);
     const setting = await dataSource.query(
       `SELECT "value" FROM "public"."settings" WHERE "field" = 'active_dataset'`,
     );
@@ -669,10 +269,12 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
   it('keeps the histories apart: an edit marks the word in its dataset only, a name leaves them all (issue #531)', async () => {
     const SHARED = 'dataset-shared-word';
     // the same headword in both datasets, as two sources both have "run"; no history yet
-    for (const schema of ['public', SCHEMA]) {
-      await dataSource.query(`INSERT INTO "${schema}"."en_entries" ("word") VALUES ($1)`, [SHARED]);
-      await dataSource.query(
-        `INSERT INTO "${schema}"."en_words" ("word", "part_of_speech", "form_of_word", "description", "generated")
+    for (const dataset of ['default', NAME]) {
+      await (await reader(dataset)).query(`INSERT INTO "en_entries" ("word") VALUES ($1)`, [SHARED]);
+      await (
+        await reader(dataset)
+      ).query(
+        `INSERT INTO "en_words" ("word", "part_of_speech", "form_of_word", "description", "generated")
          VALUES ($1, 'noun', 'base_form', 'what the source says', false)`,
         [SHARED],
       );
@@ -715,9 +317,11 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
       expect(listed.body.total).toBe(0);
 
       // a name is taken out of every dataset of the instance, the active one or not
-      for (const schema of ['public', SCHEMA]) {
-        await dataSource.query(
-          `INSERT INTO "${schema}"."en_changes" ("headword", "part_of_speech", "entity", "action", "diff", "origin", "author")
+      for (const dataset of ['default', NAME]) {
+        await (
+          await reader(dataset)
+        ).query(
+          `INSERT INTO "en_changes" ("headword", "part_of_speech", "entity", "action", "diff", "origin", "author")
            VALUES ($1, 'noun', 'word', 'update', '{"transcription":{"before":null,"after":"x"}}', 'suggestion', 'Ada Lovelace')`,
           [SHARED],
         );
@@ -728,11 +332,11 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
         .send({ author: 'Ada Lovelace' })
         .expect(200)
         .expect({ success: true, forgotten: 2 });
-      for (const schema of ['public', SCHEMA]) {
+      for (const dataset of ['default', NAME]) {
         expect(
-          await dataSource.query(
-            `SELECT count(*)::int AS n FROM "${schema}"."en_changes" WHERE "author" IS NOT NULL`,
-          ),
+          await (
+            await reader(dataset)
+          ).query(`SELECT count(*)::int AS n FROM "en_changes" WHERE "author" IS NOT NULL`),
         ).toEqual([{ n: 0 }]);
       }
 
@@ -747,10 +351,10 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
       expect((await readers()).word).toEqual(expect.objectContaining({ description: 'what the source says' }));
     } finally {
       await request(server()).post('/api/en/datasets/default/activate').set(auth).expect(200);
-      for (const schema of ['public', SCHEMA]) {
-        await dataSource.query(`DELETE FROM "${schema}"."en_changes" WHERE "headword" = $1`, [SHARED]);
-        await dataSource.query(`DELETE FROM "${schema}"."en_words" WHERE "word" = $1`, [SHARED]);
-        await dataSource.query(`DELETE FROM "${schema}"."en_entries" WHERE "word" = $1`, [SHARED]);
+      for (const dataset of ['default', NAME]) {
+        await (await reader(dataset)).query(`DELETE FROM "en_changes" WHERE "headword" = $1`, [SHARED]);
+        await (await reader(dataset)).query(`DELETE FROM "en_words" WHERE "word" = $1`, [SHARED]);
+        await (await reader(dataset)).query(`DELETE FROM "en_entries" WHERE "word" = $1`, [SHARED]);
       }
     }
   });
@@ -758,10 +362,12 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
   it('keeps phrasal variants inside their dataset in admin reads and public dataset groups', async () => {
     const base = `${HEADWORD}phrasal`;
     const names = [base, `${base} up`, `${base} out`];
-    const write = async (schema: string, word: string, baseId: number | null = null): Promise<number> => {
-      await dataSource.query(`INSERT INTO "${schema}"."en_entries" ("word") VALUES ($1)`, [word]);
-      const [row] = (await dataSource.query(
-        `INSERT INTO "${schema}"."en_words"
+    const write = async (dataset: string, word: string, baseId: number | null = null): Promise<number> => {
+      await (await reader(dataset)).query(`INSERT INTO "en_entries" ("word") VALUES ($1)`, [word]);
+      const [row] = (await (
+        await reader(dataset)
+      ).query(
+        `INSERT INTO "en_words"
           ("word", "part_of_speech", "form_of_word", "generated", "basePhrasalId", "verb___is_phrasal")
          VALUES ($1, 'verb', 'base_form', false, $2, $3) RETURNING id`,
         [word, baseId, baseId !== null],
@@ -776,11 +382,11 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
       ]);
     };
     try {
-      const defaultId = await write('public', base);
-      await write('public', names[1], defaultId);
-      const otherId = await write(SCHEMA, base);
+      const defaultId = await write('default', base);
+      await write('default', names[1], defaultId);
+      const otherId = await write(NAME, base);
       // Even a matching spelling in the other dataset is not a phrasal variant without its own link.
-      await write(SCHEMA, names[1]);
+      await write(NAME, names[1]);
       expect(await groups()).toEqual([
         ['default', [names[1]]],
         [NAME, []],
@@ -788,7 +394,7 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
       const empty = await request(server()).get(`/api/en/${otherId}?dataset=${NAME}`).set(auth).expect(200);
       expect(empty.body.phrasal_variants).toEqual([]);
 
-      await write(SCHEMA, names[2], otherId);
+      await write(NAME, names[2], otherId);
       const expected = [
         ['default', [names[1]]],
         [NAME, [names[2]]],
@@ -808,8 +414,8 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
       expect(original.body.phrasal_variants).toEqual([names[1]]);
     } finally {
       await request(server()).post('/api/en/datasets/default/activate').set(auth).expect(200);
-      for (const schema of ['public', SCHEMA]) {
-        await dataSource.query(`DELETE FROM "${schema}"."en_entries" WHERE "word" = ANY($1)`, [names]);
+      for (const dataset of ['default', NAME]) {
+        await (await reader(dataset)).query(`DELETE FROM "en_entries" WHERE "word" = ANY($1)`, [names]);
       }
     }
   });
@@ -818,10 +424,12 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
     const BOTH = `${HEADWORD}both`;
     const PROPER = `${BOTH[0].toUpperCase()}${BOTH.slice(1)}`;
     const ONE = `${HEADWORD}one`;
-    const write = async (schema: string, word: string, description: string) => {
-      await dataSource.query(`INSERT INTO "${schema}"."en_entries" ("word") VALUES ($1)`, [word]);
-      await dataSource.query(
-        `INSERT INTO "${schema}"."en_words" ("word", "part_of_speech", "form_of_word", "description", "generated")
+    const write = async (dataset: string, word: string, description: string) => {
+      await (await reader(dataset)).query(`INSERT INTO "en_entries" ("word") VALUES ($1)`, [word]);
+      await (
+        await reader(dataset)
+      ).query(
+        `INSERT INTO "en_words" ("word", "part_of_speech", "form_of_word", "description", "generated")
          VALUES ($1, 'noun', 'base_form', $2, false)`,
         [word, description],
       );
@@ -829,15 +437,16 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
     const read = async (word: string) =>
       (await request(server()).get(`/api/v1/words/${word}/datasets`).expect(200))
         .body as PublicWordDatasetsV1ResT;
-    const readers = () => (app.get(DatasetsService) as unknown as { readers: Map<string, unknown> }).readers;
 
     // one spelling in the default dataset; two that differ by case in the other, as a public source has them
-    await write('public', BOTH, 'what the project says');
-    await write(SCHEMA, BOTH, 'what the source says');
-    await write(SCHEMA, PROPER, 'a name');
-    await write(SCHEMA, ONE, 'a word of one dataset');
-    await dataSource.query(
-      `INSERT INTO "${SCHEMA}"."en_changes" ("headword", "part_of_speech", "entity", "action", "diff", "origin")
+    await write('default', BOTH, 'what the project says');
+    await write(NAME, BOTH, 'what the source says');
+    await write(NAME, PROPER, 'a name');
+    await write(NAME, ONE, 'a word of one dataset');
+    await (
+      await reader(NAME)
+    ).query(
+      `INSERT INTO "en_changes" ("headword", "part_of_speech", "entity", "action", "diff", "origin")
        VALUES ($1, 'noun', 'word', 'update', '{"description":{"before":"said before","after":"what the source says"}}', 'admin')`,
       [BOTH],
     );
@@ -898,17 +507,8 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
       await request(server()).get(`/api/v1/words/${ONE}/datasets/default/history`).expect(404);
       await request(server()).get(`/api/v1/words/${BOTH}/datasets/${IMPORTED}/history`).expect(404);
 
-      // one connection per dataset that is not served, kept between the requests
-      expect([...readers().keys()]).toEqual([NAME]);
-      const kept = readers().get(NAME);
-      // …and on the schema of its dataset, every connection of its pool
-      const opened = (await kept) as DataSource;
-      const schemas = await Promise.all(
-        Array.from({ length: 6 }, () => opened.query('SELECT current_schema() AS s')),
-      );
-      expect(new Set(schemas.map(([row]: Array<{ s: string }>) => row.s))).toEqual(new Set([SCHEMA]));
+      expect((await reader(NAME)).driver).toBe(dataSource.driver);
       await Promise.all(Array.from({ length: 12 }, () => read(BOTH)));
-      expect(readers().get(NAME)).toBe(kept);
 
       // after a switch the groups are the same, the served one is another
       const before = await request(server()).get(`/api/v1/words/${BOTH}/datasets`).expect(200);
@@ -920,21 +520,20 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
         [NAME, true],
       ]);
       expect(switched.data.map((group) => group.entries)).toEqual(data.map((group) => group.entries));
-      expect([...readers().keys()]).toEqual(['default']);
       expect(after.headers.etag).not.toBe(before.headers.etag);
       expect(Date.parse(after.headers['last-modified'] as string)).toBeGreaterThanOrEqual(
         Date.parse(before.headers['last-modified'] as string),
       );
     } finally {
       await request(server()).post('/api/en/datasets/default/activate').set(auth).expect(200);
-      await dataSource.query(`DELETE FROM "${SCHEMA}"."en_changes" WHERE "headword" LIKE $1`, [`${HEADWORD}%`]);
-      for (const schema of ['public', SCHEMA]) {
-        await dataSource.query(`DELETE FROM "${schema}"."en_words" WHERE lower("word") LIKE $1`, [
-          `${HEADWORD}%`,
-        ]);
-        await dataSource.query(`DELETE FROM "${schema}"."en_entries" WHERE lower("word") LIKE $1`, [
-          `${HEADWORD}%`,
-        ]);
+      await (await reader(NAME)).query(`DELETE FROM "en_changes" WHERE "headword" LIKE $1`, [`${HEADWORD}%`]);
+      for (const dataset of ['default', NAME]) {
+        await (
+          await reader(dataset)
+        ).query(`DELETE FROM "en_words" WHERE lower("word") LIKE $1`, [`${HEADWORD}%`]);
+        await (
+          await reader(dataset)
+        ).query(`DELETE FROM "en_entries" WHERE lower("word") LIKE $1`, [`${HEADWORD}%`]);
       }
     }
   });
@@ -967,14 +566,14 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
     expect(onOther.headers.etag).not.toBe(onDefault.headers.etag);
   });
 
-  it('starts on the active dataset, with the migrations of every schema applied', async () => {
+  it('starts on the active dataset, with shared migrations applied', async () => {
     await request(server()).post(`/api/en/datasets/${NAME}/activate`).set(auth).expect(200);
     try {
-      await expect(prepareDatabase()).resolves.toBe(SCHEMA);
+      await expect(prepareDatabase()).resolves.toBeUndefined();
     } finally {
       await request(server()).post('/api/en/datasets/default/activate').set(auth).expect(200);
     }
-    await expect(prepareDatabase()).resolves.toBe('public');
+    await expect(prepareDatabase()).resolves.toBeUndefined();
   });
 
   it('imports into a dataset that is not the active one: a schema of its own, the active dataset untouched', async () => {
@@ -1018,7 +617,7 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
       attribution: 'Somebody else',
       notice: 'Not what the catalog says',
     };
-    const before = await dataSource.query(`SELECT count(*)::int AS n FROM "public"."en_words"`);
+    const before = await (await reader('default')).query(`SELECT count(*)::int AS n FROM "en_words"`);
     const versionBefore = await dataSource.query(
       `SELECT "value" FROM "public"."settings" WHERE "field" = 'en_dataset_version'`,
     );
@@ -1049,8 +648,10 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
           active: false,
         }),
       );
-      expect(await dataSource.query(`SELECT "word" FROM "ds_${other}"."en_entries"`)).toEqual([{ word }]);
-      expect(await dataSource.query(`SELECT count(*)::int AS n FROM "public"."en_words"`)).toEqual(before);
+      expect(await (await reader(other)).query(`SELECT "word" FROM "en_entries"`)).toEqual([{ word }]);
+      expect(await (await reader('default')).query(`SELECT count(*)::int AS n FROM "en_words"`)).toEqual(
+        before,
+      );
       await request(server()).get(`/api/v1/words/${word}`).expect(404);
       // the version the settings mirror is the active dataset's, not the imported one's
       expect(
@@ -1101,7 +702,6 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
     } finally {
       await request(server()).post('/api/en/datasets/default/activate').set(auth);
       await request(server()).delete(`/api/en/datasets/${other}`).set(auth);
-      await dataSource.query(`DROP SCHEMA IF EXISTS "ds_${other}" CASCADE`);
     }
   });
 
@@ -1116,24 +716,25 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
 
     // a read of every dataset opened a connection on the one that is about to go (issue #528)
     const STAYS = `${HEADWORD}stays`;
-    await dataSource.query(`INSERT INTO "public"."en_entries" ("word") VALUES ($1)`, [STAYS]);
-    await dataSource.query(
-      `INSERT INTO "public"."en_words" ("word", "part_of_speech", "form_of_word", "generated")
+    await (await reader('default')).query(`INSERT INTO "en_entries" ("word") VALUES ($1)`, [STAYS]);
+    await (
+      await reader('default')
+    ).query(
+      `INSERT INTO "en_words" ("word", "part_of_speech", "form_of_word", "generated")
        VALUES ($1, 'noun', 'base_form', false)`,
       [STAYS],
     );
-    const service = app.get(DatasetsService) as unknown as { readers: Map<string, unknown> };
     try {
       const both = await request(server()).get(`/api/v1/words/${STAYS}/datasets`).expect(200);
       expect(both.body.meta).toEqual({ word: STAYS, datasets: 2, found: 1 });
-      expect([...service.readers.keys()]).toEqual([NAME]);
 
       await request(server()).delete(`/api/en/datasets/${NAME}`).set(auth).expect(200);
       expect(
-        await dataSource.query(`SELECT count(*)::int AS n FROM pg_namespace WHERE nspname = $1`, [SCHEMA]),
+        await dataSource.query(`SELECT count(*)::int AS n FROM pg_namespace WHERE nspname = $1`, [
+          `ds_${NAME}`,
+        ]),
       ).toEqual([{ n: 0 }]);
       // the connection went with the dataset
-      expect(service.readers.size).toBe(0);
       // what is read from every dataset changed, although no row of the remaining one did
       const one = await request(server()).get(`/api/v1/words/${STAYS}/datasets`).expect(200);
       expect(one.body.meta).toEqual({ word: STAYS, datasets: 1, found: 1 });
@@ -1142,8 +743,8 @@ describe('datasets in schemas (Postgres, issue #527)', () => {
         Date.parse(both.headers['last-modified'] as string),
       );
     } finally {
-      await dataSource.query(`DELETE FROM "public"."en_words" WHERE "word" = $1`, [STAYS]);
-      await dataSource.query(`DELETE FROM "public"."en_entries" WHERE "word" = $1`, [STAYS]);
+      await (await reader('default')).query(`DELETE FROM "en_words" WHERE "word" = $1`, [STAYS]);
+      await (await reader('default')).query(`DELETE FROM "en_entries" WHERE "word" = $1`, [STAYS]);
     }
     // the catalog still offers it
     expect((await list()).datasets.find((dataset) => dataset.name === NAME)).toEqual(

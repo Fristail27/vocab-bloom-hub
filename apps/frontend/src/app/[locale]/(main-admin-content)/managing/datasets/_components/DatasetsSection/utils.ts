@@ -8,3 +8,9 @@ export const formatMegabytes = (megabytes: number, locale: string): string => {
 
 export const formatCount = (count: number, locale: string): string =>
   new Intl.NumberFormat(locale).format(count);
+
+/** The server and browser may have different time zones when hydrating the same card. */
+export const formatDatasetTime = (value: string, locale: string): string =>
+  new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'long', timeZone: 'UTC' }).format(
+    new Date(value),
+  );

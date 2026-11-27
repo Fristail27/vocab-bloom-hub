@@ -26,7 +26,12 @@ export const META_COUNTS_TTL_MS = 60_000;
 /** GET /api/v1/meta: what the instance serves (issue #272) */
 @Injectable()
 export class PublicMetaService {
-  private countsCache: { counts: PublicDatasetCountsV1T; modified: number; fetchedAt: number } | null = null;
+  private countsCache: {
+    owner: number | undefined;
+    counts: PublicDatasetCountsV1T;
+    modified: number;
+    fetchedAt: number;
+  } | null = null;
 
   constructor(
     private readonly enStatisticsService: EnStatisticsService,
@@ -43,14 +48,19 @@ export class PublicMetaService {
 
   // the counters, and with them how many headwords were changed or added on the instance (issue #531)
   private async getCounts(): Promise<{ counts: PublicDatasetCountsV1T; modified: number }> {
-    if (this.countsCache && Date.now() - this.countsCache.fetchedAt < META_COUNTS_TTL_MS) {
+    const owner = this.datasets?.getActive()?.id;
+    if (
+      this.countsCache &&
+      this.countsCache.owner === owner &&
+      Date.now() - this.countsCache.fetchedAt < META_COUNTS_TTL_MS
+    ) {
       return this.countsCache;
     }
     const [{ totals }, modified] = await Promise.all([
       this.enStatisticsService.getStatistics(),
       this.changes?.countModifiedEntries() ?? 0,
     ]);
-    this.countsCache = { counts: totals, modified, fetchedAt: Date.now() };
+    this.countsCache = { owner, counts: totals, modified, fetchedAt: Date.now() };
     return this.countsCache;
   }
 

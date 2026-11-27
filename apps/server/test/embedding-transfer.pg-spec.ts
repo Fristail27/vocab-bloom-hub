@@ -1,9 +1,10 @@
+import { dictionaryConnection, enableDictionaryScope } from '../src/db/shared-dictionary/connection';
 import { randomUUID } from 'node:crypto';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DataSource } from 'typeorm';
-import { prepareDatabase, createDatasetSchema, searchPathExtra } from '../src/db/datasets';
+import { prepareDatabase } from '../src/db/datasets';
 import { DB_ENTITIES } from '../src/db/typeorm-options';
 import { EnEntry } from '../src/modules/EnModule/entities/en_entry.entity';
 import { EnWord } from '../src/modules/EnModule/entities/en_word.entity';
@@ -33,19 +34,16 @@ describe('embedding file publication on PostgreSQL', () => {
       url: url.toString(),
       entities: DB_ENTITIES,
     }).initialize();
-    await createDatasetSchema('ds_transfer');
-    target = await new DataSource({
-      type: 'postgres',
-      url: url.toString(),
-      entities: DB_ENTITIES,
-      extra: searchPathExtra('ds_transfer'),
-    }).initialize();
+    enableDictionaryScope(source);
+    const [{ id }] = await source.query(
+      `INSERT INTO datasets (name,source,license,license_url,attribution) VALUES ('transfer','transfer','CC0-1.0','','fixture') RETURNING id`,
+    );
+    target = dictionaryConnection(source, id);
     process.env.DATABASE_URL = configured;
     dir = await mkdtemp(join(tmpdir(), 'vbh-transfer-pg-'));
   });
   afterAll(async () => {
     process.env.DATABASE_URL = configured;
-    if (target?.isInitialized) await target.destroy();
     if (source?.isInitialized) await source.destroy();
     if (admin?.isInitialized) {
       await admin.query(`DROP DATABASE IF EXISTS "${database}"`);
@@ -108,7 +106,7 @@ describe('embedding file publication on PostgreSQL', () => {
       await runner.connect();
       await runner.startTransaction();
       try {
-        await runner.query('LOCK TABLE en_meanings IN ROW EXCLUSIVE MODE');
+        await runner.query('SELECT pg_advisory_xact_lock_shared(691, public.dictionary_dataset_id())');
         await writeFile(file, JSON.stringify(line) + '\n');
         let finished = false;
         const pending = importMeaningEmbeddings(target.manager, file, manifest, 1).then(() => {

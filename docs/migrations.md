@@ -14,9 +14,8 @@ All the relevant code lives in `apps/server/src/db/`:
 - `typeorm-options.ts` — the runtime TypeORM configuration used by `AppModule`;
 - `data-source.ts` — a CLI-only DataSource for the `typeorm` commands (requires `DATABASE_URL`);
 - `migrations/` — the **shared** migrations plus `index.ts`, the **explicit list** of them;
-- `dataset-migrations/` — the migrations of the dictionary tables, run in every dataset schema,
-  with a list of their own ([below](#shared-and-dataset-migrations));
-- `datasets.ts` — runs both lists before the server's connection exists.
+- `dataset-migrations/` — the historical migration list used while upgrading installations created before #691.
+- `shared-dictionary/` — the table keys, copy verification and transaction scoping for the shared dictionary tables.
 
 ## Commands
 
@@ -41,82 +40,53 @@ DATABASE_URL=... yarn workspace server db:reset                                 
 > `DATABASE_URL` may also come from the root `.env` — the CLI DataSource loads it the same way
 > the server does. A variable already set in the shell wins over the `.env` value.
 
-## Shared and dataset migrations
+## Upgrading a database with dataset schemas
 
-An instance holds several datasets, each in a Postgres schema of its own
-([`database.md`](./database.md#datasets-a-schema-each)). The dictionary tables exist once per
-dataset, so their migrations run once per dataset:
+`ShareDictionaryTables1795600000000` moves the default dictionary in `public` and every
+registered `ds_*` dictionary into shared tables. Plan a maintenance window. Its duration
+depends on the size of the data, the time to build indexes, and the storage available
+for comparisons. Both copies, temporary sort files, indexes and WAL need room during the upgrade.
 
-|                  | Shared                                                          | Dataset                                                                                           |
-| ---------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Folder           | `src/db/migrations/`                                            | `src/db/dataset-migrations/`                                                                      |
-| Tables           | `settings`, `datasets`, `audit_log`; the enum types; extensions | `en_entries`, `en_words`, `en_meanings`, the translations, the links, `en_changes`, `suggestions` |
-| Runs in          | `public`, once                                                  | every registered schema — `public` for the `default` dataset, every `ds_<name>`                   |
-| Journal          | `public.migrations`                                             | `dataset_migrations` of each schema                                                               |
-| Names the schema | yes: `"public"."settings"`                                      | **never**: `"en_words"` — the `search_path` of the connection decides where it lands              |
-| Runs             | at server start, first                                          | at server start, after the shared ones; and when a dataset is created                             |
+1. Stop the API and any import or maintenance process that writes to this database.
+   Take a full database backup and restore it into a separate database.
+   [Backup and restore commands](./database.md#backups).
+2. On that restore, run `DATABASE_URL=... yarn workspace server migration:run` with the new
+   version. Measure elapsed time, free space and WAL usage. Check active selection, public
+   visibility, an existing word link in each dictionary, and a saved edit or merge plan.
+3. Run the same migration on the stopped instance, or start one new server to apply it.
+   The migration completes pending legacy migrations, copies all fields, checks counts and
+   both content and dataset-local keys, restores ID counters including deleted IDs, then
+   validates foreign keys and indexes. Only then does it retire the legacy tables and journals.
+   On instances that already ran `ShareContentReviews1795600000000`, the migration retains
+   the shared review table and adds missing per-dataset reviews. If the same dataset, scope
+   and identity have different snapshots or check times in the two stores, the transaction
+   rolls back and reports the affected source table.
+   Unknown objects in an old namespace or external dependencies can stop removal. Inspect the
+   PostgreSQL error and preserve those objects before retrying.
+4. Check `/api/ready`, the active dataset, the admin dataset selector, and the public word
+   links used in the rehearsal before resuming writes.
 
-Everything up to `AddDatasets` is history: those migrations built the dictionary tables in
-`public` before datasets existed and stay in the shared list. `DatasetBaseline` builds the same
-tables in a new schema and is recorded as applied in `public` by `AddDatasets`. **From here on a
-change to a dictionary table is a dataset migration**; `test:postgres` compares the structure of
-a new schema with `public` (columns, indexes, foreign keys) and fails when the two lists drift
-apart.
+An interrupted or failed migration rolls back its transaction. The old database is ready
+for a retry after correcting the cause. To return to the old server **after commit**,
+restore the pre-upgrade backup and run the matching old version. Reconcile writes made
+after the upgrade separately before restoring. The new layout and its migration history
+are described in [Shared dictionary tables](./database.md#shared-dictionary-tables).
 
-The first dataset migrations after the baseline are the ones of the history of edits
-([`datasets.md`](./datasets.md#editing-a-dataset-the-history-of-edits)): `AddChanges` creates
-`en_changes` in every schema, empty; `AddSuggestionAuthor` adds the name a reader asked to be
-credited by to `suggestions`; `ChangesCarryValues` makes the values of an edit mandatory and
-removes the rows without them that the builds before it wrote. `part_of_speech` of `en_changes` is text, not the enum of `en_words`: an enum
-type lives in `public` and is shared by every schema, a column of it would tie a dataset
-migration to a shared one.
+## Dictionary migrations
 
-Sources and contribution licenses follow the same split. `AddDatasetOrigins` and
-`AddDatasetTermsUpdatedAt` change the shared registry; `AddWordOrigins`, `NormalizeWordOrigins`
-and `AddChangeContribution` run in every dictionary schema. They preserve known terms without
-inventing earlier sources or edits. A new converter such as OpenGloss needs no separate schema
-layout: installation creates the ordinary dictionary tables through the same migration list.
+Register structural changes once in `src/db/migrations/index.ts`. For dictionary data,
+write a migration against `public.dictionary_*`, extend its scoped view as needed, and
+include `dataset_id` in local uniqueness and both ends of a foreign key. The CLI generates diffs only for ordinary registry tables. Use `migration:create` to start a hand-written dictionary migration. Test two
+dictionaries with colliding local IDs as well as existing SQLite data.
 
-Reverting `AddDatasets` (`migration:revert` while it is the newest shared migration) takes the
-registry away and leaves the journal of the dataset migrations of `public` with the rows of the
-migrations that ran since: what they built in `public` is still there, and running the
-migration again finds them applied.
-
-Writing a dataset migration:
-
-1. Edit the entity and generate the migration as usual — the generator diffs against `public`:
-
-   ```bash
-   DATABASE_URL=... yarn workspace server migration:generate src/db/dataset-migrations/AddFrequencyRank
-   ```
-
-2. Remove every `"public".` in front of a **table or an index** in the generated SQL — the
-   generator leaves the tables unqualified and writes the schema into `DROP INDEX
-"public"."IDX_…"`. A statement that names `public` would change the `default` dataset again
-   and again and never the others.
-3. **Enum types are shared.** A new enum type or a new value of one goes into a shared migration
-   (`CREATE TYPE "public"."…"`, `ALTER TYPE "public"."…" ADD VALUE`), which runs before the
-   dataset migrations; the dataset migration only uses the type, by its qualified name.
-4. Register the class in `src/db/dataset-migrations/index.ts`.
-5. Run `yarn workspace server test:postgres`.
-
-The `migration:*` commands work on the shared list and on `public`. The dataset migrations have
-no command of their own: they are applied by the server at start (the log names every schema
-and what ran there), and that is also the way to apply them by hand — start the server.
-
-> [!CAUTION]
-> `db:reset` drops `public` only. The schemas of the datasets stay behind without a registry
-> that knows them; drop them by hand (`DROP SCHEMA ds_<name> CASCADE`) before creating a dataset
-> of the same name.
-
-## Changing the schema: the workflow
+## Generating migrations for registry tables
 
 1. Edit the entity (add a column, index, table, …).
 2. Generate a migration against a Postgres database that has the **current** (pre-change)
    schema:
 
    ```bash
-   DATABASE_URL=... yarn workspace server migration:generate src/db/migrations/AddFrequencyRank
+   DATABASE_URL=... yarn workspace server migration:generate src/db/migrations/AddRegistryField
    ```
 
    TypeORM diffs the entities against that database and writes
@@ -133,6 +103,10 @@ Once a migration has run, add later schema changes in a new migration with a new
 timestamp. TypeORM records the migration's name, not a checksum of its SQL: editing an
 applied file will not update existing databases. Test both a fresh schema and an upgrade
 from the earlier schema; a passing fresh-database test alone does not cover that upgrade.
+CI also runs `TEST_UPGRADE_BACKUP=true yarn workspace server test:postgres shared-dictionary.pg-spec.ts`
+with `DATABASE_URL` pointing to a disposable PostgreSQL instance with database-creation
+privileges. This test uses `pg_dump` and `pg_restore` to recover a populated legacy database
+and upgrades the restored copy.
 
 No local Postgres? Spin up a throwaway one, apply the already-committed migrations to bring
 it to the current schema, then generate:
@@ -177,10 +151,7 @@ On every start on Postgres, before its own connection is opened, the server
 1. reads the `migrations` table to see what has already been applied;
 2. executes every pending shared migration in order inside **one transaction** (TypeORM's
    default `migrationsTransactionMode: "all"`) and records each;
-3. does the same with the dataset migrations in every schema the registry names, a transaction
-   per schema;
-4. opens its connection on the schema of the active dataset and only then lets Nest accept
-   requests.
+3. opens the application pool, loads the active registry row and accepts requests.
 
 A failed migration rolls that transaction back — every migration of that start with it, so the
 database stays where the previous version left it — and **the server does not start**: better a
@@ -230,15 +201,9 @@ actually execute.
 - **`migration:generate` produces a huge diff or wants to drop everything** — the target
   database is not at the current schema. Run `migration:run` first (or point at the right
   database), then generate.
-- **A new migration never runs** — check it is exported from `src/db/migrations/index.ts`
-  (or `src/db/dataset-migrations/index.ts`); the array is the single source of truth for both
-  the CLI and the server.
-- **A dataset migration changed `default` and no other dataset**, or fails in the second schema
-  with `already exists` — it names `public` in front of a table, or creates an enum type. See
-  [Shared and dataset migrations](#shared-and-dataset-migrations).
-- **`The database connection is on schema "public", the active dataset lives in "ds_…"`** — a
-  connection pooler dropped the startup option that carries the `search_path`
-  ([`database.md`](./database.md#datasets-a-schema-each)).
+- **A new migration never runs** — register it in `src/db/migrations/index.ts`.
+- **Dictionary view returns no rows in a SQL client** — select the owner in the same
+  transaction as the query. See [Shared dictionary tables](./database.md#shared-dictionary-tables).
 - **Driver mismatch errors** — entity column types are locked to a driver at import time
   (`checkIsPostgres`, see [environment.md](./environment.md#database-driver-locking)). The CLI
   DataSource loads `.env` before importing the entities for exactly this reason; always run

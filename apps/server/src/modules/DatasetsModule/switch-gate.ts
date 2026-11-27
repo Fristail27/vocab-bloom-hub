@@ -13,13 +13,7 @@ type RequestStateT = () => {
   writableFinished: boolean;
 };
 
-/**
- * Keeps requests and a switch of the active dataset apart (issue #527).
- * A switch closes the database connection and opens it on another schema: a
- * request in between would find no connection. So a switch waits for the
- * requests under way to finish, and the requests that arrive meanwhile wait
- * for the switch — a few tens of milliseconds.
- */
+/** Drain readers before publishing a reconciliation plan. Dataset activation does not acquire this gate. */
 export class SwitchGate {
   private inFlight = 0;
   private held: Promise<void> | null = null;

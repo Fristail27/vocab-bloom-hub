@@ -1,3 +1,5 @@
+import { selectDictionary } from '../../db/shared-dictionary/connection';
+import { currentDataset } from '../../core/utils/dataset-scope';
 import { assertOrigins } from '../../core/utils/provenance';
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash } from 'node:crypto';
@@ -14,7 +16,6 @@ import { EnChange } from './entities/en_change.entity';
 import { WORD_CHANGE_RELATIONS } from './utils/changes/words';
 import { fullWordSnapshot, canonical } from './utils/changes/snapshots';
 import { prepareWordFromDB } from './utils/prepareWordFromDB';
-import { DICTIONARY_ENTITIES } from './entities/dictionary-entities';
 
 export type CopiedWordT = {
   row: EnWord;
@@ -93,25 +94,22 @@ export class WordCopyService {
   }
 
   /** Keep the source fixed from revision validation until the target commits. */
-  async withSource<T>(source: CopyWordSourceT, work: (snapshot: CopiedWordT) => Promise<T>): Promise<T> {
+  async withSource<T>(
+    source: CopyWordSourceT,
+    work: (snapshot: CopiedWordT, manager: EntityManager) => Promise<T>,
+  ): Promise<T> {
     const dataset = await this.datasets.find(source.dataset);
     const connection = await this.datasets.reader(dataset);
-    return connection.transaction('REPEATABLE READ', async (em) => {
-      const tables = DICTIONARY_ENTITIES.map((entity) => connection.getMetadata(entity));
-      const names = [
-        ...tables,
-        ...tables.flatMap((meta) =>
-          meta.ownRelations.filter((r) => r.isManyToManyOwner).map((r) => r.junctionEntityMetadata!),
-        ),
-      ].map((meta) => connection.driver.escape(meta.tableName));
-      await em.query(`LOCK TABLE ${names.join(', ')} IN SHARE MODE`);
+    return connection.transaction(async (em) => {
+      await em.query('SELECT pg_advisory_xact_lock(691, $1)', [dataset.id]);
       const captured = await em.findOneOrFail(Dataset, {
         where: { id: dataset.id },
         lock: { mode: 'pessimistic_read' },
       });
       const snapshot = await this.load(em, captured, source.id);
       if (snapshot.revision !== source.revision) throw new ConflictException(ErrorCodes.copy_source_changed);
-      return work(snapshot);
+      await selectDictionary(em.queryRunner!, currentDataset().id);
+      return work(snapshot, em);
     });
   }
 }

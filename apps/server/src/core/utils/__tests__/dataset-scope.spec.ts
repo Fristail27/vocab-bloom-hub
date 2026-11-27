@@ -18,14 +18,14 @@ describe('dataset scope', () => {
   const target = class Word {};
   const own = { getRepository: () => 'the repository of the named dataset', manager: 'its manager' };
   const scope = {
-    dataset: { name: 'my_words', source: 'my_words', own: true },
+    dataset: { id: 2, name: 'my_words', source: 'my_words', own: true },
     dataSource: own as unknown as DataSource,
   };
   const active = { target, manager: 'the active manager' } as unknown as Repository<object>;
   const application = { manager: 'the application manager' } as unknown as DataSource;
 
   it('answers the active dataset outside of a scope', () => {
-    setActiveDataset({ name: 'default', source: 'vocab-bloom-hub' });
+    setActiveDataset({ id: 1, name: 'default', source: 'vocab-bloom-hub' });
     expect(currentDatasetScope()).toBeNull();
     expect(currentDatasetName()).toBe('default');
     expect(currentDatasetSource()).toBe('vocab-bloom-hub');

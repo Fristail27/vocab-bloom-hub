@@ -1,14 +1,13 @@
 import { EntityManager } from 'typeorm';
-import { assertSafeSchema } from '../../db/datasets';
 import { EnEmbeddingProfile } from '../../modules/EnModule/entities/en_embedding_profile.entity';
 import type { MeaningEmbeddingLineT } from '../../../types/embeddings';
 import { currentEmbeddingLines, supportedEmbeddingProfile, writeEmbeddingLines } from './transfer';
 
 /** The caller holds the fork snapshot; this manager stays on the receiving schema. */
-export async function copyForkEmbeddings(em: EntityManager, sourceSchema: string): Promise<void> {
-  const source = em.connection.driver.escape(assertSafeSchema(sourceSchema));
+export async function copyForkEmbeddings(em: EntityManager, sourceId: number): Promise<void> {
   const profiles = (await em.query(
-    `SELECT * FROM ${source}.en_embedding_profiles ORDER BY id`,
+    `SELECT * FROM public.dictionary_en_embedding_profiles WHERE dataset_id=$1 ORDER BY id`,
+    [sourceId],
   )) as EnEmbeddingProfile[];
   for (const profile of profiles) {
     if (!supportedEmbeddingProfile(profile)) continue;
@@ -17,9 +16,9 @@ export async function copyForkEmbeddings(em: EntityManager, sourceSchema: string
     for (;;) {
       const rows = (await em.query(
         `SELECT v.meaning_id, m.sync_id AS meaning_sync_id, v.profile_id, v.input_hash, v.embedding
-         FROM ${source}.en_meaning_embeddings v JOIN ${source}.en_meanings m ON m.id = v.meaning_id
-         WHERE v.profile_id = $1 AND v.meaning_id > $2 ORDER BY v.meaning_id LIMIT 200`,
-        [profile.id, after],
+         FROM public.dictionary_en_meaning_embeddings v JOIN public.dictionary_en_meanings m ON (m.dataset_id,m.id)=(v.dataset_id,v.meaning_id)
+         WHERE v.dataset_id=$3 AND v.profile_id = $1 AND v.meaning_id > $2 ORDER BY v.meaning_id LIMIT 200`,
+        [profile.id, after, sourceId],
       )) as Array<MeaningEmbeddingLineT & { meaning_id: number }>;
       if (!rows.length) break;
       await em.createQueryBuilder().insert().into(EnEmbeddingProfile).values(profile).orIgnore().execute();

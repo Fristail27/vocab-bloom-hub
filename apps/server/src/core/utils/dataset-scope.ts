@@ -1,20 +1,12 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { DataSource, EntityManager, ObjectLiteral, Repository } from 'typeorm';
-import { getActiveDataset } from './active-dataset';
+import { type ActiveDatasetT, getActiveDataset } from './active-dataset';
 
-// The dataset an admin request works on (issue #540): the one the switch of
-// the admin UI names, when it is not the active one. The edit services of
-// the dictionary hold the repositories of the application's connection —
-// the active dataset; a request that names another dataset runs inside a
-// scope that carries a connection on that dataset's schema, and the
-// services take their repositories from it. What the scope is, is said
-// around the request, not passed through every signature — the way
-// `withChangeSource` says where an edit comes from.
-
+// Named requests and pinned operations carry the registry identity through async work.
 export type DatasetScopeT = {
   /** The dataset of the registry, as DatasetsService found it */
-  dataset: { name: string; source: string; own: boolean };
-  /** A connection on the dataset's schema */
+  dataset: ActiveDatasetT;
+  /** Dataset-scoped access to the application pool */
   dataSource: DataSource;
   /** A pinned connection/transaction, when the entire operation must use one */
   manager?: EntityManager;
@@ -28,8 +20,7 @@ export const withDatasetScope = <T>(scope: DatasetScopeT, work: () => T): T => s
 export const currentDatasetScope = (): DatasetScopeT | null => storage.getStore() ?? null;
 
 /** The dataset the request works on: the one it named, else the active one */
-export const currentDataset = (): { name: string; source: string; own: boolean } =>
-  storage.getStore()?.dataset ?? getActiveDataset();
+export const currentDataset = (): ActiveDatasetT => storage.getStore()?.dataset ?? getActiveDataset();
 
 /** The name of the dataset the request works on: the one it named, else the active one */
 export const currentDatasetName = (): string => currentDataset().name;

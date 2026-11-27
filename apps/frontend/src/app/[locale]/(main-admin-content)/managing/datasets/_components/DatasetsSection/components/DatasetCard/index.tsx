@@ -18,7 +18,7 @@ import { DatasetCatalogEntryT } from 'server/core/constants/dataset_catalog';
 import { findStandardLicense } from 'server/core/constants/data_licenses';
 import { DEFAULT_DATASET_NAME } from 'server/core/constants/datasets';
 import { DatasetT, DatasetUpdateT } from 'server/types';
-import { formatCount, formatMegabytes } from '../../utils';
+import { formatCount, formatDatasetTime, formatMegabytes } from '../../utils';
 import styles from './styles.module.scss';
 
 const { Paragraph, Text } = Typography;
@@ -135,7 +135,7 @@ export const DatasetCard: React.FC<DatasetCardP> = ({
               {update.latest ?? t('source_unknown')}
               {update.checked_at && (
                 <Text type="secondary" className={styles.checked}>
-                  {t('source_checked', { date: new Date(update.checked_at).toLocaleString(locale) })}
+                  {t('source_checked', { date: formatDatasetTime(update.checked_at, locale) })}
                 </Text>
               )}
             </dd>
@@ -144,7 +144,7 @@ export const DatasetCard: React.FC<DatasetCardP> = ({
         {own && dataset?.created_at && (
           <>
             <dt>{t('label_created')}</dt>
-            <dd>{new Date(dataset.created_at).toLocaleString(locale)}</dd>
+            <dd>{formatDatasetTime(dataset.created_at, locale)}</dd>
           </>
         )}
       </dl>
@@ -234,9 +234,7 @@ export const DatasetCard: React.FC<DatasetCardP> = ({
             </div>
             <div>
               <dt>{t('label_imported')}</dt>
-              <dd>
-                {dataset?.imported_at ? new Date(dataset.imported_at).toLocaleString(locale) : t('never')}
-              </dd>
+              <dd>{dataset?.imported_at ? formatDatasetTime(dataset.imported_at, locale) : t('never')}</dd>
             </div>
           </>
         )}

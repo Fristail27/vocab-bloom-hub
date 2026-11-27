@@ -238,8 +238,7 @@ export default {
     [ErrorCodes.dataset_terms_fixed]: 'As condições de um conjunto de dados do catálogo são as da sua fonte',
     [ErrorCodes.dataset_license_invalid]:
       'Escolha uma licença da lista, ou informe o nome, o link e o texto da sua própria',
-    [ErrorCodes.datasets_not_supported]:
-      'Este banco de dados não tem esquemas: vários conjuntos de dados exigem Postgres',
+    [ErrorCodes.datasets_not_supported]: 'O gerenciamento de vários conjuntos de dados requer PostgreSQL.',
     [ErrorCodes.dataset_not_found]: 'Conjunto de dados não encontrado',
     [ErrorCodes.dataset_name_invalid]: 'Esta instância não conhece nenhum conjunto de dados com esse nome',
     [ErrorCodes.dataset_source_invalid]:
@@ -487,7 +486,7 @@ export default {
     public_note:
       'Só os datasets abertos são públicos: {method} lê cada um sob a sua licença. Novos datasets e forks começam fechados.',
     not_supported:
-      'Esta instância usa SQLite, que não tem esquemas: contém apenas o conjunto de dados padrão. Instalar, ativar e excluir conjuntos de dados exige um banco de dados Postgres.',
+      'Esta instância SQLite contém o conjunto de dados padrão. Para instalar, ativar e excluir outros conjuntos de dados, use PostgreSQL.',
     status_active: 'ativo',
     status_installed: 'instalado',
     status_not_installed: 'não instalado',

@@ -1,3 +1,4 @@
+import { dictionaryConnection, enableDictionaryScope } from '../src/db/shared-dictionary/connection';
 import { randomUUID } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
@@ -6,7 +7,7 @@ import request from 'supertest';
 import type { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../src/modules/AppModule/app.module';
-import { prepareDatabase, createDatasetSchema, searchPathExtra } from '../src/db/datasets';
+import { prepareDatabase } from '../src/db/datasets';
 import { DB_ENTITIES } from '../src/db/typeorm-options';
 import { Dataset } from '../src/modules/DatasetsModule/entities/dataset.entity';
 import { EnEntry } from '../src/modules/EnModule/entities/en_entry.entity';
@@ -92,6 +93,7 @@ pg('separate semantic API with a local fixture model', () => {
     process.env.DATABASE_URL = url.toString();
     await prepareDatabase();
     ds = await new DataSource({ type: 'postgres', url: url.toString(), entities: DB_ENTITIES }).initialize();
+    enableDictionaryScope(ds);
     await ds.query('CREATE SCHEMA vector_extension');
     await ds.query('CREATE EXTENSION vector WITH SCHEMA vector_extension');
     await ds.manager.insert(EnEmbeddingProfile, { ...profile, id: profileId });
@@ -99,16 +101,8 @@ pg('separate semantic API with a local fixture model', () => {
     await seed(ds, 'birdwatcher', [0.8, 0.6, 0]);
     const stale = await seed(ds, 'stale', [1, 0, 0]);
     await ds.manager.update(EnMeaning, stale.id, { definition: 'Changed after embedding' });
-    await createDatasetSchema('ds_semanticother');
-    other = await new DataSource({
-      type: 'postgres',
-      url: url.toString(),
-      entities: DB_ENTITIES,
-      extra: searchPathExtra('ds_semanticother'),
-    }).initialize();
-    await ds.manager.save(Dataset, {
+    const owner = await ds.manager.save(Dataset, {
       name: 'semanticother',
-      schema: 'ds_semanticother',
       source: 'semanticother',
       own: true,
       title: 'Other dictionary',
@@ -118,6 +112,7 @@ pg('separate semantic API with a local fixture model', () => {
       is_public: true,
       language: 'en',
     });
+    other = dictionaryConnection(ds, owner.id);
     await other.manager.insert(EnEmbeddingProfile, { ...profile, id: profileId });
     await seed(other, 'otherword', [1, 0, 0]);
     model = createServer(async (req, res) => {
@@ -148,7 +143,6 @@ pg('separate semantic API with a local fixture model', () => {
   });
   afterAll(async () => {
     await app?.close();
-    if (other?.isInitialized) await other.destroy();
     if (ds?.isInitialized) await ds.destroy();
     if (model) await new Promise<void>((resolve, reject) => model.close((e) => (e ? reject(e) : resolve())));
     if (admin?.isInitialized) {

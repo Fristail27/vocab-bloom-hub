@@ -314,5 +314,5 @@ The admin-only endpoints are `GET /api/en/reviews/word/{id}`,
 `POST /api/en/reviews/{scope}/{id}` with `{checked, expected}`. Scopes are `definition`,
 `meaning_translation`, and `short_translation`. Each endpoint supports the usual `dataset`
 query parameter. The listing accepts `search` (word prefix), `page` and `limit` (1–100).
-PostgreSQL stores `en_content_reviews` in each dataset schema through a dataset migration;
+PostgreSQL keys each marker by dataset ID, scope and portable identity.
 SQLite supports the same markers for its single dataset.
